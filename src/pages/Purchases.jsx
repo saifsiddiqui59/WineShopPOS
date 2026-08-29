@@ -68,7 +68,8 @@ export default function Purchases() {
       return products
         .filter(
           (product) =>
-            product.name
+            product.active !== false &&
+            (product.name
               .toLowerCase()
               .includes(value) ||
             product.brand
@@ -77,7 +78,7 @@ export default function Purchases() {
             product.sku
               .toLowerCase()
               .includes(value) ||
-            product.barcode.includes(value)
+            product.barcode.includes(value))
         )
         .slice(0, 8);
     }, [search, products]);

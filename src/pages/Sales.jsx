@@ -1,4 +1,5 @@
-import { ReceiptText } from "lucide-react";
+import { Eye, ReceiptText } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 
 const money = new Intl.NumberFormat("en-IN", {
@@ -15,7 +16,7 @@ export default function Sales() {
       <div className="page-heading">
         <div>
           <h2>Sales History</h2>
-          <p>Completed local transactions</p>
+          <p>{sales.length} completed transaction(s)</p>
         </div>
       </div>
 
@@ -35,7 +36,9 @@ export default function Sales() {
                   <th>Date & Time</th>
                   <th>Items</th>
                   <th>Payment</th>
+                  <th>Discount</th>
                   <th>Total</th>
+                  <th>Action</th>
                 </tr>
               </thead>
 
@@ -63,8 +66,20 @@ export default function Sales() {
                       </span>
                     </td>
 
+                    <td>{money.format(Number(sale.discount ?? 0))}</td>
+
                     <td>
                       <strong>{money.format(sale.grandTotal)}</strong>
+                    </td>
+
+                    <td>
+                      <Link
+                        className="edit-product-link"
+                        to={`/sales/${sale.id}`}
+                      >
+                        <Eye size={15} />
+                        View
+                      </Link>
                     </td>
                   </tr>
                 ))}

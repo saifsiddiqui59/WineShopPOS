@@ -10,6 +10,7 @@ import {
   Smartphone,
   Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 
 const money = new Intl.NumberFormat("en-IN", {
@@ -20,11 +21,14 @@ const money = new Intl.NumberFormat("en-IN", {
 
 export default function POS() {
   const { products, getStock, completeSale } = useShop();
+  const navigate = useNavigate();
 
   const [barcode, setBarcode] = useState("");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [discount, setDiscount] = useState(0);
   const [message, setMessage] = useState(
     "Ready to scan. Try barcode 8900000010016"
   );
@@ -39,17 +43,18 @@ export default function POS() {
   const searchResults = useMemo(() => {
     const value = search.trim().toLowerCase();
 
-    if (!value) {
-      return [];
-    }
+    if (!value) return [];
 
     return products
       .filter(
         (product) =>
-          product.name.toLowerCase().includes(value) ||
-          product.brand.toLowerCase().includes(value) ||
-          product.sku.toLowerCase().includes(value) ||
-          product.barcode.includes(value)
+          product.active !== false &&
+          (
+            product.name.toLowerCase().includes(value) ||
+            product.brand.toLowerCase().includes(value) ||
+            product.sku.toLowerCase().includes(value) ||
+            product.barcode.includes(value)
+          )
       )
       .slice(0, 8);
   }, [search, products]);
@@ -61,6 +66,12 @@ export default function POS() {
   }
 
   function addProduct(product) {
+    if (product.active === false) {
+      setMessage(`${product.name} is inactive.`);
+      setMessageType("error");
+      return;
+    }
+
     const available = getStock(product.id);
     const alreadyInCart = currentCartQuantity(product.id);
 
@@ -76,20 +87,20 @@ export default function POS() {
       return;
     }
 
-    setCart((currentCart) => {
-      const existing = currentCart.find(
+    setCart((current) => {
+      const existing = current.find(
         (item) => item.product.id === product.id
       );
 
       if (existing) {
-        return currentCart.map((item) =>
+        return current.map((item) =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
 
-      return [...currentCart, { product, quantity: 1 }];
+      return [...current, { product, quantity: 1 }];
     });
 
     setMessage(`${product.name} added to cart.`);
@@ -101,12 +112,12 @@ export default function POS() {
 
     const scannedBarcode = barcode.trim();
 
-    if (!scannedBarcode) {
-      return;
-    }
+    if (!scannedBarcode) return;
 
     const product = products.find(
-      (item) => item.barcode === scannedBarcode
+      (item) =>
+        item.active !== false &&
+        item.barcode === scannedBarcode
     );
 
     if (!product) {
@@ -118,9 +129,7 @@ export default function POS() {
 
     setBarcode("");
 
-    requestAnimationFrame(() => {
-      barcodeRef.current?.focus();
-    });
+    requestAnimationFrame(() => barcodeRef.current?.focus());
   }
 
   function changeQuantity(productId, delta) {
@@ -128,9 +137,7 @@ export default function POS() {
       (cartItem) => cartItem.product.id === productId
     );
 
-    if (!item) {
-      return;
-    }
+    if (!item) return;
 
     const newQuantity = item.quantity + delta;
 
@@ -147,8 +154,8 @@ export default function POS() {
       return;
     }
 
-    setCart((currentCart) =>
-      currentCart.map((cartItem) =>
+    setCart((current) =>
+      current.map((cartItem) =>
         cartItem.product.id === productId
           ? { ...cartItem, quantity: newQuantity }
           : cartItem
@@ -157,10 +164,8 @@ export default function POS() {
   }
 
   function removeItem(productId) {
-    setCart((currentCart) =>
-      currentCart.filter(
-        (item) => item.product.id !== productId
-      )
+    setCart((current) =>
+      current.filter((item) => item.product.id !== productId)
     );
   }
 
@@ -169,13 +174,19 @@ export default function POS() {
     0
   );
 
+  const normalizedDiscount = Math.max(0, Number(discount) || 0);
+  const grandTotal = Math.max(0, subtotal - normalizedDiscount);
+
   const itemCount = cart.reduce(
     (total, item) => total + item.quantity,
     0
   );
 
   function handleCompleteSale() {
-    const result = completeSale(cart, paymentMethod);
+    const result = completeSale(cart, paymentMethod, {
+      discount: normalizedDiscount,
+      paymentReference,
+    });
 
     if (!result.ok) {
       setMessage(result.message);
@@ -183,18 +194,22 @@ export default function POS() {
       return;
     }
 
+    const saleId = result.sale.id;
+
+    setCart([]);
+    setSearch("");
+    setDiscount(0);
+    setPaymentReference("");
     setMessage(
       `${result.sale.invoiceNumber} completed successfully for ${money.format(
         result.sale.grandTotal
       )}.`
     );
     setMessageType("success");
-    setCart([]);
-    setSearch("");
 
-    requestAnimationFrame(() => {
-      barcodeRef.current?.focus();
-    });
+    navigate(`/sales/${saleId}`);
+
+    requestAnimationFrame(() => barcodeRef.current?.focus());
   }
 
   return (
@@ -225,9 +240,7 @@ export default function POS() {
                   ref={barcodeRef}
                   className="barcode-input"
                   value={barcode}
-                  onChange={(event) =>
-                    setBarcode(event.target.value)
-                  }
+                  onChange={(event) => setBarcode(event.target.value)}
                   placeholder="Scan barcode and press Enter"
                   autoComplete="off"
                 />
@@ -371,15 +384,22 @@ export default function POS() {
               <strong>{money.format(subtotal)}</strong>
             </div>
 
-            <div>
-              <span>Discount</span>
-              <strong>{money.format(0)}</strong>
+            <div className="discount-entry">
+              <span>Discount ₹</span>
+              <input
+                type="number"
+                min="0"
+                max={subtotal}
+                step="1"
+                value={discount}
+                onChange={(event) => setDiscount(event.target.value)}
+              />
             </div>
           </div>
 
           <div className="grand-total">
             <span>Grand Total</span>
-            <strong>{money.format(subtotal)}</strong>
+            <strong>{money.format(grandTotal)}</strong>
           </div>
 
           <div className="payment-title">Payment Method</div>
@@ -422,13 +442,29 @@ export default function POS() {
             </button>
           </div>
 
+          {paymentMethod !== "CASH" && (
+            <label className="payment-reference-label">
+              {paymentMethod === "UPI"
+                ? "UPI Reference (optional)"
+                : "Card Reference (optional)"}
+
+              <input
+                value={paymentReference}
+                onChange={(event) =>
+                  setPaymentReference(event.target.value)
+                }
+                placeholder="Transaction / reference number"
+              />
+            </label>
+          )}
+
           <button
             className="complete-sale"
             onClick={handleCompleteSale}
             disabled={cart.length === 0}
           >
             Complete Sale
-            <span>{money.format(subtotal)}</span>
+            <span>{money.format(grandTotal)}</span>
           </button>
 
           <div className="test-barcode-box">
