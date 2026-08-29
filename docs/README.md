@@ -1,34 +1,57 @@
 # WineShopPOS Documentation
 
-This repository contains both implementation and permanent project documentation.
+## Completed Chapters
 
-## Completed local MVP chapters
+1. Project Foundation
+2. UI Shell
+3. Product Master
+4. POS Billing
+5. Barcode Scanner Integration
+6. Local Inventory Engine
+7. Receive Stock
+8. Persistent Product Master
+9. Payments & Sales
+10. Dashboard
+11. Reports
+12. Backup
+13. Azure Blob Static Hosting
+14. Authentication, Multi-Shop Roles & Users
+15. Supabase Live Data Integration
 
-- Chapter 1 — Project foundation
-- Chapter 2 — Application shell
-- Chapter 3 — Dummy product master
-- Chapter 4 — POS billing
-- Chapter 5 — Barcode scanner flow
-- Chapter 6 — Local inventory
-- Chapter 7 — Receive stock / purchases
-- Chapter 8 — Persistent product master
-- Chapter 9 — Payments, sales history and invoice detail
-- Chapter 10 — Enhanced dashboard
-- Chapter 11 — Reports
-- Chapter 12 — JSON backup / restore
+## Current Architecture
 
-## Current architecture
+Barcode Scanner
+→ React/Vite static frontend
+→ Supabase Auth
+→ Supabase PostgreSQL + RLS + RPCs
+→ Azure Blob Static Website
 
-React + Vite browser application using LocalStorage for MVP persistence.
+## Roles
 
-No real backend/database is connected yet.
+- Platform Owner: controls shop ADMIN + subscription/kill switch
+- ADMIN: shop administration + Manager/Cashier creation
+- MANAGER: inventory/products/purchases/reports/POS
+- CASHIER: POS-focused access
 
-Next major stage begins with database/Supabase chapters.
+## Cloud Source of Truth
 
-Read:
+Supabase is now the live source of truth for:
+- products
+- inventory
+- purchases
+- sales
+- payments
+- stock movements
+- users/roles
 
-- `PROJECT_CONTEXT.md`
-- `chapters/`
-- `testing/TEST_MATRIX.md`
+## Production URL
 
-A future chat should read these files before changing architecture or code.
+`https://wineshoppos.z29.web.core.windows.net/`
+
+## Future Enhancements
+
+- Azure AI Document Intelligence invoice OCR
+- 80mm receipt printer integration
+- returns/refunds
+- advanced tax/excise compliance
+- custom domain
