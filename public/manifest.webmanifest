@@ -1,0 +1,9 @@
+{
+  "name": "WineShop POS",
+  "short_name": "WineShopPOS",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#15171c",
+  "description": "Wine shop barcode POS and inventory management"
+}

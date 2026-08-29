@@ -1,0 +1,38 @@
+PROJECT CONTINUATION: WineShopPOS Chapters 16–26
+
+The current production architecture before this release was Chapter 15: React/Vite + Supabase Auth/Postgres/RLS/RPCs + Azure Blob static website.
+
+This release adds:
+16 global professional scanner
+17 returns/refunds/voids
+18 cashier shifts/day close
+19 physical stock count
+20 80mm/58mm receipt printing via browser installed printer
+21 PO/supplier ledger/purchase returns/price history
+22 rule-based smart reorder
+23 organizations + branch stock transfer
+24 audit controls and RLS hardening
+25 emergency encrypted offline POS queue + idempotent server sync
+26 Azure Document Intelligence invoice OCR scaffold + human review/product matching
+
+Critical decisions:
+- Platform Owner is separate from shop roles.
+- Existing shops are isolated into separate organizations; stock transfer only after branches are explicitly grouped under one organization.
+- returns do not move stock until manager/admin approval.
+- stock count does not convert unscanned SKUs to zero silently.
+- static browser thermal printing uses print dialog; silent raw ESC/POS requires a future trusted local bridge/device-specific integration.
+- offline is emergency POS only after prior authenticated/cache load; conflicts are server-revalidated and never force-applied.
+- OCR secrets are Supabase Edge Function secrets. OCR never changes inventory directly.
+- statutory excise/compliance reports remain jurisdiction-specific and are not falsely certified.
+
+Migration:
+supabase/migrations/20260829190000_chapters_16_26.sql
+
+OCR Edge Function:
+supabase/functions/ocr-invoice/index.ts
+
+Release test matrix:
+docs/testing/CHAPTERS_16_26_TEST_MATRIX.md
+
+Runbook:
+docs/PRODUCTION_RUNBOOK_CH16_26.md

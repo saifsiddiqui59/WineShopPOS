@@ -1,48 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import Layout from "./components/Layout";
-import RequireAuth from "./components/RequireAuth";
-import RequireRole from "./components/RequireRole";
-import AddProduct from "./pages/AddProduct";
-import Dashboard from "./pages/Dashboard";
-import EditProduct from "./pages/EditProduct";
-import Inventory from "./pages/Inventory";
-import Login from "./pages/Login";
-import POS from "./pages/POS";
-import Products from "./pages/Products";
-import Purchases from "./pages/Purchases";
-import Reports from "./pages/Reports";
-import SaleDetails from "./pages/SaleDetails";
-import Sales from "./pages/Sales";
-import Settings from "./pages/Settings";
-import Users from "./pages/Users";
-
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-
-      <Route element={<RequireAuth />}>
-        <Route element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="pos" element={<POS />} />
-          <Route path="sales" element={<Sales />} />
-          <Route path="sales/:id" element={<SaleDetails />} />
-
-          <Route element={<RequireRole roles={["ADMIN","MANAGER"]} />}>
-            <Route path="products" element={<Products />} />
-            <Route path="products/new" element={<AddProduct />} />
-            <Route path="products/:id/edit" element={<EditProduct />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="purchases" element={<Purchases />} />
-            <Route path="reports" element={<Reports />} />
-          </Route>
-
-          <Route element={<RequireRole roles={["ADMIN"]} />}>
-            <Route path="users" element={<Users />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-        </Route>
-      </Route>
-    </Routes>
-  );
-}
+import Layout from "./components/Layout";import RequireAuth from "./components/RequireAuth";import RequireRole from "./components/RequireRole";
+import AddProduct from "./pages/AddProduct";import Dashboard from "./pages/Dashboard";import EditProduct from "./pages/EditProduct";import Inventory from "./pages/Inventory";import Login from "./pages/Login";import POS from "./pages/POS";import Products from "./pages/Products";import Purchases from "./pages/Purchases";import Reports from "./pages/Reports";import SaleDetails from "./pages/SaleDetails";import Sales from "./pages/Sales";import Settings from "./pages/Settings";import Users from "./pages/Users";
+import PriceHistory from "./pages/PriceHistory";import ScannerSettings from "./pages/ScannerSettings";import Returns from "./pages/Returns";import Shifts from "./pages/Shifts";import StockCount from "./pages/StockCount";import PrinterSettings from "./pages/PrinterSettings";import Procurement from "./pages/Procurement";import Reorder from "./pages/Reorder";import Transfers from "./pages/Transfers";import Audit from "./pages/Audit";import OfflineQueue from "./pages/OfflineQueue";import AutomationHub from "./pages/AutomationHub";
+export default function App(){return <Routes><Route path="/login" element={<Login/>}/><Route element={<RequireAuth/>}><Route element={<Layout/>}><Route index element={<Dashboard/>}/><Route path="pos" element={<POS/>}/><Route path="shifts" element={<Shifts/>}/><Route path="returns" element={<Returns/>}/><Route path="sales" element={<Sales/>}/><Route path="sales/:id" element={<SaleDetails/>}/><Route path="scanner-settings" element={<ScannerSettings/>}/><Route path="offline-queue" element={<OfflineQueue/>}/><Route element={<RequireRole roles={["ADMIN","MANAGER"]}/> }><Route path="products" element={<Products/>}/><Route path="products/new" element={<AddProduct/>}/><Route path="products/:id/edit" element={<EditProduct/>}/><Route path="inventory" element={<Inventory/>}/><Route path="stock-count" element={<StockCount/>}/><Route path="purchases" element={<Purchases/>}/><Route path="procurement" element={<Procurement/>}/><Route path="price-history" element={<PriceHistory/>}/><Route path="reorder" element={<Reorder/>}/><Route path="transfers" element={<Transfers/>}/><Route path="reports" element={<Reports/>}/><Route path="automation" element={<AutomationHub/>}/></Route><Route element={<RequireRole roles={["ADMIN"]}/> }><Route path="users" element={<Users/>}/><Route path="audit" element={<Audit/>}/><Route path="printer-settings" element={<PrinterSettings/>}/><Route path="settings" element={<Settings/>}/></Route></Route></Route></Routes>}
