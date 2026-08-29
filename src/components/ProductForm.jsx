@@ -1,427 +1,83 @@
-import {
-  Save,
-} from "lucide-react";
+import { useEffect, useState } from "react";
 
-const categories = [
-  "Whisky",
-  "Beer",
-  "Rum",
-  "Vodka",
-  "Brandy",
-  "Wine",
-  "Gin",
-  "Tequila",
-];
-
-const defaults = {
+const emptyProduct = {
   barcode: "",
   sku: "",
   name: "",
   brand: "",
   category: "Whisky",
-
+  subcategory: "",
   sizeMl: 750,
-
   alcoholPercentage: "",
-
   purchasePrice: 0,
   mrp: 0,
   price: 0,
-
   minimumStock: 5,
   unitsPerCase: 12,
-
   openingStock: 0,
 };
 
-import {
-  useState,
-} from "react";
-
 export default function ProductForm({
-  initialValues = {},
+  initialValue,
   showOpeningStock = false,
-  submitLabel = "Save Product",
   onSubmit,
+  submitLabel,
 }) {
-  const [
-    form,
-    setForm,
-  ] = useState({
-    ...defaults,
-    ...initialValues,
-  });
+  const [form, setForm] = useState(emptyProduct);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function update(
-    field,
-    value
-  ) {
-    setForm(
-      (current) => ({
-        ...current,
-        [field]: value,
-      })
-    );
+  useEffect(() => {
+    if (initialValue) {
+      setForm({
+        ...emptyProduct,
+        ...initialValue,
+        openingStock: 0,
+      });
+    }
+  }, [initialValue]);
+
+  function set(name, value) {
+    setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function handleSubmit(
-    event
-  ) {
+  async function submit(event) {
     event.preventDefault();
-    onSubmit(form);
+    setBusy(true);
+    setMessage("");
+
+    const result = await onSubmit(form);
+    if (!result?.ok) setMessage(result?.message || "Operation failed.");
+
+    setBusy(false);
   }
 
   return (
-    <form
-      className="product-form"
-      onSubmit={
-        handleSubmit
-      }
-    >
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h3>
-              Product Identification
-            </h3>
-
-            <p>
-              Barcode, SKU and product
-              description
-            </p>
-          </div>
-        </div>
-
-        <div className="product-form-grid">
-          <label>
-            Barcode *
-
-            <input
-              value={
-                form.barcode
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "barcode",
-                  event.target
-                    .value
-                )
-              }
-              placeholder="8900000099999"
-            />
-          </label>
-
-          <label>
-            SKU *
-
-            <input
-              value={
-                form.sku
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "sku",
-                  event.target
-                    .value
-                )
-              }
-              placeholder="WH-NEW-750"
-            />
-          </label>
-
-          <label className="product-form-wide">
-            Product Name *
-
-            <input
-              value={
-                form.name
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "name",
-                  event.target
-                    .value
-                )
-              }
-              placeholder="Product Name 750ml"
-            />
-          </label>
-
-          <label>
-            Brand *
-
-            <input
-              value={
-                form.brand
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "brand",
-                  event.target
-                    .value
-                )
-              }
-              placeholder="Brand"
-            />
-          </label>
-
-          <label>
-            Category *
-
-            <select
-              value={
-                form.category
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "category",
-                  event.target
-                    .value
-                )
-              }
-            >
-              {categories.map(
-                (category) => (
-                  <option
-                    key={
-                      category
-                    }
-                    value={
-                      category
-                    }
-                  >
-                    {category}
-                  </option>
-                )
-              )}
-            </select>
-          </label>
-
-          <label>
-            Bottle Size (ml) *
-
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={
-                form.sizeMl
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "sizeMl",
-                  event.target
-                    .value
-                )
-              }
-            />
-          </label>
-
-          <label>
-            Alcohol %
-
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={
-                form.alcoholPercentage
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "alcoholPercentage",
-                  event.target
-                    .value
-                )
-              }
-              placeholder="42.8"
-            />
-          </label>
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h3>
-              Pricing & Inventory
-            </h3>
-
-            <p>
-              Pricing, reorder level and
-              case configuration
-            </p>
-          </div>
-        </div>
-
-        <div className="product-form-grid">
-          <label>
-            Purchase Price *
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={
-                form.purchasePrice
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "purchasePrice",
-                  event.target
-                    .value
-                )
-              }
-            />
-          </label>
-
-          <label>
-            MRP *
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={
-                form.mrp
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "mrp",
-                  event.target
-                    .value
-                )
-              }
-            />
-          </label>
-
-          <label>
-            Selling Price *
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={
-                form.price
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "price",
-                  event.target
-                    .value
-                )
-              }
-            />
-          </label>
-
-          <label>
-            Minimum Stock *
-
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={
-                form.minimumStock
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "minimumStock",
-                  event.target
-                    .value
-                )
-              }
-            />
-          </label>
-
-          <label>
-            Bottles Per Case *
-
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={
-                form.unitsPerCase
-              }
-              onChange={(
-                event
-              ) =>
-                update(
-                  "unitsPerCase",
-                  event.target
-                    .value
-                )
-              }
-            />
-          </label>
-
-          {showOpeningStock && (
-            <label>
-              Opening Stock *
-
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={
-                  form.openingStock
-                }
-                onChange={(
-                  event
-                ) =>
-                  update(
-                    "openingStock",
-                    event.target
-                      .value
-                  )
-                }
-              />
-            </label>
-          )}
-        </div>
-
-        {!showOpeningStock && (
-          <div className="inventory-edit-warning">
-            Current inventory is not changed
-            when product details are edited.
-            Use Receive Stock or Stock
-            Adjustment for inventory changes.
-          </div>
+    <form className="panel" onSubmit={submit}>
+      <div className="form-grid">
+        <label>Barcode<input value={form.barcode} onChange={(e) => set("barcode", e.target.value)} required /></label>
+        <label>SKU<input value={form.sku} onChange={(e) => set("sku", e.target.value)} required /></label>
+        <label>Product Name<input value={form.name} onChange={(e) => set("name", e.target.value)} required /></label>
+        <label>Brand<input value={form.brand} onChange={(e) => set("brand", e.target.value)} required /></label>
+        <label>Category<input value={form.category} onChange={(e) => set("category", e.target.value)} required /></label>
+        <label>Subcategory<input value={form.subcategory} onChange={(e) => set("subcategory", e.target.value)} /></label>
+        <label>Size (ml)<input type="number" min="1" value={form.sizeMl} onChange={(e) => set("sizeMl", e.target.value)} required /></label>
+        <label>Alcohol %<input type="number" min="0" step="0.1" value={form.alcoholPercentage ?? ""} onChange={(e) => set("alcoholPercentage", e.target.value)} /></label>
+        <label>Purchase Price<input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={(e) => set("purchasePrice", e.target.value)} required /></label>
+        <label>MRP<input type="number" min="0" step="0.01" value={form.mrp} onChange={(e) => set("mrp", e.target.value)} required /></label>
+        <label>Selling Price<input type="number" min="0" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)} required /></label>
+        <label>Minimum Stock<input type="number" min="0" value={form.minimumStock} onChange={(e) => set("minimumStock", e.target.value)} required /></label>
+        <label>Bottles / Case<input type="number" min="1" value={form.unitsPerCase} onChange={(e) => set("unitsPerCase", e.target.value)} required /></label>
+        {showOpeningStock && (
+          <label>Opening Stock<input type="number" min="0" value={form.openingStock} onChange={(e) => set("openingStock", e.target.value)} required /></label>
         )}
-      </section>
+      </div>
 
-      <div className="product-form-actions">
-        <button
-          type="submit"
-          className="primary-button product-save-button"
-        >
-          <Save size={18} />
+      {message && <div className="purchase-message error" style={{ marginTop: 12 }}>{message}</div>}
 
-          {submitLabel}
+      <div style={{ marginTop: 16 }}>
+        <button className="primary-button" disabled={busy}>
+          {busy ? "Saving..." : submitLabel}
         </button>
       </div>
     </form>

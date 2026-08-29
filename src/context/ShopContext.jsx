@@ -1,616 +1,570 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
-
-import { products as seedProducts } from "../data/products";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "./AuthContext";
 
 const ShopContext = createContext(null);
 
-const PRODUCTS_KEY = "wineshop_products_v1";
-const INVENTORY_KEY = "wineshop_inventory_v1";
-const SALES_KEY = "wineshop_sales_v1";
-const PURCHASES_KEY = "wineshop_purchases_v1";
-
-function loadJSON(key, fallback) {
-  try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : fallback;
-  } catch {
-    return fallback;
-  }
+function moneyNumber(value) {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function normalizeProduct(product) {
-  const sizeMl =
-    product.sizeMl ??
-    Number.parseInt(String(product.size ?? ""), 10) ??
-    0;
-
+function normalizeProduct(row) {
   return {
-    ...product,
-    active: product.active !== false,
-    mrp: Number(product.mrp ?? product.price ?? 0),
-    price: Number(product.price ?? 0),
-    purchasePrice: Number(product.purchasePrice ?? 0),
-    minimumStock: Number(product.minimumStock ?? 0),
-    unitsPerCase: Number(product.unitsPerCase ?? 1),
-    openingStock: Number(product.openingStock ?? 0),
-    sizeMl: Number.isFinite(sizeMl) ? sizeMl : 0,
-    size: product.size ?? `${sizeMl || 0} ml`,
+    id: row.id,
+    barcode: row.barcode ?? "",
+    sku: row.sku ?? "",
+    name: row.product_name ?? "",
+    brand: row.brand ?? "",
+    category: row.categories?.name ?? "",
+    categoryId: row.category_id ?? null,
+    subcategory: row.subcategory ?? "",
+    sizeMl: Number(row.size_ml ?? 0),
+    size: `${Number(row.size_ml ?? 0)} ml`,
+    alcoholPercentage:
+      row.alcohol_percentage === null ? null : Number(row.alcohol_percentage),
+    purchasePrice: moneyNumber(row.purchase_price),
+    mrp: moneyNumber(row.mrp),
+    price: moneyNumber(row.selling_price),
+    minimumStock: Number(row.minimum_stock ?? 0),
+    unitsPerCase: Number(row.units_per_case ?? 1),
+    active: row.active !== false,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
-function createInitialProducts() {
-  const savedProducts = loadJSON(PRODUCTS_KEY, null);
+function normalizeSale(row, productById) {
+  const payment = row.payments?.[0] ?? null;
 
-  if (Array.isArray(savedProducts) && savedProducts.length > 0) {
-    return savedProducts.map(normalizeProduct);
-  }
-
-  return seedProducts.map(normalizeProduct);
+  return {
+    id: row.id,
+    invoiceNumber: row.invoice_number,
+    createdAt: row.created_at,
+    cashierId: row.cashier_id,
+    paymentMethod: payment?.payment_method ?? "",
+    paymentReference: payment?.reference_number ?? "",
+    subtotal: moneyNumber(row.subtotal),
+    discount: moneyNumber(row.discount),
+    grandTotal: moneyNumber(row.grand_total),
+    status: row.status,
+    items: (row.sale_items ?? []).map((item) => ({
+      id: item.id,
+      productId: item.product_id,
+      productName: item.product_name_snapshot,
+      barcode: item.barcode_snapshot,
+      quantity: Number(item.quantity ?? 0),
+      unitPrice: moneyNumber(item.unit_price),
+      purchasePrice: moneyNumber(productById[item.product_id]?.purchasePrice),
+      lineTotal: moneyNumber(item.line_total),
+    })),
+  };
 }
 
-function createInitialInventory(productList) {
-  const savedInventory = loadJSON(INVENTORY_KEY, {});
+function normalizePurchase(row, productById) {
+  const items = (row.purchase_items ?? []).map((item) => ({
+    id: item.id,
+    productId: item.product_id,
+    productName: productById[item.product_id]?.name ?? "Product",
+    barcode: productById[item.product_id]?.barcode ?? "",
+    purchaseUnit: item.purchase_unit,
+    caseCount: Number(item.case_count ?? 0),
+    unitsPerCase: Number(item.units_per_case ?? 1),
+    looseBottles: Number(item.loose_bottles ?? 0),
+    quantity: Number(item.quantity ?? 0),
+    purchasePrice: moneyNumber(item.purchase_price),
+    lineTotal: moneyNumber(item.line_total),
+  }));
 
-  return productList.reduce((result, product) => {
-    result[product.id] =
-      typeof savedInventory[product.id] === "number"
-        ? savedInventory[product.id]
-        : Number(product.openingStock) || 0;
-
-    return result;
-  }, {});
-}
-
-function createInitialSales() {
-  const sales = loadJSON(SALES_KEY, []);
-  return Array.isArray(sales) ? sales : [];
-}
-
-function createInitialPurchases() {
-  const purchases = loadJSON(PURCHASES_KEY, []);
-  return Array.isArray(purchases) ? purchases : [];
+  return {
+    id: row.id,
+    purchaseNumber: row.purchase_number,
+    supplierId: row.supplier_id,
+    supplierName: row.supplier_name_snapshot ?? "Supplier",
+    invoiceNumber: row.invoice_number,
+    invoiceDate: row.invoice_date,
+    createdAt: row.created_at,
+    notes: row.notes ?? "",
+    total: moneyNumber(row.total),
+    totalUnits: items.reduce((sum, item) => sum + item.quantity, 0),
+    items,
+  };
 }
 
 export function ShopProvider({ children }) {
-  const initialProducts = useMemo(() => createInitialProducts(), []);
+  const { user, profile, access } = useAuth();
 
-  const [products, setProducts] = useState(initialProducts);
-  const [inventory, setInventory] = useState(() =>
-    createInitialInventory(initialProducts)
-  );
-  const [sales, setSales] = useState(createInitialSales);
-  const [purchases, setPurchases] = useState(createInitialPurchases);
+  const [products, setProducts] = useState([]);
+  const [inventory, setInventory] = useState({});
+  const [sales, setSales] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
+  const [dataError, setDataError] = useState("");
+
+  const canUseShop = Boolean(user && profile?.active && access?.allowed);
+
+  const refreshAll = useCallback(async () => {
+    if (!canUseShop) {
+      setProducts([]);
+      setInventory({});
+      setSales([]);
+      setPurchases([]);
+      setCategories([]);
+      setSuppliers([]);
+      return { ok: false, message: "Shop session is not active." };
+    }
+
+    setLoadingData(true);
+    setDataError("");
+
+    try {
+      const [
+        categoriesResult,
+        suppliersResult,
+        productsResult,
+        inventoryResult,
+      ] = await Promise.all([
+        supabase
+          .from("categories")
+          .select("id,name,active")
+          .order("name"),
+        supabase
+          .from("suppliers")
+          .select("id,supplier_name,active")
+          .order("supplier_name"),
+        supabase
+          .from("products")
+          .select("*, categories(name)")
+          .order("product_name"),
+        supabase
+          .from("inventory")
+          .select("product_id,quantity,reserved_quantity"),
+      ]);
+
+      for (const result of [
+        categoriesResult,
+        suppliersResult,
+        productsResult,
+        inventoryResult,
+      ]) {
+        if (result.error) throw result.error;
+      }
+
+      const normalizedProducts = (productsResult.data ?? []).map(normalizeProduct);
+      const productById = Object.fromEntries(
+        normalizedProducts.map((product) => [product.id, product])
+      );
+
+      const stockMap = {};
+      for (const row of inventoryResult.data ?? []) {
+        stockMap[row.product_id] = Number(row.quantity ?? 0);
+      }
+
+      let salesQuery = supabase
+        .from("sales")
+        .select(`
+          id, invoice_number, subtotal, discount, grand_total,
+          payment_status, cashier_id, status, notes, created_at,
+          sale_items(
+            id, product_id, product_name_snapshot, barcode_snapshot,
+            quantity, unit_price, discount, line_total
+          ),
+          payments(
+            id, payment_method, amount, reference_number, created_at
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+
+      if (profile?.role === "CASHIER") {
+        salesQuery = salesQuery.eq("cashier_id", profile.user_id);
+      }
+
+      const [salesResult, purchasesResult] = await Promise.all([
+        salesQuery,
+        profile?.role === "CASHIER"
+          ? Promise.resolve({ data: [], error: null })
+          : supabase
+              .from("purchases")
+              .select(`
+                id, purchase_number, supplier_id, supplier_name_snapshot,
+                invoice_number, invoice_date, subtotal, tax, total,
+                status, notes, created_at,
+                purchase_items(
+                  id, product_id, quantity, purchase_unit,
+                  case_count, units_per_case, loose_bottles,
+                  purchase_price, line_total
+                )
+              `)
+              .order("created_at", { ascending: false })
+              .limit(1000),
+      ]);
+
+      if (salesResult.error) throw salesResult.error;
+      if (purchasesResult.error) throw purchasesResult.error;
+
+      setCategories(categoriesResult.data ?? []);
+      setSuppliers(suppliersResult.data ?? []);
+      setProducts(normalizedProducts);
+      setInventory(stockMap);
+      setSales(
+        (salesResult.data ?? []).map((row) => normalizeSale(row, productById))
+      );
+      setPurchases(
+        (purchasesResult.data ?? []).map((row) =>
+          normalizePurchase(row, productById)
+        )
+      );
+
+      return { ok: true };
+    } catch (error) {
+      const message = error?.message || String(error);
+      setDataError(message);
+      return { ok: false, message };
+    } finally {
+      setLoadingData(false);
+    }
+  }, [canUseShop, profile?.role, profile?.user_id]);
 
   useEffect(() => {
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
-  }, [inventory]);
-
-  useEffect(() => {
-    localStorage.setItem(SALES_KEY, JSON.stringify(sales));
-  }, [sales]);
-
-  useEffect(() => {
-    localStorage.setItem(PURCHASES_KEY, JSON.stringify(purchases));
-  }, [purchases]);
+    refreshAll();
+  }, [refreshAll]);
 
   function getStock(productId) {
-    return inventory[productId] ?? 0;
+    return Number(inventory[productId] ?? 0);
   }
 
-  function validateProduct(data, editingId = null, includeOpeningStock = false) {
-    const barcode = String(data.barcode ?? "").trim();
-    const sku = String(data.sku ?? "").trim().toUpperCase();
-    const name = String(data.name ?? "").trim();
-    const brand = String(data.brand ?? "").trim();
-    const category = String(data.category ?? "").trim();
+  async function ensureCategory(name) {
+    const categoryName = String(name ?? "").trim();
+    if (!categoryName) return null;
 
-    const sizeMl = Number(data.sizeMl);
-    const alcoholPercentage =
-      data.alcoholPercentage === "" ||
-      data.alcoholPercentage === null ||
-      data.alcoholPercentage === undefined
-        ? null
-        : Number(data.alcoholPercentage);
+    const existing = categories.find(
+      (item) => item.name.toLowerCase() === categoryName.toLowerCase()
+    );
+    if (existing) return existing.id;
 
-    const purchasePrice = Number(data.purchasePrice);
-    const mrp = Number(data.mrp);
-    const price = Number(data.price);
-    const minimumStock = Number(data.minimumStock);
-    const unitsPerCase = Number(data.unitsPerCase);
-    const openingStock = includeOpeningStock ? Number(data.openingStock) : 0;
+    const { data, error } = await supabase
+      .from("categories")
+      .insert({
+        shop_id: profile.shop_id,
+        name: categoryName,
+        active: true,
+      })
+      .select("id,name,active")
+      .single();
 
-    if (!barcode) return { ok: false, message: "Barcode is required." };
-    if (!sku) return { ok: false, message: "SKU is required." };
-    if (!name) return { ok: false, message: "Product name is required." };
-    if (!brand) return { ok: false, message: "Brand is required." };
-    if (!category) return { ok: false, message: "Category is required." };
+    if (error) throw error;
+    setCategories((current) => [...current, data].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    ));
+    return data.id;
+  }
 
-    if (!Number.isInteger(sizeMl) || sizeMl <= 0) {
-      return { ok: false, message: "Bottle size must be greater than 0." };
+  function validateProduct(data, includeOpeningStock = false) {
+    const value = {
+      barcode: String(data.barcode ?? "").trim(),
+      sku: String(data.sku ?? "").trim().toUpperCase(),
+      name: String(data.name ?? "").trim(),
+      brand: String(data.brand ?? "").trim(),
+      category: String(data.category ?? "").trim(),
+      subcategory: String(data.subcategory ?? "").trim(),
+      sizeMl: Number(data.sizeMl),
+      alcoholPercentage:
+        data.alcoholPercentage === "" ||
+        data.alcoholPercentage === null ||
+        data.alcoholPercentage === undefined
+          ? null
+          : Number(data.alcoholPercentage),
+      purchasePrice: Number(data.purchasePrice),
+      mrp: Number(data.mrp),
+      price: Number(data.price),
+      minimumStock: Number(data.minimumStock),
+      unitsPerCase: Number(data.unitsPerCase),
+      openingStock: includeOpeningStock ? Number(data.openingStock ?? 0) : 0,
+    };
+
+    if (!value.barcode) return { ok: false, message: "Barcode is required." };
+    if (!value.sku) return { ok: false, message: "SKU is required." };
+    if (!value.name) return { ok: false, message: "Product name is required." };
+    if (!value.brand) return { ok: false, message: "Brand is required." };
+    if (!value.category) return { ok: false, message: "Category is required." };
+    if (!Number.isInteger(value.sizeMl) || value.sizeMl <= 0) {
+      return { ok: false, message: "Bottle size is invalid." };
     }
-
-    if (Number.isNaN(purchasePrice) || purchasePrice < 0) {
+    if (!Number.isFinite(value.purchasePrice) || value.purchasePrice < 0) {
       return { ok: false, message: "Purchase price is invalid." };
     }
-
-    if (Number.isNaN(mrp) || mrp < 0) {
+    if (!Number.isFinite(value.mrp) || value.mrp < 0) {
       return { ok: false, message: "MRP is invalid." };
     }
-
-    if (Number.isNaN(price) || price < 0) {
+    if (!Number.isFinite(value.price) || value.price < 0) {
       return { ok: false, message: "Selling price is invalid." };
     }
-
-    if (!Number.isInteger(minimumStock) || minimumStock < 0) {
+    if (!Number.isInteger(value.minimumStock) || value.minimumStock < 0) {
       return { ok: false, message: "Minimum stock is invalid." };
     }
-
-    if (!Number.isInteger(unitsPerCase) || unitsPerCase <= 0) {
-      return {
-        ok: false,
-        message: "Bottles per case must be greater than 0.",
-      };
+    if (!Number.isInteger(value.unitsPerCase) || value.unitsPerCase <= 0) {
+      return { ok: false, message: "Bottles per case is invalid." };
     }
-
     if (
       includeOpeningStock &&
-      (!Number.isInteger(openingStock) || openingStock < 0)
+      (!Number.isInteger(value.openingStock) || value.openingStock < 0)
     ) {
       return { ok: false, message: "Opening stock is invalid." };
     }
+    return { ok: true, value };
+  }
 
-    if (
-      alcoholPercentage !== null &&
-      (Number.isNaN(alcoholPercentage) || alcoholPercentage < 0)
-    ) {
-      return { ok: false, message: "Alcohol percentage is invalid." };
-    }
+  async function addProduct(productData) {
+    try {
+      const validation = validateProduct(productData, true);
+      if (!validation.ok) return validation;
 
-    const duplicateBarcode = products.some(
-      (product) =>
-        product.id !== editingId &&
-        String(product.barcode).trim() === barcode
-    );
+      const v = validation.value;
+      const categoryId = await ensureCategory(v.category);
 
-    if (duplicateBarcode) {
+      const { data, error } = await supabase.rpc("create_new_product", {
+        p_barcode: v.barcode,
+        p_sku: v.sku,
+        p_product_name: v.name,
+        p_brand: v.brand,
+        p_category_id: categoryId,
+        p_subcategory: v.subcategory || null,
+        p_size_ml: v.sizeMl,
+        p_alcohol_percentage: v.alcoholPercentage,
+        p_purchase_price: v.purchasePrice,
+        p_mrp: v.mrp,
+        p_selling_price: v.price,
+        p_minimum_stock: v.minimumStock,
+        p_units_per_case: v.unitsPerCase,
+        p_opening_stock: v.openingStock,
+      });
+
+      if (error) throw error;
+      await refreshAll();
+
       return {
-        ok: false,
-        message: "A product with this barcode already exists.",
+        ok: true,
+        productId: data,
+        message: `${v.name} created successfully.`,
       };
+    } catch (error) {
+      return { ok: false, message: error?.message || String(error) };
     }
+  }
 
-    const duplicateSku = products.some(
-      (product) =>
-        product.id !== editingId &&
-        String(product.sku).trim().toUpperCase() === sku
-    );
+  async function updateProduct(productId, productData) {
+    try {
+      const validation = validateProduct(productData, false);
+      if (!validation.ok) return validation;
 
-    if (duplicateSku) {
+      const v = validation.value;
+      const categoryId = await ensureCategory(v.category);
+
+      const { error } = await supabase
+        .from("products")
+        .update({
+          barcode: v.barcode,
+          sku: v.sku,
+          product_name: v.name,
+          brand: v.brand,
+          category_id: categoryId,
+          subcategory: v.subcategory || null,
+          size_ml: v.sizeMl,
+          alcohol_percentage: v.alcoholPercentage,
+          purchase_price: v.purchasePrice,
+          mrp: v.mrp,
+          selling_price: v.price,
+          minimum_stock: v.minimumStock,
+          units_per_case: v.unitsPerCase,
+        })
+        .eq("id", productId);
+
+      if (error) throw error;
+      await refreshAll();
+      return { ok: true, message: `${v.name} updated successfully.` };
+    } catch (error) {
+      return { ok: false, message: error?.message || String(error) };
+    }
+  }
+
+  async function setProductStatus(productId, active) {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ active })
+        .eq("id", productId);
+
+      if (error) throw error;
+      await refreshAll();
       return {
-        ok: false,
-        message: "A product with this SKU already exists.",
+        ok: true,
+        message: active ? "Product activated." : "Product deactivated.",
       };
+    } catch (error) {
+      return { ok: false, message: error?.message || String(error) };
     }
-
-    return {
-      ok: true,
-      value: {
-        barcode,
-        sku,
-        name,
-        brand,
-        category,
-        sizeMl,
-        size: `${sizeMl} ml`,
-        alcoholPercentage,
-        purchasePrice,
-        mrp,
-        price,
-        minimumStock,
-        unitsPerCase,
-        openingStock,
-      },
-    };
   }
 
-  function addProduct(productData) {
-    const validation = validateProduct(productData, null, true);
-
-    if (!validation.ok) return validation;
-
-    const now = new Date().toISOString();
-
-    const product = {
-      id: crypto.randomUUID(),
-      ...validation.value,
-      active: true,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    setProducts((current) => [product, ...current]);
-    setInventory((current) => ({
-      ...current,
-      [product.id]: validation.value.openingStock,
-    }));
-
-    return {
-      ok: true,
-      product,
-      message: `${product.name} created successfully.`,
-    };
-  }
-
-  function updateProduct(productId, productData) {
-    const existing = products.find((product) => product.id === productId);
-
-    if (!existing) {
-      return { ok: false, message: "Product not found." };
-    }
-
-    const validation = validateProduct(productData, productId, false);
-
-    if (!validation.ok) return validation;
-
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === productId
-          ? {
-              ...product,
-              ...validation.value,
-              openingStock: product.openingStock,
-              updatedAt: new Date().toISOString(),
-            }
-          : product
-      )
-    );
-
-    return {
-      ok: true,
-      message: `${validation.value.name} updated successfully.`,
-    };
-  }
-
-  function setProductStatus(productId, active) {
-    const product = products.find((item) => item.id === productId);
-
-    if (!product) {
-      return { ok: false, message: "Product not found." };
-    }
-
-    setProducts((current) =>
-      current.map((item) =>
-        item.id === productId
-          ? {
-              ...item,
-              active,
-              updatedAt: new Date().toISOString(),
-            }
-          : item
-      )
-    );
-
-    return {
-      ok: true,
-      message: `${product.name} ${active ? "activated" : "deactivated"}.`,
-    };
-  }
-
-  function deactivateProduct(productId) {
+  async function deactivateProduct(productId) {
     return setProductStatus(productId, false);
   }
 
-  function activateProduct(productId) {
+  async function activateProduct(productId) {
     return setProductStatus(productId, true);
   }
 
-  function completeSale(
+  async function completeSale(
     cart,
     paymentMethod,
-    {
-      discount = 0,
-      paymentReference = "",
-    } = {}
+    { discount = 0, paymentReference = "" } = {}
   ) {
-    if (!cart.length) {
-      return { ok: false, message: "Cart is empty." };
+    try {
+      if (!cart?.length) return { ok: false, message: "Cart is empty." };
+
+      const { data, error } = await supabase.rpc("complete_sale", {
+        p_items: cart.map((item) => ({
+          product_id: item.product.id,
+          quantity: Number(item.quantity),
+        })),
+        p_payment_method: paymentMethod,
+        p_discount: Number(discount || 0),
+        p_payment_reference: String(paymentReference ?? "").trim() || null,
+      });
+
+      if (error) throw error;
+      await refreshAll();
+
+      const sale = sales.find((item) => item.id === data) ?? { id: data };
+      return { ok: true, sale: { ...sale, id: data } };
+    } catch (error) {
+      return { ok: false, message: error?.message || String(error) };
     }
-
-    const allowedPaymentMethods = ["CASH", "UPI", "CARD"];
-
-    if (!allowedPaymentMethods.includes(paymentMethod)) {
-      return { ok: false, message: "Invalid payment method." };
-    }
-
-    for (const item of cart) {
-      const currentProduct = products.find(
-        (product) => product.id === item.product.id
-      );
-
-      if (!currentProduct || currentProduct.active === false) {
-        return {
-          ok: false,
-          message: `${item.product.name} is inactive and cannot be sold.`,
-        };
-      }
-
-      const available = inventory[item.product.id] ?? 0;
-
-      if (item.quantity > available) {
-        return {
-          ok: false,
-          message: `Only ${available} unit(s) of ${item.product.name} are available.`,
-        };
-      }
-    }
-
-    const subtotal = cart.reduce(
-      (total, item) => total + item.product.price * item.quantity,
-      0
-    );
-
-    const normalizedDiscount = Number(discount);
-
-    if (
-      Number.isNaN(normalizedDiscount) ||
-      normalizedDiscount < 0 ||
-      normalizedDiscount > subtotal
-    ) {
-      return {
-        ok: false,
-        message: "Discount must be between ₹0 and the subtotal.",
-      };
-    }
-
-    const updatedInventory = { ...inventory };
-
-    cart.forEach((item) => {
-      updatedInventory[item.product.id] -= item.quantity;
-    });
-
-    const grandTotal = subtotal - normalizedDiscount;
-
-    const invoiceNumber =
-      `INV-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-` +
-      `${String(sales.length + 1).padStart(4, "0")}`;
-
-    const sale = {
-      id: crypto.randomUUID(),
-      invoiceNumber,
-      createdAt: new Date().toISOString(),
-      paymentMethod,
-      paymentReference: String(paymentReference ?? "").trim(),
-      subtotal,
-      discount: normalizedDiscount,
-      grandTotal,
-      items: cart.map((item) => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        barcode: item.product.barcode,
-        quantity: item.quantity,
-        unitPrice: item.product.price,
-        purchasePrice: Number(item.product.purchasePrice ?? 0),
-        lineTotal: item.product.price * item.quantity,
-      })),
-    };
-
-    setInventory(updatedInventory);
-    setSales((current) => [sale, ...current]);
-
-    return { ok: true, sale };
   }
 
-  function receiveStock({
+  async function ensureSupplier(supplierName) {
+    const name = String(supplierName ?? "").trim();
+    if (!name) throw new Error("Supplier name is required.");
+
+    const existing = suppliers.find(
+      (item) => item.supplier_name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (existing) return existing.id;
+
+    const { data, error } = await supabase
+      .from("suppliers")
+      .insert({
+        shop_id: profile.shop_id,
+        supplier_name: name,
+        active: true,
+      })
+      .select("id,supplier_name,active")
+      .single();
+
+    if (error) throw error;
+    setSuppliers((current) => [...current, data]);
+    return data.id;
+  }
+
+  async function receiveStock({
     supplierName,
     invoiceNumber,
     invoiceDate,
     items,
     notes = "",
   }) {
-    if (!supplierName?.trim()) {
-      return { ok: false, message: "Supplier name is required." };
-    }
-
-    if (!invoiceNumber?.trim()) {
-      return {
-        ok: false,
-        message: "Supplier invoice number is required.",
-      };
-    }
-
-    if (!items?.length) {
-      return { ok: false, message: "Add at least one product." };
-    }
-
-    const duplicateInvoice = purchases.some(
-      (purchase) =>
-        purchase.invoiceNumber.trim().toLowerCase() ===
-        invoiceNumber.trim().toLowerCase()
-    );
-
-    if (duplicateInvoice) {
-      return {
-        ok: false,
-        message: "This supplier invoice already exists.",
-      };
-    }
-
-    const updatedInventory = { ...inventory };
-    const purchaseItems = [];
-
-    for (const item of items) {
-      const product = products.find(
-        (productItem) => productItem.id === item.productId
-      );
-
-      if (!product || product.active === false) {
-        return {
-          ok: false,
-          message: "Invalid or inactive product selected.",
-        };
+    try {
+      if (!items?.length) {
+        return { ok: false, message: "Add at least one product." };
       }
 
-      const quantity = Number(item.quantity);
-      const purchasePrice = Number(item.purchasePrice);
-      const caseCount = Number(item.caseCount) || 0;
-      const unitsPerCase = Number(item.unitsPerCase) || 1;
-      const looseBottles = Number(item.looseBottles) || 0;
+      const supplierId = await ensureSupplier(supplierName);
 
-      if (!Number.isInteger(quantity) || quantity <= 0) {
-        return {
-          ok: false,
-          message: `Invalid quantity for ${product.name}.`,
-        };
-      }
+      const payloadItems = items.map((item) => ({
+        product_id: item.productId,
+        case_count: Number(item.caseCount ?? 0),
+        units_per_case: Number(item.unitsPerCase ?? 1),
+        loose_bottles: Number(item.looseBottles ?? 0),
+        quantity: Number(item.quantity),
+        purchase_price: Number(item.purchasePrice),
+      }));
 
-      if (Number.isNaN(purchasePrice) || purchasePrice < 0) {
-        return {
-          ok: false,
-          message: `Invalid purchase price for ${product.name}.`,
-        };
-      }
-
-      const stockBefore = updatedInventory[product.id] ?? 0;
-      const stockAfter = stockBefore + quantity;
-
-      updatedInventory[product.id] = stockAfter;
-
-      purchaseItems.push({
-        productId: product.id,
-        productName: product.name,
-        barcode: product.barcode,
-        purchaseUnit: caseCount > 0 ? "CASE" : "BOTTLE",
-        caseCount,
-        unitsPerCase,
-        looseBottles,
-        quantity,
-        purchasePrice,
-        lineTotal: quantity * purchasePrice,
-        stockBefore,
-        stockAfter,
+      const { data, error } = await supabase.rpc("receive_purchase", {
+        p_supplier_id: supplierId,
+        p_invoice_number: String(invoiceNumber ?? "").trim(),
+        p_invoice_date:
+          invoiceDate || new Date().toISOString().slice(0, 10),
+        p_items: payloadItems,
+        p_notes: notes || null,
       });
+
+      if (error) throw error;
+      await refreshAll();
+
+      return {
+        ok: true,
+        purchaseId: data,
+        message: "Stock received successfully.",
+      };
+    } catch (error) {
+      return { ok: false, message: error?.message || String(error) };
     }
+  }
 
-    const total = purchaseItems.reduce(
-      (sum, item) => sum + item.lineTotal,
-      0
-    );
+  async function adjustStock({
+    productId,
+    adjustmentType,
+    quantityChange,
+    reason,
+    notes = "",
+  }) {
+    try {
+      const { data, error } = await supabase.rpc("adjust_stock", {
+        p_product_id: productId,
+        p_adjustment_type: adjustmentType,
+        p_quantity_change: Number(quantityChange),
+        p_reason: String(reason ?? "").trim(),
+        p_notes: notes || null,
+      });
 
-    const totalUnits = purchaseItems.reduce(
-      (sum, item) => sum + item.quantity,
-      0
-    );
-
-    const purchaseNumber =
-      `PUR-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-` +
-      `${String(purchases.length + 1).padStart(4, "0")}`;
-
-    const purchase = {
-      id: crypto.randomUUID(),
-      purchaseNumber,
-      supplierName: supplierName.trim(),
-      invoiceNumber: invoiceNumber.trim(),
-      invoiceDate:
-        invoiceDate || new Date().toISOString().slice(0, 10),
-      createdAt: new Date().toISOString(),
-      notes,
-      total,
-      totalUnits,
-      items: purchaseItems,
-    };
-
-    setInventory(updatedInventory);
-    setPurchases((current) => [purchase, ...current]);
-
-    return { ok: true, purchase };
+      if (error) throw error;
+      await refreshAll();
+      return { ok: true, quantity: data, message: "Stock adjusted." };
+    } catch (error) {
+      return { ok: false, message: error?.message || String(error) };
+    }
   }
 
   function createBackup() {
     return {
       meta: {
         app: "WineShopPOS",
-        formatVersion: 1,
+        mode: "SUPABASE_CLOUD",
         exportedAt: new Date().toISOString(),
       },
-      data: {
-        products,
-        inventory,
-        sales,
-        purchases,
-      },
+      data: { products, inventory, sales, purchases },
     };
   }
 
-  function importBackup(backup) {
-    if (
-      !backup ||
-      backup.meta?.app !== "WineShopPOS" ||
-      !backup.data ||
-      !Array.isArray(backup.data.products) ||
-      typeof backup.data.inventory !== "object" ||
-      backup.data.inventory === null ||
-      !Array.isArray(backup.data.sales) ||
-      !Array.isArray(backup.data.purchases)
-    ) {
-      return {
-        ok: false,
-        message: "This is not a valid WineShopPOS backup file.",
-      };
-    }
-
-    const importedProducts = backup.data.products.map(normalizeProduct);
-
-    const importedInventory = importedProducts.reduce(
-      (result, product) => {
-        const quantity = Number(backup.data.inventory[product.id]);
-
-        result[product.id] =
-          Number.isFinite(quantity) && quantity >= 0
-            ? Math.trunc(quantity)
-            : 0;
-
-        return result;
-      },
-      {}
-    );
-
-    setProducts(importedProducts);
-    setInventory(importedInventory);
-    setSales(backup.data.sales);
-    setPurchases(backup.data.purchases);
-
-    return {
-      ok: true,
-      message:
-        `Backup restored: ${importedProducts.length} products, ` +
-        `${backup.data.sales.length} sales and ` +
-        `${backup.data.purchases.length} purchases.`,
-    };
-  }
-
-  function resetDemo() {
-    const resetProducts = seedProducts.map(normalizeProduct);
-
-    const resetInventory = resetProducts.reduce((result, product) => {
-      result[product.id] = Number(product.openingStock) || 0;
-      return result;
-    }, {});
-
-    setProducts(resetProducts);
-    setInventory(resetInventory);
-    setSales([]);
-    setPurchases([]);
-  }
+  const lowStockProducts = useMemo(
+    () =>
+      products.filter(
+        (product) =>
+          product.active !== false &&
+          getStock(product.id) <= product.minimumStock
+      ),
+    [products, inventory]
+  );
 
   return (
     <ShopContext.Provider
@@ -619,16 +573,21 @@ export function ShopProvider({ children }) {
         inventory,
         sales,
         purchases,
+        categories,
+        suppliers,
+        loadingData,
+        dataError,
+        lowStockProducts,
         getStock,
+        refreshAll,
         addProduct,
         updateProduct,
         deactivateProduct,
         activateProduct,
         completeSale,
         receiveStock,
+        adjustStock,
         createBackup,
-        importBackup,
-        resetDemo,
       }}
     >
       {children}
@@ -638,10 +597,6 @@ export function ShopProvider({ children }) {
 
 export function useShop() {
   const context = useContext(ShopContext);
-
-  if (!context) {
-    throw new Error("useShop must be used inside ShopProvider");
-  }
-
+  if (!context) throw new Error("useShop must be used inside ShopProvider");
   return context;
 }

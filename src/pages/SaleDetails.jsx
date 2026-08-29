@@ -1,5 +1,4 @@
-import { ArrowLeft, Printer, ReceiptText } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 
 const money = new Intl.NumberFormat("en-IN", {
@@ -10,128 +9,43 @@ const money = new Intl.NumberFormat("en-IN", {
 
 export default function SaleDetails() {
   const { id } = useParams();
-  const { sales } = useShop();
-
+  const { sales, loadingData } = useShop();
   const sale = sales.find((item) => item.id === id);
 
-  if (!sale) {
-    return (
-      <div className="panel">
-        <h3>Sale not found</h3>
-        <Link to="/sales">Return to Sales</Link>
-      </div>
-    );
-  }
+  if (loadingData) return <div className="panel">Loading...</div>;
+  if (!sale) return <Navigate to="/sales" replace />;
 
   return (
-    <div className="sale-detail-page">
+    <div className="invoice-page">
       <div className="page-heading no-print">
-        <div>
-          <Link className="back-link" to="/sales">
-            <ArrowLeft size={16} />
-            Sales
-          </Link>
-
-          <h2>Invoice Details</h2>
-          <p>{sale.invoiceNumber}</p>
-        </div>
-
-        <button
-          className="secondary-button print-button"
-          onClick={() => window.print()}
-        >
-          <Printer size={17} />
-          Print Preview
-        </button>
+        <div><h2>Invoice {sale.invoiceNumber}</h2></div>
+        <button className="primary-button" onClick={() => window.print()}>Print</button>
       </div>
 
-      <section className="invoice-card">
-        <div className="invoice-header">
-          <div>
-            <ReceiptText size={30} />
-            <h2>WineShop POS</h2>
-            <p>Development Receipt</p>
-          </div>
+      <div className="panel invoice-card">
+        <h2>WineShop POS</h2>
+        <p>{sale.invoiceNumber}</p>
+        <p>{new Date(sale.createdAt).toLocaleString("en-IN")}</p>
 
-          <div className="invoice-meta">
-            <strong>{sale.invoiceNumber}</strong>
-            <span>
-              {new Date(sale.createdAt).toLocaleString("en-IN")}
-            </span>
-          </div>
-        </div>
-
-        <div className="invoice-info-grid">
-          <div>
-            <span>Payment Method</span>
-            <strong>{sale.paymentMethod}</strong>
-          </div>
-
-          <div>
-            <span>Payment Reference</span>
-            <strong>{sale.paymentReference || "—"}</strong>
-          </div>
-
-          <div>
-            <span>Total Items</span>
-            <strong>
-              {sale.items.reduce(
-                (total, item) => total + item.quantity,
-                0
-              )}
-            </strong>
-          </div>
-        </div>
-
-        <div className="invoice-table-wrapper">
-          <table className="data-table invoice-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Amount</th>
+        <table className="data-table">
+          <thead><tr><th>Product</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+          <tbody>
+            {sale.items.map((item) => (
+              <tr key={item.id || item.productId}>
+                <td>{item.productName}</td>
+                <td>{item.quantity}</td>
+                <td>{money.format(item.unitPrice)}</td>
+                <td>{money.format(item.lineTotal)}</td>
               </tr>
-            </thead>
+            ))}
+          </tbody>
+        </table>
 
-            <tbody>
-              {sale.items.map((item) => (
-                <tr key={`${sale.id}-${item.productId}`}>
-                  <td>
-                    <strong>{item.productName}</strong>
-                    <div className="invoice-barcode">{item.barcode}</div>
-                  </td>
-                  <td>{item.quantity}</td>
-                  <td>{money.format(item.unitPrice)}</td>
-                  <td>{money.format(item.lineTotal)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="invoice-totals">
-          <div>
-            <span>Subtotal</span>
-            <strong>{money.format(sale.subtotal)}</strong>
-          </div>
-
-          <div>
-            <span>Discount</span>
-            <strong>{money.format(Number(sale.discount ?? 0))}</strong>
-          </div>
-
-          <div className="invoice-grand-total">
-            <span>Grand Total</span>
-            <strong>{money.format(sale.grandTotal)}</strong>
-          </div>
-        </div>
-
-        <div className="invoice-footer">
-          Dummy development receipt. Tax/excise/receipt compliance will be
-          configured in later production chapters.
-        </div>
-      </section>
+        <p>Subtotal: {money.format(sale.subtotal)}</p>
+        <p>Discount: {money.format(sale.discount)}</p>
+        <h2>Total: {money.format(sale.grandTotal)}</h2>
+        <p>Payment: {sale.paymentMethod} {sale.paymentReference ? `· ${sale.paymentReference}` : ""}</p>
+      </div>
     </div>
   );
 }

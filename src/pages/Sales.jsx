@@ -1,6 +1,6 @@
-import { Eye, ReceiptText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
+import { useAuth } from "../context/AuthContext";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -10,83 +10,34 @@ const money = new Intl.NumberFormat("en-IN", {
 
 export default function Sales() {
   const { sales } = useShop();
+  const { profile } = useAuth();
 
   return (
     <div>
       <div className="page-heading">
         <div>
-          <h2>Sales History</h2>
-          <p>{sales.length} completed transaction(s)</p>
+          <h2>Sales</h2>
+          <p>{profile?.role === "CASHIER" ? "Your sales" : "Shop sales"} stored in Supabase</p>
         </div>
       </div>
 
-      <div className="panel">
-        {sales.length === 0 ? (
-          <div className="large-empty-state">
-            <ReceiptText size={48} />
-            <h3>No sales yet</h3>
-            <p>Complete a transaction from POS Billing.</p>
-          </div>
-        ) : (
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Invoice</th>
-                  <th>Date & Time</th>
-                  <th>Items</th>
-                  <th>Payment</th>
-                  <th>Discount</th>
-                  <th>Total</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sales.map((sale) => (
-                  <tr key={sale.id}>
-                    <td>
-                      <strong>{sale.invoiceNumber}</strong>
-                    </td>
-
-                    <td>
-                      {new Date(sale.createdAt).toLocaleString("en-IN")}
-                    </td>
-
-                    <td>
-                      {sale.items.reduce(
-                        (total, item) => total + item.quantity,
-                        0
-                      )}
-                    </td>
-
-                    <td>
-                      <span className="category-badge">
-                        {sale.paymentMethod}
-                      </span>
-                    </td>
-
-                    <td>{money.format(Number(sale.discount ?? 0))}</td>
-
-                    <td>
-                      <strong>{money.format(sale.grandTotal)}</strong>
-                    </td>
-
-                    <td>
-                      <Link
-                        className="edit-product-link"
-                        to={`/sales/${sale.id}`}
-                      >
-                        <Eye size={15} />
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="panel data-table-wrapper">
+        <table className="data-table">
+          <thead><tr><th>Invoice</th><th>Date</th><th>Items</th><th>Payment</th><th>Discount</th><th>Total</th><th></th></tr></thead>
+          <tbody>
+            {sales.map((sale) => (
+              <tr key={sale.id}>
+                <td>{sale.invoiceNumber}</td>
+                <td>{new Date(sale.createdAt).toLocaleString("en-IN")}</td>
+                <td>{sale.items.reduce((sum,i) => sum + i.quantity, 0)}</td>
+                <td>{sale.paymentMethod}</td>
+                <td>{money.format(sale.discount)}</td>
+                <td>{money.format(sale.grandTotal)}</td>
+                <td><Link to={`/sales/${sale.id}`}>View</Link></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -16,15 +16,15 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 const navigation = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/pos", label: "POS Billing", icon: ScanBarcode },
-  { path: "/products", label: "Products", icon: Package },
-  { path: "/inventory", label: "Inventory", icon: Warehouse },
-  { path: "/purchases", label: "Purchases", icon: Truck },
-  { path: "/sales", label: "Sales", icon: ReceiptText },
-  { path: "/reports", label: "Reports", icon: BarChart3 },
-  { path: "/users", label: "Users", icon: UsersRound, adminOnly: true },
-  { path: "/settings", label: "Settings", icon: Settings },
+  { path: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN","MANAGER","CASHIER"] },
+  { path: "/pos", label: "POS Billing", icon: ScanBarcode, roles: ["ADMIN","MANAGER","CASHIER"] },
+  { path: "/products", label: "Products", icon: Package, roles: ["ADMIN","MANAGER"] },
+  { path: "/inventory", label: "Inventory", icon: Warehouse, roles: ["ADMIN","MANAGER"] },
+  { path: "/purchases", label: "Purchases", icon: Truck, roles: ["ADMIN","MANAGER"] },
+  { path: "/sales", label: "Sales", icon: ReceiptText, roles: ["ADMIN","MANAGER","CASHIER"] },
+  { path: "/reports", label: "Reports", icon: BarChart3, roles: ["ADMIN","MANAGER"] },
+  { path: "/users", label: "Users", icon: UsersRound, roles: ["ADMIN"] },
+  { path: "/settings", label: "Settings", icon: Settings, roles: ["ADMIN"] },
 ];
 
 export default function Layout() {
@@ -43,7 +43,7 @@ export default function Layout() {
 
         <nav className="nav-menu">
           {navigation
-            .filter((item) => !item.adminOnly || profile?.role === "ADMIN")
+            .filter((item) => item.roles.includes(profile?.role))
             .map((item) => {
               const Icon = item.icon;
               return (
@@ -51,9 +51,7 @@ export default function Layout() {
                   key={item.path}
                   to={item.path}
                   end={item.path === "/"}
-                  className={({ isActive }) =>
-                    isActive ? "nav-item active" : "nav-item"
-                  }
+                  className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}
                 >
                   <Icon size={19} />
                   <span>{item.label}</span>
@@ -76,7 +74,8 @@ export default function Layout() {
               border: 0,
               background: "transparent",
               color: "white",
-              padding: 4
+              padding: 4,
+              cursor: "pointer",
             }}
           >
             <LogOut size={17} />
@@ -88,7 +87,7 @@ export default function Layout() {
         <header className="topbar">
           <div>
             <h1>Wine Shop Management</h1>
-            <p>Barcode billing & inventory</p>
+            <p>Cloud POS, barcode billing & inventory</p>
           </div>
 
           <div className="user-pill">
