@@ -3,8 +3,9 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import POS from "./pages/POS";
-import Placeholder from "./pages/Placeholder";
 import Products from "./pages/Products";
+import Purchases from "./pages/Purchases";
+import Placeholder from "./pages/Placeholder";
 import Sales from "./pages/Sales";
 import Settings from "./pages/Settings";
 
@@ -16,21 +17,25 @@ export default function App() {
 
         <Route path="pos" element={<POS />} />
 
-        <Route path="products" element={<Products />} />
+        <Route
+          path="products"
+          element={<Products />}
+        />
 
-        <Route path="inventory" element={<Inventory />} />
+        <Route
+          path="inventory"
+          element={<Inventory />}
+        />
 
         <Route
           path="purchases"
-          element={
-            <Placeholder
-              title="Purchases"
-              description="Supplier purchases and receive-stock workflow"
-            />
-          }
+          element={<Purchases />}
         />
 
-        <Route path="sales" element={<Sales />} />
+        <Route
+          path="sales"
+          element={<Sales />}
+        />
 
         <Route
           path="reports"
@@ -42,7 +47,10 @@ export default function App() {
           }
         />
 
-        <Route path="settings" element={<Settings />} />
+        <Route
+          path="settings"
+          element={<Settings />}
+        />
       </Route>
     </Routes>
   );
