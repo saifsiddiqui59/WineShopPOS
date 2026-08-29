@@ -1,0 +1,121 @@
+COPY/PASTE THIS INTO A NEW CHAT
+
+PROJECT: WineShopPOS / barcode company
+
+You are continuing development of an existing WineShopPOS barcode scanner + POS + inventory application. Do NOT restart architecture planning and do NOT ask the user to repeat existing setup. Treat the following as canonical project context.
+
+USER WORKING STYLE
+- User develops in VS Code on Windows.
+- Project path: E:\\WineShopPOS ; Git Bash path: /e/WineShopPOS
+- Use Git Bash/Linux-style commands, NOT PowerShell.
+- Keep chat responses concise. For large code changes, create one downloadable .sh script instead of pasting hundreds of lines.
+- Each significant change should: update code -> npm run build -> update docs/tests -> git commit/push -> deploy if relevant.
+- User wants beginner-friendly exact steps and minimal unnecessary explanation.
+
+REPOSITORY / HOSTING
+- GitHub: https://github.com/saifsiddiqui59/WineShopPOS.git
+- Branch: main
+- Confirmed final application commit during this project: 4a33fbb - Chapter 15 - Supabase live data roles and cloud-ready POS
+- Azure subscription: Azure subscription 1
+- Resource group: wineshopPOS
+- Storage account: wineshoppos
+- Azure region: Central India
+- Production static URL: https://wineshoppos.z29.web.core.windows.net/
+- Frontend is React/Vite and uses HashRouter for Azure Blob static hosting.
+
+SUPABASE
+- Project name: WineShopPOS
+- Project ID/ref: uiurgplnsgmawvxhjzzp
+- Region: ap-northeast-1
+- Project URL: https://uiurgplnsgmawvxhjzzp.supabase.co
+- Main schema file: supabase_multi_shop_schema.sql
+- Edge Function: supabase/functions/manage-shop-users/index.ts
+- Shop ID: 5c94dbca-9bb5-451e-831a-8cfa42d06013
+- Current Shop Admin Auth UUID: 6304882e-d97f-4628-9933-997c4038194f
+- Current Shop Admin email: mdsaif72496@gmail.com
+- NEVER request or expose service-role/secret key. A service-role key was exposed earlier; it must be rotated if not already. Browser uses only Supabase publishable/anon key from .env.local.
+
+CURRENT ARCHITECTURE
+Barcode scanner (keyboard/HID) -> React/Vite SPA -> Supabase Auth -> Supabase PostgreSQL/RLS/RPCs.
+Shop user creation uses Supabase Edge Function manage-shop-users so service-role stays server-side.
+Azure Blob hosts only the static frontend. Supabase is the live source of truth for business data.
+
+MULTI-SHOP / SUBSCRIPTION MODEL
+- shops table contains access_enabled, subscription_status, subscription_end_date, max_users.
+- Every business table is shop_id scoped.
+- Platform Owner/Developer is separate from shop roles and controls the first Shop ADMIN and subscription kill switch.
+- Shop ADMIN can create MANAGER/CASHIER only, not another ADMIN.
+- MANAGER: products, inventory, purchases, reports, POS, sales.
+- CASHIER: dashboard, POS, intended own sales view.
+- Kill switch: shops.access_enabled=false and subscription_status='SUSPENDED'.
+
+DATABASE TABLES
+shops, platform_admins, profiles, shop_settings, categories, suppliers, products, inventory, purchases, purchase_items, sales, sale_items, payments, stock_movements, stock_adjustments, shop_counters.
+
+CORE RPCs
+- create_new_product(): product + opening inventory + opening stock movement.
+- receive_purchase(): purchase + items + inventory increase + stock movement.
+- adjust_stock(): controlled manual stock adjustment + audit.
+- complete_sale(): validates stock, creates sale/items/payment, reduces inventory, records movements.
+
+FEATURE STATUS
+DONE:
+- React/Vite UI shell
+- Dashboard
+- Product master
+- Barcode POS
+- Cash/UPI/Card + discount/reference
+- Supabase products/inventory/purchases/sales/payments
+- Receive stock with cases + loose bottles
+- Stock adjustments
+- Sales/invoice view
+- Reports
+- Supabase Auth
+- ADMIN/MANAGER/CASHIER role-aware frontend
+- Admin creates Manager/Cashier through secure Edge Function
+- Multi-shop data model
+- Subscription kill switch
+- Azure Blob static deployment
+- Git documentation/test files
+
+NOT DONE / NEXT:
+- OCR invoice stock receiving is NOT implemented. Purchases page only documents a placeholder/roadmap. Recommended: Azure AI Document Intelligence invoice model -> extract lines -> match products -> human review -> receive_purchase(). Never let OCR directly change inventory.
+- Dedicated 80mm receipt printer integration.
+- Returns/refunds.
+- Automated subscription billing.
+- Stronger production RLS hardening.
+
+IMPORTANT SECURITY HARDENING TO DO NEXT
+Current RLS tenant isolation exists, but some SELECT policies are broader than intended role permissions. UI hiding is not enough. Before strict production:
+1. Cashier sales SELECT should be restricted to sales.cashier_id = auth.uid().
+2. sale_items/payments should inherit corresponding sale visibility.
+3. purchases/purchase_items and supplier purchase data should be ADMIN/MANAGER only.
+4. Cashier must not be able to query products.purchase_price directly; create a safe view/RPC or tighten DB design.
+5. Add platform audit log + MFA for privileged users.
+
+TEST DATA
+- Scanner test barcode: 8900000010016
+- Expected demo product: Kingfisher Strong 650ml
+- Seed contains ~50 Indian-market products.
+
+FINAL SMOKE TEST FOR ANY CHANGE
+1. npm run build.
+2. Admin login.
+3. Scan 8900000010016.
+4. Complete sale; stock decreases.
+5. Receive purchase; stock increases.
+6. Add/edit/deactivate product.
+7. Create/login Cashier; restricted menus.
+8. Reports/Sales load.
+9. If Edge Function changed, deploy it.
+10. Git commit/push and Azure deploy when frontend changes.
+
+DOCUMENTATION
+The user has/should place these generated documents into Git:
+- WineShopPOS_Developer_Handbook.docx
+- WineShopPOS_User_Manual.docx
+- Markdown companions
+- docs/ chapters and testing files
+The developer handbook contains full generated scripts/SQL appendices.
+
+When continuing: preserve current working cloud MVP. Prefer small, safe incremental changes with rollback/testing.
