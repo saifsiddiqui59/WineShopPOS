@@ -47,7 +47,7 @@ export default function OwnerAI() {
       const { data, error: shopError } = await supabase.rpc("my_shop_memberships");
       if (!active) return;
       if (shopError) {
-        setError("Unable to load authorized shop context.");
+        setError("Unable to load your shop.");
         setMemberships([]);
       } else {
         const adminShops = (data || []).filter((row) => row.role === "ADMIN");
@@ -82,7 +82,7 @@ export default function OwnerAI() {
     const question = String(text || "").trim();
     if (!question || !selectedShopId || loading) return;
     if (!navigator.onLine) {
-      setError("AI requires an internet connection. POS offline mode is unaffected.");
+      setError("Ask WineShopPOS requires an internet connection.");
       return;
     }
 
@@ -115,7 +115,7 @@ export default function OwnerAI() {
         context: result.context,
       }]);
     } catch (e) {
-      setError(e?.message || "AI insights are temporarily unavailable. POS and business operations are unaffected.");
+      setError(e?.message || "AI insights are temporarily unavailable. Please try again.");
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -149,7 +149,7 @@ export default function OwnerAI() {
               <label className="field-label" htmlFor="ai-scope">Analysis scope</label>
               <select id="ai-scope" value={scope} onChange={(e) => changeScope(e.target.value)} disabled={loading}>
                 <option value="SHOP">{selectedShop?.shop_name || "Selected shop"} only</option>
-                <option value="ALL">All ADMIN shops in this organization</option>
+                <option value="ALL">All my shops</option>
               </select>
             </>
           ) : null}
@@ -192,9 +192,6 @@ export default function OwnerAI() {
                         ))}
                       </div>
                     ) : null}
-                    {turn.role === "assistant" && turn.tools?.length ? (
-                      <div className="ai-grounding-note">Verified with: {[...new Set(turn.tools)].join(", ")}</div>
-                    ) : null}
                   </div>
                 ))}
               </div>
@@ -204,7 +201,7 @@ export default function OwnerAI() {
               <div className="ai-turn ai-assistant ai-thinking">
                 <div className="ai-turn-role">WineShopPOS</div>
                 <div className="ai-thinking-dots"><span/><span/><span/></div>
-                <span>Checking verified business data…</span>
+                <span>Analyzing your business…</span>
               </div>
             ) : null}
           </div>
