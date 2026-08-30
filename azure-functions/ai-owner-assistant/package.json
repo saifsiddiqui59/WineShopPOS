@@ -1,0 +1,21 @@
+{
+  "name": "wineshoppos-ai-owner-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "func start",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check src/index.js && node --check src/security.js && node --check src/agentConfig.js && node --check scripts/configure-agent.mjs"
+  },
+  "dependencies": {
+    "@azure/ai-projects": "^2.0.0",
+    "@azure/functions": "^4.0.0",
+    "@azure/identity": "^4.0.0",
+    "@supabase/supabase-js": "^2.0.0"
+  },
+  "devDependencies": {
+    "bestzip": "^2.2.1"
+  }
+}
