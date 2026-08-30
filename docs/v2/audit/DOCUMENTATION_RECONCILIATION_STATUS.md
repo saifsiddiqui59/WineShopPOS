@@ -1,6 +1,6 @@
 # WineShopPOS Documentation Reconciliation Status
 
-Generated: 2026-08-30T14:31:15-04:00
+Generated: 2026-08-30T14:39:15-04:00
 
 Reconciled:
 - one living Developer Handbook
