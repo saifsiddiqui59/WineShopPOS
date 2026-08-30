@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Bot, ExternalLink, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowUp, Bot, ExternalLink, RefreshCw, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -126,15 +126,13 @@ export default function OwnerAI() {
     <div className="ai-owner-page">
       <PageHeader
         title="Ask WineShopPOS"
-        subtitle="Grounded, read-only business intelligence. Your business engine calculates; AI explains."
+        subtitle="Your business copilot for quick insights, trends, and decisions."
         tier="PRO"
-        actions={<span className="ai-readonly-pill"><ShieldCheck size={15}/> Read only</span>}
       />
 
       <div className="ai-owner-grid">
         <aside className="ai-context-card">
-          <div className="ai-context-title"><Sparkles size={17}/> Trusted business scope</div>
-          <p className="muted">The backend validates every request. The AI model cannot select another tenant or arbitrary shop.</p>
+          <div className="ai-context-title"><Sparkles size={17}/> Business context</div>
 
           <label className="field-label" htmlFor="ai-shop">Shop context</label>
           <select
@@ -156,12 +154,6 @@ export default function OwnerAI() {
             </>
           ) : null}
 
-          <div className="ai-safety-list">
-            <span>✓ ADMIN / Owner Center only</span>
-            <span>✓ Verified Supabase data</span>
-            <span>✓ No stock or financial writes</span>
-            <span>✓ No unrestricted SQL access</span>
-          </div>
         </aside>
 
         <section className="ai-chat-card">
@@ -176,7 +168,7 @@ export default function OwnerAI() {
               <div className="ai-empty-state">
                 <div className="ai-bot-mark"><Bot size={26}/></div>
                 <h3>What do you want to understand?</h3>
-                <p>Ask about verified sales, stock, profit, expenses, supplier prices, reorder needs or operational exceptions.</p>
+                <p>Ask about your shop performance, what needs attention, and what you should do next.</p>
                 <div className="ai-suggestion-grid">
                   {SUGGESTIONS.map((q) => (
                     <button key={q} type="button" className="ai-suggestion" onClick={() => ask(q)} disabled={loading || !selectedShopId}>
@@ -233,7 +225,7 @@ export default function OwnerAI() {
               ref={inputRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Ask about sales, stock, profit, supplier prices…"
+              placeholder="Ask WineShopPOS about your business…"
               rows={2}
               maxLength={2000}
               disabled={loading || !selectedShopId}
@@ -254,7 +246,7 @@ export default function OwnerAI() {
             </button>
           </form>
           <div className="ai-disclaimer">
-            AI can make mistakes in explanations. Business numbers come only from approved WineShopPOS tools.
+            Insights are based on the business data available in WineShopPOS.
           </div>
         </section>
       </div>

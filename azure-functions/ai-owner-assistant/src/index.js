@@ -145,6 +145,26 @@ async function executeTool(caller, trustedContext, toolName, rawArgs) {
   return { result, source: config.source };
 }
 
+async function createAgentResponse(openai, requestBody) {
+  try {
+    return await openai.responses.create(
+      requestBody,
+      { body: { agent: { name: FOUNDRY_AGENT_NAME, type: "agent_reference" } } },
+    );
+  } catch (error) {
+    const status = Number(error?.status || error?.statusCode || 0);
+    const msg = String(error?.message || "");
+    const retryAlternateShape =
+      [400, 404, 422].includes(status) &&
+      /agent|agent_reference|reference|request body|unknown field|invalid/i.test(msg);
+    if (!retryAlternateShape) throw error;
+    return await openai.responses.create(
+      requestBody,
+      { body: { agent_reference: { name: FOUNDRY_AGENT_NAME, type: "agent_reference" } } },
+    );
+  }
+}
+
 async function runFoundry(caller, trustedContext, body) {
   if (!FOUNDRY_PROJECT_ENDPOINT) throw new Error("Foundry project endpoint is not configured.");
 
@@ -157,18 +177,15 @@ async function runFoundry(caller, trustedContext, body) {
   try {
     conversation = await openai.conversations.create();
 
-    let response = await openai.responses.create(
-      {
-        input: [{
-          type: "message",
-          role: "user",
-          content: trustedContextPrompt(trustedContext, body),
-        }],
-        conversation: conversation.id,
-        max_output_tokens: MAX_OUTPUT_TOKENS,
-      },
-      { body: { agent: { name: FOUNDRY_AGENT_NAME, type: "agent_reference" } } },
-    );
+    let response = await createAgentResponse(openai, {
+      input: [{
+        type: "message",
+        role: "user",
+        content: trustedContextPrompt(trustedContext, body),
+      }],
+      conversation: conversation.id,
+      max_output_tokens: MAX_OUTPUT_TOKENS,
+    });
 
     let rounds = 0;
     let totalCalls = 0;
@@ -200,14 +217,11 @@ async function runFoundry(caller, trustedContext, body) {
         });
       }
 
-      response = await openai.responses.create(
-        {
-          input: outputs,
-          conversation: conversation.id,
-          max_output_tokens: MAX_OUTPUT_TOKENS,
-        },
-        { body: { agent: { name: FOUNDRY_AGENT_NAME, type: "agent_reference" } } },
-      );
+      response = await createAgentResponse(openai, {
+        input: outputs,
+        conversation: conversation.id,
+        max_output_tokens: MAX_OUTPUT_TOKENS,
+      });
       rounds += 1;
     }
 
