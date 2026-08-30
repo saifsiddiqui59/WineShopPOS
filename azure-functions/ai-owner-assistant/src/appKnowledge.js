@@ -1,4 +1,23 @@
+const USER_MANUAL_REFERENCE = {
+  title: "WineShopPOS User Manual — Master Reconsolidation",
+  app_route: "/help",
+  public_path: "/manual/WineShopPOS_User_Manual.md",
+  canonical_repo_path: "docs/manual/WineShopPOS_User_Manual_Master_Reconsolidation.md",
+  note: "For complete instructions, open Help & Manual in WineShopPOS."
+};
+
 const TOPICS = [
+  {
+    id: "user_manual",
+    title: "Open the WineShopPOS User Manual",
+    route: "/help",
+    area: "Help & Manual",
+    roles: ["ADMIN","MANAGER","CASHIER"],
+    keywords: ["manual","user manual","help","documentation","guide","instructions"],
+    summary: "Open Help & Manual for the current WineShopPOS V2 user guide.",
+    steps: ["Open Help & Manual from the main navigation.", "Open the full User Manual."],
+    cautions: ["Role and shop authorization still control available actions."]
+  },
   {
     id: "receive_bulk_inventory",
     title: "Receive multiple / bulk inventory lines",
@@ -289,8 +308,9 @@ export function searchAppKnowledge(question) {
 
   return {
     question: cleaned,
-    knowledge_version: "2026-08-30-v2",
+    knowledge_version: "2026-08-30-v3",
     read_only: true,
+    manual_reference: USER_MANUAL_REFERENCE,
     found: selected.length > 0,
     matches: selected.map(({topic,score}) => ({
       id: topic.id,

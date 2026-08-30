@@ -284,6 +284,7 @@ app.http("ai-health", {
     mode: "READ_ONLY",
     foundryConfigured: Boolean(FOUNDRY_PROJECT_ENDPOINT && FOUNDRY_AGENT_NAME),
 appHelpKnowledge: true,
+    userManualReference: true,
   }),
 });
 

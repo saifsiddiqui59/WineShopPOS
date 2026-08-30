@@ -24,7 +24,7 @@ function pageMeta(pathname) {
     customers: "Customer & Credit", offline: "Offline Queue", profit: "Profit Intelligence",
     exceptions: "Loss & Exceptions", recommendations: "Recommendations", share: "WhatsApp Summary",
     compliance: "Liquor Compliance", users: "Users", access: "Access Control", hardware: "Hardware", backup: "Backup & Recovery",
-    settings: "Settings", printer: "Printer",
+    settings: "Settings", printer: "Printer", help: "Help & Manual",
   };
   const crumbs = parts.map((part) => labels[part] || part.replaceAll("-", " "));
   return { title: crumbs.at(-1), crumbs };

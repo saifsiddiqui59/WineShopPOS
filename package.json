@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:user-manual": "node scripts/sync-user-manual.mjs",
+    "prebuild": "npm run sync:user-manual"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

@@ -73,16 +73,11 @@ Critical quality failures include cross-tenant access, wrong business numeric
 results and critical tool regressions.
 
 <!-- NEXT_AI_PUSHES_START -->
-## Next isolated AI pushes
+## Current AI rollout status
 
-The production Owner Assistant is already working.
-
-1. **Functionality knowledge tool** — read-only deterministic help for app
-   navigation/workflows.
-2. **Evaluation observability** — Application Insights + OpenTelemetry GenAI
-   `invoke_agent` spans suitable for Foundry trace-based evaluation.
-
-These are not marked deployed until their individual push scripts succeed.
+1. Functionality knowledge / `get_app_help` — deployed and live.
+2. Help & User Manual reference — exposed in-app at `/help`.
+3. Application Insights / Foundry evaluation tracing — pending until Push 3 succeeds.
 <!-- NEXT_AI_PUSHES_END -->
 
 <!-- APP_HELP_KNOWLEDGE_START -->
