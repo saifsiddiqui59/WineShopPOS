@@ -20,7 +20,19 @@ export default function Procurement() {
   const [message, setMessage] = useState("");
   const [supplierEditor, setSupplierEditor] = useState({ open: false, supplier: null });
   const [payment, setPayment] = useState({ supplierId: "", amount: "", method: "BANK_TRANSFER", reference: "" });
-  const [receive, setReceive] = useState({ poId: "", invoice: "", date: new Date().toISOString().slice(0, 10) });
+  const [receive, setReceive] = useState({
+    poId: "",
+    invoice: "",
+    date: new Date().toISOString().slice(0, 10),
+    freightAmount: 0,
+    transportAmount: 0,
+    handlingAmount: 0,
+    loadingUnloadingAmount: 0,
+    supplierDiscountAmount: 0,
+    invoiceDiscountAmount: 0,
+    miscellaneousAmount: 0,
+    roundingAdjustment: 0,
+  });
   const [ret, setRet] = useState({ supplierId: "", productId: "", qty: 1, reason: "Damaged/incorrect supply" });
 
   async function load() {
@@ -43,6 +55,16 @@ export default function Procurement() {
   }
 
   const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.purchasePrice || 0), 0), [items]);
+  const receiveAdjustment = useMemo(() =>
+    Number(receive.freightAmount || 0)
+    + Number(receive.transportAmount || 0)
+    + Number(receive.handlingAmount || 0)
+    + Number(receive.loadingUnloadingAmount || 0)
+    + Number(receive.miscellaneousAmount || 0)
+    - Number(receive.supplierDiscountAmount || 0)
+    - Number(receive.invoiceDiscountAmount || 0)
+    + Number(receive.roundingAdjustment || 0),
+  [receive]);
   const selectedSupplier = suppliers.find((supplier) => supplier.id === supplierId) || null;
 
   async function supplierSaved(saved) {
@@ -75,20 +97,64 @@ export default function Procurement() {
   async function receivePO(event) {
     event.preventDefault();
     if (!receive.poId) return;
-    const { error } = await supabase.rpc("receive_purchase_order", {
+
+    const v2Args = {
       p_po_id: receive.poId,
       p_invoice_number: receive.invoice,
       p_invoice_date: receive.date,
       p_receive_items: null,
       p_notes: "Received from consolidated Procurement",
-    });
-    setMessage(error ? "Unable to receive this purchase order. Check status, invoice number and quantities." : "Goods received; inventory and supplier balance updated transactionally.");
+      p_freight_amount: Number(receive.freightAmount || 0),
+      p_transport_amount: Number(receive.transportAmount || 0),
+      p_handling_amount: Number(receive.handlingAmount || 0),
+      p_loading_unloading_amount: Number(receive.loadingUnloadingAmount || 0),
+      p_supplier_discount_amount: Number(receive.supplierDiscountAmount || 0),
+      p_invoice_discount_amount: Number(receive.invoiceDiscountAmount || 0),
+      p_miscellaneous_amount: Number(receive.miscellaneousAmount || 0),
+      p_rounding_adjustment: Number(receive.roundingAdjustment || 0),
+    };
+
+    let { error } = await supabase.rpc("receive_purchase_order_v2", v2Args);
+    const missingV2 = error && (
+      error.code === "PGRST202" ||
+      error.code === "42883" ||
+      /receive_purchase_order_v2|could not find the function|does not exist/i.test(error.message || "")
+    );
+
+    if (missingV2) {
+      const hasLandedAdjustments = [
+        "freightAmount","transportAmount","handlingAmount","loadingUnloadingAmount",
+        "supplierDiscountAmount","invoiceDiscountAmount","miscellaneousAmount","roundingAdjustment",
+      ].some((key) => Number(receive[key] || 0) !== 0);
+
+      if (hasLandedAdjustments) {
+        setMessage("V2 landed-cost database migration is not active yet. No PO receipt was posted.");
+        return;
+      }
+
+      const legacy = await supabase.rpc("receive_purchase_order", {
+        p_po_id: receive.poId,
+        p_invoice_number: receive.invoice,
+        p_invoice_date: receive.date,
+        p_receive_items: null,
+        p_notes: "Received from consolidated Procurement",
+      });
+      error = legacy.error;
+    }
+
+    setMessage(error
+      ? "Unable to receive this purchase order. Check status, invoice number and quantities."
+      : "Goods received transactionally; landed cost and receipt lots were finalized.");
     if (!error) {
-      setReceive({ ...receive, poId: "", invoice: "" });
+      setReceive({
+        poId: "", invoice: "", date: new Date().toISOString().slice(0, 10),
+        freightAmount: 0, transportAmount: 0, handlingAmount: 0,
+        loadingUnloadingAmount: 0, supplierDiscountAmount: 0,
+        invoiceDiscountAmount: 0, miscellaneousAmount: 0, roundingAdjustment: 0,
+      });
       await Promise.all([load(), refreshAll()]);
     }
   }
-
   async function pay(event) {
     event.preventDefault();
     const { error } = await supabase.rpc("record_supplier_payment", {
@@ -160,8 +226,16 @@ export default function Procurement() {
           <label>Purchase Order<select value={receive.poId} onChange={(e) => setReceive({ ...receive, poId: e.target.value })} required><option value="">Select ready PO</option>{orders.filter((o) => ["APPROVED", "SENT", "PARTIALLY_RECEIVED"].includes(o.status)).map((o) => <option key={o.id} value={o.id}>{o.po_number} · {o.status}</option>)}</select></label>
           <label>Supplier Invoice<input required value={receive.invoice} onChange={(e) => setReceive({ ...receive, invoice: e.target.value })} /></label>
           <label>Invoice Date<input type="date" required value={receive.date} onChange={(e) => setReceive({ ...receive, date: e.target.value })} /></label>
+          <label>Freight<input type="number" min="0" step="0.01" value={receive.freightAmount} onChange={(e) => setReceive({ ...receive, freightAmount: e.target.value })} /></label>
+          <label>Transport<input type="number" min="0" step="0.01" value={receive.transportAmount} onChange={(e) => setReceive({ ...receive, transportAmount: e.target.value })} /></label>
+          <label>Handling<input type="number" min="0" step="0.01" value={receive.handlingAmount} onChange={(e) => setReceive({ ...receive, handlingAmount: e.target.value })} /></label>
+          <label>Loading / Unloading<input type="number" min="0" step="0.01" value={receive.loadingUnloadingAmount} onChange={(e) => setReceive({ ...receive, loadingUnloadingAmount: e.target.value })} /></label>
+          <label>Supplier Discount<input type="number" min="0" step="0.01" value={receive.supplierDiscountAmount} onChange={(e) => setReceive({ ...receive, supplierDiscountAmount: e.target.value })} /></label>
+          <label>Invoice Discount<input type="number" min="0" step="0.01" value={receive.invoiceDiscountAmount} onChange={(e) => setReceive({ ...receive, invoiceDiscountAmount: e.target.value })} /></label>
+          <label>Miscellaneous<input type="number" min="0" step="0.01" value={receive.miscellaneousAmount} onChange={(e) => setReceive({ ...receive, miscellaneousAmount: e.target.value })} /></label>
+          <label>Rounding Adjustment<input type="number" step="0.01" value={receive.roundingAdjustment} onChange={(e) => setReceive({ ...receive, roundingAdjustment: e.target.value })} /></label>
         </div>
-        <p className="muted-text">Inventory changes only inside the controlled receive RPC.</p>
+        <p className="muted-text">Inventory changes remain inside the controlled PO receive RPC. Net landed-cost adjustment: <strong>{money.format(receiveAdjustment)}</strong></p>
         <button className="primary-button">Receive Goods</button>
       </form>
     </div>

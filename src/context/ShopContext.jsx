@@ -168,7 +168,52 @@ export function ShopProvider({ children }) {
   }
 
   async function ensureSupplier(name){const n=String(name||"").trim();if(!n)throw new Error("Supplier name is required.");const existing=suppliers.find((s)=>s.supplier_name.toLowerCase()===n.toLowerCase());if(existing)return existing.id;const{data,error}=await supabase.from("suppliers").insert({shop_id:profile.shop_id,supplier_name:n,active:true}).select("id,supplier_name,active").single();if(error)throw error;setSuppliers((s)=>[...s,data]);return data.id;}
-  async function receiveStock({supplierName,invoiceNumber,invoiceDate,items,notes=""}){try{if(!items?.length)return{ok:false,message:"Add at least one product."};const supplierId=await ensureSupplier(supplierName);const payload=items.map((i)=>({product_id:i.productId,case_count:Number(i.caseCount||0),units_per_case:Number(i.unitsPerCase||1),loose_bottles:Number(i.looseBottles||0),quantity:Number(i.quantity),purchase_price:Number(i.purchasePrice)}));const{data,error}=await supabase.rpc("receive_purchase",{p_supplier_id:supplierId,p_invoice_number:String(invoiceNumber||"").trim(),p_invoice_date:invoiceDate||new Date().toISOString().slice(0,10),p_items:payload,p_notes:notes||null});if(error)throw error;await refreshAll();return{ok:true,purchaseId:data,message:"Stock received successfully."}}catch(e){return{ok:false,message:e.message||String(e)}}}
+  async function receiveStock({supplierName,invoiceNumber,invoiceDate,items,notes="",charges={}}){
+    try{
+      if(!items?.length)return{ok:false,message:"Add at least one resolved product."};
+      const ids=items.map((i)=>i.productId).filter(Boolean);
+      if(ids.length!==items.length)return{ok:false,message:"Every purchase line must be linked to a product."};
+      if(new Set(ids).size!==ids.length)return{ok:false,message:"Combine duplicate product lines before receiving stock."};
+      const supplierId=await ensureSupplier(supplierName);
+      const payload=items.map((i)=>({
+        product_id:i.productId,
+        case_count:Number(i.caseCount||0),
+        units_per_case:Number(i.unitsPerCase||1),
+        loose_bottles:Number(i.looseBottles||0),
+        quantity:Number(i.quantity),
+        purchase_price:Number(i.purchasePrice),
+        batch_number:String(i.batchNumber||"").trim()||null,
+        expiry_date:String(i.expiryDate||"").trim()||null
+      }));
+      for(const i of payload){
+        const finalQty=i.case_count*i.units_per_case+i.loose_bottles;
+        if(!Number.isInteger(i.quantity)||i.quantity<=0||finalQty!==i.quantity)
+          return{ok:false,message:"Final bottle quantity must equal Cases × Bottles/Case + Loose Bottles."};
+      }
+      const{data,error}=await supabase.rpc("receive_purchase_v2",{
+        p_supplier_id:supplierId,
+        p_invoice_number:String(invoiceNumber||"").trim(),
+        p_invoice_date:invoiceDate||new Date().toISOString().slice(0,10),
+        p_items:payload,p_notes:notes||null,
+        p_freight_amount:Number(charges.freightAmount||0),
+        p_transport_amount:Number(charges.transportAmount||0),
+        p_handling_amount:Number(charges.handlingAmount||0),
+        p_loading_unloading_amount:Number(charges.loadingUnloadingAmount||0),
+        p_supplier_discount_amount:Number(charges.supplierDiscountAmount||0),
+        p_invoice_discount_amount:Number(charges.invoiceDiscountAmount||0),
+        p_miscellaneous_amount:Number(charges.miscellaneousAmount||0),
+        p_rounding_adjustment:Number(charges.roundingAdjustment||0)
+      });
+      if(error){
+        const missing=error.code==="PGRST202"||error.code==="42883"||
+          /receive_purchase_v2|could not find the function|does not exist/i.test(error.message||"");
+        if(missing)return{ok:false,message:"V2 inventory-cost database migration is not active yet. No inventory was posted."};
+        throw error;
+      }
+      await refreshAll();
+      return{ok:true,purchaseId:data,message:"Stock received with landed cost and receipt-lot traceability."};
+    }catch(e){return{ok:false,message:e.message||String(e)}}
+  }
   async function adjustStock({productId,adjustmentType,quantityChange,reason,notes=""}){try{const{data,error}=await supabase.rpc("adjust_stock",{p_product_id:productId,p_adjustment_type:adjustmentType,p_quantity_change:Number(quantityChange),p_reason:String(reason||"").trim(),p_notes:notes||null});if(error)throw error;await refreshAll();return{ok:true,quantity:data,message:"Stock adjusted."}}catch(e){return{ok:false,message:e.message||String(e)}}}
   function createBackup(){return{meta:{app:"WineShopPOS",mode:"SUPABASE_CLOUD",exportedAt:new Date().toISOString()},data:{products,inventory,sales,purchases}}}
   const lowStockProducts=useMemo(()=>products.filter((p)=>p.active&&getStock(p.id)<=p.minimumStock),[products,inventory]);

@@ -153,6 +153,7 @@ Deno.serve(async (req) => {
       return {
         description: String(fieldContent(item.Description) || fieldContent(item.ProductCode) || ""),
         quantity: numberValue(item.Quantity) ?? 1,
+        unitText: String(fieldContent(item.Unit) || fieldContent(item.Units) || ""),
         unitPrice: numberValue(item.UnitPrice),
         amount: numberValue(item.Amount),
         confidence: row.confidence ?? item.Description?.confidence ?? null,

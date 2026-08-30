@@ -18,6 +18,7 @@ import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
 import BarcodeLabels from "./pages/BarcodeLabels";
 import Purchases from "./pages/Purchases";
+import AutomationHub from "./pages/AutomationHub";
 import Procurement from "./pages/Procurement";
 import Suppliers from "./pages/Suppliers";
 import PurchaseIntelligence from "./pages/PurchaseIntelligence";
@@ -25,6 +26,7 @@ import Inventory from "./pages/Inventory";
 import StockCount from "./pages/StockCount";
 import Transfers from "./pages/Transfers";
 import InventoryIntelligence from "./pages/InventoryIntelligence";
+import InventoryAgeing from "./pages/InventoryAgeing";
 import Expenses from "./pages/Expenses";
 import Approvals from "./pages/Approvals";
 import CustomerCredit from "./pages/CustomerCredit";
@@ -81,6 +83,7 @@ export default function App() {
           <Route path="purchasing" element={module("Purchases & Suppliers", "Receive goods, control procurement and understand supplier/purchase cost changes.", MODULE_TABS.purchasing)}>
             <Route index element={<Navigate to="receive" replace/>}/>
             <Route path="receive" element={<Purchases/>}/>
+            <Route path="ocr" element={<AutomationHub/>}/>
             <Route path="suppliers" element={<Suppliers/>}/>
             <Route path="procurement" element={<Procurement/>}/>
             <Route path="intelligence" element={<PurchaseIntelligence/>}/>
@@ -91,6 +94,7 @@ export default function App() {
             <Route path="count" element={<StockCount/>}/>
             <Route path="transfers" element={<Transfers/>}/>
             <Route path="intelligence" element={<InventoryIntelligence/>}/>
+            <Route path="ageing" element={<InventoryAgeing/>}/>
           </Route>
         </Route>
 
@@ -150,7 +154,7 @@ export default function App() {
         <Route path="price-history" element={<Navigate to="/purchasing/intelligence" replace/>}/>
         <Route path="reorder" element={<Navigate to="/inventory/intelligence" replace/>}/>
         <Route path="transfers" element={<Navigate to="/inventory/transfers" replace/>}/>
-        <Route path="automation" element={<Navigate to="/purchasing/intelligence" replace/>}/>
+        <Route path="automation" element={<Navigate to="/purchasing/ocr" replace/>}/>
         <Route path="users" element={<Navigate to="/admin/users" replace/>}/>
         <Route path="audit" element={<Navigate to="/admin/audit" replace/>}/>
         <Route path="printer-settings" element={<Navigate to="/admin/hardware/printer" replace/>}/>

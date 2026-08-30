@@ -755,3 +755,25 @@ The Help/About panel intentionally omits infrastructure architecture details. It
 ## Supplier Master + OCR Supplier Confirmation Patch (2026-08-30)
 
 Purchases & Suppliers now includes a dedicated Supplier Master plus inline supplier create/edit actions in Purchase Order creation. Supplier CRUD reuses the existing suppliers table and existing ADMIN/MANAGER RLS. OCR performs a supplier-review step before continuing: existing suppliers are suggested from normalized name similarity, or the operator can review and create a supplier prefilled with Azure VendorName, VendorAddress and VendorTaxId. OCR never silently creates a supplier and never changes stock.
+
+---
+
+## V2 Phase 1 — Landed Cost, Receipt Lots & OCR Resolution
+
+Phase 1 source now covers deterministic invoice landed-cost allocation,
+receipt-level lots, receipt-based stock ageing and FIFO analytical rotation.
+
+Manual/OCR receiving and approved-PO receiving reuse the existing controlled
+purchase RPCs through V2 wrapper functions. Existing POS sale stock deduction
+and sale cost snapshot behavior are intentionally unchanged.
+
+OCR requires:
+- confirmed supplier
+- a resolved Product Master product for every line
+- human confirmation for uncertain product matches
+- Select Existing Product / Create New Product for unmatched lines
+- alias persistence for confirmed description-to-product mappings
+- explicit cases, bottles-per-case, loose bottles and final bottle quantity
+  before the draft can move to Receive Stock
+
+See `docs/chapters/V2-03-inventory-cost-lots-ageing-fifo.md`.

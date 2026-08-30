@@ -1,13 +1,12 @@
-# Chapter V2-03 — Inventory Cost, Lots, Ageing & FIFO
+# Chapter V2-03 — Inventory Cost, Receipt Lots, Ageing & FIFO
 
-V2 scope:
+Source implementation is present for deterministic landed cost, receipt lots,
+true receipt ageing and FIFO analytical rotation. The production database
+migration must still be applied and verified.
 
-- deterministic landed cost
-- receipt lot/batch tracking
-- true stock ageing
-- FIFO/rotation foundation
-- optional FEFO visibility where real expiry data exists
+Existing POS sale stock deduction and sale-time cost snapshot behavior remain unchanged.
+Landed cost is stored historically on purchase lines/receipt lots and can be consumed by
+margin intelligence without silently changing existing sales accounting.
 
-These features should share one coherent inventory-cost design.
-
-Business/database logic calculates deterministic values. AI explains them.
+Legacy/opening/transfer stock without receipt provenance is explicitly shown as
+UNTRACKED rather than receiving a fabricated age.

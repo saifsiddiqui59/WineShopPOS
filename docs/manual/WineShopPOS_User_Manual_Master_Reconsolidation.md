@@ -558,3 +558,24 @@ Your normal POS, billing, inventory, purchasing and operational workflows contin
 
 Ask WineShopPOS can combine current sales, profit, expenses, shift information and operational exceptions into one business summary.
 <!-- WSP_AI_VERIFIED_V1_END -->
+
+---
+
+## V2 Phase 1 — OCR Product Resolution & Landed Cost
+
+For purchase invoice OCR:
+
+1. Analyze the invoice.
+2. Confirm an existing supplier or create the reviewed supplier.
+3. Every OCR line must resolve to a Product Master product.
+4. Strong product matches are auto-selected but the line is still shown for
+   confirmation.
+5. Uncertain matches require human selection/confirmation.
+6. Unmatched lines provide **Select Existing Product** and **Create New Product**.
+7. Confirmed description-to-product mappings are saved as aliases for future invoices.
+8. Review **Cases**, **Bottles / Case**, **Loose Bottles** and **Final Bottles**.
+9. Only confirmed lines can be sent to Receive Stock.
+10. Receive Stock shows landed-cost adjustments before inventory is posted.
+
+Receipt-based ageing and FIFO views are available under Inventory after the
+Phase-1 database migration is active.
