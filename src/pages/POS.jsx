@@ -19,15 +19,25 @@ export default function POS(){
   const[message,setMessage]=useState("Scanner ready");
   const[unknown,setUnknown]=useState("");
   const[busy,setBusy]=useState(false);
+
   const[customers,setCustomers]=useState([]);
   const[customerId,setCustomerId]=useState("");
+  const[customerSummary,setCustomerSummary]=useState(null);
+
   const[reasons,setReasons]=useState([]);
   const[reasonCodeId,setReasonCodeId]=useState("");
   const[reasonNote,setReasonNote]=useState("");
   const[approvalRequestId,setApprovalRequestId]=useState("");
   const[approvalStatus,setApprovalStatus]=useState("");
 
+  const[couponCode,setCouponCode]=useState("");
+  const[loyaltyPoints,setLoyaltyPoints]=useState(0);
+  const[storeCreditAmount,setStoreCreditAmount]=useState(0);
+  const[giftVoucherCode,setGiftVoucherCode]=useState("");
+  const[quote,setQuote]=useState(null);
+
   const active=products.filter((p)=>p.active);
+
   const results=useMemo(()=>{
     const q=search.trim().toLowerCase();
     if(!q)return[];
@@ -37,7 +47,7 @@ export default function POS(){
   useEffect(()=>{
     if(!navigator.onLine)return;
     Promise.all([
-      supabase.from("customers").select("id,full_name,mobile").eq("active",true).order("full_name").limit(200),
+      supabase.from("customers").select("id,full_name,mobile").eq("active",true).order("full_name").limit(300),
       supabase.from("reason_codes").select("id,category,code,label,requires_note").in("category",["DISCOUNT_OVERRIDE","PRICE_OVERRIDE"]).eq("active",true).order("sort_order")
     ]).then(([c,r])=>{
       setCustomers(c.data||[]);
@@ -46,7 +56,20 @@ export default function POS(){
   },[]);
 
   function clearApproval(){setApprovalRequestId("");setApprovalStatus("")}
+  function clearQuote(){setQuote(null)}
+  function pricingChanged(){clearApproval();clearQuote()}
   function qty(id){return cart.find((i)=>i.product.id===id)?.quantity||0}
+
+  async function loadCustomerSummary(id){
+    setCustomerId(id);
+    clearQuote();
+    setLoyaltyPoints(0);
+    setStoreCreditAmount(0);
+    if(!id){setCustomerSummary(null);return}
+    const{data,error}=await supabase.rpc("customer_commercial_summary",{p_customer_id:id});
+    if(error){setCustomerSummary(null);setMessage("Unable to load loyalty/store-credit balance.");return}
+    setCustomerSummary(data);
+  }
 
   function add(p){
     const stock=getStock(p.id);
@@ -61,7 +84,7 @@ export default function POS(){
         ? rows.map((i)=>i.product.id===p.id?{...i,quantity:i.quantity+1}:i)
         : [...rows,{product:p,quantity:1,unitPrice:Number(p.price)}];
     });
-    clearApproval();
+    pricingChanged();
     setUnknown("");
     setMessage(`${p.name} added.`);
     successBeep();
@@ -85,20 +108,20 @@ export default function POS(){
     const item=cart.find((x)=>x.product.id===id);
     if(!item)return;
     const next=item.quantity+d;
-    if(next<=0){clearApproval();return setCart((rows)=>rows.filter((x)=>x.product.id!==id))}
+    if(next<=0){pricingChanged();return setCart((rows)=>rows.filter((x)=>x.product.id!==id))}
     if(next>getStock(id)){errorBeep();setMessage(`Only ${getStock(id)} unit(s) available.`);return}
-    clearApproval();
+    pricingChanged();
     setCart((rows)=>rows.map((x)=>x.product.id===id?{...x,quantity:next}:x));
   }
 
   function setUnitPrice(id,value){
-    clearApproval();
+    pricingChanged();
     setCart((rows)=>rows.map((x)=>x.product.id===id?{...x,unitPrice:Math.max(0,Number(value||0))}:x));
   }
 
   const subtotal=cart.reduce((sum,item)=>sum+Number(item.unitPrice??item.product.price)*item.quantity,0);
   const disc=Math.max(0,Number(discount||0));
-  const total=Math.max(0,subtotal-disc);
+  const manualTotal=Math.max(0,subtotal-disc);
   const hasPriceOverride=cart.some((item)=>Math.abs(Number(item.unitPrice??item.product.price)-Number(item.product.price))>0.001);
   const needsReason=disc>0||hasPriceOverride;
 
@@ -134,9 +157,7 @@ export default function POS(){
     if(error){
       if(/within cashier policy/i.test(error.message||"")){
         setMessage("This pricing is within cashier policy. Complete the sale normally.");
-      }else{
-        setMessage(error.message||"Unable to request approval.");
-      }
+      }else setMessage(error.message||"Unable to request approval.");
       return;
     }
 
@@ -153,8 +174,26 @@ export default function POS(){
     setMessage(`Override approval status: ${data.status}.`);
   }
 
+  async function previewBenefits(){
+    if(!cart.length){setMessage("Add products before calculating rewards.");return}
+    setBusy(true);
+    const{data,error}=await supabase.rpc("commercial_quote",{
+      p_customer_id:customerId||null,
+      p_coupon_code:couponCode.trim()||null,
+      p_subtotal:subtotal,
+      p_manual_discount:disc,
+      p_requested_points:Number(loyaltyPoints||0),
+      p_store_credit_amount:Number(storeCreditAmount||0),
+      p_gift_voucher_code:giftVoucherCode.trim()||null
+    });
+    setBusy(false);
+    if(error){setQuote(null);setMessage(error.message||"Unable to calculate commercial benefits.");return}
+    setQuote(data);
+    setMessage("Rewards and tender preview calculated. Final values are revalidated by the database at checkout.");
+  }
+
   async function checkout(){
-    if(needsReason&&!reasonCodeId){setMessage("Select a standardized reason for this override.");return}
+    if(needsReason&&!reasonCodeId){setMessage("Select a standardized reason for this manual override.");return}
     const selected=reasons.find((r)=>r.id===reasonCodeId);
     if(needsReason&&selected?.requires_note&&!reasonNote.trim()){setMessage("This reason requires a note.");return}
 
@@ -164,31 +203,27 @@ export default function POS(){
       paymentReference,
       reasonCodeId:reasonCodeId||null,
       reasonNote,
-      overrideRequestId:approvalRequestId||null
+      overrideRequestId:approvalRequestId||null,
+      customerId:customerId||null,
+      couponCode,
+      loyaltyPoints:Number(loyaltyPoints||0),
+      storeCreditAmount:Number(storeCreditAmount||0),
+      giftVoucherCode
     });
 
     if(!r.ok){
       setBusy(false);
       if(/OVERRIDE_APPROVAL_REQUIRED/i.test(r.message||"")){
-        setMessage("This cashier discount/price change requires manager approval. Click Request Approval.");
+        setMessage("This cashier discount/price change requires manager approval.");
         return;
       }
       if(/OVERRIDE_NOT_APPROVED/i.test(r.message||"")){
-        setApprovalStatus("PENDING");
-        setMessage("Approval is still pending.");
-        return;
+        setApprovalStatus("PENDING");setMessage("Approval is still pending.");return;
       }
       if(/OVERRIDE_REQUEST_CHANGED/i.test(r.message||"")){
-        clearApproval();
-        setMessage("Cart pricing changed after approval. Request a new approval.");
-        return;
+        clearApproval();setMessage("Cart pricing changed after approval. Request a new approval.");return;
       }
       errorBeep();setMessage(r.message);return;
-    }
-
-    if(!r.offline&&customerId){
-      const{error}=await supabase.rpc("link_sale_customer",{p_sale_id:r.sale.id,p_customer_id:customerId});
-      if(error)setMessage("Sale completed, but customer could not be attached. The sale itself is safe.");
     }
 
     setBusy(false);
@@ -197,17 +232,25 @@ export default function POS(){
     setDiscount(0);
     setPaymentReference("");
     setCustomerId("");
+    setCustomerSummary(null);
     setReasonCodeId("");
     setReasonNote("");
     clearApproval();
+    setCouponCode("");
+    setLoyaltyPoints(0);
+    setStoreCreditAmount(0);
+    setGiftVoucherCode("");
+    setQuote(null);
 
     if(r.offline){setMessage(r.message);return}
     navigate(`/sales/${r.sale.id}`);
   }
 
+  const finalDue=quote?Number(quote.external_payment_due||0):manualTotal;
+
   return <div>
     <div className="page-heading">
-      <div><h2>Fast POS Billing</h2><p>Scan → Cart → Pay → Print with controlled overrides.</p></div>
+      <div><h2>Fast POS Billing</h2><p>Scan → Cart → Rewards → Pay → Print with controlled overrides.</p></div>
       <button className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button>
     </div>
 
@@ -222,6 +265,25 @@ export default function POS(){
           <label>Manual Search<input style={{width:"100%"}} value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Name, barcode, SKU, brand..."/></label>
           {results.map((p)=><button key={p.id} className="search-result" onClick={()=>add(p)}><span>{p.name}</span><span>{money.format(p.price)} · Stock {getStock(p.id)}</span></button>)}
           <div className="purchase-message" style={{marginTop:10}}>{message}</div>
+        </div>
+
+        <div className="panel" style={{marginTop:14}}>
+          <h3>Customer Rewards</h3>
+          <label>Customer
+            <select value={customerId} onChange={(e)=>loadCustomerSummary(e.target.value)} disabled={!navigator.onLine}>
+              <option value="">Walk-in customer</option>
+              {customers.map((c)=><option key={c.id} value={c.id}>{c.full_name}{c.mobile?` · ${c.mobile}`:""}</option>)}
+            </select>
+          </label>
+          {customerSummary?<div className="metric-grid two" style={{marginTop:10}}>
+            <div className="metric-card"><span>Loyalty Points</span><strong>{customerSummary.loyalty_points}</strong></div>
+            <div className="metric-card"><span>Store Credit</span><strong>{money.format(customerSummary.store_credit||0)}</strong></div>
+          </div>:null}
+          <label>Coupon / Promo Code<input value={couponCode} onChange={(e)=>{setCouponCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
+          <label>Loyalty Points to Redeem<input type="number" min="0" value={loyaltyPoints} onChange={(e)=>{setLoyaltyPoints(e.target.value);clearQuote()}} disabled={!customerId}/></label>
+          <label>Store Credit to Use<input type="number" min="0" step="0.01" value={storeCreditAmount} onChange={(e)=>{setStoreCreditAmount(e.target.value);clearQuote()}} disabled={!customerId}/></label>
+          <label>Gift Voucher Code<input value={giftVoucherCode} onChange={(e)=>{setGiftVoucherCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
+          <button type="button" className="secondary-button" onClick={previewBenefits} disabled={!cart.length||busy||!navigator.onLine}>Preview Benefits</button>
         </div>
       </div>
 
@@ -244,18 +306,11 @@ export default function POS(){
         </div>
 
         <hr/>
-        <label>Customer (optional)
-          <select value={customerId} onChange={(e)=>setCustomerId(e.target.value)} disabled={!navigator.onLine}>
-            <option value="">Walk-in customer</option>
-            {customers.map((c)=><option key={c.id} value={c.id}>{c.full_name}{c.mobile?` · ${c.mobile}`:""}</option>)}
-          </select>
-        </label>
-
         <p>Subtotal <strong>{money.format(subtotal)}</strong></p>
-        <label>Discount (₹)<input type="number" min="0" max={subtotal} value={discount} onChange={(e)=>{setDiscount(e.target.value);clearApproval()}}/></label>
+        <label>Manual Discount (₹)<input type="number" min="0" max={subtotal} value={discount} onChange={(e)=>{setDiscount(e.target.value);pricingChanged()}}/></label>
 
         {needsReason?<div className="panel" style={{marginTop:12}}>
-          <strong>Override Reason</strong>
+          <strong>Manual Override Reason</strong>
           <label>Standardized Reason
             <select value={reasonCodeId} onChange={(e)=>{setReasonCodeId(e.target.value);clearApproval()}}>
               <option value="">Select reason</option>
@@ -270,15 +325,22 @@ export default function POS(){
           <button type="button" className="secondary-button" onClick={refreshApproval} style={{marginLeft:8}}>Refresh Status</button>
         </div>:null}
 
-        <h2>Total {money.format(total)}</h2>
+        {quote?<div className="panel" style={{marginTop:12}}>
+          <h3>Benefit Preview</h3>
+          <p>Promotion: <strong>{quote.promotion_name||"None"}</strong> · {money.format(quote.promotion_discount||0)}</p>
+          <p>Loyalty: <strong>{quote.loyalty_points_used||0} points</strong> · {money.format(quote.loyalty_discount||0)}</p>
+          <p>Store Credit: <strong>{money.format(quote.store_credit_used||0)}</strong></p>
+          <p>Gift Voucher: <strong>{money.format(quote.gift_voucher_used||0)}</strong></p>
+        </div>:null}
+
+        <h2>External Payment Due {money.format(finalDue)}</h2>
+
         <div className="payment-methods">{["CASH","UPI","CARD"].map((m)=><button type="button" key={m} className={paymentMethod===m?"payment-button active":"payment-button"} onClick={()=>setPaymentMethod(m)}>{m}</button>)}</div>
         {paymentMethod!=="CASH"&&<label>Payment Reference<input value={paymentReference} onChange={(e)=>setPaymentReference(e.target.value)}/></label>}
         <br/>
 
         {needsReason&&!approvalRequestId?<button type="button" className="secondary-button" disabled={!cart.length||busy||!navigator.onLine} onClick={requestApproval} style={{marginRight:8}}>{busy?"Working...":"Request Approval (if required)"}</button>:null}
         <button className="primary-button" disabled={!cart.length||busy} onClick={checkout}>{busy?"Processing...":navigator.onLine?"Complete Sale":"Save Offline Sale"}</button>
-
-        <p className="muted-text">Cashier thresholds are enforced by the database. Offline discounts/price overrides are blocked until online authorization is available.</p>
       </div>
     </div>
   </div>

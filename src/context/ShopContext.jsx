@@ -138,7 +138,18 @@ export function ShopProvider({ children }) {
   async function setProductStatus(id,active){try{const {error}=await supabase.rpc("set_product_active",{p_product_id:id,p_active:active});if(error)throw error;await refreshAll();return{ok:true,message:active?"Product activated.":"Product deactivated."}}catch(e){return{ok:false,message:e.message||String(e)}}}
   const deactivateProduct=(id)=>setProductStatus(id,false); const activateProduct=(id)=>setProductStatus(id,true);
 
-  async function completeSale(cart,paymentMethod,{discount=0,paymentReference="",reasonCodeId=null,reasonNote="",overrideRequestId=null}={}) {
+  async function completeSale(cart,paymentMethod,{
+    discount=0,
+    paymentReference="",
+    reasonCodeId=null,
+    reasonNote="",
+    overrideRequestId=null,
+    customerId=null,
+    couponCode="",
+    loyaltyPoints=0,
+    storeCreditAmount=0,
+    giftVoucherCode=""
+  }={}) {
     const clientSaleId=crypto.randomUUID();
     const items=cart.map((i)=>({
       product_id:i.product.id,
@@ -146,10 +157,15 @@ export function ShopProvider({ children }) {
       unit_price:Number(i.unitPrice ?? i.product.price)
     }));
     const hasPriceOverride=cart.some((i)=>Math.abs(Number(i.unitPrice ?? i.product.price)-Number(i.product.price))>0.001);
+    const hasCommercial=
+      String(couponCode||"").trim()||
+      Number(loyaltyPoints||0)>0||
+      Number(storeCreditAmount||0)>0||
+      String(giftVoucherCode||"").trim();
 
     if(!navigator.onLine){
-      if(Number(discount||0)>0||hasPriceOverride){
-        return{ok:false,message:"Discounts and price overrides require an online authorization check."};
+      if(Number(discount||0)>0||hasPriceOverride||hasCommercial){
+        return{ok:false,message:"Discounts, price overrides, loyalty, coupons and vouchers require an online authorization check."};
       }
       const payload={
         clientSaleId,
@@ -188,7 +204,7 @@ export function ShopProvider({ children }) {
     }
 
     try{
-      const{data,error}=await supabase.rpc("complete_sale_v3",{
+      const{data,error}=await supabase.rpc("complete_sale_v4",{
         p_items:items,
         p_payment_method:paymentMethod,
         p_discount:Number(discount||0),
@@ -197,7 +213,12 @@ export function ShopProvider({ children }) {
         p_offline_created_at:null,
         p_reason_code_id:reasonCodeId||null,
         p_reason_note:String(reasonNote||"").trim()||null,
-        p_override_request_id:overrideRequestId||null
+        p_override_request_id:overrideRequestId||null,
+        p_customer_id:customerId||null,
+        p_coupon_code:String(couponCode||"").trim()||null,
+        p_loyalty_points_to_redeem:Number(loyaltyPoints||0),
+        p_store_credit_amount:Number(storeCreditAmount||0),
+        p_gift_voucher_code:String(giftVoucherCode||"").trim()||null
       });
       if(error)throw error;
       await refreshAll();
