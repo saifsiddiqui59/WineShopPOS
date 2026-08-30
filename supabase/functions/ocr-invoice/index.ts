@@ -163,6 +163,9 @@ Deno.serve(async (req) => {
       ok: true,
       invoice: {
         supplierName: String(fieldContent(fields.VendorName) || ""),
+        vendorAddress: String(fieldContent(fields.VendorAddress) || ""),
+        vendorTaxId: String(fieldContent(fields.VendorTaxId) || ""),
+        paymentTerm: String(fieldContent(fields.PaymentTerm) || ""),
         invoiceNumber: String(fieldContent(fields.InvoiceId) || ""),
         invoiceDate: String(fieldContent(fields.InvoiceDate) || ""),
         total: numberValue(fields.InvoiceTotal),
@@ -182,3 +185,4 @@ Deno.serve(async (req) => {
     );
   }
 });
+

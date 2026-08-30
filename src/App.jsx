@@ -19,6 +19,7 @@ import EditProduct from "./pages/EditProduct";
 import BarcodeLabels from "./pages/BarcodeLabels";
 import Purchases from "./pages/Purchases";
 import Procurement from "./pages/Procurement";
+import Suppliers from "./pages/Suppliers";
 import PurchaseIntelligence from "./pages/PurchaseIntelligence";
 import Inventory from "./pages/Inventory";
 import StockCount from "./pages/StockCount";
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="purchasing" element={module("Purchases & Suppliers", "Receive goods, control procurement and understand supplier/purchase cost changes.", MODULE_TABS.purchasing)}>
             <Route index element={<Navigate to="receive" replace/>}/>
             <Route path="receive" element={<Purchases/>}/>
+            <Route path="suppliers" element={<Suppliers/>}/>
             <Route path="procurement" element={<Procurement/>}/>
             <Route path="intelligence" element={<PurchaseIntelligence/>}/>
           </Route>
@@ -141,6 +143,7 @@ export default function App() {
         <Route path="offline-queue" element={<Navigate to="/operations/offline" replace/>}/>
         <Route path="stock-count" element={<Navigate to="/inventory/count" replace/>}/>
         <Route path="purchases" element={<Navigate to="/purchasing/receive" replace/>}/>
+        <Route path="suppliers" element={<Navigate to="/purchasing/suppliers" replace/>}/>
         <Route path="procurement" element={<Navigate to="/purchasing/procurement" replace/>}/>
         <Route path="price-history" element={<Navigate to="/purchasing/intelligence" replace/>}/>
         <Route path="reorder" element={<Navigate to="/inventory/intelligence" replace/>}/>

@@ -34,6 +34,7 @@ export const MODULE_TABS = {
   ],
   purchasing: [
     { path: "/purchasing/receive", label: "Receive Stock", roles: ["ADMIN", "MANAGER"] },
+    { path: "/purchasing/suppliers", label: "Suppliers", roles: ["ADMIN", "MANAGER"] },
     { path: "/purchasing/procurement", label: "Procurement", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
     { path: "/purchasing/intelligence", label: "Purchase Intelligence", roles: ["ADMIN", "MANAGER"], tier: "PRO" },
   ],

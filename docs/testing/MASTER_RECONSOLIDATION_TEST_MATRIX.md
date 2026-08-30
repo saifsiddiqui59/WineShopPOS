@@ -195,3 +195,18 @@ Old URLs for Shift, Returns, Sales, Scanner, Offline Queue, Stock Count, Purchas
 7. Open Access Control and verify matrix matches route/backend behavior.
 8. Manager cannot open Owner Center, Users, Access Control or Shop Settings.
 9. Cashier cannot open product/purchase/inventory/admin management routes.
+
+
+<!-- SUPPLIER_MASTER_OCR_PATCH -->
+## Supplier/OCR Patch Regression
+
+- [ ] ADMIN/MANAGER create supplier in Supplier Master.
+- [ ] ADMIN/MANAGER edit supplier and changes persist.
+- [ ] Deactivated supplier is hidden from new PO selection; history remains.
+- [ ] Create PO → + New Supplier → save → supplier auto-selects.
+- [ ] Create PO → Edit Selected Supplier works.
+- [ ] OCR existing supplier suggests match but does not silently create.
+- [ ] OCR new supplier pre-fills vendor name/address/tax ID and requires confirmation.
+- [ ] OCR cannot continue to Receive Stock without supplier confirmation.
+- [ ] CASHIER cannot access Supplier Master/Procurement.
+- [ ] PO receiving and manual purchase receipt still update stock only through controlled RPCs.

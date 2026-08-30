@@ -400,3 +400,11 @@ Open Settings & Admin → Access Control for the complete access matrix.
 ## 21. Help / About
 
 Help/About shows the application version, support/documentation information, `Trust the GOD.` and `Created by: Almighty sa_f`.
+
+
+<!-- SUPPLIER_MASTER_OCR_PATCH -->
+## Supplier Master and OCR Supplier Review
+
+ADMIN and MANAGER can open **Purchases & Suppliers → Suppliers** to create, edit, deactivate or reactivate suppliers. While creating a Purchase Order, use **+ New Supplier** to create a supplier without leaving the PO, or **Edit Selected Supplier** to correct the selected supplier.
+
+For invoice OCR, first analyze the invoice, then confirm an existing supplier or choose **Create Supplier From Invoice**. Review the OCR-proposed supplier name, GST/tax number and address before saving. The supplier must be confirmed before the OCR draft can proceed to Receive Stock. Stock changes only after the normal receive confirmation.

@@ -603,3 +603,9 @@ The role matrix is a clear product/security contract. Frontend route visibility 
 ## Help / About Branding
 
 The Help/About panel intentionally omits infrastructure architecture details. It includes the product version, support/documentation references, the line `Trust the GOD.` and creator attribution `Almighty sa_f`.
+
+
+<!-- SUPPLIER_MASTER_OCR_PATCH -->
+## Supplier Master + OCR Supplier Confirmation Patch (2026-08-30)
+
+Purchases & Suppliers now includes a dedicated Supplier Master plus inline supplier create/edit actions in Purchase Order creation. Supplier CRUD reuses the existing suppliers table and existing ADMIN/MANAGER RLS. OCR performs a supplier-review step before continuing: existing suppliers are suggested from normalized name similarity, or the operator can review and create a supplier prefilled with Azure VendorName, VendorAddress and VendorTaxId. OCR never silently creates a supplier and never changes stock.
