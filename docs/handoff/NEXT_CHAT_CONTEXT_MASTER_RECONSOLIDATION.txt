@@ -1,0 +1,85 @@
+PROJECT: WineShopPOS / barcode company
+
+LATEST CANONICAL DIRECTION:
+WineShopPOS has progressed beyond Chapters 1-26 into a MASTER RECONSOLIDATION release based on the repository and the master implementation specification.
+
+DO NOT reset the project to early chapter plans.
+DO NOT rebuild the transaction engine.
+
+Architecture:
+- React/Vite frontend.
+- Azure Blob Static Website.
+- Supabase PostgreSQL/Auth/RLS/RPCs.
+- Azure AI Document Intelligence F0 OCR through Supabase Edge Function.
+- Multi-shop + organizations.
+- ADMIN/MANAGER/CASHIER.
+- Stock changes must remain database transaction/RPC controlled.
+
+Master UX:
+8 primary modules only:
+1. POS & Billing
+2. Products
+3. Purchases & Suppliers
+4. Inventory
+5. Operations
+6. Owner Center
+7. Reports & Compliance
+8. Settings & Admin
+Future AI stays hidden.
+
+PLUS/PRO are UI/product classification only, not subscription enforcement.
+
+New reconsolidation capabilities include:
+- account/profile/shop context UX
+- barcode labels
+- expenses
+- centralized approvals
+- customer & credit/Udhaar
+- advanced PO approval lifecycle
+- transfer request/approve/dispatch/transit/receive/complete lifecycle
+- purchase/supplier intelligence
+- inventory intelligence / explain stock
+- Owner Center
+- profit intelligence
+- neutral loss/exception controls
+- smart recommendations
+- manual WhatsApp owner summary
+- CSV exports
+- compliance metadata foundation
+- backup restore-test evidence
+
+Preserved existing capabilities:
+- global scanner
+- online/offline POS
+- sales/payments
+- returns/refunds/voids
+- shifts/day close
+- stock counts
+- purchase receipt
+- stock movements
+- audit
+- OCR human-review flow
+- user management Edge Function
+
+Developer preferences:
+- VS Code + Git Bash/Linux commands.
+- Large changes via downloadable .sh release scripts.
+- Build/test/migration/docs/Git together.
+- Never expose Supabase service-role/secret keys.
+- Preserve current functionality; reuse before creating schema.
+
+Read these repo docs first:
+- docs/reconsolidation/MASTER_IMPLEMENTATION_SPECIFICATION.md
+- docs/reconsolidation/00_HANDSHAKES_1_3.md
+- docs/reconsolidation/IMPLEMENTATION_REPORT.md
+- docs/testing/MASTER_RECONSOLIDATION_TEST_MATRIX.md
+- docs/code-history/master-reconsolidation-release.md
+
+LATEST MODERN UI REVISION:
+- Global barcode scanner remains implemented and preserved.
+- Modern Power BI-inspired dashboards/charts added to Owner Center, Profit, Reports, Inventory Intelligence and Purchase Intelligence.
+- Theme switching is now functional: System/Light/Dark, OS preference listener, immediate preview and top-bar switch.
+- Shop Settings is now editable for ADMIN via get_shop_configuration/update_shop_configuration RPCs; slug and commercial kill-switch remain protected.
+- Access Control matrix added. Shop ADMIN can change non-admin staff between CASHIER and MANAGER via manage-shop-users set_role; ADMIN remains platform-controlled.
+- Owner Center remains ADMIN-only in UI/routes/backend.
+- Help/About architecture line removed; includes "Trust the GOD." and "Created by: Almighty sa_f".
