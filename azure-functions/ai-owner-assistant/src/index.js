@@ -1,6 +1,6 @@
 import { app } from "@azure/functions";
 import { AIProjectClient } from "@azure/ai-projects";
-import { DefaultAzureCredential } from "@azure/identity";
+import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
 import { createClient } from "@supabase/supabase-js";
 import { TOOL_DEFINITIONS } from "./agentConfig.js";
 import {
@@ -20,6 +20,17 @@ const MAX_TOOL_ROUNDS = Number(process.env.AI_MAX_TOOL_ROUNDS || 4);
 const MAX_OUTPUT_TOKENS = Number(process.env.AI_MAX_OUTPUT_TOKENS || 900);
 const BUSINESS_TIMEZONE = process.env.BUSINESS_TIMEZONE || "Asia/Kolkata";
 const BUSINESS_CURRENCY = process.env.BUSINESS_CURRENCY || "INR";
+
+function createFoundryCredential() {
+  const runningInAzureFunctions = Boolean(
+    process.env.WEBSITE_HOSTNAME ||
+    process.env.WEBSITE_INSTANCE_ID ||
+    process.env.FUNCTIONS_WORKER_RUNTIME
+  );
+  return runningInAzureFunctions
+    ? new ManagedIdentityCredential()
+    : new DefaultAzureCredential();
+}
 
 const TOOL_RPC = {
   get_sales_summary: { rpc: "ai_get_sales_summary", source: "/pos/sales" },
@@ -149,7 +160,7 @@ async function createAgentResponse(openai, requestBody) {
   try {
     return await openai.responses.create(
       requestBody,
-      { body: { agent: { name: FOUNDRY_AGENT_NAME, type: "agent_reference" } } },
+      { body: { agent_reference: { name: FOUNDRY_AGENT_NAME, type: "agent_reference" } } },
     );
   } catch (error) {
     const status = Number(error?.status || error?.statusCode || 0);
@@ -168,14 +179,16 @@ async function createAgentResponse(openai, requestBody) {
 async function runFoundry(caller, trustedContext, body) {
   if (!FOUNDRY_PROJECT_ENDPOINT) throw new Error("Foundry project endpoint is not configured.");
 
-  const project = new AIProjectClient(FOUNDRY_PROJECT_ENDPOINT, new DefaultAzureCredential());
+  const project = new AIProjectClient(FOUNDRY_PROJECT_ENDPOINT, createFoundryCredential());
   const openai = project.getOpenAIClient();
   let conversation;
   const toolsCalled = [];
   const sources = new Set();
+  let foundryStage = "CREATE_CONVERSATION";
 
   try {
     conversation = await openai.conversations.create();
+    foundryStage = "FIRST_RESPONSE";
 
     let response = await createAgentResponse(openai, {
       input: [{
@@ -201,6 +214,7 @@ async function runFoundry(caller, trustedContext, body) {
 
       const outputs = [];
       for (const call of calls) {
+        foundryStage = `TOOL:${call.name}`;
         if (!TOOL_DEFINITIONS.some((t) => t.name === call.name)) throw new Error("Agent requested an unapproved tool.");
 
         let parsed;
@@ -217,6 +231,7 @@ async function runFoundry(caller, trustedContext, body) {
         });
       }
 
+      foundryStage = "FOLLOWUP_RESPONSE";
       response = await createAgentResponse(openai, {
         input: outputs,
         conversation: conversation.id,
@@ -354,6 +369,8 @@ app.http("ai-chat", {
       context.error("AI request failed", {
         requestId,
         errorName: error?.name,
+        stage: error?.wspStage || "FUNCTION_ORCHESTRATION",
+        status: Number(error?.status || error?.statusCode || 0) || null,
         safeMessage: String(error?.message || "").slice(0,180),
       });
 
@@ -370,7 +387,16 @@ app.http("ai-chat", {
       }
 
       const safe = publicError(error);
-      return json(safe.status, { request_id: requestId, error: safe.message });
+      const diagnosticsRequested = request.headers.get("x-wsp-diagnostic") === "1";
+      return json(safe.status, {
+        request_id: requestId,
+        error: safe.message,
+        ...(diagnosticsRequested ? {
+          diagnostic_stage: error?.wspStage || "FUNCTION_ORCHESTRATION",
+          diagnostic_status: Number(error?.status || error?.statusCode || 0) || null,
+          diagnostic_name: String(error?.name || "Error").slice(0,80),
+        } : {}),
+      });
     }
   },
 });
