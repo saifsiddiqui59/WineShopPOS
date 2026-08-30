@@ -34,6 +34,7 @@ import OwnerProfit from "./pages/OwnerProfit";
 import OwnerExceptions from "./pages/OwnerExceptions";
 import Recommendations from "./pages/Recommendations";
 import OwnerWhatsApp from "./pages/OwnerWhatsApp";
+import OwnerAI from "./pages/OwnerAI";
 import ReportsConsolidated from "./pages/ReportsConsolidated";
 import Compliance from "./pages/Compliance";
 import Users from "./pages/Users";
@@ -111,6 +112,7 @@ export default function App() {
             <Route path="share" element={<OwnerWhatsApp/>}/>
             <Route path="profit" element={<OwnerProfit/>}/>
             <Route path="exceptions" element={<OwnerExceptions/>}/>
+            <Route path="ask" element={<OwnerAI/>}/>
           </Route>
         </Route>
 

@@ -9,6 +9,7 @@ import "./index.css";
 import "./chapters9to12.css";
 import "./chapters16to26.css";
 import "./masterConsolidation.css";
+import "./aiOwnerAssistant.css";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));

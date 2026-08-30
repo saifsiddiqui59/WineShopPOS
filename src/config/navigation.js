@@ -55,6 +55,7 @@ export const MODULE_TABS = {
     { path: "/owner", label: "Overview", roles: ["ADMIN"], tier: "PRO" },
     { path: "/owner/profit", label: "Profit Intelligence", roles: ["ADMIN"], tier: "PRO" },
     { path: "/owner/exceptions", label: "Loss & Exceptions", roles: ["ADMIN"], tier: "PRO" },
+    { path: "/owner/ask", label: "Ask WineShopPOS", roles: ["ADMIN"], tier: "PRO" },
     { path: "/owner/recommendations", label: "Recommendations", roles: ["ADMIN"], tier: "PLUS" },
     { path: "/owner/share", label: "WhatsApp Summary", roles: ["ADMIN"], tier: "PLUS" },
   ],
