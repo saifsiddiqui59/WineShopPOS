@@ -75,9 +75,10 @@ results and critical tool regressions.
 <!-- NEXT_AI_PUSHES_START -->
 ## Current AI rollout status
 
-1. Functionality knowledge / `get_app_help` — deployed and live.
-2. Help & User Manual reference — exposed in-app at `/help`.
-3. Application Insights / Foundry evaluation tracing — pending until Push 3 succeeds.
+1. Functionality knowledge / `get_app_help` - deployed and live.
+2. Help & User Manual reference - deployed and live.
+3. Foundry server-side tracing infrastructure - configured with dedicated Application Insights and Project Managed Identity authentication.
+4. Next - create one authenticated production interaction, verify it in Foundry Traces, then run trace evaluations and define quality gates.
 <!-- NEXT_AI_PUSHES_END -->
 
 <!-- APP_HELP_KNOWLEDGE_START -->
@@ -109,3 +110,17 @@ fallback so the agent does not invent app functionality.
 
 Application Insights GenAI tracing/evaluation remains the next separate push.
 <!-- APP_HELP_KNOWLEDGE_END -->
+
+<!-- AI_OBSERVABILITY_START -->
+## Foundry tracing and evaluation observability
+
+Foundry project `wineshoppos-ai` is connected to workspace-based Application Insights `wineshoppos-ai-insights`, backed by `wineshoppos-ai-law`.
+
+The connection uses `ProjectManagedIdentity` and includes the required `ApplicationInsightsConnectionString` metadata. Git Bash ARM path conversion is explicitly disabled for connection and RBAC commands.
+
+The Foundry project managed identity has `Monitoring Metrics Publisher` on Application Insights for trace ingestion and `Log Analytics Reader` for trace access.
+
+No Owner AI source or Function configuration is changed by this repair.
+
+Tracing infrastructure is configured. End-to-end tracing is verified only after a real authenticated Owner AI interaction appears in Foundry Traces.
+<!-- AI_OBSERVABILITY_END -->
