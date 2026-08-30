@@ -138,23 +138,72 @@ export function ShopProvider({ children }) {
   async function setProductStatus(id,active){try{const {error}=await supabase.rpc("set_product_active",{p_product_id:id,p_active:active});if(error)throw error;await refreshAll();return{ok:true,message:active?"Product activated.":"Product deactivated."}}catch(e){return{ok:false,message:e.message||String(e)}}}
   const deactivateProduct=(id)=>setProductStatus(id,false); const activateProduct=(id)=>setProductStatus(id,true);
 
-  async function completeSale(cart,paymentMethod,{discount=0,paymentReference=""}={}) {
+  async function completeSale(cart,paymentMethod,{discount=0,paymentReference="",reasonCodeId=null,reasonNote="",overrideRequestId=null}={}) {
     const clientSaleId=crypto.randomUUID();
-    const payload={clientSaleId,offlineCreatedAt:new Date().toISOString(),items:cart.map((i)=>({product_id:i.product.id,quantity:Number(i.quantity)})),paymentMethod,discount:Number(discount||0),paymentReference:String(paymentReference||"").trim()||null,cartSnapshot:cart.map((i)=>({product:{id:i.product.id,name:i.product.name,barcode:i.product.barcode,price:i.product.price},quantity:Number(i.quantity)}))};
-    if (!navigator.onLine) {
-      try {
+    const items=cart.map((i)=>({
+      product_id:i.product.id,
+      quantity:Number(i.quantity),
+      unit_price:Number(i.unitPrice ?? i.product.price)
+    }));
+    const hasPriceOverride=cart.some((i)=>Math.abs(Number(i.unitPrice ?? i.product.price)-Number(i.product.price))>0.001);
+
+    if(!navigator.onLine){
+      if(Number(discount||0)>0||hasPriceOverride){
+        return{ok:false,message:"Discounts and price overrides require an online authorization check."};
+      }
+      const payload={
+        clientSaleId,
+        offlineCreatedAt:new Date().toISOString(),
+        items:items.map(({product_id,quantity})=>({product_id,quantity})),
+        paymentMethod,
+        discount:0,
+        paymentReference:String(paymentReference||"").trim()||null,
+        cartSnapshot:cart.map((i)=>({
+          product:{id:i.product.id,name:i.product.name,barcode:i.product.barcode,price:i.product.price},
+          quantity:Number(i.quantity)
+        }))
+      };
+      try{
         await queueOfflineSale(payload);
-        setInventory((current)=>{const next={...current};for(const item of cart)next[item.product.id]=Math.max(0,num(next[item.product.id])-Number(item.quantity));return next;});
-        const offlineSale={id:`offline-${clientSaleId}`,invoiceNumber:`OFFLINE-${clientSaleId.slice(0,8).toUpperCase()}`,createdAt:payload.offlineCreatedAt,paymentMethod,paymentReference,subtotal:cart.reduce((s,i)=>s+i.product.price*i.quantity,0),discount:Number(discount||0),grandTotal:Math.max(0,cart.reduce((s,i)=>s+i.product.price*i.quantity,0)-Number(discount||0)),status:"OFFLINE_PENDING",items:cart.map((i)=>({productId:i.product.id,productName:i.product.name,barcode:i.product.barcode,quantity:i.quantity,unitPrice:i.product.price,lineTotal:i.product.price*i.quantity}))};
-        setSales((s)=>[offlineSale,...s]); return {ok:true,offline:true,sale:offlineSale,message:"Sale saved securely offline. Sync when internet returns."};
-      } catch(e){return{ok:false,message:e.message||String(e)}}
+        setInventory((current)=>{
+          const next={...current};
+          for(const item of cart)next[item.product.id]=Math.max(0,num(next[item.product.id])-Number(item.quantity));
+          return next;
+        });
+        const subtotal=cart.reduce((sum,i)=>sum+Number(i.product.price)*Number(i.quantity),0);
+        const offlineSale={
+          id:`offline-${clientSaleId}`,
+          invoiceNumber:`OFFLINE-${clientSaleId.slice(0,8).toUpperCase()}`,
+          createdAt:payload.offlineCreatedAt,
+          paymentMethod,paymentReference,
+          subtotal,discount:0,grandTotal:subtotal,status:"OFFLINE_PENDING",
+          items:cart.map((i)=>({
+            productId:i.product.id,productName:i.product.name,barcode:i.product.barcode,
+            quantity:i.quantity,unitPrice:i.product.price,lineTotal:i.product.price*i.quantity
+          }))
+        };
+        setSales((rows)=>[offlineSale,...rows]);
+        return{ok:true,offline:true,sale:offlineSale,message:"Sale saved securely offline. Sync when internet returns."};
+      }catch(e){return{ok:false,message:e.message||String(e)}}
     }
-    try {
-      const {data,error}=await supabase.rpc("complete_sale_v2",{p_items:payload.items,p_payment_method:paymentMethod,p_discount:Number(discount||0),p_payment_reference:paymentReference||null,p_client_sale_id:clientSaleId,p_offline_created_at:null});
-      if(error)throw error;await refreshAll();return{ok:true,sale:{id:data}};
+
+    try{
+      const{data,error}=await supabase.rpc("complete_sale_v3",{
+        p_items:items,
+        p_payment_method:paymentMethod,
+        p_discount:Number(discount||0),
+        p_payment_reference:String(paymentReference||"").trim()||null,
+        p_client_sale_id:clientSaleId,
+        p_offline_created_at:null,
+        p_reason_code_id:reasonCodeId||null,
+        p_reason_note:String(reasonNote||"").trim()||null,
+        p_override_request_id:overrideRequestId||null
+      });
+      if(error)throw error;
+      await refreshAll();
+      return{ok:true,sale:{id:data}};
     }catch(e){return{ok:false,message:e.message||String(e)}}
   }
-
   async function syncOfflineSales() {
     if (!navigator.onLine) return {ok:false,message:"Internet is offline."};
     const rows=await listOfflineSales(); let synced=0,conflicts=0;
