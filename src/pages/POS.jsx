@@ -248,8 +248,7 @@ export default function POS(){
 
   const finalDue=quote?Number(quote.external_payment_due||0):manualTotal;
 
-  return <div>
-    <div className="page-heading">
+  return <div className="pos-page"><div className="page-heading">
       <div><h2>Fast POS Billing</h2><p>Scan → Cart → Rewards → Pay → Print with controlled overrides.</p></div>
       <button className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button>
     </div>
@@ -261,13 +260,13 @@ export default function POS(){
 
     <div className="pos-layout">
       <div className="pos-left">
-        <div className="panel">
+        <div className="panel pos-search-card">
           <label>Manual Search<input style={{width:"100%"}} value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Name, barcode, SKU, brand..."/></label>
           {results.map((p)=><button key={p.id} className="search-result" onClick={()=>add(p)}><span>{p.name}</span><span>{money.format(p.price)} · Stock {getStock(p.id)}</span></button>)}
           <div className="purchase-message" style={{marginTop:10}}>{message}</div>
         </div>
 
-        <div className="panel" style={{marginTop:14}}>
+        <div className="panel pos-rewards-card" style={{marginTop:14}}>
           <h3>Customer Rewards</h3>
           <label>Customer
             <select value={customerId} onChange={(e)=>loadCustomerSummary(e.target.value)} disabled={!navigator.onLine}>
@@ -287,8 +286,7 @@ export default function POS(){
         </div>
       </div>
 
-      <div className="panel">
-        <h3>Cart</h3>
+      <div className="panel pos-checkout-card"><div className="pos-section-heading"><div><span>Checkout</span><h3>Current Bill</h3></div><strong>{cart.reduce((n,i)=>n+Number(i.quantity||0),0)} item(s)</strong></div>
         <div className="data-table-wrapper">
           <table className="data-table">
             <thead><tr><th>Product</th><th>Qty</th><th>Normal</th><th>Sale Price</th><th>Total</th></tr></thead>

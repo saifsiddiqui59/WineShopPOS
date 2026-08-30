@@ -579,3 +579,23 @@ For purchase invoice OCR:
 
 Receipt-based ageing and FIFO views are available under Inventory after the
 Phase-1 database migration is active.
+
+---
+
+## V2 POS and Billing Interface
+
+The POS is arranged as a retail workstation:
+
+1. Product search / barcode scanner
+2. Optional customer/reward controls
+3. Current Bill
+4. Applicable override/reward controls
+5. CASH / UPI / CARD selection
+6. Complete Sale
+
+On large screens the bill stays visible while products are scanned. On smaller
+screens the interface stacks automatically to prevent overlapping buttons and
+clipped fields.
+
+The invoice screen provides a 58mm/80mm thermal receipt preview. Printing hides
+normal application navigation and uses receipt-focused print styling.
