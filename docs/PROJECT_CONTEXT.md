@@ -1,242 +1,222 @@
-# WineShopPOS Current Project Context
+# WineShopPOS — Current Project Context
 
-## Repository
+**Current product/documentation generation: V2**
 
-GitHub:
+This is the canonical current-state reference.
 
-`saifsiddiqui59/WineShopPOS`
+Old Chapters 1–26 remain implementation history and must not be used as the
+current architecture/pending-work source without verification against current
+source, migrations and deployment state.
 
-Local Windows folder:
+## Current application
 
-`E:\WineShopPOS`
+WineShopPOS is an existing React/Vite production POS application.
 
-Git Bash:
+Current architecture/direction includes:
 
-`/e/WineShopPOS`
-
-Branch:
-
-`main`
-
-## Technology
-
-- React
-- Vite
-- JavaScript
-- React Router
-- Lucide React
-- CSS
-- Browser LocalStorage for current MVP
-
-## LocalStorage keys
-
-- `wineshop_products_v1`
-- `wineshop_inventory_v1`
-- `wineshop_sales_v1`
-- `wineshop_purchases_v1`
-
-## Product seed
-
-`src/data/products.js`
-
-contains approximately 50 dummy Indian-market products.
-
-Barcodes/prices are development data only.
-
-## Current completed modules
-
-- Dashboard
-- POS Billing
-- barcode scanning
-- manual product search
-- cart
-- discount
-- Cash / UPI / Card
-- optional UPI/Card payment reference
-- sale completion
-- invoice details
-- browser print preview
-- Product Master
-- Add Product
-- Edit Product
-- activate / deactivate Product
-- Inventory
-- Receive Stock
-- case + loose-bottle purchase handling
-- Purchase History
-- Sales History
-- Reports
-- JSON Export
-- JSON Import
-- Demo Reset
-
-## Important inventory rules
-
-Product Master = what the item is.
-
-Inventory = how many sellable bottles exist.
-
-Purchases increase inventory.
-
-Sales decrease inventory.
-
-Cases are converted to individual bottle quantities.
-
-Editing product information does not directly overwrite stock.
-
-Inactive products remain historically referenced and cannot be sold/received.
-
-## Current persistence limitation
-
-This is still a single-browser prototype.
-
-LocalStorage is not suitable for a final multi-user shop.
-
-## Planned production backend
-
-Later chapters will introduce:
-
+- React + Vite
 - Supabase PostgreSQL
-- database tables
-- transactional stock functions
 - Supabase Auth
-- ADMIN / MANAGER / CASHIER roles
 - RLS
-- secure inventory mutations
-- audit / stock movements
+- RPC/backend transaction operations
+- organizations
+- UUID shops
+- `user_shop_memberships`
+- ADMIN / MANAGER / CASHIER authorization
+- Azure Blob static hosting
+- Azure Document Intelligence OCR where configured
+- production AI Owner Assistant
 
-## Hosting plan
+## Existing functional areas
 
-Frontend can be statically hosted on Azure.
+The application has progressed substantially beyond the early MVP.
 
-Production architecture may later use Azure Static Web Apps or another frontend host depending on authentication/routing needs.
+Existing/developed areas include:
 
-## Scanner test barcode
+- Core POS
+- barcode scanner
+- cart/billing
+- payments
+- inventory
+- purchasing
+- purchase orders
+- receiving / GRN
+- suppliers
+- sales
+- sale items
+- payments
+- returns/refunds
+- sale void
+- cashier shifts
+- physical stock counts
+- stock adjustments
+- stock transfers
+- stock movement/ledger
+- reports
+- Owner Center
+- supplier intelligence
+- reorder intelligence
+- Purchase Coach
+- Leakage Shield / exception intelligence
+- OCR invoice workflow
+- offline foundation
+- backup foundation
+- receipt printing
+- owner WhatsApp summary
+- multi-shop access/security
+- AI Owner Assistant
+- AI business explanation/investigation/daily-summary direction
 
-`8900000010016`
+A V2 feature must be checked against the current implementation before it is
+treated as new development.
 
-Dummy product:
-
-Kingfisher Strong 650ml
-
-## AI Owner Assistant V1 — PRO
-
-WineShopPOS added a read-only, multi-tenant AI Owner Assistant milestone. It uses one Microsoft Foundry model deployment, one logical WineShopPOS Owner Agent, an Azure Function trust boundary, caller-scoped Supabase authorization and narrow deterministic analytics RPCs. AI is ADMIN/Owner Center only and cannot write business transactions. Tenant/shop access is resolved programmatically from `user_shop_memberships`; the model never decides tenant access.
-
-See `docs/ai/` and `docs/testing/AI_OWNER_ASSISTANT_V1_TEST_MATRIX.md`.
-
-<!-- WSP_AI_VERIFIED_V1_START -->
-## AI Owner Assistant V1 — VERIFIED PRODUCTION MILESTONE
-
-**Verified:** 2026-08-30  
-**Status:** Production path working end-to-end  
-**Feature:** Ask WineShopPOS  
-**Tier:** PRO  
-**Current access:** ADMIN / Owner Center
-
-### Verified production topology
+## Core business rules
 
 ```text
-WineShopPOS React/Vite
-        ↓ existing Supabase user session
-Supabase Auth access token
-        ↓
-Azure Function /api/ai/chat
-Central India — Consumption Y1
-        ↓ system-assigned managed identity
-Microsoft Foundry project
-South India
-        ↓
-WineShopPOS-Owner-Agent
-gpt-5-mini
-        ↓ controlled function calls
-Caller-scoped Supabase AI RPCs
-        ↓
-Grounded business answer
+Product Master defines the product.
+
+Inventory changes through controlled business transactions.
+
+Purchases/receiving increase stock.
+
+Sales reduce stock.
+
+Returns/voids/adjustments follow their controlled transaction rules.
+
+Historical business records are preserved.
+
+Stock-changing operations should be transaction-safe server/database operations.
+
+Backend authorization and RLS are authoritative.
+
+The browser never decides tenant authorization.
 ```
 
-### Current Azure configuration
+## Current verified production AI
 
-- Resource group: `wineshopPOS`
-- Static website storage: `wineshoppos` — Central India
-- Document Intelligence: `wineshoppos-docintel-45b7d2b9` — Central India — F0
-- AI Function App: `wineshoppos-ai-1a61d5885c`
-- AI Function region: Central India
-- AI Function plan: Consumption `Y1`
-- Always On/Premium/Dedicated hosting: not used for AI V1
-- Production Foundry account: `wineshoppos-ai-in-1a61d5885c`
-- Foundry region: South India
-- Foundry project: `wineshoppos-ai`
-- Model deployment: `gpt-5-mini`
-- Model version verified during deployment: `2025-08-07`
-- Model SKU: `GlobalStandard`
-- Logical agent: `WineShopPOS-Owner-Agent`
-- Foundry invocation: current `agent_reference` request shape
+Status:
 
-### Runtime identity / RBAC
+```text
+Ask WineShopPOS PRO AI Owner Assistant
+VERIFIED WORKING end-to-end in production
+```
 
-The Azure Function uses its **system-assigned managed identity** for Foundry access.
+Azure Function:
 
-The working runtime uses `AIProjectClient` plus project-level Responses/Conversations APIs. For this architecture, the Function managed identity requires **Foundry User at the Foundry project scope**. The narrower Agent Consumer role alone was insufficient and produced HTTP 403 during the project-level runtime call.
+```text
+Name:
+wineshoppos-ai-1a61d5885c
 
-This role is scoped to the WineShopPOS Foundry project, not the whole subscription.
+Region:
+Central India
 
-### Supabase / tenant authorization
+Plan:
+Consumption Y1
+```
 
-- Supabase project ref: `uiurgplnsgmawvxhjzzp`
-- AI migration: `20260830070000_ai_owner_assistant_v1.sql` — applied
-- Organization boundary: `organizations.id`
-- Shop boundary: `shops.id`
-- User/shop authorization: `user_shop_memberships`
-- Production UI does **not** use a fixed ADMIN email, shop ID, organization ID or role.
-- React sends the currently logged-in Supabase user's access token.
-- Azure Function validates the caller and dynamically resolves authorized shop scope.
-- Tenant/shop isolation is enforced programmatically, not by prompting the model.
+No Premium/Dedicated/Always-On AI hosting is the current production requirement.
 
-### Verified business tools
+Microsoft Foundry:
 
-1. `ai_get_sales_summary`
-2. `ai_get_profit_summary`
-3. `ai_get_inventory_health`
-4. `ai_get_reorder_recommendations`
-5. `ai_get_supplier_price_history`
-6. `ai_get_product_stock_history`
-7. `ai_get_shift_variances`
-8. `ai_get_audit_exceptions`
-9. `ai_get_expense_summary`
+```text
+Production resource:
+wineshoppos-ai-in-1a61d5885c
 
-There is no unrestricted SQL/database-query tool and no MCP/RAG/vector database in AI V1.
+Region:
+South India
 
-### Verification evidence
+Project:
+wineshoppos-ai
 
-The following were verified successfully:
+Model:
+gpt-5-mini
 
-- Supabase ADMIN authentication
-- dynamic ADMIN shop membership resolution
-- `ai_resolve_context`
-- `ai_rate_limit_check`
-- `ai_log_activity`
-- all nine business RPCs
-- direct Foundry `agent_reference` invocation
-- Foundry function-call loop
-- multiple business tool calls in one question
-- function-call outputs returned to Foundry
-- final grounded AI answer
-- Azure Function hosted in Central India on Consumption Y1
-- Function managed identity access to the South India Foundry project
-- production `/api/ai/chat` path after the Foundry project RBAC correction
+Version:
+2025-08-07
 
-A verified test for **“How is my shop performing today?”** used multiple tools and returned the correct current business facts for the test shop.
+SKU:
+GlobalStandard
 
-### Legacy cloud cleanup
+Logical agent:
+WineShopPOS-Owner-Agent
+```
 
-The earlier East US Foundry resource is **not the production AI resource**. Production uses the South India account listed above. The East US Foundry resource may be removed after the final cleanup review confirms no dependency remains.
+Runtime user authorization:
 
-### Observability/evaluation status
+```text
+currently logged-in Supabase session/access token
+↓
+Azure Function
+↓
+auth.uid()
+↓
+user_shop_memberships
+↓
+authorized organization/shop
+↓
+existing Owner Agent
+```
 
-- Application Insights exists for the AI Function App.
-- Function health and failure telemetry are available.
-- Full Foundry trace connection, production AI quality evaluation, dashboards and automated quality gates are the **next AI operational-hardening milestone**.
-- Do not claim continuous Foundry evaluation is already enabled until that work is completed.
+Function → Foundry authentication uses the Function App system-assigned managed
+identity with required Foundry project-level User access.
 
-<!-- WSP_AI_VERIFIED_V1_END -->
+Production record indicates Supabase AI migration:
+
+```text
+20260830070000
+```
+
+has been applied.
+
+The legacy East US Foundry resource named `wineshoppos-ai-1a61d5885c` is not
+the production Foundry environment and is cleanup-only after dependency review.
+
+## Next AI milestone
+
+The next AI milestone is not rebuilding the assistant.
+
+It is:
+
+- Application Insights / Foundry tracing
+- request correlation
+- AI evaluations
+- groundedness/relevance
+- numeric correctness
+- tool correctness
+- tenant/shop correctness
+- deployment quality gates
+- production monitoring/dashboarding
+
+AI failure must never break core POS availability.
+
+## V2 feature program
+
+V2 requests include:
+
+1. Landed Cost Engine
+2. Batch / Receipt Lot Tracking
+3. True Stock Ageing
+4. FIFO / Stock Rotation Foundation
+5. Discount / Price Override Control
+6. Standardized Reason Codes
+7. Accountant / Tally-ready Export
+8. Customer Loyalty
+9. Coupons / Promotions
+10. Gift Voucher / Store Credit
+11. Supplier Performance Score
+12. Advanced Stock Transfer
+13. Approval Center Expansion
+14. Leakage Shield Expansion
+15. Purchase Coach Expansion
+
+Each item must first be classified from current code as:
+
+```text
+EXISTING
+PARTIAL
+MISSING
+NEEDS TESTING
+BROKEN
+```
+
+V2 does not rebuild a working feature simply because it appears in the program.

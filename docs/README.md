@@ -1,82 +1,42 @@
 # WineShopPOS Documentation
 
-This folder contains the current production documentation for WineShopPOS.
+**Current documentation generation: V2**
 
-## Current application
+WineShopPOS maintains one living Handbook, one living User Manual and one
+current Project Context. V2 updates the existing master documents rather than
+creating competing copies.
 
-WineShopPOS is beyond the original Chapters 1–15/1–26 implementation and now uses the reconsolidated eight-module SaaS structure:
-
-1. POS & Billing
-2. Products
-3. Purchases & Suppliers
-4. Inventory
-5. Operations
-6. Owner Center
-7. Reports & Compliance
-8. Settings & Admin
-
-## Current cloud architecture
-
-```text
-Barcode Scanner
-    ↓
-React/Vite
-    ↓
-Supabase Auth
-    ↓
-Supabase PostgreSQL + RLS + transactional RPCs
-    ↓
-Azure Blob Static Website
-```
-
-Additional services:
-
-- Azure AI Document Intelligence for purchase-invoice OCR
-- Azure Function App for the AI trust boundary
-- Microsoft Foundry for Ask WineShopPOS PRO
-
-## AI milestone
-
-**Ask WineShopPOS PRO is verified working end-to-end.**
-
-Production AI:
-
-- Function App: Central India / Consumption Y1
-- Foundry: South India
-- Model: `gpt-5-mini`
-- Agent: `WineShopPOS-Owner-Agent`
-- Auth: existing logged-in Supabase session
-- Shop authorization: dynamic membership resolution
-- AI V1: controlled read-only business insights
-
-## Canonical documents
-
-### Product/user
-
-- `manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
-- `manual/WineShopPOS_User_Manual_Master_Reconsolidation.docx`
-
-### Current-state/context
+## Canonical current documents
 
 - `PROJECT_CONTEXT.md`
-- `handoff/NEXT_CHAT_CONTEXT.txt`
-- `handoff/NEXT_CHAT_CONTEXT_AI_V1.txt`
+- `handbook/WineShopPOS_Developer_Handbook_Master_Reconsolidation.md`
+- `manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
+- `AI_PRODUCTION_BASELINE.md`
+- `DOCUMENTATION_REGISTER.md`
 
-### AI
+## Historical + V2 chapters
 
-- `ai/AI_OWNER_ASSISTANT_V1.md`
-- `ai/AZURE_SUPABASE_CONFIGURATION.md`
-- `ai/SECURITY_AND_TENANT_ISOLATION.md`
-- `ai/DEPLOYMENT_RUNBOOK.md`
-- `ai/CURRENT_AI_INFRASTRUCTURE_STATUS.md`
-- `ai/AI_OBSERVABILITY_EVALUATION_PLAN.md`
+The same `docs/chapters/` collection is used for project history.
 
-### Testing
+- Chapters `01` through `26`: historical implementation record
+- Chapters `V2-01` through `V2-10`: current V2 implementation/QA program
 
-- `testing/AI_OWNER_ASSISTANT_V1_TEST_MATRIX.md`
-- `testing/FINAL_SMOKE_TEST.md`
-- `testing/TEST_MATRIX.md`
+## V2 execution records
 
-### History
+- `v2/MASTER_IMPLEMENTATION_SPECIFICATION_V2.md`
+- `v2/audit/`
+- `v2/evidence/`
 
-Historical chapter documentation remains useful for implementation history, but it must not be treated as the current application state.
+These are execution/evidence artifacts, not duplicate manuals.
+
+## Documentation rule
+
+When an application feature changes, update all affected current documents in
+the same implementation batch:
+
+1. Project Context when architecture/current status changes
+2. existing master Developer Handbook
+3. existing master User Manual when the user workflow changes
+4. AI Production Baseline when AI deployment/runtime changes
+5. relevant V2 chapter
+6. V2 implementation/audit record

@@ -1,5 +1,151 @@
 # WineShopPOS Developer Handbook — Master Reconsolidation
 
+<!-- WINEPOS_V2_CURRENT_BEGIN -->
+## Current V2 Production State — Canonical Update
+
+**Current product/documentation generation: V2**
+
+> This section supersedes older statements elsewhere in this historical
+> handbook when they conflict with current production state. Older references
+> to LocalStorage-only architecture, future/planned Supabase, hidden/future AI,
+> or a deferred Owner Assistant are historical implementation notes.
+
+### Current architecture
+
+- React + Vite frontend
+- Supabase PostgreSQL/Auth/RLS/RPC backend
+- organizations + UUID shops + `user_shop_memberships`
+- ADMIN / MANAGER / CASHIER roles
+- transaction-safe backend/database stock-changing operations
+- Azure Blob static hosting
+- current OCR/offline/backup foundations
+- production WineShopPOS AI Owner Assistant
+
+### Critical protected workflows
+
+```text
+Login
+
+Scan
+→ cart
+→ payment
+→ sale
+→ inventory deduction
+→ receipt
+
+Purchase / PO / GRN
+→ receiving
+→ inventory increase
+→ stock movement
+
+Return/refund
+Sale void
+Shift open/close
+Physical stock count
+Stock adjustment
+Stock transfer
+Multi-shop/RLS
+Offline queue
+OCR invoice review
+Owner Center
+AI Owner Assistant
+```
+
+### Verified production AI
+
+```text
+AI:
+VERIFIED WORKING
+
+Function:
+wineshoppos-ai-1a61d5885c
+Central India
+Consumption Y1
+
+Foundry:
+wineshoppos-ai-in-1a61d5885c
+South India
+project wineshoppos-ai
+
+Model:
+gpt-5-mini
+version 2025-08-07
+GlobalStandard
+
+Agent:
+WineShopPOS-Owner-Agent
+```
+
+Runtime authorization:
+
+```text
+Supabase logged-in session/access token
+→ Azure Function
+→ auth.uid()
+→ user_shop_memberships
+→ authorized organization/shop
+```
+
+Function-to-Foundry uses the Function system-assigned managed identity with
+required Foundry project-level User access.
+
+Production record indicates AI migration `20260830070000` is applied.
+
+### V2 engineering program
+
+Before adding a requested V2 feature, inspect the current implementation and
+classify it:
+
+```text
+EXISTING
+PARTIAL
+MISSING
+NEEDS TESTING
+BROKEN
+```
+
+V2 requested areas:
+
+- Landed Cost Engine
+- Receipt Lot / Batch Tracking
+- True Stock Ageing
+- FIFO / Stock Rotation Foundation
+- Discount / Price Override Control
+- Standardized Reason Codes
+- Accountant / Tally-ready Export
+- Customer Loyalty
+- Coupons / Promotions
+- Gift Voucher / Store Credit
+- Supplier Performance Score
+- Advanced Stock Transfer
+- Approval Center Expansion
+- Leakage Shield Expansion
+- Purchase Coach Expansion
+
+Existing Purchase/PO/GRN, OCR, returns, sale void, shifts, counts, adjustments,
+transfers, multi-shop, Leakage Shield, Purchase Coach, supplier intelligence,
+offline, backup, scanner, receipt printing, RLS and AI should be verified and
+extended rather than rebuilt.
+
+### Next AI milestone
+
+```text
+Application Insights / Foundry tracing
+→ automated evaluations
+→ numeric/tool/tenant correctness
+→ deployment quality gates
+→ monitoring/dashboarding
+```
+
+AI failure must never break core POS availability.
+
+### Documentation rule
+
+This master handbook remains the single developer/operations handbook.
+V2/V3/etc. update this file in place. Version history is preserved in Git and
+the chapter records under `docs/chapters/`.
+<!-- WINEPOS_V2_CURRENT_END -->
+
 Version: 2026.08 Master Reconsolidation
 
 ## 1. Purpose
@@ -75,7 +221,7 @@ The primary sidebar contains only:
 7. Reports & Compliance
 8. Settings & Admin
 
-Cashiers see only relevant modules. Managers see operating modules. Admins see authorized full-shop administration. Future AI is hidden.
+Cashiers see only relevant modules. Managers see operating modules. Admins see authorized full-shop administration. AI Owner Assistant is production-active; see Current V2 Production State.
 
 ## 5. Account and Shop Context
 

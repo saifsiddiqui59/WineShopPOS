@@ -1,5 +1,106 @@
 # WineShopPOS User Manual — Master Reconsolidation
 
+<!-- WINEPOS_V2_CURRENT_BEGIN -->
+## Current V2 User Guide Update
+
+**Current product/documentation generation: V2**
+
+> This section is the current user-facing reference where an older section
+> conflicts with current production behavior.
+
+### Current application areas
+
+Depending on role and shop authorization, WineShopPOS currently covers or has
+developed workflows around:
+
+- POS billing
+- barcode scanning
+- payments
+- receipt printing
+- products/categories
+- inventory
+- suppliers
+- purchases / PO / receiving / GRN
+- returns/refunds
+- sale void
+- cashier shifts
+- physical stock count
+- stock adjustment
+- stock transfer
+- reports / Owner Center
+- reorder / Purchase Coach intelligence
+- Leakage Shield / exception review
+- OCR invoice review
+- offline foundation
+- owner WhatsApp summary
+- Ask WineShopPOS PRO AI Owner Assistant
+
+### Cashier workflow
+
+Keep the cashier flow simple:
+
+```text
+SCAN
+→ CART
+→ PAY
+→ PRINT
+```
+
+### V2 user-visible capabilities
+
+As V2 features are verified/implemented, this same manual will document:
+
+- landed cost views
+- receipt lot/batch traceability
+- stock ageing
+- FIFO/rotation views
+- controlled discount/price overrides
+- standardized reasons
+- Accountant/Tally-ready export
+- loyalty
+- coupons/promotions
+- gift vouchers/store credit
+- supplier performance score
+- expanded transfer lifecycle
+- shared Approval Center additions
+- Leakage Shield additions
+- Purchase Coach additions
+
+A feature should not be shown as available to users until the actual
+application implementation is verified.
+
+### Ask WineShopPOS PRO AI Owner Assistant
+
+The Owner Assistant is **verified working end-to-end in production**.
+
+Example owner/manager questions include:
+
+- What were today's sales?
+- What was yesterday's gross profit?
+- Why did profit fall?
+- What should I reorder?
+- Which supplier increased prices?
+- Compare my shops.
+- What requires my attention?
+- Which inventory is ageing?
+
+Access uses the currently logged-in Supabase user and authorized shop
+membership. The AI does not decide tenant access.
+
+If AI is unavailable, core POS should remain operational.
+
+### Role rule
+
+UI visibility is not security. Backend/RLS/RPC authorization remains
+authoritative for ADMIN, MANAGER and CASHIER permissions.
+
+### Manual versioning
+
+This remains the single master WineShopPOS User Manual.
+Future V2/V3 changes update this same file; Git and V2 chapter records preserve
+history.
+<!-- WINEPOS_V2_CURRENT_END -->
+
 ## 1. What changed
 
 WineShopPOS now groups work into eight clear areas instead of showing every feature in the main sidebar.
