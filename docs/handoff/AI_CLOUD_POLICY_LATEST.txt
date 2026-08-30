@@ -1,0 +1,12 @@
+WineShopPOS AI cloud policy
+- Resource group: wineshopPOS
+- Static site: Central India
+- Document Intelligence: Central India / F0
+- AI Function App: Central India / Consumption Y1 only / no Always On
+- Foundry: Central India first, South India second, then STOP
+- No US/Europe fallback
+- One Foundry model deployment + one WineShopPOS Owner Agent
+- Supabase project ref: uiurgplnsgmawvxhjzzp
+- AI migration 20260830070000 is already applied remotely
+- Unique shop key: shops.id UUID
+- Tenant membership: user_shop_memberships
