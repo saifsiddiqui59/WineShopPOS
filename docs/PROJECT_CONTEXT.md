@@ -220,3 +220,19 @@ BROKEN
 ```
 
 V2 does not rebuild a working feature simply because it appears in the program.
+
+<!-- V2_STATUS_START -->
+## V2 implementation status — current
+
+N1–N11 and N13–N15 are implemented in the current V2 implementation history.
+N12 Advanced Stock Transfer remains an existing controlled workflow and is not
+a feature to rebuild.
+
+Recent interface work includes a dedicated POS/billing responsive UI pass and
+58mm/80mm thermal receipt styling.
+
+The production Owner Assistant remains read-only and working. Functionality
+how-to knowledge and Application Insights evaluation tracing are the next two
+separate pushes and must not be described as deployed until those pushes
+complete successfully.
+<!-- V2_STATUS_END -->

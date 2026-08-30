@@ -22,7 +22,9 @@ WineShopPOS maintains ONE canonical copy of each living document.
 
 Do not create parallel canonical documents such as:
 
-
+- `docs/HANDBOOK.md`
+- `docs/USER_MANUAL.md`
+- another competing V2-only master handbook/manual
 
 The existing master Handbook and existing master User Manual evolve in place.
 

@@ -599,3 +599,124 @@ clipped fields.
 
 The invoice screen provides a 58mm/80mm thermal receipt preview. Printing hides
 normal application navigation and uses receipt-focused print styling.
+
+<!-- V2_CURRENT_USER_WORKFLOWS_START -->
+## V2 Current User Workflows
+
+This section is authoritative where older manual wording conflicts.
+
+### Receive multiple inventory products
+
+Open **Purchasing → Receive Stock**.
+
+1. Select supplier and invoice details.
+2. Add all required product lines.
+3. Confirm cases, bottles per case, loose bottles and final bottle quantity.
+4. Enter purchase price and optional batch/expiry.
+5. Add applicable landed-cost charges/discounts.
+6. Review and confirm Receive Stock.
+
+### Receive an invoice with OCR
+
+Open **Purchasing → Purchase Intelligence** and use Invoice OCR.
+
+For every OCR line:
+
+1. Review description and quantity interpretation.
+2. Accept a strong match only when correct.
+3. For uncertain lines, select the correct existing product.
+4. For unmatched lines, use Select Existing Product or Create New Product.
+5. Confirm the mapping; WineShopPOS stores it as a product alias.
+6. Confirm cases, bottles per case, loose bottles and final bottles.
+7. Continue through controlled Receive Stock.
+
+Unresolved OCR lines must not post inventory.
+
+### Discount or price override
+
+At POS:
+
+1. Add products.
+2. Enter discount/change item sale price only when required.
+3. Select a standardized reason.
+4. If policy requires it, request approval.
+5. MANAGER/ADMIN reviews in **Operations → Approvals**.
+6. Complete sale after approval.
+
+Changing controlled pricing after approval requires a new approval.
+
+### Customer loyalty
+
+At POS select the customer, review points, enter points to redeem, preview
+benefits, and complete checkout. The database revalidates balances.
+
+Authorized managers/admins can manage loyalty adjustments from
+**Operations → Customers**.
+
+### Coupons and promotions
+
+Managers/admins create promotions from **Operations → Customers**. Promotions
+can use fixed/percentage discounts, coupon codes, minimum purchase, maximum
+discount, validity dates and automatic application. POS eligibility is
+revalidated at checkout.
+
+### Gift voucher and store credit
+
+From **Operations → Customers**, authorized managers/admins can grant store
+credit and issue gift vouchers.
+
+At POS select the customer for store credit or enter a gift-voucher code,
+preview the tender, then complete sale. These are non-cash tender, not hidden
+manual discounts.
+
+### Accountant / Tally-ready export
+
+Open **Reports & Exports**, select the date range, then choose
+**Export Accountant / Tally-ready Ledger**. The output contains ledger-oriented
+date, voucher, debit, credit, reference and narration rows. The accountant
+should validate final ledger-name mapping for the target Tally company.
+
+### Supplier Performance Score
+
+Open **Purchasing → Purchase Intelligence**. The score uses available evidence
+such as fill rate, on-time receipts, returns, price stability and purchase
+activity. It is decision support, not an accusation or contractual rating.
+
+### Purchase Coach
+
+Open **Purchasing → Purchase Intelligence → Purchase Coach**. It can flag
+REORDER, NO_MOVEMENT, OVERSTOCK and MARGIN_RISK using stock, demand and recent
+purchase/supplier evidence.
+
+### Advanced stock transfer
+
+Open **Inventory → Transfers**.
+
+`REQUESTED → APPROVED → DISPATCHED → IN_TRANSIT → RECEIVED → COMPLETED`
+
+Use the action for the current state; do not directly edit stock to imitate a
+transfer.
+
+### Leakage Shield
+
+Open **Owner Center → Leakage Shield / Exceptions** as ADMIN. Review neutral
+signals such as cash variance, unusual refunds/discounts, repeated approved POS
+overrides, large store-credit grants and high-value vouchers.
+
+### Add a new user
+
+Open **Admin → Users** as ADMIN. Create/invite the user through the current user
+management workflow, then assign the intended shop membership and role.
+
+### View historical data
+
+Use the relevant screen:
+
+- Sales: **POS → Sales**
+- Stock/movements: **Inventory**
+- Audit activity: **Admin → Audit**
+- Purchase/supplier history: **Purchasing → Purchase Intelligence**
+
+History availability depends on retained production records and screen filters.
+Deleted or never-retained records cannot be assumed recoverable.
+<!-- V2_CURRENT_USER_WORKFLOWS_END -->

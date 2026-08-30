@@ -71,3 +71,16 @@ production Foundry environment.
 
 Critical quality failures include cross-tenant access, wrong business numeric
 results and critical tool regressions.
+
+<!-- NEXT_AI_PUSHES_START -->
+## Next isolated AI pushes
+
+The production Owner Assistant is already working.
+
+1. **Functionality knowledge tool** — read-only deterministic help for app
+   navigation/workflows.
+2. **Evaluation observability** — Application Insights + OpenTelemetry GenAI
+   `invoke_agent` spans suitable for Foundry trace-based evaluation.
+
+These are not marked deployed until their individual push scripts succeed.
+<!-- NEXT_AI_PUSHES_END -->

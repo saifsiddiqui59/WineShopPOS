@@ -631,9 +631,9 @@ A feature is not considered fully operational merely because the build passes. H
 
 - Silent raw ESC/POS printing is not guaranteed by a static browser; browser/system printing remains the safe cross-printer path.
 - Barcode labels require printer/paper calibration.
-- Customer loyalty is deferred.
+- Customer loyalty is implemented in V2; see the canonical current-state section.
 - Compliance legal rules are deferred until verified.
-- AI Owner Assistant is hidden/deferred.
+- AI Owner Assistant is live in production; see the current AI baseline.
 - Voice AI is hidden/deferred.
 - PLUS/PRO do not enforce payment plans yet.
 
@@ -777,3 +777,78 @@ OCR requires:
   before the draft can move to Receive Stock
 
 See `docs/chapters/V2-03-inventory-cost-lots-ageing-fifo.md`.
+
+<!-- V2_CANONICAL_CURRENT_START -->
+## V2 Current Implementation — Canonical Summary
+
+This section is the current implementation summary. Older chapter text below is
+historical implementation evidence and must not override this section when the
+two conflict.
+
+### Production architecture
+
+- React/Vite frontend on Azure Storage static website.
+- Supabase PostgreSQL/Auth/RLS/RPC is the production business backend.
+- Multi-shop authorization uses authenticated membership and role resolution.
+- Roles: ADMIN, MANAGER, CASHIER.
+- Stock-changing workflows use transaction-safe database operations rather than
+  arbitrary direct browser inventory edits.
+
+### V2 feature status
+
+| ID | Capability | Current state |
+| --- | --- | --- |
+| N1 | Landed Cost Engine | Implemented |
+| N2 | Receipt Lot / Batch Tracking | Implemented |
+| N3 | True Stock Ageing | Implemented |
+| N4 | FIFO / Stock Rotation Foundation | Implemented |
+| N5 | Discount / Price Override Control | Implemented |
+| N6 | Standardized Reason Codes | Implemented |
+| N7 | Accountant / Tally-ready Export | Implemented |
+| N8 | Customer Loyalty | Implemented |
+| N9 | Coupons / Promotions | Implemented |
+| N10 | Gift Voucher / Store Credit | Implemented |
+| N11 | Supplier Performance Score | Implemented |
+| N12 | Advanced Stock Transfer | Existing controlled workflow; preserved |
+| N13 | Approval Center Expansion | Implemented |
+| N14 | Leakage Shield Expansion | Implemented |
+| N15 | Purchase Coach Expansion | Implemented |
+
+### OCR receiving rules
+
+Every OCR line must resolve to a product before inventory is posted.
+
+- strong matches may auto-select but remain reviewable
+- uncertain matches require confirmation
+- unmatched lines offer Select Existing Product or Create New Product
+- confirmed description-to-product mappings are saved as aliases
+- case count, bottles per case and loose bottles remain distinct
+- final bottle quantity is visible before receipt
+- inventory posting still occurs through controlled purchase receipt
+
+### POS and billing controls
+
+- cashier discounts and item-price overrides are backend-authorized
+- standardized reason codes are used for controlled overrides
+- manager/admin approval is required when policy thresholds demand it
+- loyalty, promotions, store credit and gift vouchers use controlled checkout
+- offline checkout cannot silently bypass authorization-required pricing/rewards
+
+### Production AI
+
+Ask WineShopPOS PRO Owner Assistant is a live, read-only production assistant.
+
+- Function App: `wineshoppos-ai-1a61d5885c`
+- Function region/plan: Central India / Consumption Y1
+- Foundry production resource: `wineshoppos-ai-in-1a61d5885c`
+- Foundry region: South India
+- Project: `wineshoppos-ai`
+- Model deployment: `gpt-5-mini`
+- Agent: `WineShopPOS-Owner-Agent`
+- caller authorization: current logged-in Supabase session
+- Function-to-Foundry authentication: system-assigned managed identity
+
+Next isolated AI pushes:
+1. functionality/how-to knowledge
+2. Application Insights GenAI tracing and trace-evaluation readiness
+<!-- V2_CANONICAL_CURRENT_END -->
