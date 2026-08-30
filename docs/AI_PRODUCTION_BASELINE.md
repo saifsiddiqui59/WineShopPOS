@@ -61,8 +61,11 @@ production Foundry environment.
 
 ## Next AI milestone
 
-- Application Insights / Foundry tracing
-- AI evaluations
+Tracing infrastructure is configured. The next verification/quality milestone is:
+
+- authenticated production trace ingestion verification
+- Foundry trace evaluations
+- golden evaluation dataset
 - quality gates
 - monitoring/dashboarding
 - Explanation verification
@@ -108,7 +111,7 @@ The tool does not write application data and does not introduce a second RAG
 service or database. Unknown workflows return an explicit "not verified"
 fallback so the agent does not invent app functionality.
 
-Application Insights GenAI tracing/evaluation remains the next separate push.
+Foundry/Application Insights tracing infrastructure is configured; authenticated trace ingestion and evaluation execution remain to be verified.
 <!-- APP_HELP_KNOWLEDGE_END -->
 
 <!-- AI_OBSERVABILITY_START -->

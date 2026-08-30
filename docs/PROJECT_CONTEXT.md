@@ -171,21 +171,29 @@ has been applied.
 The legacy East US Foundry resource named `wineshoppos-ai-1a61d5885c` is not
 the production Foundry environment and is cleanup-only after dependency review.
 
-## Next AI milestone
+## AI observability and next quality milestone
 
-The next AI milestone is not rebuilding the assistant.
+Foundry server-side tracing infrastructure is configured:
 
-It is:
+- Application Insights: `wineshoppos-ai-insights`
+- Log Analytics workspace: `wineshoppos-ai-law`
+- Foundry AppInsights authentication: `ProjectManagedIdentity`
+- project managed identity has `Monitoring Metrics Publisher` for trace ingestion
+- project managed identity has `Log Analytics Reader` for trace access
 
-- Application Insights / Foundry tracing
-- request correlation
-- AI evaluations
+The remaining verification boundary is a real authenticated Owner AI interaction
+appearing in Foundry Traces.
+
+After trace ingestion is verified, the next AI quality work is:
+
+- production trace evaluations
+- golden evaluation dataset
 - groundedness/relevance
 - numeric correctness
 - tool correctness
 - tenant/shop correctness
 - deployment quality gates
-- production monitoring/dashboarding
+- monitoring/dashboarding
 
 AI failure must never break core POS availability.
 
@@ -231,8 +239,8 @@ a feature to rebuild.
 Recent interface work includes a dedicated POS/billing responsive UI pass and
 58mm/80mm thermal receipt styling.
 
-The production Owner Assistant remains read-only and working. Functionality
-how-to knowledge and Application Insights evaluation tracing are the next two
-separate pushes and must not be described as deployed until those pushes
-complete successfully.
+The production Owner Assistant remains read-only and working. Verified
+functionality/how-to knowledge is deployed. Foundry/Application Insights tracing
+infrastructure is configured; trace ingestion remains pending final authenticated
+end-to-end verification before evaluation quality gates are treated as complete.
 <!-- V2_STATUS_END -->

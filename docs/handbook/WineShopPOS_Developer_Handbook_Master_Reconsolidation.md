@@ -127,15 +127,24 @@ transfers, multi-shop, Leakage Shield, Purchase Coach, supplier intelligence,
 offline, backup, scanner, receipt printing, RLS and AI should be verified and
 extended rather than rebuilt.
 
-### Next AI milestone
+### AI observability / next quality milestone
 
 ```text
-Application Insights / Foundry tracing
-→ automated evaluations
+Foundry server-side tracing infrastructure CONFIGURED
+→ authenticated production trace verification
+→ automated trace evaluations
 → numeric/tool/tenant correctness
 → deployment quality gates
 → monitoring/dashboarding
 ```
+
+Tracing resources:
+- Application Insights: `wineshoppos-ai-insights`
+- Log Analytics: `wineshoppos-ai-law`
+- Foundry connection auth: `ProjectManagedIdentity`
+- project MI ingestion role: `Monitoring Metrics Publisher`
+- project MI trace-read role: `Log Analytics Reader`
+
 
 AI failure must never break core POS availability.
 
@@ -232,7 +241,7 @@ The top bar provides:
 - online/offline state,
 - user avatar and account menu.
 
-The account menu provides My Profile, Account Settings, Security, Help/About and Logout.
+The account menu provides My Profile, Account Settings, Security, Help & Manual and Logout.
 
 Safe self-editable profile fields:
 - display name,
@@ -848,7 +857,9 @@ Ask WineShopPOS PRO Owner Assistant is a live, read-only production assistant.
 - caller authorization: current logged-in Supabase session
 - Function-to-Foundry authentication: system-assigned managed identity
 
-Next isolated AI pushes:
-1. functionality/how-to knowledge
-2. Application Insights GenAI tracing and trace-evaluation readiness
+Current AI extension state:
+1. functionality/how-to knowledge is deployed
+2. Foundry/Application Insights server-side tracing infrastructure is configured
+3. final trace ingestion verification requires one authenticated production interaction
+4. trace evaluation quality gates remain the next implementation/verification stage
 <!-- V2_CANONICAL_CURRENT_END -->

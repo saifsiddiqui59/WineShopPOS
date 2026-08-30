@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WineShopPOS User Manual</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #17181c;
+      background: #f4f5f7;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; }
+    .manual-shell { width: min(1200px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64px; }
+    .manual-header { margin-bottom: 20px; padding: 28px; border: 1px solid #e5e6e9; border-radius: 16px; background: #fff; }
+    .manual-header p { margin: 7px 0 0; color: #73767d; }
+    .manual-layout { display: grid; grid-template-columns: minmax(220px, 290px) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .toc { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; padding: 16px; border: 1px solid #e5e6e9; border-radius: 14px; background: #fff; }
+    .toc h2 { margin: 0 0 12px; font-size: 15px; }
+    .toc-links { display: grid; gap: 5px; }
+    .toc-link { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: start; padding: 8px; border-radius: 8px; color: #3b3d43; text-decoration: none; font-size: 12px; }
+    .toc-link:hover { background: #f7f1f4; }
+    .toc-link span { color: #8e244d; font-weight: 800; }
+    .content { min-width: 0; padding: 30px; border: 1px solid #e5e6e9; border-radius: 14px; background: #fff; line-height: 1.65; }
+    .content h1 { margin-top: 0; font-size: 28px; }
+    .content h2 { scroll-margin-top: 24px; margin-top: 38px; padding-top: 8px; border-top: 1px solid #eeeef0; font-size: 21px; }
+    .content h3 { scroll-margin-top: 24px; margin-top: 25px; font-size: 16px; }
+    .content p, .content li { font-size: 14px; }
+    .content blockquote { margin: 16px 0; padding: 12px 16px; border-left: 4px solid #8e244d; background: #faf6f8; color: #55575c; }
+    .content code { padding: 2px 5px; border-radius: 4px; background: #f4f4f5; }
+    .content pre { overflow: auto; padding: 14px; border-radius: 10px; background: #202124; color: #fff; }
+    .content pre code { padding: 0; background: transparent; }
+    .content table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .content th, .content td { padding: 9px; border: 1px solid #e5e6e9; text-align: left; vertical-align: top; }
+    @media (max-width: 860px) {
+      .manual-layout { grid-template-columns: 1fr; }
+      .toc { position: static; max-height: none; }
+      .content, .manual-header { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="manual-shell">
+    <header class="manual-header">
+      <h1>WineShopPOS User Manual</h1>
+      <p>Operational guidance for authorized WineShopPOS users.</p>
+    </header>
+    <div class="manual-layout">
+      <aside class="toc" aria-label="Manual contents">
+        <h2>Contents</h2>
+        <div class="toc-links"><a class="toc-link" href="#current-v2-user-guide-update"><span>01</span><strong>Current V2 User Guide Update</strong></a><a class="toc-link" href="#1-what-changed"><span>02</span><strong>1. What changed</strong></a><a class="toc-link" href="#2-roles"><span>03</span><strong>2. Roles</strong></a><a class="toc-link" href="#3-top-bar-and-account-menu"><span>04</span><strong>3. Top Bar and Account Menu</strong></a><a class="toc-link" href="#4-pos-billing"><span>05</span><strong>4. POS & Billing</strong></a><a class="toc-link" href="#5-sales-returns-voids"><span>06</span><strong>5. Sales / Returns / Voids</strong></a><a class="toc-link" href="#6-shift-day-close"><span>07</span><strong>6. Shift & Day Close</strong></a><a class="toc-link" href="#7-products"><span>08</span><strong>7. Products</strong></a><a class="toc-link" href="#8-purchases-suppliers"><span>09</span><strong>8. Purchases & Suppliers</strong></a><a class="toc-link" href="#9-inventory"><span>10</span><strong>9. Inventory</strong></a><a class="toc-link" href="#10-operations"><span>11</span><strong>10. Operations</strong></a><a class="toc-link" href="#11-owner-center"><span>12</span><strong>11. Owner Center</strong></a><a class="toc-link" href="#12-reports-compliance"><span>13</span><strong>12. Reports & Compliance</strong></a><a class="toc-link" href="#13-settings-admin"><span>14</span><strong>13. Settings & Admin</strong></a><a class="toc-link" href="#14-troubleshooting"><span>15</span><strong>14. Troubleshooting</strong></a><a class="toc-link" href="#15-daily-shop-checklist"><span>16</span><strong>15. Daily Shop Checklist</strong></a><a class="toc-link" href="#18-modern-theme-and-dashboard"><span>17</span><strong>18. Modern Theme and Dashboard</strong></a><a class="toc-link" href="#19-shop-settings-admin"><span>18</span><strong>19. Shop Settings — ADMIN</strong></a><a class="toc-link" href="#20-users-and-role-access-admin"><span>19</span><strong>20. Users and Role Access — ADMIN</strong></a><a class="toc-link" href="#21-help-user-manual"><span>20</span><strong>21. Help & User Manual</strong></a><a class="toc-link" href="#supplier-master-and-ocr-supplier-review"><span>21</span><strong>Supplier Master and OCR Supplier Review</strong></a><a class="toc-link" href="#ask-wineshoppos-pro"><span>22</span><strong>Ask WineShopPOS (PRO)</strong></a><a class="toc-link" href="#v2-phase-1-ocr-product-resolution-landed-cost"><span>23</span><strong>V2 Phase 1 — OCR Product Resolution & Landed Cost</strong></a><a class="toc-link" href="#v2-pos-and-billing-interface"><span>24</span><strong>V2 POS and Billing Interface</strong></a><a class="toc-link" href="#v2-current-user-workflows"><span>25</span><strong>V2 Current User Workflows</strong></a><a class="toc-link" href="#ask-wineshoppos-functionality-help"><span>26</span><strong>Ask WineShopPOS — functionality help</strong></a></div>
+      </aside>
+      <article class="content"><h1>WineShopPOS User Manual — Master Reconsolidation</h1>
+<!-- WINEPOS_V2_CURRENT_BEGIN -->
+<h2 id="current-v2-user-guide-update">Current V2 User Guide Update</h2>
+<p><strong>Current product/documentation generation: V2</strong></p>
+<blockquote>
+<p>This section is the current user-facing reference where an older section
+conflicts with current production behavior.</p>
+</blockquote>
+<h3 id="current-application-areas">Current application areas</h3>
+<p>Depending on role and shop authorization, WineShopPOS currently covers or has
+developed workflows around:</p>
+<ul>
+<li>POS billing</li>
+<li>barcode scanning</li>
+<li>payments</li>
+<li>receipt printing</li>
+<li>products/categories</li>
+<li>inventory</li>
+<li>suppliers</li>
+<li>purchases / PO / receiving / GRN</li>
+<li>returns/refunds</li>
+<li>sale void</li>
+<li>cashier shifts</li>
+<li>physical stock count</li>
+<li>stock adjustment</li>
+<li>stock transfer</li>
+<li>reports / Owner Center</li>
+<li>reorder / Purchase Coach intelligence</li>
+<li>Leakage Shield / exception review</li>
+<li>OCR invoice review</li>
+<li>offline foundation</li>
+<li>owner WhatsApp summary</li>
+<li>Ask WineShopPOS PRO AI Owner Assistant</li>
+</ul>
+<h3 id="cashier-workflow">Cashier workflow</h3>
+<p>Keep the cashier flow simple:</p>
+<pre><code class="language-text">SCAN
+→ CART
+→ PAY
+→ PRINT
+</code></pre>
+<h3 id="v2-user-visible-capabilities">V2 user-visible capabilities</h3>
+<p>As V2 features are verified/implemented, this same manual will document:</p>
+<ul>
+<li>landed cost views</li>
+<li>receipt lot/batch traceability</li>
+<li>stock ageing</li>
+<li>FIFO/rotation views</li>
+<li>controlled discount/price overrides</li>
+<li>standardized reasons</li>
+<li>Accountant/Tally-ready export</li>
+<li>loyalty</li>
+<li>coupons/promotions</li>
+<li>gift vouchers/store credit</li>
+<li>supplier performance score</li>
+<li>expanded transfer lifecycle</li>
+<li>shared Approval Center additions</li>
+<li>Leakage Shield additions</li>
+<li>Purchase Coach additions</li>
+</ul>
+<p>A feature should not be shown as available to users until the actual
+application implementation is verified.</p>
+<h3 id="ask-wineshoppos-pro-ai-owner-assistant">Ask WineShopPOS PRO AI Owner Assistant</h3>
+<p>The Owner Assistant is <strong>verified working end-to-end in production</strong>.</p>
+<p>Example owner/manager questions include:</p>
+<ul>
+<li>What were today&#39;s sales?</li>
+<li>What was yesterday&#39;s gross profit?</li>
+<li>Why did profit fall?</li>
+<li>What should I reorder?</li>
+<li>Which supplier increased prices?</li>
+<li>Compare my shops.</li>
+<li>What requires my attention?</li>
+<li>Which inventory is ageing?</li>
+</ul>
+<p>Access uses the currently logged-in Supabase user and authorized shop
+membership. The AI does not decide tenant access.</p>
+<p>If AI is unavailable, core POS should remain operational.</p>
+<h3 id="role-rule">Role rule</h3>
+<p>UI visibility is not security. Backend/RLS/RPC authorization remains
+authoritative for ADMIN, MANAGER and CASHIER permissions.</p>
+<h3 id="manual-versioning">Manual versioning</h3>
+<p>This remains the single master WineShopPOS User Manual.
+Future V2/V3 changes update this same file; Git and V2 chapter records preserve
+history.</p>
+<!-- WINEPOS_V2_CURRENT_END --><h2 id="1-what-changed">1. What changed</h2>
+<p>WineShopPOS now groups work into eight clear areas instead of showing every feature in the main sidebar.</p>
+<ul>
+<li>POS &amp; Billing</li>
+<li>Products</li>
+<li>Purchases &amp; Suppliers</li>
+<li>Inventory</li>
+<li>Operations</li>
+<li>Owner Center</li>
+<li>Reports &amp; Compliance</li>
+<li>Settings &amp; Admin</li>
+</ul>
+<p>You only see modules allowed for your role.</p>
+<h2 id="2-roles">2. Roles</h2>
+<h3 id="cashier">Cashier</h3>
+<p>Use POS, sales lookup, returns where permitted, current shift, scanner and offline queue. Management/owner/admin screens are hidden.</p>
+<h3 id="manager">Manager</h3>
+<p>Use cashier functions plus products, procurement, inventory, stock count, transfers, expenses, approvals, customer credit and operational reports.</p>
+<h3 id="admin-owner">Admin / Owner</h3>
+<p>Use all authorized shop functions including users, Owner Center, profit, exceptions, hardware, compliance configuration, backup evidence and audit.</p>
+<p>You cannot change your own role from the account menu.</p>
+<h2 id="3-top-bar-and-account-menu">3. Top Bar and Account Menu</h2>
+<p>Top-right shows:</p>
+<ul>
+<li>current shop,</li>
+<li>online/offline status,</li>
+<li>your avatar/name.</li>
+</ul>
+<p>Click your avatar for:</p>
+<ul>
+<li>My Profile,</li>
+<li>Account Settings,</li>
+<li>Security,</li>
+<li>Help &amp; Manual,</li>
+<li>Logout.</li>
+</ul>
+<p>You may update display name, phone and profile image URL. Email/role/shop security are controlled by administration.</p>
+<h2 id="4-pos-billing">4. POS &amp; Billing</h2>
+<h3 id="normal-sale">Normal sale</h3>
+<ol>
+<li>Open POS &amp; Billing → Billing.</li>
+<li>Scan a barcode.</li>
+<li>Confirm the product appears in the cart.</li>
+<li>Scan the same barcode again to increase quantity.</li>
+<li>Adjust quantity if needed.</li>
+<li>Optionally select a known customer while online.</li>
+<li>Enter allowed discount if applicable.</li>
+<li>Select Cash, UPI or Card.</li>
+<li>For UPI/Card, record the reference if available.</li>
+<li>Select Complete Sale.</li>
+<li>Print the receipt if needed.</li>
+</ol>
+<h3 id="unknown-barcode">Unknown barcode</h3>
+<p>If the barcode is unknown:</p>
+<ul>
+<li>PRODUCT NOT FOUND is shown.</li>
+<li>Manager/Admin can select Add Product with this Barcode.</li>
+<li>The scanned barcode is prefilled.</li>
+</ul>
+<h3 id="scanner-behavior">Scanner behavior</h3>
+<p>The scanner works globally on the POS page. Rapid scanner input ending with Enter is separated from normal human typing. If the scanner appears unreliable, open Scanner diagnostics from the POS module or Admin Hardware.</p>
+<h2 id="5-sales-returns-voids">5. Sales / Returns / Voids</h2>
+<p>Open POS &amp; Billing → Sales to find invoices.</p>
+<p>For a return:</p>
+<ol>
+<li>open Returns &amp; Voids,</li>
+<li>choose original invoice/product,</li>
+<li>enter return quantity and reason,</li>
+<li>submit request,</li>
+<li>Manager/Admin approves where required,</li>
+<li>approved returned quantity is added back to inventory through the controlled backend.</li>
+</ol>
+<p>Never manually increase stock to imitate a return.</p>
+<h2 id="6-shift-day-close">6. Shift &amp; Day Close</h2>
+<ol>
+<li>Open Shift.</li>
+<li>Enter opening cash and open shift.</li>
+<li>Work normally through the day.</li>
+<li>At closing, enter actual cash and request close.</li>
+<li>Review expected cash and difference.</li>
+<li>Manager approves close where required.</li>
+</ol>
+<p>The app may block closing if this device still has unsynced/conflicting offline sales.</p>
+<h2 id="7-products">7. Products</h2>
+<h3 id="add-edit">Add/Edit</h3>
+<p>Managers/Admins use Products → Product Master.</p>
+<p>Maintain:</p>
+<ul>
+<li>barcode,</li>
+<li>SKU,</li>
+<li>name/brand/category,</li>
+<li>bottle size,</li>
+<li>case size,</li>
+<li>purchase price,</li>
+<li>MRP/selling price,</li>
+<li>minimum stock,</li>
+<li>active/inactive status.</li>
+</ul>
+<p>Editing product details does not directly rewrite inventory.</p>
+<h3 id="barcode-labels">Barcode Labels</h3>
+<ol>
+<li>Open Products → Barcode Labels.</li>
+<li>Search/select product.</li>
+<li>Choose number of copies.</li>
+<li>Select Print Labels.</li>
+<li>Choose installed barcode/label printer in system print dialog.</li>
+<li>Verify paper size/calibration before bulk printing.</li>
+</ol>
+<h2 id="8-purchases-suppliers">8. Purchases &amp; Suppliers</h2>
+<h3 id="receive-stock">Receive Stock</h3>
+<p>Use Receive Stock for direct supplier invoice receiving. Enter supplier/invoice/items and confirm. Stock increases only after controlled purchase receipt succeeds.</p>
+<h3 id="procurement-plus">Procurement PLUS</h3>
+<p>Purchase order flow:</p>
+<ol>
+<li>Create Draft PO.</li>
+<li>Submit for Approval.</li>
+<li>Manager/Admin approves.</li>
+<li>Mark PO Sent when sent to supplier.</li>
+<li>On arrival, select PO and enter supplier invoice/date.</li>
+<li>Receive Goods.</li>
+<li>Inventory and stock movements update transactionally.</li>
+</ol>
+<p>Also use Procurement for supplier payments and purchase returns.</p>
+<h3 id="purchase-intelligence-pro">Purchase Intelligence PRO</h3>
+<p>Use Purchase Intelligence to view:</p>
+<ul>
+<li>invoice OCR,</li>
+<li>product purchase-price history,</li>
+<li>supplier price comparison,</li>
+<li>supplier outstanding/return/payment statistics,</li>
+<li>estimated margin impact.</li>
+</ul>
+<p>OCR is a draft assistant. Always review extracted quantities, product match and price before receiving.</p>
+<h2 id="9-inventory">9. Inventory</h2>
+<h3 id="overview">Overview</h3>
+<p>Shows live stock from Supabase.</p>
+<h3 id="stock-count">Stock Count</h3>
+<ol>
+<li>Start a count.</li>
+<li>Walk through the store and scan products.</li>
+<li>Record physical quantities.</li>
+<li>Submit count.</li>
+<li>Manager approves.</li>
+<li>Approved differences create stock adjustments/movements.</li>
+</ol>
+<h3 id="transfers-plus">Transfers PLUS</h3>
+<ol>
+<li>Source requests transfer to another shop in same organization.</li>
+<li>Destination approves.</li>
+<li>Source dispatches — source stock decreases.</li>
+<li>Mark In Transit.</li>
+<li>Destination receives — destination stock increases.</li>
+<li>Destination completes transfer.</li>
+</ol>
+<p>Do not use manual adjustments instead of the transfer workflow.</p>
+<h3 id="inventory-intelligence-pro">Inventory Intelligence PRO</h3>
+<p>Use this screen to identify:</p>
+<ul>
+<li>stockout risk,</li>
+<li>out of stock,</li>
+<li>dead stock,</li>
+<li>overstock,</li>
+<li>fast/slow stock.</li>
+</ul>
+<p>Explain My Stock summarizes movement categories for a selected product. Reorder-risk products can create a draft PO after selecting supplier.</p>
+<h2 id="10-operations">10. Operations</h2>
+<h3 id="expenses">Expenses</h3>
+<p>Managers/Admins record operating expenses such as rent, salary, electricity, transport and maintenance. If an entry is wrong, Void it with a reason instead of deleting history.</p>
+<h3 id="approvals">Approvals</h3>
+<p>The Approvals tab consolidates pending operational approvals such as returns, shift closes, stock counts, transfers and purchase orders.</p>
+<h3 id="customer-credit-plus">Customer &amp; Credit PLUS</h3>
+<p>Use Customer &amp; Credit to:</p>
+<ul>
+<li>add customer,</li>
+<li>record Udhaar/charge,</li>
+<li>record payment received,</li>
+<li>review outstanding balance.</li>
+</ul>
+<p>Normal POS customer capture remains optional.</p>
+<h3 id="offline-queue">Offline Queue</h3>
+<p>If internet fails after the catalog was loaded:</p>
+<ul>
+<li>continue emergency billing,</li>
+<li>the sale is encrypted/queued locally,</li>
+<li>reconnect,</li>
+<li>synchronize,</li>
+<li>resolve any conflict instead of forcing inventory.</li>
+</ul>
+<p>Never clear browser data while unsynced offline sales exist.</p>
+<h2 id="11-owner-center">11. Owner Center</h2>
+<h3 id="overview-pro">Overview PRO</h3>
+<p>Shows revenue, bills, gross profit, operating profit, expenses, low stock, inventory cost and cash variance for the current shop.</p>
+<h3 id="profit-intelligence-pro">Profit Intelligence PRO</h3>
+<p>Shows revenue, COGS, gross profit and SKU margins. Older sales created before cost snapshots may not have complete historical COGS.</p>
+<h3 id="loss-exceptions-pro">Loss &amp; Exceptions PRO</h3>
+<p>Flags operational events for review using neutral wording. It does not accuse staff of fraud.</p>
+<h3 id="recommendations-plus">Recommendations PLUS</h3>
+<p>Shows rule-based suggestions such as stockout risk, dead/overstock and shift variance, with links to the relevant action screen.</p>
+<h3 id="whatsapp-summary-plus">WhatsApp Summary PLUS</h3>
+<ol>
+<li>Open WhatsApp Summary.</li>
+<li>Review generated text.</li>
+<li>Select Share with Owner.</li>
+<li>WhatsApp/WhatsApp Web opens.</li>
+<li>Select recipient and manually send.</li>
+</ol>
+<p>WineShopPOS does not automatically send or schedule WhatsApp messages.</p>
+<h2 id="12-reports-compliance">12. Reports &amp; Compliance</h2>
+<h3 id="reports-exports">Reports / Exports</h3>
+<p>Choose date range and export:</p>
+<ul>
+<li>sales CSV,</li>
+<li>purchases CSV,</li>
+<li>current inventory CSV,</li>
+<li>expenses CSV.</li>
+</ul>
+<p>Confirm any accountant/Tally import format with your accountant before relying on it.</p>
+<h3 id="liquor-compliance">Liquor Compliance</h3>
+<p>Admin stores verified license/state metadata. The application does not currently claim generic state excise compliance. Only enter verified values supplied for the licensed shop.</p>
+<h2 id="13-settings-admin">13. Settings &amp; Admin</h2>
+<h3 id="users">Users</h3>
+<p>Shop Admin can create Manager/Cashier accounts. Shop Admin cannot create another Admin. Activate/deactivate operational users from Users.</p>
+<h3 id="hardware">Hardware</h3>
+<p>Hardware links to scanner diagnostics and receipt printer settings. Barcode labels are under Products.</p>
+<h3 id="backup-recovery">Backup &amp; Recovery</h3>
+<p>Admin can export an operational JSON snapshot. This is not a full PostgreSQL backup.</p>
+<p>A proper backup process also requires database backup and a successful restore drill in a separate environment. Record restore-test evidence only after it actually happened.</p>
+<h3 id="audit-log">Audit Log</h3>
+<p>Admin can inspect technical audit history for changes/actions captured by the backend.</p>
+<h2 id="14-troubleshooting">14. Troubleshooting</h2>
+<h3 id="product-does-not-scan">Product does not scan</h3>
+<ul>
+<li>Open Scanner diagnostics.</li>
+<li>Test barcode <code>8900000010016</code>.</li>
+<li>Confirm scanner sends Enter after barcode.</li>
+<li>Confirm product is active and barcode matches Product Master.</li>
+</ul>
+<h3 id="sale-says-inventory-changed">Sale says inventory changed</h3>
+<p>Refresh cloud stock and retry. Do not manually force a lower inventory number.</p>
+<h3 id="offline-sale-not-syncing">Offline sale not syncing</h3>
+<p>Reconnect internet, open Offline Queue and retry synchronization. If conflict remains, Manager should review live stock.</p>
+<h3 id="ocr-product-match-looks-wrong">OCR product match looks wrong</h3>
+<p>Do not confirm. Correct the product match/quantity/price first.</p>
+<h3 id="printer-layout-wrong">Printer layout wrong</h3>
+<p>Use the correct installed printer, paper width (58/80mm) or label paper and recalibrate system printer settings.</p>
+<h3 id="subscription-blocked">Subscription blocked</h3>
+<p>Contact the WineShopPOS software provider. Shop data access may be intentionally suspended by the platform owner.</p>
+<h2 id="15-daily-shop-checklist">15. Daily Shop Checklist</h2>
+<h3 id="opening">Opening</h3>
+<ul>
+<li>login,</li>
+<li>confirm Online status,</li>
+<li>open Cashier shift,</li>
+<li>scanner quick test,</li>
+<li>confirm printer paper.</li>
+</ul>
+<h3 id="during-day">During day</h3>
+<ul>
+<li>use POS for sales,</li>
+<li>use Receive Stock/PO workflow for stock-in,</li>
+<li>use Returns for customer returns,</li>
+<li>use Stock Adjustments/Stock Count rather than direct inventory editing,</li>
+<li>monitor Offline indicator.</li>
+</ul>
+<h3 id="closing">Closing</h3>
+<ul>
+<li>sync offline queue,</li>
+<li>close shift and reconcile cash,</li>
+<li>review pending approvals,</li>
+<li>review low-stock recommendations,</li>
+<li>owner/manager reviews exceptions if needed.</li>
+</ul>
+<h2 id="18-modern-theme-and-dashboard">18. Modern Theme and Dashboard</h2>
+<p>WineShopPOS now uses a modern light/dark visual system with Power BI-inspired business charts on management screens.</p>
+<h3 id="change-theme">Change theme</h3>
+<p>Use either:</p>
+<ul>
+<li>the theme button in the top-right application bar, or</li>
+<li>My Account → Account Settings → Theme.</li>
+</ul>
+<p>Options:</p>
+<ul>
+<li>Light</li>
+<li>Dark</li>
+<li>System/Auto</li>
+</ul>
+<p>System/Auto follows the device/browser light or dark preference. The theme should change immediately; saved account preference is reused on later sessions.</p>
+<h3 id="charts">Charts</h3>
+<p>Charts are management aids and do not replace transaction records. You will see visual trends in Owner Center, Profit Intelligence, Reports, Inventory Intelligence and Purchase Intelligence. Hover/labels and the detailed tables should be used when exact values are needed.</p>
+<h2 id="19-shop-settings-admin">19. Shop Settings — ADMIN</h2>
+<p>Open Settings &amp; Admin → Shop Settings.</p>
+<p>The Shop Admin can edit:</p>
+<ol>
+<li>shop name,</li>
+<li>address and phone,</li>
+<li>registration number,</li>
+<li>currency code/symbol,</li>
+<li>invoice and purchase prefixes,</li>
+<li>receipt paper size,</li>
+<li>receipt footer,</li>
+<li>configured tax enable/percentage.</li>
+</ol>
+<p>Select <strong>Save Shop Settings</strong>. Successful changes are stored centrally and audited.</p>
+<p>The shop slug is read-only. Subscription status and the access kill switch are platform-controlled and are not editable here.</p>
+<h2 id="20-users-and-role-access-admin">20. Users and Role Access — ADMIN</h2>
+<p>Open Settings &amp; Admin → Users to create staff and manage their role/status.</p>
+<h3 id="cashier-2">Cashier</h3>
+<p>Cashier is the fast-selling role. It can use POS/scanner, permitted sales/returns, its shift and offline queue. Cashier cannot edit product master, purchases, inventory, Owner Center or administration.</p>
+<h3 id="manager-2">Manager</h3>
+<p>Manager can run operational workflows: products, purchases, suppliers, inventory, stock count/transfers, expenses, approvals, customer credit and reports. Manager cannot open Owner Center or Shop Admin administration.</p>
+<h3 id="shop-admin">Shop Admin</h3>
+<p>Shop Admin has all authorized shop functionality, including Owner Center, users, role management, Shop Settings, backup and audit.</p>
+<h3 id="change-staff-role">Change staff role</h3>
+<p>For a non-admin staff row, choose <strong>Cashier</strong> or <strong>Manager</strong> in the Role field. Role changes are applied through the secure user-management function. ADMIN is platform-controlled and cannot be assigned from this screen.</p>
+<p>Open Settings &amp; Admin → Access Control for the complete access matrix.</p>
+<h2 id="21-help-user-manual">21. Help &amp; User Manual</h2>
+<p>Open <strong>Help &amp; Manual</strong> from the main navigation.</p>
+<p>The Help Center provides clickable chapters for the main WineShopPOS workflows,
+including billing, sales/returns, shifts, products, purchasing, inventory,
+operations, Owner Center, reports, administration and troubleshooting.</p>
+<p>Select a chapter to jump directly to its guidance, or select <strong>Open Full User
+Manual</strong> for the complete manual with a clickable table of contents.</p>
+<!-- SUPPLIER_MASTER_OCR_PATCH -->
+<h2 id="supplier-master-and-ocr-supplier-review">Supplier Master and OCR Supplier Review</h2>
+<p>ADMIN and MANAGER can open <strong>Purchases &amp; Suppliers → Suppliers</strong> to create, edit, deactivate or reactivate suppliers. While creating a Purchase Order, use <strong>+ New Supplier</strong> to create a supplier without leaving the PO, or <strong>Edit Selected Supplier</strong> to correct the selected supplier.</p>
+<p>For invoice OCR, first analyze the invoice, then confirm an existing supplier or choose <strong>Create Supplier From Invoice</strong>. Review the OCR-proposed supplier name, GST/tax number and address before saving. The supplier must be confirmed before the OCR draft can proceed to Receive Stock. Stock changes only after the normal receive confirmation.</p>
+<!-- WSP_AI_VERIFIED_V1_START -->
+<h2 id="ask-wineshoppos-pro">Ask WineShopPOS (PRO)</h2>
+<p>Ask WineShopPOS is the Owner Center business copilot for quick questions about your shop.</p>
+<h3 id="who-can-use-it">Who can use it</h3>
+<p>Ask WineShopPOS is currently available to authorized <strong>ADMIN</strong> users from:</p>
+<p><strong>Owner Center → Ask WineShopPOS</strong></p>
+<h3 id="what-you-can-ask">What you can ask</h3>
+<p>Examples:</p>
+<ul>
+<li>How is my shop performing today?</li>
+<li>What should I reorder?</li>
+<li>Which products may run out soon?</li>
+<li>Which products are moving slowly?</li>
+<li>How is my profit today?</li>
+<li>Which supplier prices changed?</li>
+<li>Show me stock movement for a product.</li>
+<li>Are there shift differences I should review?</li>
+<li>What expenses affected my business?</li>
+<li>Is there anything operational that needs my attention?</li>
+</ul>
+<h3 id="shop-selection">Shop selection</h3>
+<p>The shop context comes from your WineShopPOS account.</p>
+<p>If your account is authorized for more than one shop, use the available shop/scope selector to choose the business context you want to review.</p>
+<h3 id="using-the-answer">Using the answer</h3>
+<p>Ask WineShopPOS explains the business information available in the application and can point you to the relevant screen for more detail.</p>
+<p>AI V1 provides <strong>insights and recommendations</strong>. Final operational actions remain under the user&#39;s control in the normal WineShopPOS workflows.</p>
+<h3 id="if-ai-is-temporarily-unavailable">If AI is temporarily unavailable</h3>
+<p>Your normal POS, billing, inventory, purchasing and operational workflows continue to work. Try the AI question again after a short interval.</p>
+<h3 id="example">Example</h3>
+<p><strong>Question:</strong> How is my shop performing today?</p>
+<p>Ask WineShopPOS can combine current sales, profit, expenses, shift information and operational exceptions into one business summary.</p>
+<!-- WSP_AI_VERIFIED_V1_END --><hr>
+<h2 id="v2-phase-1-ocr-product-resolution-landed-cost">V2 Phase 1 — OCR Product Resolution &amp; Landed Cost</h2>
+<p>For purchase invoice OCR:</p>
+<ol>
+<li>Analyze the invoice.</li>
+<li>Confirm an existing supplier or create the reviewed supplier.</li>
+<li>Every OCR line must resolve to a Product Master product.</li>
+<li>Strong product matches are auto-selected but the line is still shown for
+confirmation.</li>
+<li>Uncertain matches require human selection/confirmation.</li>
+<li>Unmatched lines provide <strong>Select Existing Product</strong> and <strong>Create New Product</strong>.</li>
+<li>Confirmed description-to-product mappings are saved as aliases for future invoices.</li>
+<li>Review <strong>Cases</strong>, <strong>Bottles / Case</strong>, <strong>Loose Bottles</strong> and <strong>Final Bottles</strong>.</li>
+<li>Only confirmed lines can be sent to Receive Stock.</li>
+<li>Receive Stock shows landed-cost adjustments before inventory is posted.</li>
+</ol>
+<p>Receipt-based ageing and FIFO views are available under Inventory after the
+Phase-1 database migration is active.</p>
+<hr>
+<h2 id="v2-pos-and-billing-interface">V2 POS and Billing Interface</h2>
+<p>The POS is arranged as a retail workstation:</p>
+<ol>
+<li>Product search / barcode scanner</li>
+<li>Optional customer/reward controls</li>
+<li>Current Bill</li>
+<li>Applicable override/reward controls</li>
+<li>CASH / UPI / CARD selection</li>
+<li>Complete Sale</li>
+</ol>
+<p>On large screens the bill stays visible while products are scanned. On smaller
+screens the interface stacks automatically to prevent overlapping buttons and
+clipped fields.</p>
+<p>The invoice screen provides a 58mm/80mm thermal receipt preview. Printing hides
+normal application navigation and uses receipt-focused print styling.</p>
+<!-- V2_CURRENT_USER_WORKFLOWS_START -->
+<h2 id="v2-current-user-workflows">V2 Current User Workflows</h2>
+<p>This section is authoritative where older manual wording conflicts.</p>
+<h3 id="receive-multiple-inventory-products">Receive multiple inventory products</h3>
+<p>Open <strong>Purchasing → Receive Stock</strong>.</p>
+<ol>
+<li>Select supplier and invoice details.</li>
+<li>Add all required product lines.</li>
+<li>Confirm cases, bottles per case, loose bottles and final bottle quantity.</li>
+<li>Enter purchase price and optional batch/expiry.</li>
+<li>Add applicable landed-cost charges/discounts.</li>
+<li>Review and confirm Receive Stock.</li>
+</ol>
+<h3 id="receive-an-invoice-with-ocr">Receive an invoice with OCR</h3>
+<p>Open <strong>Purchasing → Purchase Intelligence</strong> and use Invoice OCR.</p>
+<p>For every OCR line:</p>
+<ol>
+<li>Review description and quantity interpretation.</li>
+<li>Accept a strong match only when correct.</li>
+<li>For uncertain lines, select the correct existing product.</li>
+<li>For unmatched lines, use Select Existing Product or Create New Product.</li>
+<li>Confirm the mapping; WineShopPOS stores it as a product alias.</li>
+<li>Confirm cases, bottles per case, loose bottles and final bottles.</li>
+<li>Continue through controlled Receive Stock.</li>
+</ol>
+<p>Unresolved OCR lines must not post inventory.</p>
+<h3 id="discount-or-price-override">Discount or price override</h3>
+<p>At POS:</p>
+<ol>
+<li>Add products.</li>
+<li>Enter discount/change item sale price only when required.</li>
+<li>Select a standardized reason.</li>
+<li>If policy requires it, request approval.</li>
+<li>MANAGER/ADMIN reviews in <strong>Operations → Approvals</strong>.</li>
+<li>Complete sale after approval.</li>
+</ol>
+<p>Changing controlled pricing after approval requires a new approval.</p>
+<h3 id="customer-loyalty">Customer loyalty</h3>
+<p>At POS select the customer, review points, enter points to redeem, preview
+benefits, and complete checkout. The database revalidates balances.</p>
+<p>Authorized managers/admins can manage loyalty adjustments from
+<strong>Operations → Customers</strong>.</p>
+<h3 id="coupons-and-promotions">Coupons and promotions</h3>
+<p>Managers/admins create promotions from <strong>Operations → Customers</strong>. Promotions
+can use fixed/percentage discounts, coupon codes, minimum purchase, maximum
+discount, validity dates and automatic application. POS eligibility is
+revalidated at checkout.</p>
+<h3 id="gift-voucher-and-store-credit">Gift voucher and store credit</h3>
+<p>From <strong>Operations → Customers</strong>, authorized managers/admins can grant store
+credit and issue gift vouchers.</p>
+<p>At POS select the customer for store credit or enter a gift-voucher code,
+preview the tender, then complete sale. These are non-cash tender, not hidden
+manual discounts.</p>
+<h3 id="accountant-tally-ready-export">Accountant / Tally-ready export</h3>
+<p>Open <strong>Reports &amp; Exports</strong>, select the date range, then choose
+<strong>Export Accountant / Tally-ready Ledger</strong>. The output contains ledger-oriented
+date, voucher, debit, credit, reference and narration rows. The accountant
+should validate final ledger-name mapping for the target Tally company.</p>
+<h3 id="supplier-performance-score">Supplier Performance Score</h3>
+<p>Open <strong>Purchasing → Purchase Intelligence</strong>. The score uses available evidence
+such as fill rate, on-time receipts, returns, price stability and purchase
+activity. It is decision support, not an accusation or contractual rating.</p>
+<h3 id="purchase-coach">Purchase Coach</h3>
+<p>Open <strong>Purchasing → Purchase Intelligence → Purchase Coach</strong>. It can flag
+REORDER, NO_MOVEMENT, OVERSTOCK and MARGIN_RISK using stock, demand and recent
+purchase/supplier evidence.</p>
+<h3 id="advanced-stock-transfer">Advanced stock transfer</h3>
+<p>Open <strong>Inventory → Transfers</strong>.</p>
+<p><code>REQUESTED → APPROVED → DISPATCHED → IN_TRANSIT → RECEIVED → COMPLETED</code></p>
+<p>Use the action for the current state; do not directly edit stock to imitate a
+transfer.</p>
+<h3 id="leakage-shield">Leakage Shield</h3>
+<p>Open <strong>Owner Center → Leakage Shield / Exceptions</strong> as ADMIN. Review neutral
+signals such as cash variance, unusual refunds/discounts, repeated approved POS
+overrides, large store-credit grants and high-value vouchers.</p>
+<h3 id="add-a-new-user">Add a new user</h3>
+<p>Open <strong>Admin → Users</strong> as ADMIN. Create/invite the user through the current user
+management workflow, then assign the intended shop membership and role.</p>
+<h3 id="view-historical-data">View historical data</h3>
+<p>Use the relevant screen:</p>
+<ul>
+<li>Sales: <strong>POS → Sales</strong></li>
+<li>Stock/movements: <strong>Inventory</strong></li>
+<li>Audit activity: <strong>Admin → Audit</strong></li>
+<li>Purchase/supplier history: <strong>Purchasing → Purchase Intelligence</strong></li>
+</ul>
+<p>History availability depends on retained production records and screen filters.
+Deleted or never-retained records cannot be assumed recoverable.</p>
+<!-- V2_CURRENT_USER_WORKFLOWS_END --><!-- AI_APP_HELP_START -->
+<h2 id="ask-wineshoppos-functionality-help">Ask WineShopPOS — functionality help</h2>
+<p>You can ask the existing Owner Assistant questions such as:</p>
+<ul>
+<li>&quot;How do I add bulk inventory?&quot;</li>
+<li>&quot;How do I scan a supplier invoice?&quot;</li>
+<li>&quot;How do I add a new user?&quot;</li>
+<li>&quot;Where can I see stock history?&quot;</li>
+<li>&quot;How do transfers work?&quot;</li>
+<li>&quot;Where do I approve a discount?&quot;</li>
+<li>&quot;How do loyalty points or gift vouchers work?&quot;</li>
+<li>&quot;How do I export for my accountant?&quot;</li>
+</ul>
+<p>For these questions the assistant uses the verified WineShopPOS functionality
+knowledge tool and returns the relevant app area/route, role requirements, steps
+and cautions. It remains read-only and cannot perform the operation for you.</p>
+<!-- AI_APP_HELP_END -->
+</article>
+    </div>
+  </main>
+</body>
+</html>

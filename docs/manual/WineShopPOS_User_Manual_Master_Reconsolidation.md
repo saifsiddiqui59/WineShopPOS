@@ -140,7 +140,7 @@ Click your avatar for:
 - My Profile,
 - Account Settings,
 - Security,
-- Help/About,
+- Help & Manual,
 - Logout.
 
 You may update display name, phone and profile image URL. Email/role/shop security are controlled by administration.
@@ -500,9 +500,14 @@ Open Settings & Admin → Access Control for the complete access matrix.
 
 ## 21. Help & User Manual
 
-Open **Help & Manual** from the main navigation. ADMIN, MANAGER and CASHIER can use this page to open the current full User Manual and quick operating guidance.
+Open **Help & Manual** from the main navigation.
 
-The in-app manual file is generated from this canonical document during the frontend build. Do not maintain a second manually-edited User Manual.
+The Help Center provides clickable chapters for the main WineShopPOS workflows,
+including billing, sales/returns, shifts, products, purchasing, inventory,
+operations, Owner Center, reports, administration and troubleshooting.
+
+Select a chapter to jump directly to its guidance, or select **Open Full User
+Manual** for the complete manual with a clickable table of contents.
 
 
 <!-- SUPPLIER_MASTER_OCR_PATCH -->
