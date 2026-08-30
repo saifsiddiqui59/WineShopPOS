@@ -1,57 +1,82 @@
 # WineShopPOS Documentation
 
-## Completed Chapters
+This folder contains the current production documentation for WineShopPOS.
 
-1. Project Foundation
-2. UI Shell
-3. Product Master
-4. POS Billing
-5. Barcode Scanner Integration
-6. Local Inventory Engine
-7. Receive Stock
-8. Persistent Product Master
-9. Payments & Sales
-10. Dashboard
-11. Reports
-12. Backup
-13. Azure Blob Static Hosting
-14. Authentication, Multi-Shop Roles & Users
-15. Supabase Live Data Integration
+## Current application
 
-## Current Architecture
+WineShopPOS is beyond the original Chapters 1–15/1–26 implementation and now uses the reconsolidated eight-module SaaS structure:
 
+1. POS & Billing
+2. Products
+3. Purchases & Suppliers
+4. Inventory
+5. Operations
+6. Owner Center
+7. Reports & Compliance
+8. Settings & Admin
+
+## Current cloud architecture
+
+```text
 Barcode Scanner
-→ React/Vite static frontend
-→ Supabase Auth
-→ Supabase PostgreSQL + RLS + RPCs
-→ Azure Blob Static Website
+    ↓
+React/Vite
+    ↓
+Supabase Auth
+    ↓
+Supabase PostgreSQL + RLS + transactional RPCs
+    ↓
+Azure Blob Static Website
+```
 
-## Roles
+Additional services:
 
-- Platform Owner: controls shop ADMIN + subscription/kill switch
-- ADMIN: shop administration + Manager/Cashier creation
-- MANAGER: inventory/products/purchases/reports/POS
-- CASHIER: POS-focused access
+- Azure AI Document Intelligence for purchase-invoice OCR
+- Azure Function App for the AI trust boundary
+- Microsoft Foundry for Ask WineShopPOS PRO
 
-## Cloud Source of Truth
+## AI milestone
 
-Supabase is now the live source of truth for:
-- products
-- inventory
-- purchases
-- sales
-- payments
-- stock movements
-- users/roles
+**Ask WineShopPOS PRO is verified working end-to-end.**
 
-## Production URL
+Production AI:
 
-`https://wineshoppos.z29.web.core.windows.net/`
+- Function App: Central India / Consumption Y1
+- Foundry: South India
+- Model: `gpt-5-mini`
+- Agent: `WineShopPOS-Owner-Agent`
+- Auth: existing logged-in Supabase session
+- Shop authorization: dynamic membership resolution
+- AI V1: controlled read-only business insights
 
-## Future Enhancements
+## Canonical documents
 
-- Azure AI Document Intelligence invoice OCR
-- 80mm receipt printer integration
-- returns/refunds
-- advanced tax/excise compliance
-- custom domain
+### Product/user
+
+- `manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
+- `manual/WineShopPOS_User_Manual_Master_Reconsolidation.docx`
+
+### Current-state/context
+
+- `PROJECT_CONTEXT.md`
+- `handoff/NEXT_CHAT_CONTEXT.txt`
+- `handoff/NEXT_CHAT_CONTEXT_AI_V1.txt`
+
+### AI
+
+- `ai/AI_OWNER_ASSISTANT_V1.md`
+- `ai/AZURE_SUPABASE_CONFIGURATION.md`
+- `ai/SECURITY_AND_TENANT_ISOLATION.md`
+- `ai/DEPLOYMENT_RUNBOOK.md`
+- `ai/CURRENT_AI_INFRASTRUCTURE_STATUS.md`
+- `ai/AI_OBSERVABILITY_EVALUATION_PLAN.md`
+
+### Testing
+
+- `testing/AI_OWNER_ASSISTANT_V1_TEST_MATRIX.md`
+- `testing/FINAL_SMOKE_TEST.md`
+- `testing/TEST_MATRIX.md`
+
+### History
+
+Historical chapter documentation remains useful for implementation history, but it must not be treated as the current application state.

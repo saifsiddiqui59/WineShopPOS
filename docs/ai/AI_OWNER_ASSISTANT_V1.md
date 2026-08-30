@@ -1,94 +1,78 @@
-# WineShopPOS AI Owner Assistant V1 — PRO
+# Ask WineShopPOS — AI Owner Assistant V1
 
-## Milestone
+## Status
 
-WineShopPOS now defines **Ask WineShopPOS** as a **PRO** capability inside **Owner Center**.
+**PRODUCTION PATH VERIFIED — 2026-08-30**
 
-AI V1 is intentionally **read only**:
+Ask WineShopPOS is a PRO Owner Center feature that turns authenticated WineShopPOS business data into grounded natural-language insights.
 
-> Business engine calculates. AI explains.
+## User experience
 
-Core POS, stock, purchasing, refunds, payments, roles and other transactions do not depend on AI availability.
+ADMIN opens:
+
+`Owner Center → Ask WineShopPOS`
+
+Examples:
+
+- How is my shop performing today?
+- What should I reorder?
+- Which products are at risk of stockout?
+- Why has profit changed?
+- Which supplier prices increased?
+- Are there shift variances I should review?
+- What expenses affected today?
+- Are there operational exceptions requiring attention?
+
+## V1 scope
+
+V1 is an insight/explanation capability. Business-changing actions remain in the existing WineShopPOS workflows.
+
+The agent can use only approved deterministic business tools. It cannot run arbitrary SQL or freely browse database tables.
 
 ## Architecture
 
 ```text
-React Owner Center / Ask WineShopPOS
-        |
-        | Supabase access token
-        v
+React
+  ↓ authenticated Supabase access token
 Azure Function /api/ai/chat
-        |
-        | validate token with Supabase Auth
-        | resolve ADMIN membership
-        | authorize selected shop / same-org ALL scope
-        v
-ONE Microsoft Foundry Owner Agent
-        |
-        | approved function tools only
-        v
-Azure Function tool dispatcher
-        |
-        | caller-scoped Supabase JWT
-        v
-AI-safe deterministic Supabase RPCs
-        |
-        v
-PostgreSQL
+  ↓ caller validation + shop scope
+Microsoft Foundry
+  ↓ WineShopPOS-Owner-Agent
+Controlled function calls
+  ↓
+Caller-scoped Supabase RPCs
+  ↓
+Grounded answer + source paths
 ```
 
-## Existing architecture reused
+## Runtime
 
-- `organizations`
-- `shops.id` UUID tenant/shop identifier
-- `shops.organization_id`
-- `profiles.shop_id` retained for current-shop compatibility
-- `user_shop_memberships` reused as scalable user → shop assignment
-- existing product, sale, payment, purchase, inventory, movement, shift, expense, audit and intelligence data
-- existing React Auth and Owner Center role gate
-- existing Azure Blob static frontend hosting
+- Azure Function: Central India, Consumption Y1
+- Foundry: South India
+- Model: `gpt-5-mini`
+- Agent: `WineShopPOS-Owner-Agent`
+- Foundry request shape: `agent_reference`
+- Function identity: system-assigned managed identity
+- Foundry RBAC for current project-level runtime: Foundry User at project scope
 
-No duplicate `user_shop_access` table is created.
+## Business tools
 
-## One model / one agent
+- sales summary
+- profit summary
+- inventory health
+- reorder recommendations
+- supplier price history
+- product stock history
+- shift variances
+- audit exceptions
+- expense summary
 
-AI V1 uses:
+## Tenant model
 
-- one Foundry model deployment
-- one logical `WineShopPOS-Owner-Agent`
-- multiple controlled read-only business tools
+The model does not select tenant identity.
 
-There is no per-shop/per-customer LLM and no Sales/Inventory/Supplier sub-agent architecture.
+The Function validates the Supabase access token and resolves `auth.uid()` → membership → organization → authorized shop(s). The selected shop must be in that authorized set.
 
-## Initial tools
+## Verified result
 
-1. `get_sales_summary`
-2. `get_profit_summary`
-3. `get_inventory_health`
-4. `get_reorder_recommendations`
-5. `get_supplier_price_history`
-6. `get_product_stock_history`
-7. `get_shift_variances`
-8. `get_audit_exceptions`
-9. `get_expense_summary`
-
-The model tool schemas contain no shop ID, organization ID, user ID, role, SQL or generic table argument.
-
-## UI
-
-Owner Center adds:
-
-`Ask WineShopPOS   PRO`
-
-Cashier and Manager routes do not expose the Owner AI page. Current WineShopPOS uses `ADMIN` as the owner-level application role; no unsupported `OWNER` database role is invented.
-
-The AI page supports:
-- suggested questions
-- single-shop auto context
-- ADMIN multi-shop selector
-- optional `ALL` scope within the selected organization
-- loading/retry/error states
-- source-screen navigation
-- ephemeral UI conversation history
-- graceful offline/unavailable behavior
-
+The complete production flow is working, including authentication, authorization, Foundry function calling, Supabase tool execution and the final response.

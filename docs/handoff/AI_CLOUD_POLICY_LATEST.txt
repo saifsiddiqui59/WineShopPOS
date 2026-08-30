@@ -1,12 +1,32 @@
-WineShopPOS AI cloud policy
-- Resource group: wineshopPOS
-- Static site: Central India
-- Document Intelligence: Central India / F0
-- AI Function App: Central India / Consumption Y1 only / no Always On
-- Foundry: Central India first, South India second, then STOP
-- No US/Europe fallback
-- One Foundry model deployment + one WineShopPOS Owner Agent
-- Supabase project ref: uiurgplnsgmawvxhjzzp
-- AI migration 20260830070000 is already applied remotely
-- Unique shop key: shops.id UUID
-- Tenant membership: user_shop_memberships
+WineShopPOS AI Cloud Policy — VERIFIED 2026-08-30
+
+RESOURCE GROUP
+wineshopPOS
+
+FUNCTION
+wineshoppos-ai-1a61d5885c
+Central India
+Consumption Y1
+No Always On / Premium / Dedicated AI hosting
+
+FOUNDRY PRODUCTION
+wineshoppos-ai-in-1a61d5885c
+South India
+Project: wineshoppos-ai
+Model: gpt-5-mini
+Agent: WineShopPOS-Owner-Agent
+
+RUNTIME IDENTITY
+Function system-assigned managed identity
+Foundry User at project scope for the current AIProjectClient Conversations/Responses architecture
+
+SUPABASE
+Project ref: uiurgplnsgmawvxhjzzp
+AI migration: 20260830070000_ai_owner_assistant_v1.sql
+
+PRODUCTION AUTH
+Dynamic current user session → membership → authorized shop scope.
+No hardcoded shop/admin identity.
+
+LEGACY EAST US
+Not production. Cleanup after dependency review.

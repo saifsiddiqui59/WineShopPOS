@@ -408,3 +408,52 @@ Help/About shows the application version, support/documentation information, `Tr
 ADMIN and MANAGER can open **Purchases & Suppliers → Suppliers** to create, edit, deactivate or reactivate suppliers. While creating a Purchase Order, use **+ New Supplier** to create a supplier without leaving the PO, or **Edit Selected Supplier** to correct the selected supplier.
 
 For invoice OCR, first analyze the invoice, then confirm an existing supplier or choose **Create Supplier From Invoice**. Review the OCR-proposed supplier name, GST/tax number and address before saving. The supplier must be confirmed before the OCR draft can proceed to Receive Stock. Stock changes only after the normal receive confirmation.
+
+<!-- WSP_AI_VERIFIED_V1_START -->
+## Ask WineShopPOS (PRO)
+
+Ask WineShopPOS is the Owner Center business copilot for quick questions about your shop.
+
+### Who can use it
+
+Ask WineShopPOS is currently available to authorized **ADMIN** users from:
+
+**Owner Center → Ask WineShopPOS**
+
+### What you can ask
+
+Examples:
+
+- How is my shop performing today?
+- What should I reorder?
+- Which products may run out soon?
+- Which products are moving slowly?
+- How is my profit today?
+- Which supplier prices changed?
+- Show me stock movement for a product.
+- Are there shift differences I should review?
+- What expenses affected my business?
+- Is there anything operational that needs my attention?
+
+### Shop selection
+
+The shop context comes from your WineShopPOS account.
+
+If your account is authorized for more than one shop, use the available shop/scope selector to choose the business context you want to review.
+
+### Using the answer
+
+Ask WineShopPOS explains the business information available in the application and can point you to the relevant screen for more detail.
+
+AI V1 provides **insights and recommendations**. Final operational actions remain under the user's control in the normal WineShopPOS workflows.
+
+### If AI is temporarily unavailable
+
+Your normal POS, billing, inventory, purchasing and operational workflows continue to work. Try the AI question again after a short interval.
+
+### Example
+
+**Question:** How is my shop performing today?
+
+Ask WineShopPOS can combine current sales, profit, expenses, shift information and operational exceptions into one business summary.
+<!-- WSP_AI_VERIFIED_V1_END -->

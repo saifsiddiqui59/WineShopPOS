@@ -1,84 +1,49 @@
 # AI Owner Assistant V1 — Deployment Runbook
 
-## One-command release
+## Verified production topology
 
-```bash
-cd /e/WineShopPOS
-bash inject_ai_owner_assistant_v1.sh
-```
+- RG: `wineshopPOS`
+- Supabase project ref: `uiurgplnsgmawvxhjzzp`
+- Function: `wineshoppos-ai-1a61d5885c`
+- Function region: Central India
+- Function plan: Consumption Y1
+- Foundry account: `wineshoppos-ai-in-1a61d5885c`
+- Foundry project: `wineshoppos-ai`
+- Foundry region: South India
+- Model: `gpt-5-mini`
+- Agent: `WineShopPOS-Owner-Agent`
 
-The injection script is also stored after deployment as:
+## Required deployment rules
 
-`scripts/inject_ai_owner_assistant_v1.sh`
+1. Reuse the existing `wineshopPOS` resource group.
+2. Function App must remain Central India / Consumption Y1.
+3. New production Foundry deployment must remain in approved India region(s).
+4. Do not silently fall back to US/Europe.
+5. Do not create a second production Function App if the existing one is healthy.
+6. Supabase migrations must be additive and dry-run before push.
+7. Never use service-role keys in React or the model.
+8. Use current Foundry `agent_reference` invocation.
+9. Function managed identity must have the project-scope permission required by the runtime.
 
-## Deployment sequence
+## Current Foundry RBAC requirement
 
-1. protect Git baseline and create pre-AI tag
-2. baseline build + lint
-3. write additive Supabase AI migration
-4. write Azure Function trust boundary + tests
-5. add `Ask WineShopPOS` PRO UI
-6. local build/lint/function tests
-7. logical Git checkpoints (local only)
-8. Supabase `db push --dry-run`
-9. Supabase migration
-10. create/reuse one Foundry resource/project/model deployment
-11. create a new version of one logical Owner Agent
-12. create/reuse one Azure Function App
-13. assign managed identities + least-privilege Foundry roles
-14. configure non-secret/public Supabase connection settings
-15. deploy Function ZIP
-16. set local Vite AI endpoint
-17. final Vite build
-18. Azure Blob frontend deploy
-19. write non-secret deployment metadata
-20. generate actual Git code-history
-21. final docs commit
-22. one final push of commits + pre-AI tag
+Because the Function uses `AIProjectClient` project-level Conversations/Responses APIs, grant the Function system-assigned managed identity **Foundry User** on the WineShopPOS Foundry **project** scope.
 
-## Cost
+Agent Consumer alone is not sufficient for this runtime design.
 
-A new Foundry model deployment is usage-billed. The script asks for explicit confirmation before creating a model deployment. Existing matching model deployments are reused.
+## Verification
 
-## Environment variables
+After deployment verify:
 
-Frontend `.env.local` (not committed):
-- `VITE_AI_API_URL`
-- `VITE_AI_OWNER_ENABLED=true`
+- `/api/ai/health` → HTTP 200
+- unauthenticated `/api/ai/chat` → HTTP 401
+- valid ADMIN → authenticated shop membership
+- real AI question → HTTP 200
+- tool calls recorded
+- answer grounded in tool output
+- tenant-isolation tests pass
+- Function remains Consumption Y1
 
-Azure Function App settings:
-- `SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY`
-- `FOUNDRY_PROJECT_ENDPOINT`
-- `FOUNDRY_AGENT_NAME`
-- `FOUNDRY_MODEL_DEPLOYMENT`
-- `BUSINESS_TIMEZONE=Asia/Kolkata`
-- `BUSINESS_CURRENCY=INR`
-- request/tool/token limit settings
+## Legacy East US resource
 
-Dynamic tenant values are **not** environment variables:
-- shop ID
-- organization ID
-- user ID
-- role
-
-## Rollback
-
-AI is an additive layer.
-
-Fast application rollback:
-1. disable/hide `/owner/ask` or set `VITE_AI_OWNER_ENABLED=false`
-2. redeploy frontend
-3. optionally stop Function App
-
-Core POS continues independently.
-
-Do not delete production migration history casually. Database rollback should be a reviewed forward migration.
-
-## India-only cloud policy
-- Azure resource group: `wineshopPOS`.
-- Function App: Central India, Consumption (`Y1`) only.
-- Foundry: Central India → South India → stop.
-- No automatic non-India fallback.
-- If the requested model is unavailable in allowed India regions, use the documented India fallback only when the installer discovers it as supported.
-- See `docs/ai/AZURE_SUPABASE_CONFIGURATION.md`.
+The earlier East US Foundry account is not production. Remove it only after final dependency review.

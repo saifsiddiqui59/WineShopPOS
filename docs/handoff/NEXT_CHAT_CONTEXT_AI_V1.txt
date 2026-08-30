@@ -1,16 +1,42 @@
-WineShopPOS AI V1 canonical context
+WineShopPOS — AI V1 CANONICAL HANDOFF
+Updated: 2026-08-30
+Status: VERIFIED WORKING
 
-Milestone: AI Owner Assistant — PRO
-Architecture: one Foundry model deployment + one WineShopPOS Owner Agent + controlled read-only business tools.
-Trust boundary: Azure Function App.
-Identity: Supabase JWT validated server-side.
-Tenant isolation: user_shop_memberships + organization + explicit selected-shop validation.
-AI V1 role: ADMIN only (current application owner-level role).
-AI never mutates business data.
-No unrestricted SQL tool.
-No service/elevated database credential is required by AI V1.
-Existing POS, scanner, offline, OCR, purchases, inventory, returns, shifts and transaction RPCs remain independent.
-UI route: /owner/ask.
-Database migration: 20260830070000_ai_owner_assistant_v1.sql.
-Operational log: ai_activity_logs stores metadata only; no prompt/response body.
-Security patch planned separately after AI milestone; do not mix unrelated security changes into AI V1 unless required to fix an AI-specific vulnerability.
+Ask WineShopPOS PRO is live and functionally verified.
+
+PRODUCTION:
+- Live app: https://wineshoppos.z29.web.core.windows.net/
+- Resource group: wineshopPOS
+- Function: wineshoppos-ai-1a61d5885c
+- Function region/plan: Central India / Consumption Y1
+- Foundry account: wineshoppos-ai-in-1a61d5885c
+- Foundry project: wineshoppos-ai
+- Foundry region: South India
+- Model: gpt-5-mini
+- Agent: WineShopPOS-Owner-Agent
+- Supabase AI migration: 20260830070000_ai_owner_assistant_v1.sql applied
+
+RUNTIME:
+React sends the currently logged-in user's Supabase access token.
+Function validates user/membership/shop dynamically.
+No fixed ADMIN email/shop ID exists in the SaaS runtime.
+Function uses system-assigned managed identity.
+Current Foundry runtime uses project-level AIProjectClient Conversations/Responses APIs and requires Foundry User at project scope.
+Use agent_reference, not deprecated body.agent.
+
+VERIFIED:
+- Supabase auth
+- dynamic ADMIN membership
+- context/rate-limit/activity RPCs
+- all nine AI business tools
+- Foundry function calls
+- tool outputs
+- final answer
+- real Azure Function /api/ai/chat production path
+
+NEXT AI MILESTONE:
+Application Insights / Foundry tracing + evaluation + quality gates.
+Do not claim full continuous Foundry evaluation is complete yet.
+
+LEGACY:
+Old East US Foundry resource is cleanup-only; production is South India.
