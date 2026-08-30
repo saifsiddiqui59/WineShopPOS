@@ -90,6 +90,12 @@ export function sanitizeToolArgs(toolName, input) {
       return { days: clampInt(args.days,30,1,365) };
     case "get_expense_summary":
       return { period: normalizePeriod(args.period,"LAST_30_DAYS") };
+    case "get_app_help": {
+      const helpQuestion = String(args.help_question || "").trim().slice(0,500);
+      if (!helpQuestion) throw new Error("A functionality help question is required.");
+      return { help_question: helpQuestion };
+    }
+
     default:
       throw new Error("Unknown AI tool.");
   }
@@ -97,6 +103,8 @@ export function sanitizeToolArgs(toolName, input) {
 
 export function classifyQuestion(tools=[]) {
   const first = tools[0] || "";
+
+if (first.includes("app_help")) return "APP_HELP";
   if (first.includes("sales")) return "SALES";
   if (first.includes("profit")) return "PROFIT";
   if (first.includes("inventory") || first.includes("stock") || first.includes("reorder")) return "INVENTORY";

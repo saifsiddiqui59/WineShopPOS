@@ -1,3 +1,4 @@
+import { searchAppKnowledge } from "./appKnowledge.js";
 import { app } from "@azure/functions";
 import { AIProjectClient } from "@azure/ai-projects";
 import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
@@ -116,6 +117,14 @@ function trustedContextPrompt(context, body) {
 }
 
 async function executeTool(caller, trustedContext, toolName, rawArgs) {
+
+if (toolName === "get_app_help") {
+  const args = sanitizeToolArgs(toolName, rawArgs);
+  const result = searchAppKnowledge(args.help_question);
+  const source = result.matches?.[0]?.route || "/help";
+  return { result, source };
+}
+
   const config = TOOL_RPC[toolName];
   if (!config) throw new Error("Unknown AI tool.");
   const args = sanitizeToolArgs(toolName, rawArgs);
@@ -274,6 +283,7 @@ app.http("ai-health", {
     service: "WineShopPOS AI Owner Assistant",
     mode: "READ_ONLY",
     foundryConfigured: Boolean(FOUNDRY_PROJECT_ENDPOINT && FOUNDRY_AGENT_NAME),
+appHelpKnowledge: true,
   }),
 });
 

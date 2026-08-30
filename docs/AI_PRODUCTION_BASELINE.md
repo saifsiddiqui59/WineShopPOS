@@ -84,3 +84,33 @@ The production Owner Assistant is already working.
 
 These are not marked deployed until their individual push scripts succeed.
 <!-- NEXT_AI_PUSHES_END -->
+
+<!-- APP_HELP_KNOWLEDGE_START -->
+## Functionality knowledge — deployed with AI help push
+
+The existing production Owner Assistant includes a read-only deterministic
+`get_app_help` tool for WineShopPOS functionality/navigation questions.
+
+Covered verified topics include:
+
+- multi-line/bulk stock receipt
+- invoice OCR/product resolution
+- product creation vs stock receipt
+- ageing/FIFO and history guidance
+- sales history
+- users/roles/access
+- stock count and transfers
+- approvals and POS overrides
+- loyalty/promotions/store credit/gift vouchers
+- accountant/Tally-ready export
+- supplier score/Purchase Coach
+- Leakage Shield
+- scanner/printer
+- backup/audit
+
+The tool does not write application data and does not introduce a second RAG
+service or database. Unknown workflows return an explicit "not verified"
+fallback so the agent does not invent app functionality.
+
+Application Insights GenAI tracing/evaluation remains the next separate push.
+<!-- APP_HELP_KNOWLEDGE_END -->

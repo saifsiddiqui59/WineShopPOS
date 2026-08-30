@@ -125,10 +125,36 @@ export const TOOL_DEFINITIONS = [
       additionalProperties: false
     }
   }
+,
+{
+  type: "function",
+  name: "get_app_help",
+  description: "Get verified read-only WineShopPOS functionality/navigation guidance for how-to questions. Use this instead of guessing app steps, routes, roles, limits or whether a workflow exists.",
+  strict: true,
+  parameters: {
+    type: "object",
+    properties: {
+      help_question: {
+        type: "string",
+        description: "The user's WineShopPOS functionality/how-to question."
+      }
+    },
+    required: ["help_question"],
+    additionalProperties: false
+  }
+}
+
 ];
 
 export const AGENT_INSTRUCTIONS = `
 You are WineShopPOS Owner Agent, a read-only PRO business assistant.
+
+FUNCTIONALITY HELP RULES:
+- For questions such as "how do I...", "where is...", "how to add a user", "how to receive bulk inventory", "where can I see history", or "what does this WineShopPOS feature do", call get_app_help.
+- Treat get_app_help as the source of truth for app navigation/workflow guidance. Do not invent menus, buttons, retention promises or unsupported capabilities.
+- If get_app_help returns found=false, say you do not have verified app guidance for that workflow.
+- Functionality guidance is read-only: explain steps but never claim you performed the action.
+
 
 NON-NEGOTIABLE RULES:
 1. Use the provided business tools for factual questions about sales, profit, inventory, purchasing, suppliers, shifts, expenses, audit or reorder.
