@@ -1,0 +1,90 @@
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useShop } from "../context/ShopContext";
+import AutomationHub from "./AutomationHub";
+import PageHeader from "../components/ui/PageHeader";
+import EmptyState from "../components/ui/EmptyState";
+import LoadingState from "../components/ui/LoadingState";
+import { HorizontalBarChartCard, LineChartCard } from "../components/charts/BusinessCharts";
+
+const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
+
+export default function PurchaseIntelligence() {
+  const { products } = useShop();
+  const [productId, setProductId] = useState("");
+  const [comparison, setComparison] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const selected = useMemo(() => products.find((p) => p.id === productId), [products, productId]);
+
+  async function loadSupplierIntelligence() {
+    const { data, error } = await supabase.rpc("supplier_intelligence", { p_days: 180 });
+    if (error) setMessage("Unable to load supplier intelligence.");
+    else setSuppliers(data || []);
+  }
+
+  useEffect(() => { loadSupplierIntelligence(); }, []);
+
+  async function inspectProduct(id) {
+    setProductId(id);
+    setComparison([]); setHistory([]); setMessage("");
+    if (!id) return;
+    setLoading(true);
+    const [compare, price] = await Promise.all([
+      supabase.rpc("supplier_price_comparison", { p_product_id: id, p_days: 180 }),
+      supabase.rpc("purchase_price_history", { p_product_id: id, p_limit: 24 }),
+    ]);
+    if (compare.error || price.error) setMessage("Unable to load purchase intelligence for this product.");
+    else { setComparison(compare.data || []); setHistory(price.data || []); }
+    setLoading(false);
+  }
+
+  const latest = history[0];
+  const previous = history[1];
+  const priceDiff = latest && previous ? Number(latest.purchase_price) - Number(previous.purchase_price) : null;
+  const pct = previous && Number(previous.purchase_price) > 0 ? priceDiff / Number(previous.purchase_price) * 100 : null;
+  const marginPct = selected?.price > 0 && latest ? (selected.price - Number(latest.purchase_price)) / selected.price * 100 : null;
+  const priceTrend = useMemo(() => history.slice().reverse().map((r) => ({ label: r.invoice_date || "Purchase", value: Number(r.purchase_price || 0) })), [history]);
+  const supplierChart = useMemo(() => comparison.slice().sort((a,b)=>Number(a.avg_price||0)-Number(b.avg_price||0)).map((r)=>({label:r.supplier_name||"Supplier",value:Number(r.avg_price||0)})), [comparison]);
+
+  return <div>
+    <PageHeader title="Smart Purchase Intelligence" subtitle="OCR review, purchase-price change, supplier comparison and margin impact." tier="PRO"/>
+    {message ? <div className="purchase-message">{message}</div> : null}
+
+    <section className="panel intelligence-filter">
+      <label>Analyze Product
+        <select value={productId} onChange={(e) => inspectProduct(e.target.value)}>
+          <option value="">Select product</option>
+          {products.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </label>
+    </section>
+
+    {loading ? <LoadingState label="Analyzing purchase history..."/> : null}
+    {selected && !loading ? <>
+      <div className="metric-grid four" style={{ marginTop: 16 }}>
+        <div className="metric-card"><span>Current Selling Price</span><strong>{money.format(selected.price)}</strong></div>
+        <div className="metric-card"><span>Latest Purchase Price</span><strong>{latest ? money.format(latest.purchase_price) : "No history"}</strong></div>
+        <div className="metric-card"><span>Latest Change</span><strong>{priceDiff === null ? "-" : `${priceDiff >= 0 ? "+" : ""}${money.format(priceDiff)}${pct === null ? "" : ` (${pct.toFixed(2)}%)`}`}</strong></div>
+        <div className="metric-card"><span>Estimated Gross Margin</span><strong>{marginPct === null ? "-" : `${marginPct.toFixed(2)}%`}</strong></div>
+      </div>
+
+      <div className="dashboard-chart-grid" style={{ marginTop: 16 }}>
+        <LineChartCard title="Purchase Price Trend" subtitle="Historical unit purchase cost for the selected SKU" data={priceTrend} formatValue={(v)=>money.format(v)}/>
+        <HorizontalBarChartCard title="Supplier Average Price" subtitle="Lower bars indicate more competitive historical unit cost" data={supplierChart} formatValue={(v)=>money.format(v)}/>
+      </div>
+
+      <div className="settings-grid" style={{ marginTop: 16 }}>
+        <section className="panel"><h3>Supplier Price Comparison</h3>{comparison.length === 0 ? <EmptyState title="No supplier history yet" message="Receive this product from suppliers to build comparison history."/> : <div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Units</th><th>Avg</th><th>Min</th><th>Max</th><th>Last</th></tr></thead><tbody>{comparison.map((r) => <tr key={r.supplier_id}><td>{r.supplier_name || "Supplier"}</td><td>{r.purchase_count}</td><td>{r.total_units}</td><td>{money.format(r.avg_price)}</td><td>{money.format(r.min_price)}</td><td>{money.format(r.max_price)}</td><td>{money.format(r.last_price)}</td></tr>)}</tbody></table></div>}</section>
+        <section className="panel"><h3>Recent Price History</h3>{history.length === 0 ? <EmptyState title="No price history" message="Purchase receipts will populate this timeline."/> : <div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Date</th><th>Supplier</th><th>Price</th></tr></thead><tbody>{history.slice(0, 10).map((r, i) => <tr key={`${r.invoice_date || i}-${r.invoice_date}`}><td>{r.invoice_date}</td><td>{r.supplier_name || "-"}</td><td>{money.format(r.purchase_price)}</td></tr>)}</tbody></table></div>}</section>
+      </div>
+    </> : null}
+
+    <section className="panel" style={{ marginTop: 16 }}><h3>Supplier Intelligence · Last 180 Days</h3>{suppliers.length === 0 ? <EmptyState title="No supplier activity yet" message="Purchases and supplier payments will build reliability and price history."/> : <div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Purchase Total</th><th>Returns</th><th>Outstanding</th><th>Ordered</th><th>Received</th><th>Variance</th></tr></thead><tbody>{suppliers.map((r) => <tr key={r.supplier_id}><td>{r.supplier_name}</td><td>{r.purchase_count}</td><td>{money.format(r.purchase_total)}</td><td>{money.format(r.return_total)}</td><td>{money.format(r.outstanding)}</td><td>{r.po_ordered}</td><td>{r.po_received}</td><td>{r.receive_variance}</td></tr>)}</tbody></table></div>}</section>
+
+    <div className="embedded-capability" style={{ marginTop: 20 }}><AutomationHub/></div>
+  </div>;
+}

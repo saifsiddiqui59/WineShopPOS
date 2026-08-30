@@ -1,0 +1,6 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import PageHeader from "../components/ui/PageHeader";
+import EmptyState from "../components/ui/EmptyState";
+export default function Recommendations(){const[rows,setRows]=useState([]);const[msg,setMsg]=useState("");async function load(){const{data,error}=await supabase.rpc("owner_recommendations",{p_history_days:30});if(error)setMsg("Unable to calculate recommendations.");else setRows(data||[])}useEffect(()=>{load()},[]);return <div><PageHeader title="Smart Recommendations" subtitle="Rule-based actions from live stock, sales, inventory health and shift variance." tier="PLUS"/>{msg?<div className="purchase-message">{msg}</div>:null}<section className="panel recommendation-list">{rows.length===0?<EmptyState title="No recommendations right now" message="The shop has no configured condition requiring an action."/>:rows.map((r,i)=><div className="recommendation-card" key={`${r.recommendation_type}-${i}`}><div><span className={`priority ${String(r.priority).toLowerCase()}`}>{r.priority}</span><h3>{r.title}</h3><p>{r.message}</p></div><Link className="secondary-button" to={r.action_path||"/owner"}>Take Action</Link></div>)}</section></div>}

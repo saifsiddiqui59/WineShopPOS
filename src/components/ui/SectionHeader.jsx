@@ -1,0 +1,1 @@
+export default function SectionHeader({title,subtitle,actions}){return <div className="section-row"><div><h3>{title}</h3>{subtitle?<p className="muted-text">{subtitle}</p>:null}</div>{actions?<div className="page-actions">{actions}</div>:null}</div>}

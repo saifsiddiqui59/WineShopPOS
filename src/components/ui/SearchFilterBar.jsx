@@ -1,0 +1,1 @@
+export default function SearchFilterBar({value,onChange,placeholder="Search...",children}){return <div className="filter-bar"><input value={value} onChange={e=>onChange?.(e.target.value)} placeholder={placeholder}/>{children}</div>}
