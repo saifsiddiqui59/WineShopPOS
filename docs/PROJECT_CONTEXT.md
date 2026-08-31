@@ -315,3 +315,6 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 
 ### Demo-ready production state (20260831T160407Z)
 V3 invoice reliability plus the demo fixes are deployed to the production static site. The invoice Email Function is 64-bit; Gmail IMAP and SMTP health passed; registered senders receive >4 MB rejection feedback; barcode handling was normalized/tolerance-tested; and ADMINs have a controlled whole-shop operational Demo/Test Data Reset. Production URL: https://wineshoppos.z29.web.core.windows.net/. Logic App remains every 5 minutes for acceptance testing; lowering recurrence for cost is a future task.
+
+### V3-02 local validated patch (20260831T182936Z)
+Feature `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310`: invoice financial-summary reconciliation/landed-cost auto-fill, Gmail receipt acknowledgement (up to 1 hour expectation), optional auto-filled supplier invoice/reference, and required-field star UX. First-row case logic intentionally unchanged. Build/lint/finance smoke passed locally. Deployment and push are pending explicit instruction.

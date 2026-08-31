@@ -667,6 +667,14 @@ Choose <strong>Without Barcode</strong>, open <strong>Edit</strong>, scan/enter 
 <p>When a registered shop Email sends a supported invoice PDF/JPG/PNG larger than 4 MB, WineShopPOS does not OCR or receive stock from that oversized attachment. The system replies from the central WineShopPOS Gmail account with the filename, size, current 4 MB limit and a request to compress and resend.</p>
 <h3 id="barcode-demo-behavior">Barcode demo behavior</h3>
 <p>USB/Bluetooth HID scanners may terminate a barcode with <strong>Enter or Tab</strong>. WineShopPOS normalizes scanner whitespace/control characters while preserving leading zeros. Use <strong>POS → Scanner Test</strong> to confirm the device before a live billing demo.</p>
+<h3 id="invoice-financial-reconciliation">Invoice financial reconciliation</h3>
+<p>When Invoice OCR recognizes invoice-level values such as Freight/Carting, Cash Discount, Other Deduction, TCS, Stamp Duty or other additions, WineShopPOS pre-fills <strong>Landed Cost Adjustments</strong>. Always review the values before receiving stock. If a printed invoice total is available, WineShopPOS compares it with the calculated landed total and shows <strong>MATCH</strong> or <strong>REVIEW</strong>.</p>
+<h3 id="supplier-invoice-reference">Supplier Invoice / Reference</h3>
+<p>The Supplier Invoice / Reference field is optional for the operator. WineShopPOS uses the OCR invoice number when available. If the invoice number cannot be read or is absent, WineShopPOS supplies an internal <code>AUTO-...</code> reference so stock receiving is not blocked.</p>
+<h3 id="invoice-email-acknowledgement">Invoice Email acknowledgement</h3>
+<p>For an authorized shop Email with a supported invoice attachment, WineShopPOS sends one automatic acknowledgement confirming that the Email was received and asking the sender to allow up to <strong>1 hour</strong> for it to appear in Invoice Inbox. Oversized attachments continue to use the separate &gt;4 MB rejection message.</p>
+<h3 id="required-fields">Required fields</h3>
+<p>A red <code>*</code> identifies required fields. Fields explicitly labelled <strong>optional</strong> are not required.</p>
 </article>
     </div>
   </main>

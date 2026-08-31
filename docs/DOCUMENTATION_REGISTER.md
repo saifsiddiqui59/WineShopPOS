@@ -54,3 +54,5 @@ chapters, Master test matrix and Master handoff.
 V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.
 
 - V3 Demo Ready (20260831T160407Z): feature commit `234088b6715110536391f9adf5c8398407606035`; production deployment verified before documentation. Covers V3-01D reliability, >4 MB Email feedback, barcode repair, ADMIN Demo/Test Data Reset, 64-bit V3 invoice Function and production demo promotion. Logic App cost cadence optimization remains deferred.
+
+- V3-02 (20260831T182936Z) — LOCAL VERIFIED / NOT DEPLOYED / NOT PUSHED. Feature `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310`. Invoice financial reconciliation + landed-cost auto-fill + Email receipt ACK + optional supplier invoice/reference + mandatory-field stars.

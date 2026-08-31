@@ -150,3 +150,20 @@ Feature commit: `234088b6715110536391f9adf5c8398407606035`
 
 ### Deferred cost task
 After acceptance testing, increase the Logic App Email polling interval from 5 minutes to a lower-cost cadence. This was intentionally NOT changed for the demo.
+
+## V3-02 — Invoice Financial Reconciliation + Email Receipt ACK
+
+Status: LOCAL BUILD/LINT/SMOKE VERIFIED — NOT DEPLOYED / NOT PUSHED
+Feature commit: `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310`
+
+Implemented:
+- Liquor-invoice summary-row recognition for Cash Discount, Other Deduction, Freight/Carting, Stamp Duty, TCS, Transport, Handling, Loading/Unloading, Other Additions and Round Off.
+- Automatic landed-cost field population in OCR review and Receive Stock.
+- Printed-vs-calculated invoice reconciliation; differences above ₹1 require review before Receive Stock.
+- Supplier Invoice / Reference is optional in Receive Stock. OCR value is preferred; otherwise WineShopPOS pre-fills/generates an internal `AUTO-...` reference.
+- Registered Email senders receive one idempotent acknowledgement per Gmail UID: invoice Email received, allow up to 1 hour to appear in Invoice Inbox.
+- Existing >4 MB rejection Email remains independent.
+- Native required form fields display a visible star; Receive Stock table explicitly marks required Product, Bottles/Case and Final Bottles.
+- First-row quantity/case logic was intentionally NOT changed in this patch.
+
+Deployment and Git push remain intentionally pending explicit user instruction.

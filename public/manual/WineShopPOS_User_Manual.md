@@ -788,3 +788,15 @@ When a registered shop Email sends a supported invoice PDF/JPG/PNG larger than 4
 
 ### Barcode demo behavior
 USB/Bluetooth HID scanners may terminate a barcode with **Enter or Tab**. WineShopPOS normalizes scanner whitespace/control characters while preserving leading zeros. Use **POS → Scanner Test** to confirm the device before a live billing demo.
+
+### Invoice financial reconciliation
+When Invoice OCR recognizes invoice-level values such as Freight/Carting, Cash Discount, Other Deduction, TCS, Stamp Duty or other additions, WineShopPOS pre-fills **Landed Cost Adjustments**. Always review the values before receiving stock. If a printed invoice total is available, WineShopPOS compares it with the calculated landed total and shows **MATCH** or **REVIEW**.
+
+### Supplier Invoice / Reference
+The Supplier Invoice / Reference field is optional for the operator. WineShopPOS uses the OCR invoice number when available. If the invoice number cannot be read or is absent, WineShopPOS supplies an internal `AUTO-...` reference so stock receiving is not blocked.
+
+### Invoice Email acknowledgement
+For an authorized shop Email with a supported invoice attachment, WineShopPOS sends one automatic acknowledgement confirming that the Email was received and asking the sender to allow up to **1 hour** for it to appear in Invoice Inbox. Oversized attachments continue to use the separate >4 MB rejection message.
+
+### Required fields
+A red `*` identifies required fields. Fields explicitly labelled **optional** are not required.
