@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import SupplierEditor from "../components/SupplierEditor";
+import { storeManualInvoice } from "../lib/invoiceClient";
 
 const STRONG_MATCH = 0.90;
 const REVIEW_KEY = "wineshop_ocr_review_state";
@@ -69,7 +70,7 @@ function interpretQuantity(item, product) {
 
 export default function AutomationHub() {
   const { products, suppliers, refreshAll } = useShop();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const navigate = useNavigate();
 
   const [file, setFile] = useState(null);
@@ -78,6 +79,8 @@ export default function AutomationHub() {
   const [resolution, setResolution] = useState({});
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ingestionId, setIngestionId] = useState(null);
+  const [sourceFileName, setSourceFileName] = useState("");
 
   const [supplierId, setSupplierId] = useState("");
   const [confirmedSupplier, setConfirmedSupplier] = useState(null);
@@ -115,6 +118,8 @@ export default function AutomationHub() {
         setResolution(state.resolution || {});
         setSupplierId(state.supplierId || "");
         setConfirmedSupplier(state.confirmedSupplier || null);
+        setIngestionId(state.ingestionId || null);
+        setSourceFileName(state.sourceFileName || "");
       }
 
       const created = sessionStorage.getItem(CREATED_KEY);
@@ -173,9 +178,11 @@ export default function AutomationHub() {
         resolution,
         supplierId,
         confirmedSupplier,
+        ingestionId,
+        sourceFileName,
       }),
     );
-  }, [result, matches, resolution, supplierId, confirmedSupplier]);
+  }, [result, matches, resolution, supplierId, confirmedSupplier, ingestionId, sourceFileName]);
 
   function toBase64(nextFile) {
     return new Promise((resolve, reject) => {
@@ -240,16 +247,31 @@ export default function AutomationHub() {
 
     try {
       const contentBase64 = await toBase64(file);
-      const { data, error } = await supabase.functions.invoke("ocr-invoice", {
-        body: {
-          contentBase64,
-          contentType: file.type || "application/octet-stream",
-        },
-      });
+      let nextIngestionId = null;
+      let storageWarning = "";
+      let duplicateStatus = "";
+      setIngestionId(null);
+      setSourceFileName(file.name || "");
+      try {
+        const stored = await storeManualInvoice({ token: session?.access_token, fileName: file.name, contentType: file.type || "application/octet-stream", contentBase64 });
+        if (stored?.duplicate) {
+          setMessage(`Duplicate invoice file detected. Existing status: ${stored.existing_status || "UNKNOWN"}. Open Invoice Inbox instead of receiving it again.`);
+          return;
+        }
+        nextIngestionId = stored?.ingestion_id || null;
+        setIngestionId(nextIngestionId);
+      } catch (storageError) {
+        storageWarning = ` Original invoice storage is temporarily unavailable (${storageError?.message || "storage error"}). Existing OCR will continue.`;
+      }
+      const { data, error } = await supabase.functions.invoke("ocr-invoice", { body: { contentBase64, contentType: file.type || "application/octet-stream" } });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.message || "OCR failed");
-
       setResult(data.invoice);
+      if (nextIngestionId) {
+        const { data: metadata, error: metadataError } = await supabase.rpc("invoice_record_ocr_result", { p_ingestion_id: nextIngestionId, p_supplier_name: data.invoice?.supplierName || null, p_invoice_number: data.invoice?.invoiceNumber || null, p_invoice_date: data.invoice?.invoiceDate || null, p_total: data.invoice?.total ?? null, p_normalized_invoice: data.invoice });
+        if (metadataError) storageWarning += ` Invoice history metadata could not be updated (${metadataError.message}).`;
+        else duplicateStatus = metadata?.review_status || "";
+      }
 
       const ranked = suppliers
         .filter((supplier) => supplier.active !== false)
@@ -267,7 +289,9 @@ export default function AutomationHub() {
       }
 
       setMessage(
-        "OCR complete. Confirm the supplier, then resolve and confirm every invoice line before stock receipt.",
+        duplicateStatus === "POSSIBLE_DUPLICATE"
+          ? `OCR complete, but this looks like a possible duplicate. Resolve it in Invoice Inbox before Receive Stock.${storageWarning}`
+          : `OCR complete. Confirm the supplier, then resolve and confirm every invoice line before stock receipt.${storageWarning}`,
       );
     } catch (error) {
       setMessage(error.message || String(error));
@@ -576,7 +600,8 @@ export default function AutomationHub() {
           invoiceDate:
             result.invoiceDate || new Date().toISOString().slice(0, 10),
           items: lines,
-          sourceFile: file?.name || "OCR invoice",
+          sourceFile: sourceFileName || file?.name || "OCR invoice",
+          ingestionId: ingestionId || null,
           createdAt: new Date().toISOString(),
         }),
       );

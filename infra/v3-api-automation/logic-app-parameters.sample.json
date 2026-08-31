@@ -1,0 +1,14 @@
+{
+  "sampleCentralMailbox": "wineshoppos.invoice.app@gmail.com",
+  "sampleAuthorizedShopSender": "wineshoppos.sample.shop@gmail.com",
+  "sampleShopId": "5c94dbca-9bb5-451e-831a-8cfa42d06013",
+  "gmailConnectionDeployment": "NOT_DEPLOYED_WITH_SAMPLE_ADDRESS",
+  "requiredBeforeEmailActivation": [
+    "Choose real central mailbox",
+    "Authorize Gmail connector",
+    "For consumer @gmail.com with HTTP/Blob workflow, use Gmail Bring Your Own Application OAuth; Google Workspace is another option",
+    "Deploy template with authorized Gmail API connection resource ID",
+    "Grant Logic App managed identity Blob Data Contributor and Cognitive Services User",
+    "Keep workflow disabled until one invoice test succeeds"
+  ]
+}

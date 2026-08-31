@@ -20,6 +20,7 @@ import EditProduct from "./pages/EditProduct";
 import BarcodeLabels from "./pages/BarcodeLabels";
 import Purchases from "./pages/Purchases";
 import AutomationHub from "./pages/AutomationHub";
+import InvoiceInbox from "./pages/InvoiceInbox";
 import Procurement from "./pages/Procurement";
 import Suppliers from "./pages/Suppliers";
 import PurchaseIntelligence from "./pages/PurchaseIntelligence";
@@ -87,6 +88,7 @@ export default function App() {
             <Route index element={<Navigate to="receive" replace/>}/>
             <Route path="receive" element={<Purchases/>}/>
             <Route path="ocr" element={<AutomationHub/>}/>
+            <Route path="invoices" element={<InvoiceInbox/>}/>
             <Route path="suppliers" element={<Suppliers/>}/>
             <Route path="procurement" element={<Procurement/>}/>
             <Route path="intelligence" element={<PurchaseIntelligence/>}/>

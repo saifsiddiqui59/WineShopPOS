@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useShop } from "../context/ShopContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 const empty=()=>({description:"",productId:"",caseCount:0,unitsPerCase:12,looseBottles:0,quantity:0,purchasePrice:0,batchNumber:"",expiryDate:""});
@@ -18,6 +19,7 @@ export default function Purchases(){
   const[charges,setCharges]=useState(emptyCharges());
   const[message,setMessage]=useState("");
   const[busy,setBusy]=useState(false);
+  const[ingestionId,setIngestionId]=useState(null);
 
   useEffect(()=>{
     try{
@@ -28,6 +30,7 @@ export default function Purchases(){
       setInvoiceDate(d.invoiceDate||new Date().toISOString().slice(0,10));
       setNotes(`OCR draft from ${d.sourceFile||"invoice"}. Product mapping and final bottle quantities were reviewed.`);
       setItems((d.items||[]).map((x)=>({...empty(),...x,caseCount:Number(x.caseCount||0),unitsPerCase:Number(x.unitsPerCase||1),looseBottles:Number(x.looseBottles||0),quantity:Number(x.quantity||0),purchasePrice:Number(x.purchasePrice||0)})));
+      setIngestionId(d.ingestionId||null);
       sessionStorage.removeItem("wineshop_ocr_purchase_draft");
       setMessage("OCR review loaded. Recheck final bottle quantities and landed-cost adjustments before posting.");
     }catch{setMessage("OCR draft could not be loaded. Enter the receipt manually.");}
@@ -53,8 +56,10 @@ export default function Purchases(){
     for(const i of cleaned){if(Number(i.quantity)!==Number(i.caseCount||0)*Number(i.unitsPerCase||1)+Number(i.looseBottles||0)){setMessage("Final Bottles must equal Cases × Bottles/Case + Loose Bottles.");return;}}
     if(landedTotal<0){setMessage("Total landed cost cannot be negative.");return;}
     setBusy(true);
+    if(ingestionId){const{error:guardError}=await supabase.rpc("invoice_assert_receivable",{p_ingestion_id:ingestionId});if(guardError){setMessage(guardError.message||"Invoice is not allowed to Receive Stock yet.");setBusy(false);return;}}
     const r=await receiveStock({supplierName,invoiceNumber,invoiceDate,notes,items:cleaned,charges});
-    setMessage(r.message);if(r.ok){setInvoiceNumber("");setNotes("");setItems([empty()]);setCharges(emptyCharges());}setBusy(false);
+    if(r.ok&&ingestionId){const{error:linkError}=await supabase.rpc("invoice_link_purchase",{p_ingestion_id:ingestionId,p_purchase_id:r.purchaseId});if(linkError){setMessage(`Stock was received, but invoice history linking failed: ${linkError.message}`);setBusy(false);return;}}
+    setMessage(r.message);if(r.ok){setInvoiceNumber("");setNotes("");setItems([empty()]);setCharges(emptyCharges());setIngestionId(null);}setBusy(false);
   }
 
   return <div>

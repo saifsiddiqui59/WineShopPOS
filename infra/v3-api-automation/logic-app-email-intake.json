@@ -1,0 +1,338 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "logicAppName": {
+      "type": "string"
+    },
+    "invoiceStorageAccount": {
+      "type": "string"
+    },
+    "invoiceContainer": {
+      "type": "string"
+    },
+    "documentIntelligenceEndpoint": {
+      "type": "string"
+    },
+    "supabaseFunctionUrl": {
+      "type": "string"
+    },
+    "centralMailbox": {
+      "type": "string"
+    },
+    "ingestSecret": {
+      "type": "secureString"
+    },
+    "gmailConnectionResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "EXISTING OAuth-authorized Gmail API connection resource ID. For consumer @gmail.com combined with HTTP/Blob actions, use Gmail Bring Your Own Application OAuth. Google Workspace is also supported."
+      }
+    },
+    "gmailConnectionName": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('logicAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "tags": {
+        "WineShopPOSGeneration": "V3",
+        "Purpose": "InvoiceEmailIngestion",
+        "GmailAuthorization": "Pending",
+        "RequiresAuthorizedGmailConnection": "true"
+      },
+      "properties": {
+        "state": "Disabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            },
+            "invoiceStorageAccount": {
+              "type": "String"
+            },
+            "invoiceContainer": {
+              "type": "String"
+            },
+            "documentIntelligenceEndpoint": {
+              "type": "String"
+            },
+            "supabaseFunctionUrl": {
+              "type": "String"
+            },
+            "centralMailbox": {
+              "type": "String"
+            },
+            "ingestSecret": {
+              "type": "SecureString"
+            }
+          },
+          "triggers": {
+            "When_a_new_email_arrives": {
+              "type": "ApiConnection",
+              "recurrence": {
+                "frequency": "Minute",
+                "interval": 5
+              },
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['gmail']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/Mail/OnNewEmail",
+                "queries": {
+                  "to": "@parameters('centralMailbox')",
+                  "fetchOnlyWithAttachments": true,
+                  "includeAttachments": true
+                }
+              }
+            }
+          },
+          "actions": {
+            "For_each_attachment": {
+              "type": "Foreach",
+              "foreach": "@triggerBody()?['Attachments']",
+              "actions": {
+                "Allowed_invoice_file": {
+                  "type": "If",
+                  "expression": "@or(endsWith(toLower(items('For_each_attachment')?['Name']),'.pdf'),endsWith(toLower(items('For_each_attachment')?['Name']),'.png'),endsWith(toLower(items('For_each_attachment')?['Name']),'.jpg'),endsWith(toLower(items('For_each_attachment')?['Name']),'.jpeg'),endsWith(toLower(items('For_each_attachment')?['Name']),'.tif'),endsWith(toLower(items('For_each_attachment')?['Name']),'.tiff'))",
+                  "actions": {
+                    "Preflight_invoice": {
+                      "type": "Http",
+                      "inputs": {
+                        "method": "POST",
+                        "uri": "@parameters('supabaseFunctionUrl')",
+                        "headers": {
+                          "Content-Type": "application/json",
+                          "x-wsp-automation-secret": "@parameters('ingestSecret')"
+                        },
+                        "body": {
+                          "action": "preflight",
+                          "source": "EMAIL",
+                          "source_identity": "@triggerBody()?['From']",
+                          "source_message_id": "@triggerBody()?['Id']",
+                          "original_file_name": "@items('For_each_attachment')?['Name']",
+                          "content_base64": "@items('For_each_attachment')?['ContentBytes']"
+                        }
+                      }
+                    },
+                    "Not_already_ingested": {
+                      "type": "If",
+                      "runAfter": {
+                        "Preflight_invoice": [
+                          "Succeeded"
+                        ]
+                      },
+                      "expression": "@equals(body('Preflight_invoice')?['duplicate'],false)",
+                      "actions": {
+                        "Ingestion_ID": {
+                          "type": "Compose",
+                          "inputs": "@guid()"
+                        },
+                        "Received_IST": {
+                          "type": "Compose",
+                          "runAfter": {
+                            "Ingestion_ID": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": "@convertTimeZone(triggerBody()?['DateTimeReceived'],'UTC','India Standard Time')"
+                        },
+                        "Stored_name": {
+                          "type": "Compose",
+                          "runAfter": {
+                            "Received_IST": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": "@concat(if(greater(length(split(items('For_each_attachment')?['Name'],'.')),1),join(take(split(items('For_each_attachment')?['Name'],'.'),sub(length(split(items('For_each_attachment')?['Name'],'.')),1)),'.'),items('For_each_attachment')?['Name']),'_',formatDateTime(outputs('Received_IST'),'MMddyyyy'),if(greater(length(split(items('For_each_attachment')?['Name'],'.')),1),concat('.',last(split(items('For_each_attachment')?['Name'],'.'))),''))"
+                        },
+                        "Blob_path": {
+                          "type": "Compose",
+                          "runAfter": {
+                            "Stored_name": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": "@concat(body('Preflight_invoice')?['shop_id'],'/',formatDateTime(outputs('Received_IST'),'yyyy'),'/',formatDateTime(outputs('Received_IST'),'MM'),'/',outputs('Ingestion_ID'),'/',outputs('Stored_name'))"
+                        },
+                        "Upload_private_blob": {
+                          "type": "Http",
+                          "runAfter": {
+                            "Blob_path": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "method": "PUT",
+                            "uri": "@concat('https://',parameters('invoiceStorageAccount'),'.blob.core.windows.net/',parameters('invoiceContainer'),'/',body('Preflight_invoice')?['shop_id'],'/',formatDateTime(outputs('Received_IST'),'yyyy'),'/',formatDateTime(outputs('Received_IST'),'MM'),'/',outputs('Ingestion_ID'),'/',uriComponent(outputs('Stored_name')))",
+                            "headers": {
+                              "x-ms-blob-type": "BlockBlob",
+                              "x-ms-version": "2023-11-03",
+                              "Content-Type": "@items('For_each_attachment')?['ContentType']"
+                            },
+                            "body": "@base64ToBinary(items('For_each_attachment')?['ContentBytes'])",
+                            "authentication": {
+                              "type": "ManagedServiceIdentity",
+                              "audience": "https://storage.azure.com/"
+                            }
+                          }
+                        },
+                        "Analyze_invoice": {
+                          "type": "Http",
+                          "runAfter": {
+                            "Upload_private_blob": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "method": "POST",
+                            "uri": "@concat(parameters('documentIntelligenceEndpoint'),'/documentintelligence/documentModels/prebuilt-invoice:analyze?_overload=analyzeDocument&api-version=2024-11-30')",
+                            "headers": {
+                              "Content-Type": "application/json"
+                            },
+                            "body": {
+                              "base64Source": "@items('For_each_attachment')?['ContentBytes']"
+                            },
+                            "authentication": {
+                              "type": "ManagedServiceIdentity",
+                              "audience": "https://cognitiveservices.azure.com/"
+                            }
+                          }
+                        },
+                        "Until_OCR_complete": {
+                          "type": "Until",
+                          "runAfter": {
+                            "Analyze_invoice": [
+                              "Succeeded"
+                            ]
+                          },
+                          "expression": "@or(equals(body('Get_OCR_result')?['status'],'succeeded'),equals(body('Get_OCR_result')?['status'],'failed'))",
+                          "limit": {
+                            "count": 45,
+                            "timeout": "PT1M"
+                          },
+                          "actions": {
+                            "Delay": {
+                              "type": "Wait",
+                              "inputs": {
+                                "interval": {
+                                  "count": 1,
+                                  "unit": "Second"
+                                }
+                              }
+                            },
+                            "Get_OCR_result": {
+                              "type": "Http",
+                              "runAfter": {
+                                "Delay": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "inputs": {
+                                "method": "GET",
+                                "uri": "@coalesce(outputs('Analyze_invoice')?['headers']?['operation-location'],outputs('Analyze_invoice')?['headers']?['Operation-Location'])",
+                                "authentication": {
+                                  "type": "ManagedServiceIdentity",
+                                  "audience": "https://cognitiveservices.azure.com/"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Record_invoice_result": {
+                          "type": "Http",
+                          "runAfter": {
+                            "Until_OCR_complete": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "method": "POST",
+                            "uri": "@parameters('supabaseFunctionUrl')",
+                            "headers": {
+                              "Content-Type": "application/json",
+                              "x-wsp-automation-secret": "@parameters('ingestSecret')"
+                            },
+                            "body": {
+                              "action": "record_result",
+                              "ingestion_id": "@outputs('Ingestion_ID')",
+                              "shop_id": "@body('Preflight_invoice')?['shop_id']",
+                              "source": "EMAIL",
+                              "source_identity": "@triggerBody()?['From']",
+                              "source_message_id": "@triggerBody()?['Id']",
+                              "original_file_name": "@items('For_each_attachment')?['Name']",
+                              "stored_file_name": "@outputs('Stored_name')",
+                              "blob_container": "@parameters('invoiceContainer')",
+                              "blob_path": "@outputs('Blob_path')",
+                              "content_type": "@items('For_each_attachment')?['ContentType']",
+                              "size_bytes": "@length(base64ToBinary(items('For_each_attachment')?['ContentBytes']))",
+                              "sha256": "@body('Preflight_invoice')?['sha256']",
+                              "received_at": "@outputs('Received_IST')",
+                              "ocr_result": "@body('Get_OCR_result')"
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              }
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "gmail": {
+                "connectionId": "[parameters('gmailConnectionResourceId')]",
+                "connectionName": "[parameters('gmailConnectionName')]",
+                "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('location'),'/managedApis/gmail')]"
+              }
+            }
+          },
+          "invoiceStorageAccount": {
+            "value": "[parameters('invoiceStorageAccount')]"
+          },
+          "invoiceContainer": {
+            "value": "[parameters('invoiceContainer')]"
+          },
+          "documentIntelligenceEndpoint": {
+            "value": "[parameters('documentIntelligenceEndpoint')]"
+          },
+          "supabaseFunctionUrl": {
+            "value": "[parameters('supabaseFunctionUrl')]"
+          },
+          "centralMailbox": {
+            "value": "[parameters('centralMailbox')]"
+          },
+          "ingestSecret": {
+            "value": "[parameters('ingestSecret')]"
+          }
+        }
+      }
+    }
+  ]
+}
