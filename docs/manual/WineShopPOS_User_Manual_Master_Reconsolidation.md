@@ -728,24 +728,6 @@ History availability depends on retained production records and screen filters.
 Deleted or never-retained records cannot be assumed recoverable.
 <!-- V2_CURRENT_USER_WORKFLOWS_END -->
 
-<!-- AI_APP_HELP_START -->
-## Ask WineShopPOS — functionality help
-
-You can ask the existing Owner Assistant questions such as:
-
-- "How do I add bulk inventory?"
-- "How do I scan a supplier invoice?"
-- "How do I add a new user?"
-- "Where can I see stock history?"
-- "How do transfers work?"
-- "Where do I approve a discount?"
-- "How do loyalty points or gift vouchers work?"
-- "How do I export for my accountant?"
-
-For these questions the assistant uses the verified WineShopPOS functionality
-knowledge tool and returns the relevant app area/route, role requirements, steps
-and cautions. It remains read-only and cannot perform the operation for you.
-<!-- AI_APP_HELP_END -->
 
 <!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
 ## Product Master — real product onboarding
