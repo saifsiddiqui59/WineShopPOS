@@ -2,9 +2,9 @@
 
 <!-- V3_API_AUTOMATION_20260831 -->
 
-Status: V3 FOUNDATION DEPLOYED / EMAIL GMAIL AUTHORIZATION REQUIRED  
-Date: 2026-08-31  
-Branch: `V3`  
+Status: V3 FOUNDATION DEPLOYED / EMAIL GMAIL AUTHORIZATION REQUIRED
+Date: 2026-08-31
+Branch: `V3`
 Feature commit: `7dd99f21e03e79b17490c837cb1bd5d470823dca`
 
 ## Verified deployed foundation
@@ -61,7 +61,7 @@ Automation never posts inventory directly.
 
 <!-- V3_WHATSAPP_WEBHOOK_20260831 -->
 
-Status: WEBHOOK BACKEND DEPLOYED / META CALLBACK REGISTRATION PENDING  
+Status: WEBHOOK BACKEND DEPLOYED / META CALLBACK REGISTRATION PENDING
 Feature commit: `6c88136acd40c6188c85464365a685cb194540ba`
 
 Verified:
@@ -130,3 +130,23 @@ Next real acceptance test:
 3. confirm it appears in Invoice Inbox with Source = Email;
 4. open View Original and Review OCR;
 5. confirm stock is unchanged until Receive Stock.
+
+## V3 Demo Ready — Invoice Reliability, Email Feedback, Reset, Barcode
+
+Status: DEPLOYED TO PRODUCTION DEMO AND VERIFIED
+Feature commit: `234088b6715110536391f9adf5c8398407606035`
+
+### Runtime changes
+- V3-01D invoice review reliability is active: server-side review drafts, resume/cancel/reopen, safer quantity interpretation and preserved OCR financial/batch fields.
+- Gmail invoice polling is independent of Read/Unread state and uses the private Blob UID checkpoint.
+- The existing HTTP-only Logic App remains at a 5-minute recurrence for current acceptance testing.
+- Authorized shop senders now receive an automated reply from `wineshoppos@gmail.com` when a supported invoice attachment exceeds 4 MB.
+- Oversize feedback is idempotency-protected by a private Blob marker per Gmail UID.
+- Oversized attachments do not create purchases or inventory transactions.
+- Barcode input is normalized, common Enter/Tab scanner suffixes are supported, and the default timing tolerance is widened for real HID scanners.
+- An ADMIN-only **Demo / Test Data Reset** clears operational shop test data transaction-consistently while preserving shop/users/settings/categories/Email channel mapping/audit configuration.
+- The standalone V3 invoice Function is configured with `use32BitWorkerProcess=false` (64-bit worker).
+- Production frontend was deployed from the verified V3 build to `https://wineshoppos.z29.web.core.windows.net/`.
+
+### Deferred cost task
+After acceptance testing, increase the Logic App Email polling interval from 5 minutes to a lower-cost cadence. This was intentionally NOT changed for the demo.
