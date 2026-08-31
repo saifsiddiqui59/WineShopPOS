@@ -48,7 +48,6 @@ import BackupRecovery from "./pages/BackupRecovery";
 import Settings from "./pages/Settings";
 import Audit from "./pages/Audit";
 import Account from "./pages/Account";
-import Help from "./pages/Help";
 
 function module(title, subtitle, tabs) {
   return <ModuleLayout title={title} subtitle={subtitle} tabs={tabs}/>;
@@ -62,7 +61,7 @@ export default function App() {
       <Route element={<Layout/>}>
         <Route index element={<HomeRedirect/>}/>
         <Route path="account" element={<Account/>}/>
-        <Route path="help" element={<Help/>}/>
+        <Route path="help" element={<Navigate to="/account?tab=about" replace/>}/>
 
         <Route path="pos" element={module("POS & Billing", "Scan → Cart → Pay → Print. Operational distractions stay outside the cashier flow.", MODULE_TABS.pos)}>
           <Route index element={<POS/>}/>

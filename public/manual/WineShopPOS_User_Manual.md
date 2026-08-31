@@ -498,18 +498,16 @@ For a non-admin staff row, choose **Cashier** or **Manager** in the Role field. 
 
 Open Settings & Admin → Access Control for the complete access matrix.
 
-## 21. Help & User Manual
+## 21. Help / About & User Manual
 
-Open **Help & Manual** from the main navigation.
+Open the user menu from your name in the top-right corner, then select
+**Help / About**.
 
-The Help Center provides clickable chapters for the main WineShopPOS workflows,
-including billing, sales/returns, shifts, products, purchasing, inventory,
-operations, Owner Center, reports, administration and troubleshooting.
+Select **Open Full User Manual** to open the complete WineShopPOS manual in a
+new browser tab. The manual includes its own clickable table of contents.
 
-Select a chapter to jump directly to its guidance, or select **Open Full User
-Manual** for the complete manual with a clickable table of contents.
-
-
+WineShopPOS does not use a separate Help category in the main application
+navigation.
 <!-- SUPPLIER_MASTER_OCR_PATCH -->
 ## Supplier Master and OCR Supplier Review
 

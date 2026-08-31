@@ -17,6 +17,7 @@ WineShopPOS maintains ONE canonical copy of each living document.
 | `docs/chapters/01-*...26-*` | HISTORICAL | pre-V2 implementation history |
 | `docs/v2/*` | V2 EXECUTION RECORD | V2 specification/audit/evidence |
 | `docs/v2/audit/ALL_CANONICAL_DOCS_RECONCILED_AFTER_PUSH3.md` | CURRENT AUDIT | Push-3 canonical documentation reconciliation evidence |
+| `docs/v2/audit/AI_MONITOR_ACCESS_TRACE_INGESTION_STATUS.md` | CURRENT AUDIT | Monitor access resolved; trace ingestion pending E2E verification |
 | `docs/code-history/*` | HISTORICAL BACKUP | superseded snapshots |
 
 ## Rule

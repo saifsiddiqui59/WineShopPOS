@@ -49,3 +49,33 @@ gates remain follow-on work.
 Future changes update the existing canonical Project Context, Developer
 Handbook, User Manual, AI Production Baseline and relevant V2 chapter in place.
 Git history and audit/chapter records preserve implementation history.
+
+<!-- AI_MONITOR_STATUS_20260831_START -->
+## Post-Push-3 Monitor and Help correction
+
+Verified after the earlier Push-3 reconciliation:
+
+- standalone Help category/module is removed from the main navigation.
+- top-right Help / About exposes the full HTML User Manual.
+- full User Manual remains the customer documentation surface with a clickable TOC.
+- Foundry Monitor permission issue is resolved.
+- Current Monitor trace result is **No results to show**.
+- Trace ingestion remains explicitly **NOT YET VERIFIED E2E**.
+<!-- AI_MONITOR_STATUS_20260831_END -->
+
+<!-- HELP_ENTRY_SIMPLIFIED_20260831 -->
+## Final Help UX correction
+
+The earlier browse-by-category Help page was removed after live usability review.
+
+Final customer UX:
+
+```text
+Main navigation Help category: REMOVED
+Top-right Help / About:        KEPT
+Open Full User Manual:         AVAILABLE
+Full manual clickable TOC:     KEPT
+Legacy #/help:                 REDIRECTS TO HELP / ABOUT
+```
+
+No separate Help category/cards page should be reintroduced.

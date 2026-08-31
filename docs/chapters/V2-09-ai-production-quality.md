@@ -52,3 +52,20 @@ Foundry Traces.
 8. add monitoring/dashboarding and operational alerts
 
 AI failure must never break core POS availability.
+
+<!-- AI_MONITOR_STATUS_20260831_START -->
+## Monitor access status — 2026-08-31
+
+The prior Foundry Monitor permission error is resolved.
+
+Configured/verified:
+
+- AppInsights connection authentication: `ProjectManagedIdentity`
+- connection target: exact Application Insights ARM resource ID
+- human Monitor access: available
+- current owner-observed Monitor result: **No results to show**
+
+Therefore the remaining quality boundary is trace ingestion itself, not RBAC.
+A fresh authenticated production interaction must appear in Foundry Traces
+before trace-based evaluations and deployment gates move to verified status.
+<!-- AI_MONITOR_STATUS_20260831_END -->

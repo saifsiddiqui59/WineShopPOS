@@ -106,3 +106,29 @@ Current Product Master milestone:
 - Receive Stock remains the purchase-stock posting step
 - legacy dummy product catalogue retired from active use; history preserved
 - old applied migrations were NOT rewritten; one new additive migration carries the change
+
+<!-- AI_MONITOR_STATUS_20260831_START -->
+AI_MONITOR_STATUS_20260831
+
+Current AI observability continuation state:
+- Foundry Monitor permission issue => RESOLVED
+- Foundry connection auth => ProjectManagedIdentity
+- Foundry target => exact Application Insights ARM resource ID
+- Monitor UI => accessible
+- current trace result => No results to show
+- trace ingestion E2E => NOT YET VERIFIED
+- next action => generate one new authenticated production Owner Assistant request,
+  allow ingestion delay, then verify it in Foundry Traces
+- do not add more RBAC roles unless a new explicit permission error appears
+<!-- AI_MONITOR_STATUS_20260831_END -->
+
+<!-- HELP_ENTRY_SIMPLIFIED_20260831 -->
+HELP_ENTRY_SIMPLIFIED_20260831
+
+Customer documentation UX:
+- REMOVE standalone Help & Manual category from main navigation
+- KEEP top-right user menu -> Help / About
+- Help / About -> Open Full User Manual
+- full manual -> /manual/index.html with clickable TOC
+- #/help -> compatibility redirect to /account?tab=about
+- do not reintroduce browse-by-category Help cards/page

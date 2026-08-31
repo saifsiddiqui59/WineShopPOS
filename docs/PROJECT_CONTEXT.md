@@ -268,3 +268,40 @@ Current rules:
   barcodes can be completed later through Edit Product.
 - The known legacy dummy barcode catalogue is retired from active use without
   deleting historical sale/purchase references.
+
+<!-- AI_MONITOR_STATUS_20260831_START -->
+## Foundry Monitor access / trace verification — 2026-08-31
+
+Current verified/configured state:
+
+- Foundry AppInsights connection uses `ProjectManagedIdentity`.
+- The connection target is the exact Application Insights ARM resource ID.
+- The prior human permission error in the Foundry Monitor UI is resolved.
+- Owner-observed Monitor state after access repair: **No results to show**.
+
+Status boundary:
+
+```text
+MONITOR PERMISSION ISSUE: RESOLVED
+MONITOR UI ACCESS:        AVAILABLE
+TRACE RESULTS:            NO RESULTS TO SHOW
+TRACE INGESTION E2E:      NOT YET VERIFIED
+```
+
+A new authenticated production Owner Assistant interaction must appear in
+Foundry Traces before trace ingestion is described as end-to-end verified.
+Trace evaluations and deployment quality gates remain follow-on work.
+<!-- AI_MONITOR_STATUS_20260831_END -->
+
+<!-- HELP_ENTRY_SIMPLIFIED_20260831 -->
+## Help entry — simplified production SaaS UX
+
+Customer Help access is intentionally simple:
+
+- there is no standalone **Help & Manual** module in the main navigation;
+- the top-right signed-in user menu keeps **Help / About**;
+- Help / About exposes one **Open Full User Manual** button;
+- the full HTML manual remains the customer documentation surface and keeps its
+  clickable table of contents;
+- legacy `#/help` navigation redirects to Account → Help / About instead of
+  rendering a separate Help category page.

@@ -916,3 +916,40 @@ Product Master exposes All / With Barcode / Without Barcode filtering. A Product
 created without barcode through Bulk Product Import is completed later through
 the existing Edit Product screen. Normal single-product creation continues to
 require Barcode.
+
+<!-- AI_MONITOR_STATUS_20260831_START -->
+## AI observability — Monitor access resolved
+
+Foundry/Application Insights server-side tracing infrastructure remains
+configured. The prior human `not enough permission` condition in Foundry
+Monitor is resolved.
+
+Current verification boundary:
+
+```text
+Foundry connection target: EXACT APP INSIGHTS ARM ID
+Foundry auth:              ProjectManagedIdentity
+Human Monitor access:      RESOLVED
+Current trace view:        NO RESULTS TO SHOW
+Trace E2E:                 NOT YET VERIFIED
+```
+
+Do not classify tracing as end-to-end verified until a new authenticated
+production Owner Assistant request is visible in Foundry Traces.
+<!-- AI_MONITOR_STATUS_20260831_END -->
+
+<!-- HELP_ENTRY_SIMPLIFIED_20260831 -->
+## Customer Help entry
+
+The production SaaS does not expose a standalone Help module.
+
+```text
+Top-right user menu
+→ Help / About
+→ Open Full User Manual
+→ /manual/index.html
+```
+
+The previous `#/help` URL is retained only as a compatibility redirect to
+`/account?tab=about`. Do not rebuild a separate category/chapter Help page.
+The customer manual is generated from the canonical master User Manual.

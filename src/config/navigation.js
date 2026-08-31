@@ -1,6 +1,5 @@
 import {
   BarChart3,
-  BookOpen,
   Boxes,
   Building2,
   ClipboardList,
@@ -19,7 +18,6 @@ export const MAIN_MODULES = [
   { path: "/owner", label: "Owner Center", icon: Building2, roles: ["ADMIN"] },
   { path: "/reports", label: "Reports & Compliance", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
   { path: "/admin", label: "Settings & Admin", icon: Settings, roles: ["ADMIN"] },
-  { path: "/help", label: "Help & Manual", icon: BookOpen, roles: ["ADMIN", "MANAGER", "CASHIER"] },
 ];
 
 export const MODULE_TABS = {

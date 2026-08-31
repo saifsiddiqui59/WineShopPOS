@@ -127,3 +127,23 @@ No Owner AI source or Function configuration is changed by this repair.
 
 Tracing infrastructure is configured. End-to-end tracing is verified only after a real authenticated Owner AI interaction appears in Foundry Traces.
 <!-- AI_OBSERVABILITY_END -->
+
+<!-- AI_MONITOR_STATUS_20260831_START -->
+## Foundry Monitor access / trace verification — 2026-08-31
+
+The Foundry Monitor permission problem is resolved.
+
+Current state:
+
+```text
+TRACING INFRASTRUCTURE:  CONFIGURED
+MONITOR ACCESS:          RESOLVED
+TRACE VIEW:              NO RESULTS TO SHOW
+TRACE INGESTION E2E:     NOT YET VERIFIED
+```
+
+The next verification is one fresh authenticated production Owner Assistant
+interaction followed by confirmation of the corresponding Foundry trace after
+telemetry ingestion delay. Only then should trace evaluations and quality gates
+be treated as verified.
+<!-- AI_MONITOR_STATUS_20260831_END -->

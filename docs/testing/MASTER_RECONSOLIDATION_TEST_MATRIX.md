@@ -238,3 +238,29 @@ Old URLs for Shift, Returns, Sales, Scanner, Offline Queue, Stock Count, Purchas
 - [ ] Existing Product audit trigger continues to record Product writes.
 - [ ] `npm run build` passes.
 - [ ] `npm run lint` passes.
+
+<!-- AI_MONITOR_STATUS_20260831_START -->
+## AI Monitor / tracing regression — 2026-08-31
+
+- [x] Foundry Monitor no longer blocks the owner with the prior permission error.
+- [x] Foundry AppInsights connection uses `ProjectManagedIdentity`.
+- [x] Foundry connection target is an Azure ARM resource ID rather than a Git-Bash Windows path.
+- [x] Standalone Help & Manual module is removed from main navigation.
+- [x] Full User Manual is generated as HTML with a clickable table of contents.
+- [x] Product Help/manual does not instruct customers to use AI as the Help mechanism.
+- [ ] Generate a new authenticated production Owner Assistant request after tracing repair.
+- [ ] Confirm that request appears in Foundry Traces.
+- [ ] Run trace evaluation only after trace ingestion is observed.
+<!-- AI_MONITOR_STATUS_20260831_END -->
+
+<!-- HELP_ENTRY_SIMPLIFIED_20260831 -->
+## Help entry regression — 2026-08-31
+
+- [ ] Main navigation does not show a Help & Manual module/category.
+- [ ] Top-right user menu still shows Help / About.
+- [ ] Help / About shows exactly one customer-documentation action: Open Full User Manual.
+- [ ] Open Full User Manual opens `/manual/index.html`.
+- [ ] Full manual contains its clickable table of contents.
+- [ ] `#/help` redirects to Account → Help / About and does not render category cards.
+- [ ] Production application bundle does not contain `Browse by chapter`.
+- [ ] Production application bundle does not expose Git/canonical-source documentation links.
