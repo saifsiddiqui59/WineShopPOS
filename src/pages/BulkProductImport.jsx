@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
+import { useScanner } from "../context/ScannerContext";
 import { inferBrandFromProductName, inferCategoryId } from "../lib/productInference";
 
 const OCR_REVIEW_KEY = "wineshop_ocr_review_state";
@@ -74,8 +75,10 @@ function rowsFromOcrReview(categories = []) {
 
 export default function BulkProductImport() {
   const { categories, refreshAll } = useShop();
+  const { lastScan, successBeep } = useScanner();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const barcodeTargetRow = useRef(null);
 
   const [rows, setRows] = useState([blankRow()]);
   const [busy, setBusy] = useState(false);
@@ -88,6 +91,18 @@ export default function BulkProductImport() {
     () => (categories || []).filter((item) => item.active !== false),
     [categories],
   );
+
+  useEffect(() => {
+    if (!lastScan?.barcode || barcodeTargetRow.current == null) return;
+    const rowIndex = Number(barcodeTargetRow.current);
+    setRows((current) =>
+      current.map((row, index) =>
+        index === rowIndex ? { ...row, barcode: lastScan.barcode } : row,
+      ),
+    );
+    setMessage(`Barcode ${lastScan.barcode} scanned into row ${rowIndex + 1}.`);
+    successBeep();
+  }, [lastScan?.id]);
 
   useEffect(() => {
     if (!fromOcr) return;
@@ -273,7 +288,16 @@ export default function BulkProductImport() {
                   <td>
                     <input
                       value={row.barcode}
-                      placeholder="Add later"
+                      placeholder="Scan or type"
+                      data-scanner-capture="barcode"
+                      onFocus={() => {
+                        barcodeTargetRow.current = index;
+                      }}
+                      onBlur={() => {
+                        if (barcodeTargetRow.current === index) {
+                          barcodeTargetRow.current = null;
+                        }
+                      }}
                       onChange={(event) =>
                         updateRow(index, "barcode", event.target.value)
                       }

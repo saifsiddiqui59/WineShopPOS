@@ -120,7 +120,24 @@ export function ScannerProvider({ children }) {
         if (scannerLike) {
           event.preventDefault();
           event.stopPropagation();
-          restoreEditable(initialFocusSnapshot.current);
+
+          const snapshot = initialFocusSnapshot.current;
+          const directCapture =
+            snapshot?.element?.dataset?.scannerCapture === "barcode";
+
+          if (directCapture && snapshot?.element?.isConnected) {
+            const el = snapshot.element;
+            const setter = Object.getOwnPropertyDescriptor(
+              Object.getPrototypeOf(el),
+              "value",
+            )?.set;
+            if (setter) setter.call(el, chars);
+            else el.value = chars;
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+          } else {
+            restoreEditable(snapshot);
+          }
+
           setLastScan({
             id: crypto.randomUUID(),
             barcode: chars,
@@ -128,7 +145,7 @@ export function ScannerProvider({ children }) {
             averageGapMs: Math.round(avgGap),
             length: chars.length,
           });
-          requestAnimationFrame(() => initialFocusSnapshot.current?.element?.focus?.());
+          requestAnimationFrame(() => snapshot?.element?.focus?.());
         }
         reset();
         return;
