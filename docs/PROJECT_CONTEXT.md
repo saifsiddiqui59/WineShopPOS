@@ -305,3 +305,7 @@ Customer Help access is intentionally simple:
   clickable table of contents;
 - legacy `#/help` navigation redirects to Account → Help / About instead of
   rendering a separate Help category page.
+
+## V3 API Automation Integration
+<!-- V3_API_AUTOMATION_20260831 -->
+V3 is isolated on branch `V3`; main is not merged. Private per-shop invoice storage, `invoice_ingestions`, duplicate protection, standalone invoice API, automation Edge Function and Invoice Inbox are deployed/previewed. Existing manual OCR and Receive Stock remain authoritative. Preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/`. Gmail Email ingestion is NOT DEPLOYED because a real OAuth-authorized Gmail connection is required; the failed unauthorised connection design was removed.

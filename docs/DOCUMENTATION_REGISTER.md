@@ -41,3 +41,11 @@ line round-trip, barcode-completion filtering and retirement of the legacy sampl
 catalogue. Current detail is maintained in Project Context, the Master Developer
 Handbook, Master User Manual, Product Master chapter, V2 Purchase/Inventory
 chapters, Master test matrix and Master handoff.
+
+## V3-01 API Automation Integration
+<!-- V3_API_AUTOMATION_20260831 -->
+- `docs/chapters/V3-01-api-automation-integration.md` — private invoice storage, persistent Inbox, duplicate protection and Email automation foundation.
+- Feature commit: `7dd99f21e03e79b17490c837cb1bd5d470823dca`
+- Branch: `V3`; Preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/`
+- Gmail Logic App: AUTHORIZATION REQUIRED / NOT DEPLOYED
+- Main merge: NOT YET

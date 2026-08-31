@@ -770,3 +770,7 @@ Open **Products → Bulk Product Import**.
 
 Open Product Master and use **All**, **With Barcode** or **Without Barcode**.
 Choose **Without Barcode**, open **Edit**, scan/enter the physical barcode and save.
+
+## Invoice Inbox and stored supplier invoices
+<!-- V3_API_AUTOMATION_20260831 -->
+ADMIN/MANAGER users can use **Purchases & Suppliers → Invoice Inbox** in the V3 preview. Filter by Year, Month and Status. **View Original** opens the private invoice through temporary secure access. **Review OCR** reopens stored OCR. `POSSIBLE_DUPLICATE` must be resolved before Receive Stock. An Inbox invoice does not mean stock was received; only **Confirm & Receive Stock** changes inventory. Manual App OCR storage is part of V3. Email remains pending until the real Gmail/Google Workspace connection is authorized and tested.

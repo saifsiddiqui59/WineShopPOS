@@ -953,3 +953,7 @@ Top-right user menu
 The previous `#/help` URL is retained only as a compatibility redirect to
 `/account?tab=about`. Do not rebuild a separate category/chapter Help page.
 The customer manual is generated from the canonical master User Manual.
+
+## V3 — Invoice document ingestion and storage
+<!-- V3_API_AUTOMATION_20260831 -->
+Architecture: Manual OCR / future Email / future WhatsApp → private Blob → `invoice_ingestions` → human review → Receive Stock → `purchases`. `invoice_ingestions` is evidence/workflow, not a second purchase table. React reads RLS metadata and original files open through short-lived read-only SAS from the standalone V3 invoice Function after ADMIN/MANAGER/shop authorization. Existing manual OCR remains independently usable. Email template deployment now requires an already authorized Gmail API connection; do not create a fake Gmail connection in ARM.
