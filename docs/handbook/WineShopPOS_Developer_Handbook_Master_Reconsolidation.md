@@ -957,3 +957,11 @@ The customer manual is generated from the canonical master User Manual.
 ## V3 — Invoice document ingestion and storage
 <!-- V3_API_AUTOMATION_20260831 -->
 Architecture: Manual OCR / future Email / future WhatsApp → private Blob → `invoice_ingestions` → human review → Receive Stock → `purchases`. `invoice_ingestions` is evidence/workflow, not a second purchase table. React reads RLS metadata and original files open through short-lived read-only SAS from the standalone V3 invoice Function after ADMIN/MANAGER/shop authorization. Existing manual OCR remains independently usable. Email template deployment now requires an already authorized Gmail API connection; do not create a fake Gmail connection in ARM.
+
+## V3 WhatsApp webhook boundary
+
+<!-- V3_WHATSAPP_WEBHOOK_20260831 -->
+
+The isolated V3 invoice Function exposes `https://wsp-v3-invoice-53b6e9a1.azurewebsites.net/api/whatsapp/webhook` for Meta WhatsApp Cloud API webhook verification/events. GET verification compares the configured verify token using timing-safe comparison. POST events require valid `x-hub-signature-256` HMAC-SHA256 calculated with the Meta App Secret before JSON is trusted.
+
+Current Step 1 only acknowledges/logs safe metadata for inbound messages. It does not download media and cannot alter inventory. The Meta temporary access token/App Secret/verify token are Azure App Settings only and must never be committed.

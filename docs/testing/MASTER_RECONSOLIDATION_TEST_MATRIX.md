@@ -286,3 +286,22 @@ Old URLs for Shift, Returns, Sales, Scanner, Offline Queue, Stock Count, Purchas
 | Email invoice E2E | PENDING AUTHORIZATION |
 | WhatsApp | V3-01B |
 | Main merge | NOT YET |
+
+## V3 WhatsApp webhook tests
+
+<!-- V3_WHATSAPP_WEBHOOK_20260831 -->
+
+| Test | Result |
+|---|---|
+| Initial temporary-token phone lookup | SUPERSEDED — HTTP 400 before webhook changes; token is not required for Step 1 |
+| Access-token validation | DEFERRED TO MEDIA STEP 2 |
+| WhatsApp webhook health/configuration | PASS |
+| GET verification challenge | PASS |
+| Wrong verify token rejected | PASS / HTTP 403 |
+| Invalid Meta HMAC signature rejected | PASS / HTTP 401 |
+| Valid HMAC signature accepted | PASS / HTTP 200 |
+| Manual OCR changed | NO |
+| WhatsApp media ingestion | NOT YET — next V3-01B step |
+| Direct inventory mutation from webhook | DISABLED |
+| Meta dashboard callback registration | PENDING USER STEP |
+| Real inbound `hello` | PENDING USER STEP |
