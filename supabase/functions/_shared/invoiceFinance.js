@@ -27,6 +27,15 @@ function parseMoneyText(value) {
   return negative ? -Math.abs(n) : n;
 }
 
+function looksLikeStandaloneMoney(value) {
+  const text = String(value || "").trim();
+  if (!text || /[a-z]/i.test(text)) return false;
+  if (/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/.test(text)) return false;
+  if (/\b\d{1,2}:\d{2}\b/.test(text)) return false;
+  if (/^(19|20)\d{2}$/.test(text)) return false;
+  return parseMoneyText(text) != null;
+}
+
 function bounds(line) {
   const polygon = line?.polygon || [];
   let points = [];
@@ -72,22 +81,26 @@ function flattenLines(analyzeResult) {
 function findLabeledAmount(lines, aliases) {
   const normalizedAliases = aliases.map(normalizeText);
   for (const label of lines) {
-    if (!normalizedAliases.some((alias) => label.norm === alias || label.norm.includes(alias))) continue;
+    if (!normalizedAliases.includes(label.norm)) continue;
 
     const inline = parseMoneyText(label.text);
     if (inline != null && /\d/.test(label.text.replace(new RegExp(aliases[0], "i"), ""))) {
       return { value: inline, label: label.text, evidence: label.text, pageIndex: label.pageIndex, y: label.y };
     }
 
-    const tolerance = Math.max(label.pageHeight * 0.012, label.height * 1.6);
+    const tolerance = Math.max(label.pageHeight * 0.008, label.height * 1.05);
     const candidates = lines
       .filter((row) =>
+        row !== label &&
         row.pageIndex === label.pageIndex &&
         row.left > label.right + label.pageWidth * 0.03 &&
         Math.abs(row.y - label.y) <= tolerance &&
-        parseMoneyText(row.text) != null
+        looksLikeStandaloneMoney(row.text)
       )
-      .sort((a, b) => b.right - a.right);
+      .sort((a, b) =>
+        Math.abs(a.y - label.y) - Math.abs(b.y - label.y) ||
+        b.right - a.right
+      );
 
     if (candidates[0]) {
       return {
@@ -102,7 +115,7 @@ function findLabeledAmount(lines, aliases) {
   return null;
 }
 
-function findPrintedTotal(lines, summaryEvidence, baseValue) {
+function findPrintedTotal(lines, summaryEvidence, baseValue, expectedValue = 0) {
   const evidence = summaryEvidence.filter(Boolean);
   if (!evidence.length) return null;
   const pageIndex = Math.max(...evidence.map((x) => x.pageIndex));
@@ -115,15 +128,76 @@ function findPrintedTotal(lines, summaryEvidence, baseValue) {
       row.pageIndex === pageIndex &&
       row.y >= startY &&
       row.x >= row.pageWidth * 0.60 &&
+      looksLikeStandaloneMoney(row.text) &&
       Number.isFinite(row.money) &&
-      row.money > threshold
-    )
-    .sort((a, b) => b.y - a.y || b.right - a.right);
+      Math.abs(row.money) > threshold
+    );
 
-  return candidates[0]?.money ?? null;
+  const expected = Number(expectedValue || 0);
+  candidates.sort((a, b) => {
+    if (expected > 0) {
+      const da = Math.abs(Math.abs(a.money) - expected);
+      const db = Math.abs(Math.abs(b.money) - expected);
+      if (Math.abs(da - db) > 0.01) return da - db;
+    }
+    return b.y - a.y || b.right - a.right;
+  });
+
+  return candidates[0] ? Math.abs(candidates[0].money) : null;
 }
 
 const absOrZero = (entry) => Math.abs(Number(entry?.value || 0));
+
+
+function tokenScore(a, b) {
+  const aa = new Set(normalizeText(a).split(" ").filter((x) => x.length > 1));
+  const bb = new Set(normalizeText(b).split(" ").filter((x) => x.length > 1));
+  if (!aa.size || !bb.size) return 0;
+  return [...aa].filter((x) => bb.has(x)).length / Math.max(aa.size, bb.size);
+}
+
+export function enrichItemsWithTableHints(analyzeResult, items = []) {
+  const hints = [];
+  for (const table of analyzeResult?.analyzeResult?.tables || []) {
+    const cells = table?.cells || [];
+    const rows = [...new Set(cells.map((c) => Number(c.rowIndex || 0)))].sort((a,b)=>a-b);
+    let header = null, descCol = null, mrpCol = null;
+    for (const ri of rows.slice(0,4)) {
+      for (const c of cells.filter((x)=>Number(x.rowIndex||0)===ri)) {
+        const n=normalizeText(c.content);
+        if (n === "name of item" || n === "item name" || n === "description" || n.includes("name of item")) {
+          header=ri; descCol=Number(c.columnIndex);
+        }
+        if (n === "mrp" || n.startsWith("mrp ")) {
+          header=header ?? ri; mrpCol=Number(c.columnIndex);
+        }
+      }
+      if (descCol != null && mrpCol != null) break;
+    }
+    if (header == null || descCol == null || mrpCol == null) continue;
+    for (const ri of rows.filter((x)=>x>header)) {
+      const d=cells.find((c)=>Number(c.rowIndex||0)===ri && Number(c.columnIndex||0)===descCol)?.content;
+      const m=cells.find((c)=>Number(c.rowIndex||0)===ri && Number(c.columnIndex||0)===mrpCol)?.content;
+      const mrp=parseMoneyText(m);
+      if (String(d||"").trim() && Number(mrp)>0) hints.push({description:String(d).trim(),mrp:Number(mrp)});
+    }
+  }
+  if (!hints.length) return items;
+  const used=new Set();
+  return (items||[]).map((item,index)=>{
+    if (Number(item?.mrp||0)>0) return item;
+    let bi=-1, bs=0;
+    hints.forEach((h,i)=>{
+      if(used.has(i)) return;
+      const sc=tokenScore(item?.description,h.description);
+      if(sc>bs){bs=sc;bi=i;}
+    });
+    if (bi<0 && hints.length===items.length && !used.has(index)) { bi=index; bs=.5; }
+    if (bi<0 || bs<.35) return item;
+    used.add(bi);
+    return {...item,mrp:hints[bi].mrp,mrpSource:"INVOICE_TABLE_MRP"};
+  });
+}
 
 export function extractInvoiceFinancials(analyzeResult, fields = {}, items = []) {
   const lines = flattenLines(analyzeResult);
@@ -173,16 +247,30 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   const explicitSubtotal = Number(fieldNumber(fields.SubTotal) || 0);
   const subtotal = explicitSubtotal > 0 ? explicitSubtotal : (lineProductValue > 0 ? lineProductValue : null);
 
-  const explicitTotal = Number(fieldNumber(fields.InvoiceTotal) || 0);
-  let printedInvoiceTotal = explicitTotal > 0 ? explicitTotal : findPrintedTotal(lines, evidence, lineProductValue);
-
   const knownAdjustment =
     freightAmount + transportAmount + handlingAmount + loadingUnloadingAmount +
     miscellaneousAmount - supplierDiscountAmount - invoiceDiscountAmount;
 
+  const expectedBeforeRounding = Number((lineProductValue + knownAdjustment).toFixed(2));
+  const explicitTotal = Number(fieldNumber(fields.InvoiceTotal) || 0);
+  const spatialTotal = findPrintedTotal(lines, evidence, lineProductValue, expectedBeforeRounding);
+  let printedInvoiceTotal = explicitTotal > 0 ? explicitTotal : spatialTotal;
+
+  if (spatialTotal > 0) {
+    const explicitLooksLikeSubtotal =
+      explicitTotal > 0 &&
+      Math.abs(explicitTotal - lineProductValue) <= 1 &&
+      Math.abs(knownAdjustment) > 1;
+    const spatialIsCloser =
+      explicitTotal <= 0 ||
+      Math.abs(spatialTotal - expectedBeforeRounding) + 0.01 <
+        Math.abs(explicitTotal - expectedBeforeRounding);
+    if (explicitLooksLikeSubtotal || spatialIsCloser) printedInvoiceTotal = spatialTotal;
+  }
+
   let roundingAdjustment = Number(roundOff?.value || 0);
   if (!roundOff && printedInvoiceTotal && lineProductValue > 0) {
-    const delta = Number((printedInvoiceTotal - (lineProductValue + knownAdjustment)).toFixed(2));
+    const delta = Number((printedInvoiceTotal - expectedBeforeRounding).toFixed(2));
     if (Math.abs(delta) <= 10) roundingAdjustment = delta;
   }
 

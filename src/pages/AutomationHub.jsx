@@ -237,6 +237,7 @@ export default function AutomationHub() {
   const [ingestionId, setIngestionId] = useState(null);
   const [sourceFileName, setSourceFileName] = useState("");
   const [charges, setCharges] = useState(emptyCharges());
+  const [financeWarning, setFinanceWarning] = useState(null);
 
   const [supplierId, setSupplierId] = useState("");
   const [confirmedSupplier, setConfirmedSupplier] = useState(null);
@@ -853,8 +854,14 @@ export default function AutomationHub() {
     }
 
     if (!reconciliationMatches) {
-      setMessage(
-        `Invoice financials do not reconcile. Difference: ₹${Math.abs(reconciliationDifference).toFixed(2)}. Review landed-cost adjustments before Receive Stock.`,
+      setFinanceWarning({
+        calculated: reviewedInvoiceTotal,
+        printed: printedInvoiceTotal,
+        difference: Math.abs(reconciliationDifference),
+      });
+      setMessage("");
+      window.requestAnimationFrame(() =>
+        document.getElementById("invoice-financial-summary")?.scrollIntoView({behavior:"smooth",block:"center"})
       );
       return;
     }
@@ -946,6 +953,25 @@ export default function AutomationHub() {
 
   return (
     <div>
+      {financeWarning ? (
+        <div className="finance-warning-backdrop">
+          <div className="finance-warning-modal" role="alertdialog" aria-modal="true">
+            <div className="finance-warning-icon">!</div>
+            <h2>Invoice Total Does Not Match</h2>
+            <p>Receive Stock is blocked until the reviewed financial calculation matches the printed invoice.</p>
+            <div className="finance-warning-values">
+              <div><span>Calculated Invoice</span><strong>₹{Number(financeWarning.calculated||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</strong></div>
+              <div><span>Printed Invoice</span><strong>₹{Number(financeWarning.printed||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</strong></div>
+              <div className="danger"><span>Difference</span><strong>₹{Number(financeWarning.difference||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</strong></div>
+            </div>
+            <p className="muted-text">Review the highlighted landed-cost fields. Inventory has not changed.</p>
+            <div className="button-row">
+              <button type="button" className="primary-button" onClick={() => {setFinanceWarning(null);window.requestAnimationFrame(()=>document.getElementById("invoice-financial-summary")?.scrollIntoView({behavior:"smooth",block:"center"}));}}>Review Financials</button>
+              <button type="button" className="secondary-button" onClick={() => setFinanceWarning(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="page-heading">
         <div>
           <h2>Invoice OCR</h2>
@@ -1060,7 +1086,7 @@ export default function AutomationHub() {
       ) : null}
 
       {result && confirmedSupplier ? (
-        <section className="panel" style={{ marginTop: 16 }}>
+        <section id="invoice-financial-summary" className={`panel${financeWarning ? " finance-review-flash" : ""}`} style={{ marginTop: 16 }}>
           <h3>Invoice Financial Summary</h3>
           <div className="metric-grid four">
             <div className="metric-card"><span>Subtotal OCR</span><strong>{result.subtotal == null ? "—" : Number(result.subtotal).toLocaleString("en-IN")}</strong></div>

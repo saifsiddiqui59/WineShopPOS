@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractInvoiceFinancials } from "../_shared/invoiceFinance.js";
+import { extractInvoiceFinancials, enrichItemsWithTableHints } from "../_shared/invoiceFinance.js";
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"content-type,x-wsp-automation-secret"};
 const out=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...headers,"Content-Type":"application/json"}});
 function normalize(v:unknown){return String(v||"").toLowerCase().replace(/&/g," and ").replace(/\b(private|pvt|limited|ltd|llp|company|co)\b/g," ").replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");}
@@ -9,7 +9,7 @@ async function hashBase64(s:string){const raw=atob(s);const b=new Uint8Array(raw
 function normalizeDI(r:any){
   const doc=r?.analyzeResult?.documents?.[0];
   const f=doc?.fields||{};
-  const items=(f.Items?.valueArray||[]).map((row:any)=>{
+  const rawItems=(f.Items?.valueArray||[]).map((row:any)=>{
     const x=row.valueObject||{};
     return{
       description:String(field(x.Description)||field(x.ProductCode)||""),
@@ -25,6 +25,7 @@ function normalizeDI(r:any){
       confidence:row.confidence??x.Description?.confidence??null
     };
   });
+  const items=enrichItemsWithTableHints(r,rawItems);
   const financial=extractInvoiceFinancials(r,f,items);
   return{
     supplierName:String(field(f.VendorName)||""),

@@ -2033,3 +2033,16 @@ label:has(> textarea[required])::before {
   color: #ef4444;
   font-weight: 800;
 }
+
+.finance-warning-backdrop{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+.finance-warning-modal{width:min(560px,96vw);padding:26px;border:1px solid rgba(239,68,68,.65);border-radius:16px;background:#17181c;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.finance-warning-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:50%;font-size:28px;font-weight:900;color:#fff;background:#dc2626}
+.finance-warning-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}
+.finance-warning-values>div{padding:12px;border:1px solid rgba(148,163,184,.28);border-radius:10px}
+.finance-warning-values span,.finance-warning-values strong{display:block}
+.finance-warning-values span{margin-bottom:6px;font-size:12px;opacity:.78}
+.finance-warning-values .danger{border-color:rgba(239,68,68,.65)}
+.finance-warning-values .danger strong{color:#ef4444}
+.finance-review-flash{outline:2px solid #ef4444;outline-offset:2px;animation:finance-review-pulse 1s ease-in-out 2}
+@keyframes finance-review-pulse{50%{box-shadow:0 0 0 7px rgba(239,68,68,.2)}}
+@media(max-width:700px){.finance-warning-values{grid-template-columns:1fr}}

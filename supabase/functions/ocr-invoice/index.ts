@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractInvoiceFinancials } from "../_shared/invoiceFinance.js";
+import { extractInvoiceFinancials, enrichItemsWithTableHints } from "../_shared/invoiceFinance.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     const document = result.analyzeResult?.documents?.[0];
     const fields = document?.fields || {};
 
-    const items = (fields.Items?.valueArray || []).map((row: any) => {
+    const rawItems = (fields.Items?.valueArray || []).map((row: any) => {
       const item = row.valueObject || {};
       return {
         description: String(fieldContent(item.Description) || fieldContent(item.ProductCode) || ""),
@@ -166,6 +166,7 @@ Deno.serve(async (req) => {
       };
     });
 
+    const items = enrichItemsWithTableHints(result, rawItems);
     const financial = extractInvoiceFinancials(result, fields, items);
 
     return json({

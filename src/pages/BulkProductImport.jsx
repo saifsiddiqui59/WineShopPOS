@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
+import { inferBrandFromProductName, inferCategoryId } from "../lib/productInference";
 
 const OCR_REVIEW_KEY = "wineshop_ocr_review_state";
 const OCR_BULK_CREATED_KEY = "wineshop_ocr_bulk_created_products";
@@ -41,7 +42,7 @@ function inferSizeMl(description) {
   return Math.round(value);
 }
 
-function rowsFromOcrReview() {
+function rowsFromOcrReview(categories = []) {
   const raw = sessionStorage.getItem(OCR_REVIEW_KEY);
   if (!raw) return [];
 
@@ -54,10 +55,12 @@ function rowsFromOcrReview() {
       const row = resolution[index] || {};
       if (row.productId) return null;
 
+      const productName = String(item?.description || "").trim();
       return blankRow({
-        productName: String(item?.description || "").trim(),
-        brand: String(item?.brand || "").trim(),
-        sizeMl: inferSizeMl(item?.description),
+        productName,
+        brand: String(item?.brand || "").trim() || inferBrandFromProductName(productName),
+        categoryId: inferCategoryId(productName, categories),
+        sizeMl: inferSizeMl(productName),
         alcoholPercentage: item?.alcoholPercentage ?? "",
         purchasePrice: Number(row.purchasePrice || 0),
         mrp: Number(item?.mrp || 0),
@@ -90,7 +93,7 @@ export default function BulkProductImport() {
     if (!fromOcr) return;
 
     try {
-      const ocrRows = rowsFromOcrReview();
+      const ocrRows = rowsFromOcrReview(activeCategories);
       if (ocrRows.length) {
         setRows(ocrRows);
         setMessage(
@@ -106,7 +109,7 @@ export default function BulkProductImport() {
       setRows([]);
       setMessage(error?.message || "Unable to load the Invoice OCR review.");
     }
-  }, [fromOcr]);
+  }, [fromOcr, activeCategories]);
 
   function updateRow(index, field, value) {
     setRows((current) =>
@@ -239,7 +242,7 @@ export default function BulkProductImport() {
       <section className="panel">
         <p className="muted-text">
           Product creation does not receive stock. Physical quantity is posted
-          only through Receive Stock after invoice review.
+          only through Receive Stock after invoice review. OCR rows also suggest Brand from the first product-name word, MRP from the invoice MRP column when detected, and Category when a matching active category can be inferred. Review suggestions before creating.
         </p>
 
         <div className="data-table-wrapper">
