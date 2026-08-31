@@ -11,7 +11,7 @@ export default function ScannerSettings() {
 
   return (
     <div>
-      <div className="page-heading"><div><h2>Scanner Test & Settings</h2><p>USB/Bluetooth HID barcode scanner diagnostics</p></div></div>
+      <div className="page-heading"><div><h2>Scanner Test & Settings</h2><p>USB/Bluetooth HID barcode scanner diagnostics · Enter/Tab suffix supported</p></div></div>
       <div className="settings-grid">
         <section className="panel">
           <h3>Detection</h3>
@@ -25,7 +25,7 @@ export default function ScannerSettings() {
         </section>
         <section className="panel scanner-test-zone">
           <h3>Live Test</h3>
-          <p>Click anywhere or type in another field, then scan a barcode. The scanner listener is global.</p>
+          <p>Click anywhere or type in another field, then scan a barcode. The scanner listener is global and accepts common Enter/Tab scanner suffixes.</p>
           {lastScan ? <div className="scanner-last"><strong>{lastScan.barcode}</strong><span>{lastScan.length} chars · avg gap {lastScan.averageGapMs} ms</span></div> : <div className="scanner-last muted">No scan detected yet</div>}
           <div className="button-row"><button className="secondary-button" onClick={successBeep}>Test success beep</button><button className="secondary-button" onClick={errorBeep}>Test error beep</button></div>
         </section>

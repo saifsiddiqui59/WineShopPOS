@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 import { useScanner } from "../context/ScannerContext";
 import { supabase } from "../lib/supabase";
+import { findProductByBarcode, normalizeBarcode } from "../lib/barcode";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -92,11 +93,12 @@ export default function POS(){
   }
 
   function processBarcode(code){
-    const p=active.find((x)=>x.barcode===code);
+    const normalized=normalizeBarcode(code);
+    const p=findProductByBarcode(active,normalized);
     if(!p){
       errorBeep();
-      setUnknown(code);
-      setMessage(`PRODUCT NOT FOUND: ${code}`);
+      setUnknown(normalized);
+      setMessage(`PRODUCT NOT FOUND: ${normalized}`);
       return;
     }
     add(p);

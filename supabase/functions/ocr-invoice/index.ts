@@ -152,10 +152,15 @@ Deno.serve(async (req) => {
       const item = row.valueObject || {};
       return {
         description: String(fieldContent(item.Description) || fieldContent(item.ProductCode) || ""),
-        quantity: numberValue(item.Quantity) ?? 1,
+        productCode: String(fieldContent(item.ProductCode) || ""),
+        quantity: numberValue(item.Quantity),
         unitText: String(fieldContent(item.Unit) || fieldContent(item.Units) || ""),
         unitPrice: numberValue(item.UnitPrice),
         amount: numberValue(item.Amount),
+        mrp: numberValue(item.MRP) ?? numberValue(item.ListPrice),
+        batchNumber: String(fieldContent(item.BatchNumber) || fieldContent(item.LotNumber) || ""),
+        expiryDate: String(fieldContent(item.ExpiryDate) || ""),
+        taxAmount: numberValue(item.Tax),
         confidence: row.confidence ?? item.Description?.confidence ?? null,
       };
     });
@@ -169,6 +174,13 @@ Deno.serve(async (req) => {
         paymentTerm: String(fieldContent(fields.PaymentTerm) || ""),
         invoiceNumber: String(fieldContent(fields.InvoiceId) || ""),
         invoiceDate: String(fieldContent(fields.InvoiceDate) || ""),
+        subtotal: numberValue(fields.SubTotal),
+        totalTax: numberValue(fields.TotalTax),
+        discountAmount: numberValue(fields.Discount) ?? numberValue(fields.TotalDiscount),
+        freightAmount: numberValue(fields.Freight) ?? numberValue(fields.ShippingCost),
+        shippingAmount: numberValue(fields.Shipping),
+        otherCharges: numberValue(fields.OtherCharges),
+        amountDue: numberValue(fields.AmountDue),
         total: numberValue(fields.InvoiceTotal),
         items,
       },

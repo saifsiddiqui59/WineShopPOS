@@ -12,12 +12,14 @@ const emptyForm = {
 };
 
 export default function Settings() {
-  const { refreshAccess } = useAuth();
+  const { refreshAccess, profile } = useAuth();
   const { products, sales, purchases, createBackup, refreshAll } = useShop();
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [demoConfirmation, setDemoConfirmation] = useState("");
+  const [demoResetBusy, setDemoResetBusy] = useState(false);
 
   async function load() {
     setLoading(true); setMessage("");
@@ -75,6 +77,31 @@ export default function Settings() {
     URL.revokeObjectURL(url);
   }
 
+  async function resetDemoData() {
+    if (demoConfirmation !== "DELETE DEMO DATA") {
+      setMessage('Type DELETE DEMO DATA exactly before resetting test data.');
+      return;
+    }
+    const confirmed = window.confirm(
+      "Delete ALL operational demo/test data for this shop? Products, purchases, sales, inventory, suppliers and invoice review records will be removed. Shop/users/settings/email mapping are preserved."
+    );
+    if (!confirmed) return;
+
+    setDemoResetBusy(true);
+    setMessage("");
+    const { data, error } = await supabase.rpc("demo_reset_current_shop", {
+      p_confirmation: demoConfirmation,
+    });
+    if (error) {
+      setMessage(error.message || "Demo data reset failed.");
+    } else {
+      setDemoConfirmation("");
+      await refreshAll();
+      setMessage(`Demo/test data reset completed. ${Object.keys(data?.deleted || {}).length} operational table(s) cleared.`);
+    }
+    setDemoResetBusy(false);
+  }
+
   if (loading) return <LoadingState label="Loading shop settings..."/>;
 
   return <div>
@@ -114,6 +141,21 @@ export default function Settings() {
         </div>
         <p className="muted-text">WineShopPOS does not invent state liquor/excise rules. Configure tax only from verified requirements.</p>
       </section>
+
+      {profile?.role === "ADMIN" ? <section className="panel settings-section" style={{marginTop:16,border:"1px solid currentColor"}}>
+        <div className="settings-section-heading"><div><h3>Demo / Test Data Reset</h3><p>ADMIN only. Clears operational test data while preserving shop identity, users, settings, categories and Email sender mapping.</p></div></div>
+        <div className="settings-fields">
+          <label className="span-two">Type <strong>DELETE DEMO DATA</strong> to enable reset
+            <input value={demoConfirmation} onChange={(e)=>setDemoConfirmation(e.target.value)} placeholder="DELETE DEMO DATA"/>
+          </label>
+        </div>
+        <div className="button-row">
+          <button type="button" className="secondary-button" onClick={resetDemoData} disabled={demoResetBusy||demoConfirmation!=="DELETE DEMO DATA"}>
+            {demoResetBusy ? "Deleting test data..." : "Delete All Demo/Test Operational Data"}
+          </button>
+        </div>
+        <p className="muted-text">This is a destructive testing tool. Posted products, purchases, sales, stock, suppliers and invoice review data are removed together to avoid orphaned inventory. Audit/configuration data are preserved.</p>
+      </section> : null}
 
       <div className="settings-action-bar">
         <div><strong>{products.length}</strong> products · <strong>{sales.length}</strong> sales loaded · <strong>{purchases.length}</strong> purchases loaded</div>

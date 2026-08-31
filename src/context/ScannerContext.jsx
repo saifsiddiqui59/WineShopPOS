@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { normalizeBarcode, scannerSequenceLooksValid } from "../lib/barcode";
 
 const ScannerContext = createContext(null);
 const SETTINGS_KEY = "wineshop_scanner_settings_v1";
@@ -6,8 +7,8 @@ const SETTINGS_KEY = "wineshop_scanner_settings_v1";
 const defaults = {
   enabled: true,
   minLength: 6,
-  maxAverageGapMs: 55,
-  resetGapMs: 160,
+  maxAverageGapMs: 100,
+  resetGapMs: 400,
   successFrequency: 1046,
   errorFrequency: 220,
 };
@@ -108,12 +109,13 @@ export function ScannerProvider({ children }) {
 
       if (lastKeyAt.current && gap > settings.resetGapMs) reset();
 
-      if (event.key === "Enter") {
+      if (event.key === "Enter" || event.key === "Tab") {
         if (!buffer.current.length) return;
-        const chars = buffer.current.join("");
+        const rawChars = buffer.current.join("");
+        const chars = normalizeBarcode(rawChars);
         const gaps = times.current.slice(1).map((t, i) => t - times.current[i]);
         const avgGap = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 999;
-        const scannerLike = chars.length >= settings.minLength && avgGap <= settings.maxAverageGapMs;
+        const scannerLike = scannerSequenceLooksValid(rawChars, times.current, settings);
 
         if (scannerLike) {
           event.preventDefault();

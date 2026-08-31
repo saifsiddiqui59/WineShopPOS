@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workflowName": { "type": "string" },
+    "location": { "type": "string" },
+    "pollUrl": { "type": "string" },
+    "schedulerSecret": { "type": "securestring" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('workflowName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "triggers": {
+            "Recurrence": {
+              "type": "Recurrence",
+              "recurrence": {
+                "frequency": "Minute",
+                "interval": 5
+              }
+            }
+          },
+          "actions": {
+            "Poll_WineShopPOS_Email": {
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "[parameters('pollUrl')]",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "x-wsp-email-scheduler-secret": "[parameters('schedulerSecret')]"
+                },
+                "body": {
+                  "source": "azure-logic-app-recurrence"
+                }
+              },
+              "runtimeConfiguration": {
+                "secureData": {
+                  "properties": [ "inputs", "outputs" ]
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {}
+      }
+    }
+  ]
+}

@@ -20,6 +20,7 @@ export default function Purchases(){
   const[message,setMessage]=useState("");
   const[busy,setBusy]=useState(false);
   const[ingestionId,setIngestionId]=useState(null);
+  const[draftLoaded,setDraftLoaded]=useState(false);
 
   useEffect(()=>{
     try{
@@ -28,13 +29,71 @@ export default function Purchases(){
       const d=JSON.parse(raw);
       setSupplierName(d.supplierName||"");setInvoiceNumber(d.invoiceNumber||"");
       setInvoiceDate(d.invoiceDate||new Date().toISOString().slice(0,10));
-      setNotes(`OCR draft from ${d.sourceFile||"invoice"}. Product mapping and final bottle quantities were reviewed.`);
+      setNotes(d.notes||`OCR draft from ${d.sourceFile||"invoice"}. Product mapping and final bottle quantities were reviewed.`);
       setItems((d.items||[]).map((x)=>({...empty(),...x,caseCount:Number(x.caseCount||0),unitsPerCase:Number(x.unitsPerCase||1),looseBottles:Number(x.looseBottles||0),quantity:Number(x.quantity||0),purchasePrice:Number(x.purchasePrice||0)})));
+      setCharges({...emptyCharges(),...(d.charges||{})});
       setIngestionId(d.ingestionId||null);
+      setDraftLoaded(Boolean(d.ingestionId));
       sessionStorage.removeItem("wineshop_ocr_purchase_draft");
       setMessage("OCR review loaded. Recheck final bottle quantities and landed-cost adjustments before posting.");
     }catch{setMessage("OCR draft could not be loaded. Enter the receipt manually.");}
   },[]);
+
+  function receiveDraftSnapshot(){
+    return {
+      version:1,
+      stage:"RECEIVE_STOCK",
+      ingestionId,
+      purchaseDraft:{
+        supplierName,
+        invoiceNumber,
+        invoiceDate,
+        notes,
+        items,
+        charges,
+        ingestionId,
+        sourceFile:"Saved Invoice Inbox draft",
+        updatedAt:new Date().toISOString(),
+      },
+      updatedAt:new Date().toISOString(),
+    };
+  }
+
+  async function persistReceiveDraft(showMessage=false){
+    if(!ingestionId)return{ok:true,skipped:true};
+    const{error}=await supabase.rpc("invoice_save_review_draft",{
+      p_ingestion_id:ingestionId,
+      p_review_draft:receiveDraftSnapshot(),
+      p_ready:true,
+    });
+    if(error){
+      if(showMessage)setMessage(error.message||"Unable to save Receive Stock draft.");
+      return{ok:false,error};
+    }
+    if(showMessage)setMessage("Receive Stock draft saved. You can resume it from Invoice Inbox.");
+    return{ok:true};
+  }
+
+  useEffect(()=>{
+    if(!draftLoaded||!ingestionId)return undefined;
+    const timer=window.setTimeout(()=>{persistReceiveDraft(false);},1200);
+    return()=>window.clearTimeout(timer);
+  },[draftLoaded,ingestionId,supplierName,invoiceNumber,invoiceDate,notes,items,charges]);
+
+  async function cancelDraft(){
+    if(!ingestionId){
+      setItems([empty()]);setCharges(emptyCharges());setMessage("Manual draft cleared. Inventory was not changed.");
+      return;
+    }
+    if(!window.confirm("Cancel this invoice review? The original document stays in Invoice Inbox and inventory is not changed."))return;
+    const reason=window.prompt("Optional cancellation reason:","")??"";
+    setBusy(true);
+    const{error}=await supabase.rpc("invoice_cancel_review",{p_ingestion_id:ingestionId,p_reason:reason||null});
+    setBusy(false);
+    if(error){setMessage(error.message||"Unable to cancel invoice review.");return;}
+    setIngestionId(null);setDraftLoaded(false);
+    navigate("/purchasing/invoices");
+  }
 
   function update(n,k,v){
     setItems((cur)=>cur.map((i,idx)=>{
@@ -79,7 +138,12 @@ export default function Purchases(){
       {[["freightAmount","Freight"],["transportAmount","Transport"],["handlingAmount","Handling"],["loadingUnloadingAmount","Loading / Unloading"],["supplierDiscountAmount","Supplier Discount"],["invoiceDiscountAmount","Invoice Discount"],["miscellaneousAmount","Miscellaneous"]].map(([k,l])=><label key={k}>{l}<input type="number" min="0" step="0.01" value={charges[k]} onChange={(e)=>setCharges((c)=>({...c,[k]:e.target.value}))}/></label>)}
       <label>Rounding Adjustment<input type="number" step="0.01" value={charges.roundingAdjustment} onChange={(e)=>setCharges((c)=>({...c,roundingAdjustment:e.target.value}))}/></label></div>
       <div className="metric-grid four" style={{marginTop:16}}><div className="metric-card"><span>Product Value</span><strong>{money.format(baseTotal)}</strong></div><div className="metric-card"><span>Net Adjustment</span><strong>{money.format(adjustment)}</strong></div><div className="metric-card"><span>Landed Total</span><strong>{money.format(landedTotal)}</strong></div><div className="metric-card"><span>Allocation</span><strong>Pro-rata</strong></div></div></section>
-      <br/><button className="primary-button" disabled={busy||landedTotal<0}>{busy?"Receiving...":"Confirm & Receive Stock"}</button>
+      <br/>
+      <div className="button-row">
+        {ingestionId?<button type="button" className="secondary-button" disabled={busy} onClick={()=>persistReceiveDraft(true)}>Save Draft</button>:null}
+        {ingestionId?<button type="button" className="secondary-button" disabled={busy} onClick={cancelDraft}>Cancel Draft</button>:null}
+        <button className="primary-button" disabled={busy||landedTotal<0}>{busy?"Receiving...":"Confirm & Receive Stock"}</button>
+      </div>
     </form>
     <section className="panel" style={{marginTop:16}}><h3>Recent Purchases</h3><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Purchase</th><th>Invoice</th><th>Supplier</th><th>Date</th><th>Units</th><th>Total</th></tr></thead><tbody>{purchases.slice(0,20).map((p)=><tr key={p.id}><td>{p.purchaseNumber}</td><td>{p.invoiceNumber}</td><td>{p.supplierName}</td><td>{p.invoiceDate}</td><td>{p.totalUnits}</td><td>{money.format(p.total)}</td></tr>)}</tbody></table></div></section>
   </div>;

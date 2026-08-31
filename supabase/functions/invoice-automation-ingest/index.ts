@@ -5,8 +5,53 @@ function normalize(v:unknown){return String(v||"").toLowerCase().replace(/&/g," 
 function field(f:any){return f?.content??f?.valueString??f?.valueNumber??f?.valueDate??null;}
 function number(f:any){const v=f?.valueNumber??f?.valueCurrency?.amount??f?.content;const n=Number(String(v??"").replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:null;}
 async function hashBase64(s:string){const raw=atob(s);const b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);const d=await crypto.subtle.digest("SHA-256",b);return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,"0")).join("");}
-function normalizeDI(r:any){const doc=r?.analyzeResult?.documents?.[0];const f=doc?.fields||{};const items=(f.Items?.valueArray||[]).map((row:any)=>{const x=row.valueObject||{};return{description:String(field(x.Description)||field(x.ProductCode)||""),quantity:number(x.Quantity)??1,unitText:String(field(x.Unit)||field(x.Units)||""),unitPrice:number(x.UnitPrice),amount:number(x.Amount),confidence:row.confidence??x.Description?.confidence??null};});return{supplierName:String(field(f.VendorName)||""),vendorAddress:String(field(f.VendorAddress)||""),vendorTaxId:String(field(f.VendorTaxId)||""),paymentTerm:String(field(f.PaymentTerm)||""),invoiceNumber:String(field(f.InvoiceId)||""),invoiceDate:String(field(f.InvoiceDate)||""),total:number(f.InvoiceTotal),items};}
+function normalizeDI(r:any){
+  const doc=r?.analyzeResult?.documents?.[0];
+  const f=doc?.fields||{};
+  const items=(f.Items?.valueArray||[]).map((row:any)=>{
+    const x=row.valueObject||{};
+    return{
+      description:String(field(x.Description)||field(x.ProductCode)||""),
+      productCode:String(field(x.ProductCode)||""),
+      quantity:number(x.Quantity),
+      unitText:String(field(x.Unit)||field(x.Units)||""),
+      unitPrice:number(x.UnitPrice),
+      amount:number(x.Amount),
+      mrp:number(x.MRP)??number(x.ListPrice),
+      batchNumber:String(field(x.BatchNumber)||field(x.LotNumber)||""),
+      expiryDate:String(field(x.ExpiryDate)||""),
+      taxAmount:number(x.Tax),
+      confidence:row.confidence??x.Description?.confidence??null
+    };
+  });
+  return{
+    supplierName:String(field(f.VendorName)||""),
+    vendorAddress:String(field(f.VendorAddress)||""),
+    vendorTaxId:String(field(f.VendorTaxId)||""),
+    paymentTerm:String(field(f.PaymentTerm)||""),
+    invoiceNumber:String(field(f.InvoiceId)||""),
+    invoiceDate:String(field(f.InvoiceDate)||""),
+    subtotal:number(f.SubTotal),
+    totalTax:number(f.TotalTax),
+    discountAmount:number(f.Discount)??number(f.TotalDiscount),
+    freightAmount:number(f.Freight)??number(f.ShippingCost),
+    shippingAmount:number(f.Shipping),
+    otherCharges:number(f.OtherCharges),
+    amountDue:number(f.AmountDue),
+    total:number(f.InvoiceTotal),
+    items
+  };
+}
 Deno.serve(async req=>{if(req.method==="OPTIONS")return new Response("ok",{headers});try{const expected=Deno.env.get("WSP_INVOICE_AUTOMATION_SECRET")||"";if(!expected||req.headers.get("x-wsp-automation-secret")!==expected)return out({ok:false,error:"Unauthorized automation caller"},401);const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!url||!key)throw new Error("Supabase service configuration incomplete");const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});const b=await req.json();const action=String(b?.action||"");if(action==="register_channel"){const source=String(b?.source||"").toUpperCase(),identity=String(b?.identity||"").trim().toLowerCase(),shop=String(b?.shop_id||"").trim();if(!["EMAIL","WHATSAPP"].includes(source)||!identity||!shop)return out({ok:false,error:"Missing/invalid channel fields"},400);const{data:existing,error:ee}=await db.from("invoice_ingestion_channels").select("id,shop_id,active").eq("channel",source).ilike("identity",identity).limit(1).maybeSingle();if(ee)throw ee;if(existing?.id&&existing.shop_id!==shop)return out({ok:false,error:"Channel identity is already assigned to another shop"},409);if(existing?.id){const{error:ue}=await db.from("invoice_ingestion_channels").update({active:true,notes:"V3 Email automation sender mapping"}).eq("id",existing.id);if(ue)throw ue;return out({ok:true,created:false,shop_id:shop,channel:source,identity});}const{error:ie}=await db.from("invoice_ingestion_channels").insert({shop_id:shop,channel:source,identity,active:true,notes:"V3 Email automation sender mapping"});if(ie)throw ie;return out({ok:true,created:true,shop_id:shop,channel:source,identity});}
+if(action==="authorize_sender"){
+  const source=String(b?.source||"").toUpperCase();
+  const identity=String(b?.source_identity||"").trim().toLowerCase();
+  if(!["EMAIL","WHATSAPP"].includes(source)||!identity)return out({ok:false,error:"Missing/invalid sender fields"},400);
+  const{data:ch,error:ce}=await db.from("invoice_ingestion_channels").select("shop_id,active").eq("channel",source).ilike("identity",identity).eq("active",true).limit(1).maybeSingle();
+  if(ce)throw ce;
+  if(!ch?.shop_id)return out({ok:false,error:"Sender is not registered to a shop"},403);
+  return out({ok:true,authorized:true,shop_id:ch.shop_id,channel:source,identity});
+}
 if(action==="preflight"){const source=String(b?.source||"").toUpperCase(),identity=String(b?.source_identity||"").trim().toLowerCase(),msg=String(b?.source_message_id||"").trim(),name=String(b?.original_file_name||"").trim(),base64=String(b?.content_base64||"");if(!["EMAIL","WHATSAPP"].includes(source)||!identity||!name||!base64)return out({ok:false,error:"Missing/invalid preflight fields"},400);const{data:ch,error:ce}=await db.from("invoice_ingestion_channels").select("shop_id,active").eq("channel",source).ilike("identity",identity).eq("active",true).limit(1).maybeSingle();if(ce)throw ce;if(!ch?.shop_id)return out({ok:false,error:"Sender is not registered to a shop"},403);const sha256=await hashBase64(base64);if(msg){const{data:d,error:e}=await db.from("invoice_ingestions").select("id,purchase_id,review_status").eq("shop_id",ch.shop_id).eq("source",source).eq("source_message_id",msg).eq("original_file_name",name).order("received_at",{ascending:false}).limit(1);if(e)throw e;if(d?.[0])return out({ok:true,duplicate:true,duplicate_type:"SOURCE_MESSAGE_ATTACHMENT",existing_ingestion_id:d[0].id,existing_purchase_id:d[0].purchase_id,existing_status:d[0].review_status,shop_id:ch.shop_id,sha256});}const{data:h,error:he}=await db.from("invoice_ingestions").select("id,purchase_id,review_status").eq("shop_id",ch.shop_id).eq("sha256",sha256).order("received_at",{ascending:false}).limit(1);if(he)throw he;if(h?.[0])return out({ok:true,duplicate:true,duplicate_type:"SHA256",existing_ingestion_id:h[0].id,existing_purchase_id:h[0].purchase_id,existing_status:h[0].review_status,shop_id:ch.shop_id,sha256});return out({ok:true,duplicate:false,shop_id:ch.shop_id,sha256});}
 if(action==="record_result"){const source=String(b?.source||"").toUpperCase(),identity=String(b?.source_identity||"").trim().toLowerCase(),shop=String(b?.shop_id||""),ocr=b?.ocr_result||{},ocrStatus=String(ocr?.status||"").toLowerCase();const{data:ch,error:ce}=await db.from("invoice_ingestion_channels").select("shop_id").eq("channel",source).ilike("identity",identity).eq("active",true).limit(1).maybeSingle();if(ce)throw ce;if(!ch?.shop_id||ch.shop_id!==shop)return out({ok:false,error:"Shop/channel scope mismatch"},403);const invoice=ocrStatus==="succeeded"?normalizeDI(ocr):null;let duplicatePurchaseId=null;if(invoice?.invoiceNumber){const{data:c,error:e}=await db.from("purchases").select("id,invoice_number,invoice_date,total,supplier_name_snapshot,created_at").eq("shop_id",shop).eq("invoice_number",invoice.invoiceNumber).order("created_at",{ascending:false}).limit(20);if(e)throw e;duplicatePurchaseId=(c||[]).find((p:any)=>normalize(p.supplier_name_snapshot)===normalize(invoice.supplierName)||(invoice.invoiceDate&&String(p.invoice_date||"")===String(invoice.invoiceDate))||(invoice.total!=null&&Math.abs(Number(p.total||0)-Number(invoice.total))<0.01))?.id||null;}const review=ocrStatus!=="succeeded"?"OCR_FAILED":duplicatePurchaseId?"POSSIBLE_DUPLICATE":"NEEDS_REVIEW";const row={id:b?.ingestion_id,shop_id:shop,source,source_message_id:b?.source_message_id||null,source_identity:identity,original_file_name:b?.original_file_name,stored_file_name:b?.stored_file_name,blob_container:b?.blob_container,blob_path:b?.blob_path,content_type:b?.content_type||null,size_bytes:b?.size_bytes??null,sha256:b?.sha256||null,received_at:b?.received_at||new Date().toISOString(),ocr_status:ocrStatus==="succeeded"?"SUCCEEDED":"FAILED",review_status:review,extracted_supplier_name:invoice?.supplierName||null,extracted_invoice_number:invoice?.invoiceNumber||null,extracted_invoice_date:invoice?.invoiceDate||null,extracted_total:invoice?.total??null,normalized_invoice:invoice,possible_duplicate_purchase_id:duplicatePurchaseId,processing_error:ocrStatus==="succeeded"?null:JSON.stringify(ocr?.error||b?.processing_error||"OCR failed").slice(0,4000)};const{data:i,error:ie}=await db.from("invoice_ingestions").insert(row).select("id,review_status,possible_duplicate_purchase_id").single();if(ie){if(ie.code==="23505"){const{data:existing}=await db.from("invoice_ingestions").select("id,review_status,purchase_id").eq("shop_id",shop).eq("source",source).eq("source_message_id",b?.source_message_id).eq("original_file_name",b?.original_file_name).limit(1).maybeSingle();return out({ok:true,duplicate:true,existing});}throw ie;}return out({ok:true,ingestion:i});}
 return out({ok:false,error:"Unknown automation action"},400);}catch(e){return out({ok:false,error:e instanceof Error?e.message:String(e)},500);}});

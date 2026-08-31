@@ -56,8 +56,11 @@ function rowsFromOcrReview() {
 
       return blankRow({
         productName: String(item?.description || "").trim(),
+        brand: String(item?.brand || "").trim(),
         sizeMl: inferSizeMl(item?.description),
-        purchasePrice: Number(row.purchasePrice || item?.unitPrice || 0),
+        alcoholPercentage: item?.alcoholPercentage ?? "",
+        purchasePrice: Number(row.purchasePrice || 0),
+        mrp: Number(item?.mrp || 0),
         unitsPerCase: Math.max(1, Number(row.unitsPerCase || 12)),
         ocrLineIndex: index,
         source: "OCR",

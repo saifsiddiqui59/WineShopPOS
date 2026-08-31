@@ -34,37 +34,169 @@ function supplierScore(ocrName, supplierName) {
   return union ? Math.round((intersection / union) * 80) : 0;
 }
 
+function emptyCharges() {
+  return {
+    freightAmount: 0,
+    transportAmount: 0,
+    handlingAmount: 0,
+    loadingUnloadingAmount: 0,
+    supplierDiscountAmount: 0,
+    invoiceDiscountAmount: 0,
+    miscellaneousAmount: 0,
+    roundingAdjustment: 0,
+  };
+}
+
+function chargesFromInvoice(invoice) {
+  return {
+    ...emptyCharges(),
+    freightAmount: Math.max(0, Number(invoice?.freightAmount || invoice?.shippingAmount || 0)),
+    invoiceDiscountAmount: Math.max(0, Number(invoice?.discountAmount || 0)),
+    miscellaneousAmount: Math.max(0, Number(invoice?.otherCharges || 0)),
+  };
+}
+
+function inferSizeMl(description) {
+  const matches = [...String(description || "").matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
+  if (!matches.length) return 0;
+  const [, raw, unit] = matches[matches.length - 1];
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  if (unit.toLowerCase() === "l") return Math.round(value * 1000);
+  if (unit.toLowerCase() === "cl") return Math.round(value * 10);
+  return Math.round(value);
+}
+
+function inferUnitsPerCase(item, product) {
+  if (Number(product?.unitsPerCase) > 0) return Number(product.unitsPerCase);
+  const text = String(item?.description || "").toLowerCase();
+  const size = inferSizeMl(text);
+  if (/\b(can|cans)\b/.test(text) && size > 0 && size <= 500) return 24;
+  if (/\b(beer|lager|witbier|stout)\b/.test(text) && size > 0 && size <= 500) return 24;
+  return 12;
+}
+
+function nearWhole(value, tolerance = 0.06) {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const rounded = Math.round(value);
+  return Math.abs(value - rounded) <= tolerance ? rounded : null;
+}
+
 function interpretQuantity(item, product) {
-  const ocrQty = Math.max(0, Number(item?.quantity ?? 0)) || 1;
-  const unitsPerCase = Math.max(1, Number(product?.unitsPerCase || 12));
+  const rawQuantity = Math.max(0, Number(item?.quantity ?? 0));
+  const amount = Math.max(0, Number(item?.amount || 0));
+  const explicitUnitPrice = Math.max(0, Number(item?.unitPrice || 0));
+  const unitsPerCase = Math.max(1, inferUnitsPerCase(item, product));
   const unitText = String(item?.unitText || "").toLowerCase();
   const caseUnit = /\b(case|cases|cs|ctn|carton|cartons)\b/.test(unitText);
-  const ocrUnitPrice = Math.max(0, Number(item?.unitPrice || 0));
 
-  if (caseUnit) {
-    return {
-      caseCount: ocrQty,
-      unitsPerCase,
-      looseBottles: 0,
-      quantity: ocrQty * unitsPerCase,
-      priceBasis: "CASE",
-      ocrUnitPrice,
-      purchasePrice: unitsPerCase > 0 ? ocrUnitPrice / unitsPerCase : 0,
-      interpretation: "OCR unit indicates case/carton. Review bottles per case before confirmation.",
-    };
+  let caseCount = 0;
+  let looseBottles = 0;
+  let quantity = 0;
+  let priceBasis = "BOTTLE";
+  let ocrUnitPrice = explicitUnitPrice;
+  let purchasePrice = 0;
+  let interpretation = "OCR quantity is ambiguous. Review Cases, Bottles/Case and Final Bottles.";
+
+  const casesFromExplicitRate =
+    explicitUnitPrice > 0 && amount > 0 ? nearWhole(amount / explicitUnitPrice) : null;
+  const casesFromQuantityAsRate =
+    rawQuantity > 0 && amount > 0 ? nearWhole(amount / rawQuantity) : null;
+
+  if (
+    rawQuantity > 0 &&
+    !Number.isInteger(rawQuantity) &&
+    casesFromQuantityAsRate &&
+    casesFromQuantityAsRate <= 1000
+  ) {
+    caseCount = casesFromQuantityAsRate;
+    quantity = caseCount * unitsPerCase;
+    priceBasis = "CASE";
+    ocrUnitPrice = rawQuantity;
+    purchasePrice = rawQuantity / unitsPerCase;
+    interpretation =
+      `OCR Quantity (${rawQuantity}) behaves like Rate/Case because Amount ÷ value ≈ ${caseCount} cases. ` +
+      "WineShopPOS corrected the case count; review Bottles/Case before confirmation.";
+  } else if (casesFromExplicitRate && caseUnit && casesFromExplicitRate <= 1000) {
+    caseCount = casesFromExplicitRate;
+    quantity = caseCount * unitsPerCase;
+    priceBasis = "CASE";
+    purchasePrice = explicitUnitPrice / unitsPerCase;
+    interpretation =
+      `Line Amount ÷ OCR Rate/Case indicates ${caseCount} cases. Review Bottles/Case before confirmation.`;
+  } else if (
+    Number.isInteger(rawQuantity) &&
+    rawQuantity > 0 &&
+    rawQuantity <= 10000
+  ) {
+    const looksLikeBottleTotal =
+      rawQuantity >= unitsPerCase * 2 &&
+      rawQuantity % unitsPerCase === 0;
+
+    if (looksLikeBottleTotal) {
+      quantity = rawQuantity;
+      caseCount = Math.floor(rawQuantity / unitsPerCase);
+      looseBottles = rawQuantity % unitsPerCase;
+      priceBasis = "BOTTLE";
+      purchasePrice =
+        explicitUnitPrice > 0 && !caseUnit
+          ? explicitUnitPrice
+          : amount > 0
+            ? amount / rawQuantity
+            : 0;
+      interpretation =
+        `OCR quantity ${rawQuantity} looks like total bottles. ` +
+        `Derived ${caseCount} case(s) × ${unitsPerCase} bottles/case. Review before confirmation.`;
+    } else if (caseUnit && rawQuantity <= 1000) {
+      caseCount = rawQuantity;
+      quantity = caseCount * unitsPerCase;
+      priceBasis = "CASE";
+      purchasePrice =
+        explicitUnitPrice > 0
+          ? explicitUnitPrice / unitsPerCase
+          : amount > 0 && quantity > 0
+            ? amount / quantity
+            : 0;
+      interpretation =
+        `OCR explicitly indicates case/carton and quantity ${rawQuantity}. Review Bottles/Case before confirmation.`;
+    } else {
+      quantity = rawQuantity;
+      looseBottles = rawQuantity;
+      purchasePrice =
+        explicitUnitPrice > 0
+          ? explicitUnitPrice
+          : amount > 0
+            ? amount / rawQuantity
+            : 0;
+      interpretation =
+        "OCR quantity treated as bottle/unit quantity. Review case breakdown before confirmation.";
+    }
+  }
+
+  if (
+    !Number.isInteger(caseCount) ||
+    !Number.isInteger(looseBottles) ||
+    !Number.isInteger(quantity) ||
+    caseCount > 1000 ||
+    quantity > 10000
+  ) {
+    caseCount = 0;
+    looseBottles = 0;
+    quantity = 0;
+    purchasePrice = 0;
+    interpretation =
+      "OCR produced an unsafe/implausible quantity. WineShopPOS did not calculate stock; enter the reviewed case/bottle quantity manually.";
   }
 
   return {
-    caseCount: 0,
+    caseCount,
     unitsPerCase,
-    looseBottles: ocrQty,
-    quantity: ocrQty,
-    priceBasis: "BOTTLE",
+    looseBottles,
+    quantity,
+    priceBasis,
     ocrUnitPrice,
-    purchasePrice: ocrUnitPrice,
-    interpretation: unitText
-      ? `OCR unit “${item.unitText}” treated as bottle/unit. Review before confirmation.`
-      : "OCR did not provide a case unit. Quantity is treated as loose bottles until confirmed.",
+    purchasePrice: Number.isFinite(purchasePrice) ? Number(purchasePrice.toFixed(4)) : 0,
+    interpretation,
   };
 }
 
@@ -81,6 +213,7 @@ export default function AutomationHub() {
   const [busy, setBusy] = useState(false);
   const [ingestionId, setIngestionId] = useState(null);
   const [sourceFileName, setSourceFileName] = useState("");
+  const [charges, setCharges] = useState(emptyCharges());
 
   const [supplierId, setSupplierId] = useState("");
   const [confirmedSupplier, setConfirmedSupplier] = useState(null);
@@ -120,6 +253,7 @@ export default function AutomationHub() {
         setConfirmedSupplier(state.confirmedSupplier || null);
         setIngestionId(state.ingestionId || null);
         setSourceFileName(state.sourceFileName || "");
+        setCharges({ ...emptyCharges(), ...(state.charges || chargesFromInvoice(state.result)) });
       }
 
       const created = sessionStorage.getItem(CREATED_KEY);
@@ -180,9 +314,10 @@ export default function AutomationHub() {
         confirmedSupplier,
         ingestionId,
         sourceFileName,
+        charges,
       }),
     );
-  }, [result, matches, resolution, supplierId, confirmedSupplier, ingestionId, sourceFileName]);
+  }, [result, matches, resolution, supplierId, confirmedSupplier, ingestionId, sourceFileName, charges]);
 
   function toBase64(nextFile) {
     return new Promise((resolve, reject) => {
@@ -244,6 +379,7 @@ export default function AutomationHub() {
     setSupplierId("");
     setMatches({});
     setResolution({});
+    setCharges(emptyCharges());
 
     try {
       const contentBase64 = await toBase64(file);
@@ -267,6 +403,7 @@ export default function AutomationHub() {
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.message || "OCR failed");
       setResult(data.invoice);
+      setCharges(chargesFromInvoice(data.invoice));
       if (nextIngestionId) {
         const { data: metadata, error: metadataError } = await supabase.rpc("invoice_record_ocr_result", { p_ingestion_id: nextIngestionId, p_supplier_name: data.invoice?.supplierName || null, p_invoice_number: data.invoice?.invoiceNumber || null, p_invoice_date: data.invoice?.invoiceDate || null, p_total: data.invoice?.total ?? null, p_normalized_invoice: data.invoice });
         if (metadataError) storageWarning += ` Invoice history metadata could not be updated (${metadataError.message}).`;
@@ -506,6 +643,9 @@ export default function AutomationHub() {
         resolution,
         supplierId,
         confirmedSupplier,
+        ingestionId,
+        sourceFileName,
+        charges,
       }),
     );
 
@@ -531,10 +671,106 @@ export default function AutomationHub() {
         resolution,
         supplierId,
         confirmedSupplier,
+        ingestionId,
+        sourceFileName,
+        charges,
       }),
     );
 
     navigate("/products/bulk-import?ocr=1");
+  }
+
+  function reviewDraftSnapshot(stage = "OCR_REVIEW", purchaseDraft = null) {
+    return {
+      version: 1,
+      stage,
+      result,
+      matches,
+      resolution,
+      supplierId,
+      confirmedSupplier: confirmedSupplier
+        ? { id: confirmedSupplier.id, supplier_name: confirmedSupplier.supplier_name }
+        : null,
+      ingestionId,
+      sourceFileName,
+      charges,
+      purchaseDraft,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  function reviewIsReady() {
+    return Boolean(
+      result?.items?.length &&
+      confirmedSupplier &&
+      result.items.every((_, index) => {
+        const row = resolution[index];
+        return (
+          row?.productId &&
+          row?.status === "CONFIRMED" &&
+          Number.isInteger(Number(row?.quantity || 0)) &&
+          Number(row?.quantity || 0) > 0
+        );
+      }),
+    );
+  }
+
+  async function persistReviewDraft({ silent = true, stage = "OCR_REVIEW", purchaseDraft = null, ready = reviewIsReady() } = {}) {
+    if (!ingestionId || !result) return { ok: true, skipped: true };
+    const { data, error } = await supabase.rpc("invoice_save_review_draft", {
+      p_ingestion_id: ingestionId,
+      p_review_draft: reviewDraftSnapshot(stage, purchaseDraft),
+      p_ready: Boolean(ready),
+    });
+    if (error) {
+      if (!silent) setMessage(error.message || "Unable to save invoice review draft.");
+      return { ok: false, error };
+    }
+    if (!silent) {
+      setMessage(data === "READY_TO_RECEIVE" ? "Draft saved and ready for Receive Stock." : "Invoice review draft saved.");
+    }
+    return { ok: true, status: data };
+  }
+
+  useEffect(() => {
+    if (!ingestionId || !result) return undefined;
+    const timer = window.setTimeout(() => {
+      persistReviewDraft({ silent: true });
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [ingestionId, result, matches, resolution, supplierId, confirmedSupplier, sourceFileName, charges]);
+
+  async function saveReviewDraft() {
+    setBusy(true);
+    await persistReviewDraft({ silent: false });
+    setBusy(false);
+  }
+
+  async function cancelReview() {
+    if (!ingestionId) {
+      sessionStorage.removeItem(REVIEW_KEY);
+      setResult(null);
+      setResolution({});
+      setMatches({});
+      setConfirmedSupplier(null);
+      setSupplierId("");
+      setMessage("Local OCR review cleared. No received stock was changed.");
+      return;
+    }
+    if (!window.confirm("Cancel this invoice review? This does not delete the original invoice and does not change inventory.")) return;
+    const reason = window.prompt("Optional cancellation reason:", "") ?? "";
+    setBusy(true);
+    const { error } = await supabase.rpc("invoice_cancel_review", {
+      p_ingestion_id: ingestionId,
+      p_reason: reason || null,
+    });
+    setBusy(false);
+    if (error) {
+      setMessage(error.message || "Unable to cancel invoice review.");
+      return;
+    }
+    sessionStorage.removeItem(REVIEW_KEY);
+    navigate("/purchasing/invoices");
   }
 
   const unresolved = useMemo(
@@ -555,9 +791,7 @@ export default function AutomationHub() {
     }
 
     if (unresolved) {
-      setMessage(
-        `${unresolved} invoice line(s) still need product/quantity confirmation.`,
-      );
+      setMessage(`${unresolved} invoice line(s) still need product/quantity confirmation.`);
       return;
     }
 
@@ -568,13 +802,9 @@ export default function AutomationHub() {
       for (let index = 0; index < result.items.length; index += 1) {
         const item = result.items[index];
         const row = resolution[index];
-        const product = activeProducts.find(
-          (entry) => entry.id === row.productId,
-        );
+        const product = activeProducts.find((entry) => entry.id === row.productId);
 
-        if (!product) {
-          throw new Error(`Product unavailable on OCR line ${index + 1}.`);
-        }
+        if (!product) throw new Error(`Product unavailable on OCR line ${index + 1}.`);
 
         await saveAlias(index, product.id);
 
@@ -586,26 +816,38 @@ export default function AutomationHub() {
           looseBottles: Number(row.looseBottles || 0),
           quantity: Number(row.quantity || 0),
           purchasePrice: Number(row.purchasePrice || 0),
-          batchNumber: "",
-          expiryDate: "",
+          batchNumber: String(item.batchNumber || ""),
+          expiryDate: String(item.expiryDate || ""),
         });
       }
 
-      sessionStorage.setItem(
-        "wineshop_ocr_purchase_draft",
-        JSON.stringify({
-          supplierId: confirmedSupplier.id,
-          supplierName: confirmedSupplier.supplier_name,
-          invoiceNumber: result.invoiceNumber || "",
-          invoiceDate:
-            result.invoiceDate || new Date().toISOString().slice(0, 10),
-          items: lines,
-          sourceFile: sourceFileName || file?.name || "OCR invoice",
-          ingestionId: ingestionId || null,
-          createdAt: new Date().toISOString(),
-        }),
-      );
+      const purchaseDraft = {
+        supplierId: confirmedSupplier.id,
+        supplierName: confirmedSupplier.supplier_name,
+        invoiceNumber: result.invoiceNumber || "",
+        invoiceDate: result.invoiceDate || new Date().toISOString().slice(0, 10),
+        items: lines,
+        charges,
+        financialSummary: {
+          subtotal: result.subtotal ?? null,
+          totalTax: result.totalTax ?? null,
+          total: result.total ?? null,
+          amountDue: result.amountDue ?? null,
+        },
+        sourceFile: sourceFileName || file?.name || "OCR invoice",
+        ingestionId: ingestionId || null,
+        createdAt: new Date().toISOString(),
+      };
 
+      const persisted = await persistReviewDraft({
+        silent: true,
+        stage: "RECEIVE_STOCK",
+        purchaseDraft,
+        ready: true,
+      });
+      if (!persisted.ok) throw persisted.error;
+
+      sessionStorage.setItem("wineshop_ocr_purchase_draft", JSON.stringify(purchaseDraft));
       sessionStorage.removeItem(REVIEW_KEY);
       navigate("/purchasing/receive");
     } catch (error) {
@@ -661,7 +903,17 @@ export default function AutomationHub() {
 
       {result ? (
         <section className="panel" style={{ marginTop: 16 }}>
-          <h3>1. Confirm Supplier</h3>
+          <div className="button-row spread">
+            <h3>1. Confirm Supplier</h3>
+            <div className="button-row">
+              <button type="button" className="secondary-button" disabled={busy} onClick={saveReviewDraft}>
+                Save Draft
+              </button>
+              <button type="button" className="secondary-button" disabled={busy} onClick={cancelReview}>
+                Cancel Review
+              </button>
+            </div>
+          </div>
           <p>
             OCR Supplier: <strong>{result.supplierName || "Not detected"}</strong>
           </p>
@@ -726,6 +978,35 @@ export default function AutomationHub() {
               </div>
             </>
           )}
+        </section>
+      ) : null}
+
+      {result && confirmedSupplier ? (
+        <section className="panel" style={{ marginTop: 16 }}>
+          <h3>Invoice Financial Summary</h3>
+          <div className="metric-grid four">
+            <div className="metric-card"><span>Subtotal OCR</span><strong>{result.subtotal == null ? "—" : Number(result.subtotal).toLocaleString("en-IN")}</strong></div>
+            <div className="metric-card"><span>Tax OCR</span><strong>{result.totalTax == null ? "—" : Number(result.totalTax).toLocaleString("en-IN")}</strong></div>
+            <div className="metric-card"><span>Invoice Total OCR</span><strong>{result.total == null ? "—" : Number(result.total).toLocaleString("en-IN")}</strong></div>
+            <div className="metric-card"><span>Amount Due OCR</span><strong>{result.amountDue == null ? "—" : Number(result.amountDue).toLocaleString("en-IN")}</strong></div>
+          </div>
+          <p className="muted-text">
+            Recognized freight/discount/other charges are carried into Receive Stock. Values not reliably returned by OCR are left at zero for human review.
+          </p>
+          <div className="form-grid">
+            <label>Freight
+              <input type="number" min="0" step="0.01" value={charges.freightAmount}
+                onChange={(e) => setCharges((current) => ({ ...current, freightAmount: Number(e.target.value || 0) }))} />
+            </label>
+            <label>Invoice Discount
+              <input type="number" min="0" step="0.01" value={charges.invoiceDiscountAmount}
+                onChange={(e) => setCharges((current) => ({ ...current, invoiceDiscountAmount: Number(e.target.value || 0) }))} />
+            </label>
+            <label>Miscellaneous
+              <input type="number" min="0" step="0.01" value={charges.miscellaneousAmount}
+                onChange={(e) => setCharges((current) => ({ ...current, miscellaneousAmount: Number(e.target.value || 0) }))} />
+            </label>
+          </div>
         </section>
       ) : null}
 
