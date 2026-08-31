@@ -87,3 +87,22 @@ LATEST MODERN UI REVISION:
 
 SUPPLIER_MASTER_OCR_PATCH
 2026-08-30 supplier patch: Supplier Master added under Purchases & Suppliers; PO now supports inline new/edit supplier; OCR now requires supplier match/create confirmation and can prefill VendorName/VendorAddress/VendorTaxId. No new DB migration. Existing supplier RLS and transaction-safe stock RPCs remain authoritative.
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+PRODUCT_MASTER_REAL_CATALOGUE_20260831
+
+Current Product Master milestone:
+- normal Add Product => Barcode mandatory
+- SKU => automatic per-shop `WSP-######`
+- Opening Stock => removed from Product Master
+- Product create => inventory 0; no OPENING_STOCK movement
+- Bulk Product Import => manual + unresolved Invoice OCR rows
+- Bulk barcode => optional
+- Product Master filters => All / With Barcode / Without Barcode
+- missing barcode => completed later through Edit Product
+- OCR review key => wineshop_ocr_review_state
+- OCR bulk return key => wineshop_ocr_bulk_created_products
+- OCR quantity/price human confirmation remains required
+- Receive Stock remains the purchase-stock posting step
+- legacy dummy product catalogue retired from active use; history preserved
+- old applied migrations were NOT rewritten; one new additive migration carries the change

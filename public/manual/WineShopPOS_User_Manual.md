@@ -746,3 +746,47 @@ For these questions the assistant uses the verified WineShopPOS functionality
 knowledge tool and returns the relevant app area/route, role requirements, steps
 and cautions. It remains read-only and cannot perform the operation for you.
 <!-- AI_APP_HELP_END -->
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## Product Master — real product onboarding
+
+### Add one product
+
+Open **Products → Product Master → Add Product**.
+
+1. Scan or enter Barcode. Barcode is mandatory in this normal form.
+2. Enter Product Name, Brand, Category, Size, pricing and pack information.
+3. SKU is generated automatically; you do not type it.
+4. There is no Opening Stock field.
+5. Save the Product.
+
+The Product starts with stock 0. Use **Purchases & Suppliers → Receive Stock**
+when physical stock is actually received.
+
+### Add many products manually
+
+Open **Products → Bulk Product Import**.
+
+- Add as many rows as required.
+- Barcode can be left blank in this bulk workflow.
+- Review Product Name, Size, Category and commercial fields.
+- Create the batch; WineShopPOS generates every SKU automatically.
+- Bulk Product creation does not increase inventory.
+
+### Add new products from Invoice OCR
+
+1. Open **Purchases & Suppliers → Invoice OCR**.
+2. Analyze the supplier invoice and confirm the supplier.
+3. Existing products are matched normally.
+4. When several lines are unmatched, click **Bulk Create Unmatched Products**.
+5. Review the new Product Master rows in Bulk Product Import.
+6. Create the products. Barcode can be added later.
+7. WineShopPOS returns the created Product IDs to their OCR invoice lines.
+8. Review cases, units/case, final bottles and purchase price per bottle.
+9. Confirm every line.
+10. Send the confirmed draft to Receive Stock.
+
+### Find products that still need barcodes
+
+Open Product Master and use **All**, **With Barcode** or **Without Barcode**.
+Choose **Without Barcode**, open **Edit**, scan/enter the physical barcode and save.

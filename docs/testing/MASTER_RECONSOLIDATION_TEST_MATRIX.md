@@ -210,3 +210,31 @@ Old URLs for Shift, Returns, Sales, Scanner, Offline Queue, Stock Count, Purchas
 - [ ] OCR cannot continue to Receive Stock without supplier confirmation.
 - [ ] CASHIER cannot access Supplier Master/Procurement.
 - [ ] PO receiving and manual purchase receipt still update stock only through controlled RPCs.
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## Product Master real-catalogue regression — 2026-08-31
+
+- [ ] Legacy `src/data/products.js` no longer exposes dummy sample rows.
+- [ ] Known dummy `890000001xxxx` DB products are inactive, not cascade-deleted.
+- [ ] Normal Add Product refuses empty Barcode.
+- [ ] Normal Add Product has no editable SKU.
+- [ ] Normal Add Product has no Opening Stock field.
+- [ ] Normal create generates unique per-shop `WSP-######` SKU.
+- [ ] Newly created Product inventory quantity is 0.
+- [ ] Product creation creates no OPENING_STOCK movement.
+- [ ] Product Master shows All / With Barcode / Without Barcode filters.
+- [ ] Missing barcode is clearly visible in Product Master.
+- [ ] Edit Product can complete a missing barcode without changing SKU.
+- [ ] Bulk Product Import is visible as a Products module tab.
+- [ ] Manual bulk Product can be created without barcode.
+- [ ] Bulk-created Product receives automatic SKU and inventory 0.
+- [ ] Bulk Product creation does not receive stock.
+- [ ] Invoice OCR unresolved rows open in Bulk Product Import.
+- [ ] Bulk-created Product IDs return to the correct OCR line indexes.
+- [ ] OCR still requires quantity/price human confirmation.
+- [ ] OCR still sends a Receive Stock draft only after all lines are confirmed.
+- [ ] Product alias learning still runs on confirmed OCR lines.
+- [ ] ADMIN/MANAGER access remains allowed; CASHIER remains blocked by Products role guard.
+- [ ] Existing Product audit trigger continues to record Product writes.
+- [ ] `npm run build` passes.
+- [ ] `npm run lint` passes.

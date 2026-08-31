@@ -8,6 +8,7 @@ import SupplierEditor from "../components/SupplierEditor";
 const STRONG_MATCH = 0.90;
 const REVIEW_KEY = "wineshop_ocr_review_state";
 const CREATED_KEY = "wineshop_ocr_created_product";
+const BULK_CREATED_KEY = "wineshop_ocr_bulk_created_products";
 
 function normalize(value) {
   return String(value || "")
@@ -132,6 +133,29 @@ export default function AutomationHub() {
         setMessage(
           "New product created and linked. Confirm this line after reviewing bottles per case, final bottle quantity and price.",
         );
+      }
+
+      const bulkCreated = sessionStorage.getItem(BULK_CREATED_KEY);
+      if (bulkCreated) {
+        const createdRows = JSON.parse(bulkCreated);
+        if (Array.isArray(createdRows) && createdRows.length) {
+          setResolution((current) => {
+            const next = { ...current };
+            for (const item of createdRows) {
+              next[item.lineIndex] = {
+                ...(next[item.lineIndex] || {}),
+                productId: item.productId,
+                status: "SELECTED_NEEDS_CONFIRMATION",
+                source: "CREATED_PRODUCT",
+              };
+            }
+            return next;
+          });
+          setMessage(
+            `${createdRows.length} new OCR product(s) were bulk-created and linked. Review quantity/price and confirm each line before Receive Stock.`,
+          );
+        }
+        sessionStorage.removeItem(BULK_CREATED_KEY);
       }
     } catch {
       sessionStorage.removeItem(REVIEW_KEY);
@@ -472,6 +496,23 @@ export default function AutomationHub() {
     navigate(`/products/new?${params.toString()}`);
   }
 
+  function bulkCreateUnmatchedProducts() {
+    if (!result) return;
+
+    sessionStorage.setItem(
+      REVIEW_KEY,
+      JSON.stringify({
+        result,
+        matches,
+        resolution,
+        supplierId,
+        confirmedSupplier,
+      }),
+    );
+
+    navigate("/products/bulk-import?ocr=1");
+  }
+
   const unresolved = useMemo(
     () =>
       (result?.items || []).filter(
@@ -678,6 +719,21 @@ export default function AutomationHub() {
                 ? `${unresolved} line(s) need confirmation`
                 : "All lines confirmed"}
             </strong>
+          </div>
+
+          <div className="button-row" style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={bulkCreateUnmatchedProducts}
+              disabled={
+                !(result.items || []).some(
+                  (_, index) => !resolution[index]?.productId,
+                )
+              }
+            >
+              Bulk Create Unmatched Products
+            </button>
           </div>
 
           <div className="data-table-wrapper">

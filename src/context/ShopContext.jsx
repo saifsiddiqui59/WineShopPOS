@@ -112,26 +112,25 @@ export function ShopProvider({ children }) {
     if (error) throw error; setCategories((c) => [...c, data]); return data.id;
   }
 
-  function validateProduct(d, opening = false) {
-    const v = { barcode:String(d.barcode||"").trim(),sku:String(d.sku||"").trim().toUpperCase(),name:String(d.name||"").trim(),brand:String(d.brand||"").trim(),category:String(d.category||"").trim(),subcategory:String(d.subcategory||"").trim(),sizeMl:Number(d.sizeMl),alcoholPercentage:d.alcoholPercentage===""?null:Number(d.alcoholPercentage),purchasePrice:Number(d.purchasePrice),mrp:Number(d.mrp),price:Number(d.price),minimumStock:Number(d.minimumStock),unitsPerCase:Number(d.unitsPerCase),openingStock:opening?Number(d.openingStock||0):0 };
-    for (const [key,label] of [["barcode","Barcode"],["sku","SKU"],["name","Product name"],["brand","Brand"],["category","Category"]]) if (!v[key]) return { ok:false,message:`${label} is required.` };
+  function validateProduct(d) {
+    const v = { barcode:String(d.barcode||"").trim(),name:String(d.name||"").trim(),brand:String(d.brand||"").trim(),category:String(d.category||"").trim(),subcategory:String(d.subcategory||"").trim(),sizeMl:Number(d.sizeMl),alcoholPercentage:d.alcoholPercentage===""?null:Number(d.alcoholPercentage),purchasePrice:Number(d.purchasePrice),mrp:Number(d.mrp),price:Number(d.price),minimumStock:Number(d.minimumStock),unitsPerCase:Number(d.unitsPerCase) };
+    for (const [key,label] of [["barcode","Barcode"],["name","Product name"],["brand","Brand"],["category","Category"]]) if (!v[key]) return { ok:false,message:`${label} is required.` };
     if (!Number.isInteger(v.sizeMl)||v.sizeMl<=0) return {ok:false,message:"Bottle size is invalid."};
     if (![v.purchasePrice,v.mrp,v.price].every((x)=>Number.isFinite(x)&&x>=0)) return {ok:false,message:"Price values are invalid."};
     if (!Number.isInteger(v.minimumStock)||v.minimumStock<0||!Number.isInteger(v.unitsPerCase)||v.unitsPerCase<=0) return {ok:false,message:"Stock settings are invalid."};
-    if (opening&&(!Number.isInteger(v.openingStock)||v.openingStock<0)) return {ok:false,message:"Opening stock is invalid."};
     return {ok:true,value:v};
   }
 
   async function addProduct(data) {
-    try { const check=validateProduct(data,true); if(!check.ok)return check; const v=check.value; const categoryId=await ensureCategory(v.category);
-      const {data:id,error}=await supabase.rpc("create_new_product",{p_barcode:v.barcode,p_sku:v.sku,p_product_name:v.name,p_brand:v.brand,p_category_id:categoryId,p_subcategory:v.subcategory||null,p_size_ml:v.sizeMl,p_alcohol_percentage:v.alcoholPercentage,p_purchase_price:v.purchasePrice,p_mrp:v.mrp,p_selling_price:v.price,p_minimum_stock:v.minimumStock,p_units_per_case:v.unitsPerCase,p_opening_stock:v.openingStock});
+    try { const check=validateProduct(data); if(!check.ok)return check; const v=check.value; const categoryId=await ensureCategory(v.category);
+      const {data:id,error}=await supabase.rpc("create_new_product",{p_barcode:v.barcode,p_sku:"AUTO",p_product_name:v.name,p_brand:v.brand,p_category_id:categoryId,p_subcategory:v.subcategory||null,p_size_ml:v.sizeMl,p_alcohol_percentage:v.alcoholPercentage,p_purchase_price:v.purchasePrice,p_mrp:v.mrp,p_selling_price:v.price,p_minimum_stock:v.minimumStock,p_units_per_case:v.unitsPerCase,p_opening_stock:0});
       if(error)throw error; await refreshAll(); return {ok:true,productId:id,message:`${v.name} created successfully.`};
     } catch(e){return {ok:false,message:e.message||String(e)}}
   }
 
   async function updateProduct(id,data) {
-    try { const check=validateProduct(data,false); if(!check.ok)return check; const v=check.value; const categoryId=await ensureCategory(v.category);
-      const {error}=await supabase.rpc("update_product_details",{p_product_id:id,p_barcode:v.barcode,p_sku:v.sku,p_product_name:v.name,p_brand:v.brand,p_category_id:categoryId,p_subcategory:v.subcategory||"",p_size_ml:v.sizeMl,p_alcohol_percentage:v.alcoholPercentage,p_purchase_price:v.purchasePrice,p_mrp:v.mrp,p_selling_price:v.price,p_minimum_stock:v.minimumStock,p_units_per_case:v.unitsPerCase});
+    try { const check=validateProduct(data); if(!check.ok)return check; const v=check.value; const categoryId=await ensureCategory(v.category);
+      const {error}=await supabase.rpc("update_product_details",{p_product_id:id,p_barcode:v.barcode,p_sku:data.sku,p_product_name:v.name,p_brand:v.brand,p_category_id:categoryId,p_subcategory:v.subcategory||"",p_size_ml:v.sizeMl,p_alcohol_percentage:v.alcoholPercentage,p_purchase_price:v.purchasePrice,p_mrp:v.mrp,p_selling_price:v.price,p_minimum_stock:v.minimumStock,p_units_per_case:v.unitsPerCase});
       if(error)throw error;await refreshAll();return {ok:true,message:`${v.name} updated successfully.`};
     }catch(e){return {ok:false,message:e.message||String(e)}}
   }

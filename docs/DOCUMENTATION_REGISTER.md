@@ -30,3 +30,13 @@ Do not create parallel canonical documents such as:
 The existing master Handbook and existing master User Manual evolve in place.
 
 Git history plus versioned chapter records preserve historical evolution.
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## 2026-08-31 — Product Master real-catalogue milestone
+
+The canonical current documents now include automatic per-shop SKU, removal of
+Opening Stock from Product Master, manual/OCR Bulk Product Import, unresolved OCR
+line round-trip, barcode-completion filtering and retirement of the legacy sample
+catalogue. Current detail is maintained in Project Context, the Master Developer
+Handbook, Master User Manual, Product Master chapter, V2 Purchase/Inventory
+chapters, Master test matrix and Master handoff.

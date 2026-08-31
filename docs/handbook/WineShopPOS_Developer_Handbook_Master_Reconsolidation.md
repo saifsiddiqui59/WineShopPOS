@@ -863,3 +863,56 @@ Current AI extension state:
 3. final trace ingestion verification requires one authenticated production interaction
 4. trace evaluation quality gates remain the next implementation/verification stage
 <!-- V2_CANONICAL_CURRENT_END -->
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## Product Master real-catalogue architecture
+
+### Normal one-product creation
+
+```text
+Barcode required
+→ Product Master details
+→ create_new_product RPC
+→ PostgreSQL assigns WSP-######
+→ inventory row = 0
+→ no OPENING_STOCK movement
+→ Receive Stock later
+```
+
+The deployed RPC signature retains `p_sku` and `p_opening_stock` as compatibility
+parameters during rollout, but the current Product Master ignores user-supplied
+values for both. This prevents an older browser bundle from breaking during the
+frontend/database rollout.
+
+### SKU
+
+`shop_counters.product_sku_counter` is the per-shop sequence source. SKU is a
+stable internal business identity, not a category code. Category, Brand, Size and
+Barcode remain separate attributes. Product edits preserve SKU.
+
+### Bulk Product Import
+
+`bulk_create_products(jsonb)` is ADMIN/MANAGER-only, shop-scoped and
+`security definer`. It permits NULL barcode because Invoice OCR may identify a
+new product before the physical bottle/can barcode is captured. Every successful
+Product starts with inventory quantity 0. The existing Product audit trigger
+continues to audit INSERT/UPDATE operations.
+
+### Invoice OCR integration
+
+The active OCR review state is `sessionStorage["wineshop_ocr_review_state"]`.
+Bulk Product Import loads only lines that do not yet have a `productId`.
+Successful rows return line-index/Product-ID mappings through
+`wineshop_ocr_bulk_created_products`. Invoice OCR restores those Product IDs,
+requires human confirmation of cases/units/final quantity/purchase price, stores
+the supplier alias and only then creates the existing Receive Stock draft.
+
+The established `wineshop_ocr_purchase_draft` therefore remains a post-review
+handoff to Receive Stock, not an input to Product Master bulk creation.
+
+### Barcode completion
+
+Product Master exposes All / With Barcode / Without Barcode filtering. A Product
+created without barcode through Bulk Product Import is completed later through
+the existing Edit Product screen. Normal single-product creation continues to
+require Barcode.

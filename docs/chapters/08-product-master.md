@@ -20,3 +20,20 @@ Implemented:
 LocalStorage:
 
 `wineshop_products_v1`
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## Current V2 Product Master note — 2026-08-31
+
+This historical Product Master chapter remains for implementation history.
+Current production behavior is:
+
+- normal Add Product: Barcode mandatory;
+- SKU: automatic server-generated `WSP-######` per shop;
+- Opening Stock: removed from Product Master;
+- bulk manual/Invoice OCR onboarding: Barcode optional;
+- stock after Product creation: zero;
+- purchased physical stock enters through Receive Stock;
+- Product Master barcode filters: All / With Barcode / Without Barcode.
+
+When this historical chapter conflicts with current source/migrations, current V2
+source and additive migrations are authoritative.

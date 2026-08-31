@@ -10,3 +10,11 @@ margin intelligence without silently changing existing sales accounting.
 
 Legacy/opening/transfer stock without receipt provenance is explicitly shown as
 UNTRACKED rather than receiving a fabricated age.
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## Product creation stock invariant
+
+Opening Stock is no longer a Product Master input. New normal and bulk-created
+Products start with inventory quantity 0 and no OPENING_STOCK movement. Receipt
+lots, landed cost, ageing and FIFO provenance therefore begin at controlled
+Receive Stock, not at catalogue creation.

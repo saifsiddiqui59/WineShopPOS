@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 const emptyProduct = {
   barcode: "",
-  sku: "",
   name: "",
   brand: "",
   category: "Whisky",
@@ -14,12 +13,10 @@ const emptyProduct = {
   price: 0,
   minimumStock: 5,
   unitsPerCase: 12,
-  openingStock: 0,
 };
 
 export default function ProductForm({
   initialValue,
-  showOpeningStock = false,
   onSubmit,
   submitLabel,
 }) {
@@ -32,7 +29,6 @@ export default function ProductForm({
       setForm({
         ...emptyProduct,
         ...initialValue,
-        openingStock: 0,
       });
     }
   }, [initialValue]);
@@ -54,9 +50,15 @@ export default function ProductForm({
 
   return (
     <form className="panel" onSubmit={submit}>
+      {/* PRODUCT_MASTER_REAL_CATALOGUE_20260831 */}
+      <div className="purchase-message" style={{ marginBottom: 14 }}>
+        SKU is generated automatically. Barcode is required when adding one product.
+        For invoice/OCR or manual bulk onboarding, use{" "}
+        <a href="#/products/bulk-import">Bulk Product Import</a>.
+      </div>
       <div className="form-grid">
         <label>Barcode<input value={form.barcode} onChange={(e) => set("barcode", e.target.value)} required /></label>
-        <label>SKU<input value={form.sku} onChange={(e) => set("sku", e.target.value)} required /></label>
+        <label>SKU<input value={initialValue?.sku || "Auto-generated on save"} readOnly /></label>
         <label>Product Name<input value={form.name} onChange={(e) => set("name", e.target.value)} required /></label>
         <label>Brand<input value={form.brand} onChange={(e) => set("brand", e.target.value)} required /></label>
         <label>Category<input value={form.category} onChange={(e) => set("category", e.target.value)} required /></label>
@@ -68,9 +70,7 @@ export default function ProductForm({
         <label>Selling Price<input type="number" min="0" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)} required /></label>
         <label>Minimum Stock<input type="number" min="0" value={form.minimumStock} onChange={(e) => set("minimumStock", e.target.value)} required /></label>
         <label>Bottles / Case<input type="number" min="1" value={form.unitsPerCase} onChange={(e) => set("unitsPerCase", e.target.value)} required /></label>
-        {showOpeningStock && (
-          <label>Opening Stock<input type="number" min="0" value={form.openingStock} onChange={(e) => set("openingStock", e.target.value)} required /></label>
-        )}
+
       </div>
 
       {message && <div className="purchase-message error" style={{ marginTop: 12 }}>{message}</div>}

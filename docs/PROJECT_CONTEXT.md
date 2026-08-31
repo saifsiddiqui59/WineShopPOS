@@ -244,3 +244,27 @@ functionality/how-to knowledge is deployed. Foundry/Application Insights tracing
 infrastructure is configured; trace ingestion remains pending final authenticated
 end-to-end verification before evaluation quality gates are treated as complete.
 <!-- V2_STATUS_END -->
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## Product Master real-catalogue onboarding — 2026-08-31
+
+WineShopPOS Product Master now uses real supplier-invoice onboarding rather than
+the development/sample catalogue.
+
+Current rules:
+
+- Normal **Add Product** keeps Barcode mandatory.
+- SKU is generated inside PostgreSQL per shop as `WSP-000001`, `WSP-000002`, ...
+- SKU is a stable internal identity; Category, Brand, Size and Barcode remain separate fields.
+- Opening Stock is no longer a Product Master input.
+- Product creation initializes inventory at zero and creates no OPENING_STOCK movement.
+- Physical purchased stock is posted only through the controlled Receive Stock workflow.
+- **Bulk Product Import** is a first-class Products screen for manual and Invoice OCR onboarding.
+- Barcode may be missing only in this controlled bulk/OCR onboarding path.
+- Invoice OCR bulk onboarding reads unresolved lines from `wineshop_ocr_review_state`,
+  returns created Product IDs to OCR, and keeps the existing human quantity/price
+  confirmation and Receive Stock handoff.
+- Product Master filters **All / With Barcode / Without Barcode** so missing physical
+  barcodes can be completed later through Edit Product.
+- The known legacy dummy barcode catalogue is retired from active use without
+  deleting historical sale/purchase references.

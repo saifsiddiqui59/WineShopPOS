@@ -33,3 +33,15 @@ It identifies:
 - MARGIN_RISK
 
 Reorder suggestions target approximately 14 days of stock cover.
+
+<!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
+## OCR-first bulk Product Master onboarding
+
+Invoice OCR can hand all unresolved product descriptions to Product Master in one
+reviewed batch. Bulk-created Products receive automatic internal SKUs and may
+temporarily have no barcode. Created Product IDs return to the corresponding OCR
+line indexes, after which the existing quantity/price confirmation, alias learning
+and Receive Stock handoff continue unchanged.
+
+The OCR review state remains `wineshop_ocr_review_state`; the purchase draft is
+still created only after every invoice line is resolved and confirmed.

@@ -15,6 +15,7 @@ import Shifts from "./pages/Shifts";
 import ScannerSettings from "./pages/ScannerSettings";
 import Products from "./pages/Products";
 import AddProduct from "./pages/AddProduct";
+import BulkProductImport from "./pages/BulkProductImport";
 import EditProduct from "./pages/EditProduct";
 import BarcodeLabels from "./pages/BarcodeLabels";
 import Purchases from "./pages/Purchases";
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="products" element={module("Products", "Product master, barcode configuration and physical label printing.", MODULE_TABS.products)}>
             <Route index element={<Products/>}/>
             <Route path="new" element={<AddProduct/>}/>
+            <Route path="bulk-import" element={<BulkProductImport/>}/>
             <Route path=":id/edit" element={<EditProduct/>}/>
             <Route path="labels" element={<BarcodeLabels/>}/>
           </Route>
