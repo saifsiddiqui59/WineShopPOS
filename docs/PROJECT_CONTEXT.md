@@ -321,3 +321,6 @@ Feature `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310`: invoice financial-summary re
 
 ### V3-03 local verified state (20260831T193701Z)
 Feature `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5` hardens invoice finance-row matching/final-total selection, adds a large mismatch popup, recovers OCR MRP from invoice tables, and improves Bulk Product Import Brand/Category prefilling. Quantity/case logic is unchanged. Build/lint and finance/product-prefill smoke tests passed. Deployment/push pending.
+
+### V3-03B production state (20260831T195134Z)
+V3-03 finance/product-prefill improvements and Bulk Product Import scanner capture are deployed to preview and production. Barcode feature `94e65616a4df66148dfcf1e9d8da13f6c7970d53` fixes the flash-then-blank input behavior. Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally Disabled until testing resumes.

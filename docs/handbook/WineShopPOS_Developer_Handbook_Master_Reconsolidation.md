@@ -977,3 +977,6 @@ Feature commit `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310` adds shared Document I
 
 ### V3-03 local verified patch
 Invoice finance matching now uses strict summary labels, rejects date/time false positives, and can override Azure subtotal-as-total using the printed bottom total. Bulk OCR onboarding carries table MRP and suggests first-token Brand plus an existing matching Category. Reconciliation failures use a blocking modal. Feature: `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5`; deployment/push pending.
+
+### V3-03B scanner capture and Email scheduler
+ScannerContext now supports explicit barcode inputs using `data-scanner-capture="barcode"`; these fields retain the completed HID scan while ordinary editable fields keep the existing protection behavior. Bulk Product Import also listens to the scanner event as a React-state fallback. Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally Disabled after testing and must be explicitly enabled before automatic Email polling resumes.

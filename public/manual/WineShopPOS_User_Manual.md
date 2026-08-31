@@ -806,3 +806,9 @@ For unmatched OCR products, Bulk Product Import suggests **Brand** from the firs
 
 ### Invoice total mismatch popup
 If the calculated invoice does not match the printed invoice total, WineShopPOS shows a large warning with Calculated Invoice, Printed Invoice and Difference and blocks Receive Stock until reviewed.
+
+### Scan barcode in Bulk Product Import
+Click the Barcode field for the desired row and scan the bottle/can. The complete barcode should remain in that row. You can still type the barcode manually.
+
+### Automatic Email polling paused
+When the Email scheduler is paused, invoice Emails remain in the mailbox until the administrator enables automatic polling again.

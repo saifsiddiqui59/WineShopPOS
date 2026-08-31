@@ -176,3 +176,11 @@ Status: VERIFIED LOCALLY; deployment/push pending. Feature: `ce1c14c8772fdb024f3
 - OCR MRP is recovered from recognized invoice-table MRP columns.
 - Bulk Product Import suggests Brand from the first product-name word and Category from product/known beverage brand.
 - Quantity/case logic is unchanged.
+
+## V3-03B — Bulk Barcode Capture + Scheduler Pause
+Status: deployed to preview/production before final Git push.
+- Bulk Product Import Barcode fields now opt into direct HID scanner capture and keep the completed scan instead of flashing then restoring the previous value.
+- Bulk Product Import also consumes the global scanner event as a controlled-input fallback.
+- V3-03 finance parser, actual printed-total reconciliation, MRP extraction, Brand/Category suggestions and mismatch popup were deployed with this build.
+- Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally **Disabled** after testing. Automatic 5-minute Email polling remains paused until manually enabled.
+Barcode commit: `94e65616a4df66148dfcf1e9d8da13f6c7970d53`.

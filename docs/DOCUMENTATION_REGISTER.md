@@ -58,3 +58,5 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 - V3-02 (20260831T182936Z) — LOCAL VERIFIED / NOT DEPLOYED / NOT PUSHED. Feature `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310`. Invoice financial reconciliation + landed-cost auto-fill + Email receipt ACK + optional supplier invoice/reference + mandatory-field stars.
 
 - V3-03 (20260831T193701Z): local verified feature `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5` — finance parser false-match repair, printed-total reconciliation, mismatch popup, OCR MRP extraction, first-token Brand and Category suggestion. Deployment/push pending.
+
+- V3-03B (20260831T195134Z): deployed Bulk Product Import barcode scanner capture `94e65616a4df66148dfcf1e9d8da13f6c7970d53`; V3-03 finance/MRP/category improvements deployed; Logic App scheduler intentionally paused.
