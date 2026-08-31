@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractInvoiceFinancials } from "../_shared/invoiceFinance.js";
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"content-type,x-wsp-automation-secret"};
 const out=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...headers,"Content-Type":"application/json"}});
 function normalize(v:unknown){return String(v||"").toLowerCase().replace(/&/g," and ").replace(/\b(private|pvt|limited|ltd|llp|company|co)\b/g," ").replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");}
@@ -24,6 +25,7 @@ function normalizeDI(r:any){
       confidence:row.confidence??x.Description?.confidence??null
     };
   });
+  const financial=extractInvoiceFinancials(r,f,items);
   return{
     supplierName:String(field(f.VendorName)||""),
     vendorAddress:String(field(f.VendorAddress)||""),
@@ -31,14 +33,7 @@ function normalizeDI(r:any){
     paymentTerm:String(field(f.PaymentTerm)||""),
     invoiceNumber:String(field(f.InvoiceId)||""),
     invoiceDate:String(field(f.InvoiceDate)||""),
-    subtotal:number(f.SubTotal),
-    totalTax:number(f.TotalTax),
-    discountAmount:number(f.Discount)??number(f.TotalDiscount),
-    freightAmount:number(f.Freight)??number(f.ShippingCost),
-    shippingAmount:number(f.Shipping),
-    otherCharges:number(f.OtherCharges),
-    amountDue:number(f.AmountDue),
-    total:number(f.InvoiceTotal),
+    ...financial,
     items
   };
 }

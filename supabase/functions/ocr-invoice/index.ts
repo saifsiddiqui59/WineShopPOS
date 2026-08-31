@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractInvoiceFinancials } from "../_shared/invoiceFinance.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -165,6 +166,8 @@ Deno.serve(async (req) => {
       };
     });
 
+    const financial = extractInvoiceFinancials(result, fields, items);
+
     return json({
       ok: true,
       invoice: {
@@ -174,14 +177,7 @@ Deno.serve(async (req) => {
         paymentTerm: String(fieldContent(fields.PaymentTerm) || ""),
         invoiceNumber: String(fieldContent(fields.InvoiceId) || ""),
         invoiceDate: String(fieldContent(fields.InvoiceDate) || ""),
-        subtotal: numberValue(fields.SubTotal),
-        totalTax: numberValue(fields.TotalTax),
-        discountAmount: numberValue(fields.Discount) ?? numberValue(fields.TotalDiscount),
-        freightAmount: numberValue(fields.Freight) ?? numberValue(fields.ShippingCost),
-        shippingAmount: numberValue(fields.Shipping),
-        otherCharges: numberValue(fields.OtherCharges),
-        amountDue: numberValue(fields.AmountDue),
-        total: numberValue(fields.InvoiceTotal),
+        ...financial,
         items,
       },
       rawConfidence: document?.confidence ?? null,

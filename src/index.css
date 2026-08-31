@@ -2011,3 +2011,25 @@ button {
   }
 }
 /* HELP_CENTER_END */
+
+
+/* Required-field UX — all native required controls receive a visible star. */
+.required-mark {
+  color: #ef4444;
+  font-weight: 800;
+  margin-left: 2px;
+}
+
+.optional-field {
+  opacity: 0.72;
+  font-size: 0.86em;
+  font-weight: 500;
+}
+
+label:has(> input[required])::before,
+label:has(> select[required])::before,
+label:has(> textarea[required])::before {
+  content: "* ";
+  color: #ef4444;
+  font-weight: 800;
+}

@@ -259,9 +259,11 @@ export function ShopProvider({ children }) {
         if(!Number.isInteger(i.quantity)||i.quantity<=0||finalQty!==i.quantity)
           return{ok:false,message:"Final bottle quantity must equal Cases × Bottles/Case + Loose Bottles."};
       }
+      const requestedInvoiceRef=String(invoiceNumber||"").trim();
+      const effectiveInvoiceRef=requestedInvoiceRef||`AUTO-${String(invoiceDate||new Date().toISOString().slice(0,10)).replaceAll("-","")}-${crypto.randomUUID().slice(0,8).toUpperCase()}`;
       const{data,error}=await supabase.rpc("receive_purchase_v2",{
         p_supplier_id:supplierId,
-        p_invoice_number:String(invoiceNumber||"").trim(),
+        p_invoice_number:effectiveInvoiceRef,
         p_invoice_date:invoiceDate||new Date().toISOString().slice(0,10),
         p_items:payload,p_notes:notes||null,
         p_freight_amount:Number(charges.freightAmount||0),
@@ -280,7 +282,7 @@ export function ShopProvider({ children }) {
         throw error;
       }
       await refreshAll();
-      return{ok:true,purchaseId:data,message:"Stock received with landed cost and receipt-lot traceability."};
+      return{ok:true,purchaseId:data,invoiceReference:effectiveInvoiceRef,message:requestedInvoiceRef?"Stock received with landed cost and receipt-lot traceability.":`Stock received. WineShopPOS assigned reference ${effectiveInvoiceRef}.`};
     }catch(e){return{ok:false,message:e.message||String(e)}}
   }
   async function adjustStock({productId,adjustmentType,quantityChange,reason,notes=""}){try{const{data,error}=await supabase.rpc("adjust_stock",{p_product_id:productId,p_adjustment_type:adjustmentType,p_quantity_change:Number(quantityChange),p_reason:String(reason||"").trim(),p_notes:notes||null});if(error)throw error;await refreshAll();return{ok:true,quantity:data,message:"Stock adjusted."}}catch(e){return{ok:false,message:e.message||String(e)}}}

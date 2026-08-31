@@ -14,6 +14,7 @@ const STORAGE_ACCOUNT = process.env.INVOICE_STORAGE_ACCOUNT;
 const STORAGE_CONTAINER = process.env.INVOICE_STORAGE_CONTAINER || "invoice-documents";
 const CHECKPOINT_BLOB = process.env.EMAIL_CHECKPOINT_BLOB || "_system/email/gmail-invoice-checkpoint.json";
 const OVERSIZE_MARKER_PREFIX = process.env.EMAIL_OVERSIZE_MARKER_PREFIX || "_system/email/oversize-notified";
+const RECEIPT_ACK_MARKER_PREFIX = process.env.EMAIL_RECEIPT_ACK_MARKER_PREFIX || "_system/email/receipt-acknowledged";
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const AUTOMATION_SECRET = process.env.WSP_INVOICE_AUTOMATION_SECRET || "";
 const DOCINTEL_ENDPOINT = String(process.env.DOCUMENT_INTELLIGENCE_ENDPOINT || "").replace(/\/$/, "");
@@ -82,6 +83,11 @@ function oversizeMarker(uid) {
   return storage()
     .getContainerClient(STORAGE_CONTAINER)
     .getBlockBlobClient(`${OVERSIZE_MARKER_PREFIX}/${Number(uid)}.json`);
+}
+function receiptAckMarker(uid) {
+  return storage()
+    .getContainerClient(STORAGE_CONTAINER)
+    .getBlockBlobClient(`${RECEIPT_ACK_MARKER_PREFIX}/${Number(uid)}.json`);
 }
 async function loadCheckpoint() {
   const blob = checkpointBlob();
@@ -257,6 +263,62 @@ async function sendOversizeFeedback(context, uid, sender, messageId, subject, at
   });
   return { sent: true };
 }
+async function receiptAckAlreadySent(uid) {
+  return receiptAckMarker(uid).exists();
+}
+async function recordReceiptAcknowledgement(uid, sender, messageId, attachments) {
+  const payload = Buffer.from(JSON.stringify({
+    uid: Number(uid),
+    senderHash: crypto.createHash("sha256").update(String(sender)).digest("hex"),
+    messageIdHash: crypto.createHash("sha256").update(String(messageId)).digest("hex"),
+    attachments: attachments.map((a) => ({
+      filename: String(a.filename || "invoice"),
+      sizeBytes: Number(a.content?.length || 0),
+    })),
+    sentAt: new Date().toISOString(),
+    expectationMinutes: 60,
+  }), "utf8");
+  await receiptAckMarker(uid).uploadData(payload, {
+    blobHTTPHeaders: { blobContentType: "application/json" },
+  });
+}
+async function sendReceiptAcknowledgement(context, uid, sender, messageId, subject, attachments) {
+  if (!attachments.length) return { sent: false, reason: "NONE" };
+  if (await receiptAckAlreadySent(uid)) {
+    context.log("Email receipt acknowledgement already sent", { uid, sender: safeLogSender(sender) });
+    return { sent: false, reason: "ALREADY_SENT" };
+  }
+
+  const body = [
+    "WineShopPOS has received your invoice email and queued it for processing.",
+    "",
+    "Please allow up to 1 hour for the invoice to appear in the WineShopPOS Invoice Inbox.",
+    "You do not need to resend the same invoice during this period; duplicate protection is enabled.",
+    "",
+    "If an attachment cannot be processed, WineShopPOS may send a separate message with the reason.",
+    "",
+    "This is an automated WineShopPOS message.",
+  ].join("\n");
+
+  const transport = smtpClient();
+  await transport.sendMail({
+    from: `WineShopPOS <${GMAIL_EMAIL}>`,
+    to: sender,
+    subject: `WineShopPOS – Invoice email received${subject ? ` – ${String(subject).slice(0, 80)}` : ""}`,
+    text: body,
+    inReplyTo: messageId || undefined,
+    references: messageId ? [messageId] : undefined,
+  });
+  transport.close();
+
+  await recordReceiptAcknowledgement(uid, sender, messageId, attachments);
+  context.log("Email receipt acknowledgement sent", {
+    uid,
+    sender: safeLogSender(sender),
+    attachmentCount: attachments.length,
+  });
+  return { sent: true };
+}
 async function processAttachment(context, sender, messageId, attachment) {
   const filename = attachment.filename || `invoice-${crypto.randomUUID()}.pdf`;
   const contentType = String(attachment.contentType || "application/octet-stream").toLowerCase();
@@ -345,6 +407,7 @@ async function pollMailbox(context) {
   let processed = 0;
   let skipped = 0;
   let oversizeReplies = 0;
+  let receiptAcks = 0;
   let checkpoint = START_UID;
 
   try {
@@ -384,12 +447,25 @@ async function pollMailbox(context) {
           skipped += 1;
           advance = true;
         } else {
-          // Explicitly authorize before sending any feedback mail.
+          // Authorize once before any acknowledgement/rejection mail.
+          await automation("authorize_sender", {
+            source: "EMAIL",
+            source_identity: sender,
+          });
+
+          if (accepted.length) {
+            const acknowledgement = await sendReceiptAcknowledgement(
+              context,
+              uid,
+              sender,
+              messageId,
+              parsed?.subject || "",
+              accepted,
+            );
+            if (acknowledgement.sent) receiptAcks += 1;
+          }
+
           if (oversized.length) {
-            await automation("authorize_sender", {
-              source: "EMAIL",
-              source_identity: sender,
-            });
             const feedback = await sendOversizeFeedback(
               context,
               uid,
@@ -438,6 +514,7 @@ async function pollMailbox(context) {
       processed,
       skipped,
       oversizeReplies,
+      receiptAcks,
       checkpoint,
       readUnreadIndependent: true,
     };
@@ -477,6 +554,8 @@ app.http("email-invoice-health", {
         readUnreadIndependent: true,
         schedulerEndpointConfigured: Boolean(POLL_SECRET),
         oversizeReplyEnabled: true,
+        receiptAckEnabled: true,
+        receiptAckExpectationMinutes: 60,
         maxAttachmentBytes: MAX_BYTES,
         inventoryMutation: false,
       });

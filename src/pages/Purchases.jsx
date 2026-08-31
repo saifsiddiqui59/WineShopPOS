@@ -17,6 +17,7 @@ export default function Purchases(){
   const[notes,setNotes]=useState("");
   const[items,setItems]=useState([empty()]);
   const[charges,setCharges]=useState(emptyCharges());
+  const[financialSummary,setFinancialSummary]=useState(null);
   const[message,setMessage]=useState("");
   const[busy,setBusy]=useState(false);
   const[ingestionId,setIngestionId]=useState(null);
@@ -32,6 +33,7 @@ export default function Purchases(){
       setNotes(d.notes||`OCR draft from ${d.sourceFile||"invoice"}. Product mapping and final bottle quantities were reviewed.`);
       setItems((d.items||[]).map((x)=>({...empty(),...x,caseCount:Number(x.caseCount||0),unitsPerCase:Number(x.unitsPerCase||1),looseBottles:Number(x.looseBottles||0),quantity:Number(x.quantity||0),purchasePrice:Number(x.purchasePrice||0)})));
       setCharges({...emptyCharges(),...(d.charges||{})});
+      setFinancialSummary(d.financialSummary||null);
       setIngestionId(d.ingestionId||null);
       setDraftLoaded(Boolean(d.ingestionId));
       sessionStorage.removeItem("wineshop_ocr_purchase_draft");
@@ -51,6 +53,7 @@ export default function Purchases(){
         notes,
         items,
         charges,
+        financialSummary,
         ingestionId,
         sourceFile:"Saved Invoice Inbox draft",
         updatedAt:new Date().toISOString(),
@@ -78,7 +81,7 @@ export default function Purchases(){
     if(!draftLoaded||!ingestionId)return undefined;
     const timer=window.setTimeout(()=>{persistReceiveDraft(false);},1200);
     return()=>window.clearTimeout(timer);
-  },[draftLoaded,ingestionId,supplierName,invoiceNumber,invoiceDate,notes,items,charges]);
+  },[draftLoaded,ingestionId,supplierName,invoiceNumber,invoiceDate,notes,items,charges,financialSummary]);
 
   async function cancelDraft(){
     if(!ingestionId){
@@ -106,6 +109,9 @@ export default function Purchases(){
   const baseTotal=useMemo(()=>items.reduce((s,i)=>s+Number(i.quantity||0)*Number(i.purchasePrice||0),0),[items]);
   const adjustment=useMemo(()=>Number(charges.freightAmount||0)+Number(charges.transportAmount||0)+Number(charges.handlingAmount||0)+Number(charges.loadingUnloadingAmount||0)+Number(charges.miscellaneousAmount||0)-Number(charges.supplierDiscountAmount||0)-Number(charges.invoiceDiscountAmount||0)+Number(charges.roundingAdjustment||0),[charges]);
   const landedTotal=baseTotal+adjustment;
+  const printedInvoiceTotal=Number(financialSummary?.total||0);
+  const reconciliationDifference=printedInvoiceTotal>0?Number((printedInvoiceTotal-landedTotal).toFixed(2)):null;
+  const reconciliationMatches=reconciliationDifference==null||Math.abs(reconciliationDifference)<=1;
 
   async function submit(e){
     e.preventDefault();setMessage("");
@@ -114,11 +120,12 @@ export default function Purchases(){
     if(new Set(cleaned.map((i)=>i.productId)).size!==cleaned.length){setMessage("Combine duplicate product lines before receiving.");return;}
     for(const i of cleaned){if(Number(i.quantity)!==Number(i.caseCount||0)*Number(i.unitsPerCase||1)+Number(i.looseBottles||0)){setMessage("Final Bottles must equal Cases × Bottles/Case + Loose Bottles.");return;}}
     if(landedTotal<0){setMessage("Total landed cost cannot be negative.");return;}
+    if(!reconciliationMatches){setMessage(`Invoice financials do not reconcile. Difference: ₹${Math.abs(reconciliationDifference).toFixed(2)}. Review landed-cost adjustments before receiving.`);return;}
     setBusy(true);
     if(ingestionId){const{error:guardError}=await supabase.rpc("invoice_assert_receivable",{p_ingestion_id:ingestionId});if(guardError){setMessage(guardError.message||"Invoice is not allowed to Receive Stock yet.");setBusy(false);return;}}
     const r=await receiveStock({supplierName,invoiceNumber,invoiceDate,notes,items:cleaned,charges});
     if(r.ok&&ingestionId){const{error:linkError}=await supabase.rpc("invoice_link_purchase",{p_ingestion_id:ingestionId,p_purchase_id:r.purchaseId});if(linkError){setMessage(`Stock was received, but invoice history linking failed: ${linkError.message}`);setBusy(false);return;}}
-    setMessage(r.message);if(r.ok){setInvoiceNumber("");setNotes("");setItems([empty()]);setCharges(emptyCharges());setIngestionId(null);}setBusy(false);
+    setMessage(r.message);if(r.ok){setInvoiceNumber("");setNotes("");setItems([empty()]);setCharges(emptyCharges());setFinancialSummary(null);setIngestionId(null);}setBusy(false);
   }
 
   return <div>
@@ -127,17 +134,19 @@ export default function Purchases(){
     <form className="panel" onSubmit={submit}>
       <div className="form-grid">
         <label>Supplier<input list="supplier-list" value={supplierName} onChange={(e)=>setSupplierName(e.target.value)} required/><datalist id="supplier-list">{suppliers.filter((s)=>s.active).map((s)=><option key={s.id} value={s.supplier_name}/>)}</datalist></label>
-        <label>Supplier Invoice<input value={invoiceNumber} onChange={(e)=>setInvoiceNumber(e.target.value)} required/></label>
+        <label>Supplier Invoice / Reference <span className="optional-field">(optional)</span><input value={invoiceNumber} onChange={(e)=>setInvoiceNumber(e.target.value)} placeholder="OCR or WineShopPOS auto reference"/></label>
         <label>Invoice Date<input type="date" value={invoiceDate} onChange={(e)=>setInvoiceDate(e.target.value)} required/></label>
-        <label>Notes<input value={notes} onChange={(e)=>setNotes(e.target.value)}/></label>
+        <label>Notes <span className="optional-field">(optional)</span><input value={notes} onChange={(e)=>setNotes(e.target.value)}/></label>
       </div>
-      <div className="data-table-wrapper" style={{marginTop:18}}><table className="data-table"><thead><tr><th>OCR / Source</th><th>Product</th><th>Cases</th><th>Bottles/Case</th><th>Loose</th><th>Final Bottles</th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Amount</th><th></th></tr></thead>
-      <tbody>{items.map((i,n)=><tr key={n}><td>{i.description||"Manual entry"}</td><td><select value={i.productId} onChange={(e)=>update(n,"productId",e.target.value)} required><option value="">Select product</option>{active.map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></td><td><input type="number" min="0" value={i.caseCount} onChange={(e)=>update(n,"caseCount",e.target.value)}/></td><td><input type="number" min="1" value={i.unitsPerCase} onChange={(e)=>update(n,"unitsPerCase",e.target.value)}/></td><td><input type="number" min="0" value={i.looseBottles} onChange={(e)=>update(n,"looseBottles",e.target.value)}/></td><td><strong>{i.quantity}</strong></td><td><input type="number" min="0" step="0.01" value={i.purchasePrice} onChange={(e)=>update(n,"purchasePrice",e.target.value)}/></td><td><input value={i.batchNumber} placeholder="Optional" onChange={(e)=>update(n,"batchNumber",e.target.value)}/></td><td><input type="date" value={i.expiryDate} onChange={(e)=>update(n,"expiryDate",e.target.value)}/></td><td>{money.format(Number(i.quantity||0)*Number(i.purchasePrice||0))}</td><td><button type="button" aria-label="Remove purchase line" onClick={()=>setItems((x)=>x.filter((_,idx)=>idx!==n))}>×</button></td></tr>)}</tbody></table></div>
+      <div className="data-table-wrapper" style={{marginTop:18}}><table className="data-table"><thead><tr><th>OCR / Source</th><th>Product <span className="required-mark">*</span></th><th>Cases</th><th>Bottles/Case <span className="required-mark">*</span></th><th>Loose</th><th>Final Bottles <span className="required-mark">*</span></th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Amount</th><th></th></tr></thead>
+      <tbody>{items.map((i,n)=><tr key={n}><td>{i.description||"Manual entry"}</td><td><select value={i.productId} onChange={(e)=>update(n,"productId",e.target.value)} required><option value="">Select product</option>{active.map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></td><td><input type="number" min="0" value={i.caseCount} onChange={(e)=>update(n,"caseCount",e.target.value)}/></td><td><input type="number" min="1" value={i.unitsPerCase} onChange={(e)=>update(n,"unitsPerCase",e.target.value)} required/></td><td><input type="number" min="0" value={i.looseBottles} onChange={(e)=>update(n,"looseBottles",e.target.value)}/></td><td><strong>{i.quantity}</strong></td><td><input type="number" min="0" step="0.01" value={i.purchasePrice} onChange={(e)=>update(n,"purchasePrice",e.target.value)}/></td><td><input value={i.batchNumber} placeholder="Optional" onChange={(e)=>update(n,"batchNumber",e.target.value)}/></td><td><input type="date" value={i.expiryDate} onChange={(e)=>update(n,"expiryDate",e.target.value)}/></td><td>{money.format(Number(i.quantity||0)*Number(i.purchasePrice||0))}</td><td><button type="button" aria-label="Remove purchase line" onClick={()=>setItems((x)=>x.filter((_,idx)=>idx!==n))}>×</button></td></tr>)}</tbody></table></div>
       <div className="button-row spread"><button type="button" className="secondary-button" onClick={()=>setItems((x)=>[...x,empty()])}>Add Line</button><strong>Product Value {money.format(baseTotal)}</strong></div>
-      <section style={{marginTop:22}}><h3>Landed Cost Adjustments</h3><p className="muted-text">Invoice-level adjustments are allocated deterministically across purchase lines.</p><div className="form-grid">
+      <section style={{marginTop:22}}><h3>Landed Cost Adjustments</h3><p className="muted-text">Auto-filled from OCR when recognized. Review before posting; invoice-level adjustments are allocated deterministically across purchase lines.</p><div className="form-grid">
       {[["freightAmount","Freight"],["transportAmount","Transport"],["handlingAmount","Handling"],["loadingUnloadingAmount","Loading / Unloading"],["supplierDiscountAmount","Supplier Discount"],["invoiceDiscountAmount","Invoice Discount"],["miscellaneousAmount","Miscellaneous"]].map(([k,l])=><label key={k}>{l}<input type="number" min="0" step="0.01" value={charges[k]} onChange={(e)=>setCharges((c)=>({...c,[k]:e.target.value}))}/></label>)}
       <label>Rounding Adjustment<input type="number" step="0.01" value={charges.roundingAdjustment} onChange={(e)=>setCharges((c)=>({...c,roundingAdjustment:e.target.value}))}/></label></div>
-      <div className="metric-grid four" style={{marginTop:16}}><div className="metric-card"><span>Product Value</span><strong>{money.format(baseTotal)}</strong></div><div className="metric-card"><span>Net Adjustment</span><strong>{money.format(adjustment)}</strong></div><div className="metric-card"><span>Landed Total</span><strong>{money.format(landedTotal)}</strong></div><div className="metric-card"><span>Allocation</span><strong>Pro-rata</strong></div></div></section>
+      <div className="metric-grid four" style={{marginTop:16}}><div className="metric-card"><span>Product Value</span><strong>{money.format(baseTotal)}</strong></div><div className="metric-card"><span>Net Adjustment</span><strong>{money.format(adjustment)}</strong></div><div className="metric-card"><span>Landed Total</span><strong>{money.format(landedTotal)}</strong></div><div className="metric-card"><span>Allocation</span><strong>Pro-rata</strong></div></div>
+      {printedInvoiceTotal>0?<div className="metric-grid four" style={{marginTop:12}}><div className="metric-card"><span>Printed Invoice</span><strong>{money.format(printedInvoiceTotal)}</strong></div><div className="metric-card"><span>Calculated Invoice</span><strong>{money.format(landedTotal)}</strong></div><div className="metric-card"><span>Difference</span><strong>{money.format(Math.abs(reconciliationDifference||0))}</strong></div><div className="metric-card"><span>Status</span><strong>{reconciliationMatches?"MATCH":"REVIEW"}</strong></div></div>:null}
+      </section>
       <br/>
       <div className="button-row">
         {ingestionId?<button type="button" className="secondary-button" disabled={busy} onClick={()=>persistReceiveDraft(true)}>Save Draft</button>:null}

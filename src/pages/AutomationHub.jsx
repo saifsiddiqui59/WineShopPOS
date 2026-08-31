@@ -48,12 +48,35 @@ function emptyCharges() {
 }
 
 function chargesFromInvoice(invoice) {
+  const finance = invoice?.financialAdjustments || {};
   return {
     ...emptyCharges(),
-    freightAmount: Math.max(0, Number(invoice?.freightAmount || invoice?.shippingAmount || 0)),
-    invoiceDiscountAmount: Math.max(0, Number(invoice?.discountAmount || 0)),
-    miscellaneousAmount: Math.max(0, Number(invoice?.otherCharges || 0)),
+    freightAmount: Math.max(0, Number(invoice?.freightAmount || finance?.freightCartingAmount || invoice?.shippingAmount || 0)),
+    transportAmount: Math.max(0, Number(invoice?.transportAmount || finance?.transportAmount || 0)),
+    handlingAmount: Math.max(0, Number(invoice?.handlingAmount || finance?.handlingAmount || 0)),
+    loadingUnloadingAmount: Math.max(0, Number(invoice?.loadingUnloadingAmount || finance?.loadingUnloadingAmount || 0)),
+    supplierDiscountAmount: Math.max(0, Number(invoice?.supplierDiscountAmount || finance?.cashDiscountAmount || 0)),
+    invoiceDiscountAmount: Math.max(0, Number(invoice?.invoiceDiscountAmount || finance?.otherDeductionAmount || invoice?.discountAmount || 0)),
+    miscellaneousAmount: Math.max(0, Number(invoice?.miscellaneousAmount || finance?.miscellaneousAmount || invoice?.otherCharges || 0)),
+    roundingAdjustment: Number(invoice?.roundingAdjustment ?? finance?.roundingAdjustment ?? 0),
   };
+}
+
+function shortHash(value) {
+  let hash = 2166136261;
+  for (const ch of String(value || "invoice")) {
+    hash ^= ch.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).toUpperCase().padStart(8, "0");
+}
+
+function autoInvoiceReference({ invoiceDate, ingestionId, sourceFileName }) {
+  const parsed = Date.parse(String(invoiceDate || ""));
+  const date = Number.isFinite(parsed)
+    ? new Date(parsed).toISOString().slice(0, 10).replaceAll("-", "")
+    : new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  return `AUTO-${date}-${shortHash(ingestionId || sourceFileName || "OCR").slice(0, 8)}`;
 }
 
 function inferSizeMl(description) {
@@ -784,6 +807,40 @@ export default function AutomationHub() {
     [result, resolution],
   );
 
+  const reviewedProductValue = useMemo(
+    () =>
+      (result?.items || []).reduce((sum, item, index) => {
+        const row = resolution[index];
+        const quantity = Number(row?.quantity || 0);
+        const price = Number(row?.purchasePrice || 0);
+        if (quantity > 0 && price > 0) return sum + quantity * price;
+        return sum + Math.max(0, Number(item?.amount || 0));
+      }, 0),
+    [result, resolution],
+  );
+
+  const reviewedAdjustment = useMemo(
+    () =>
+      Number(charges.freightAmount || 0) +
+      Number(charges.transportAmount || 0) +
+      Number(charges.handlingAmount || 0) +
+      Number(charges.loadingUnloadingAmount || 0) +
+      Number(charges.miscellaneousAmount || 0) -
+      Number(charges.supplierDiscountAmount || 0) -
+      Number(charges.invoiceDiscountAmount || 0) +
+      Number(charges.roundingAdjustment || 0),
+    [charges],
+  );
+
+  const reviewedInvoiceTotal = reviewedProductValue + reviewedAdjustment;
+  const printedInvoiceTotal = Number(result?.total || 0);
+  const reconciliationDifference =
+    printedInvoiceTotal > 0
+      ? Number((printedInvoiceTotal - reviewedInvoiceTotal).toFixed(2))
+      : null;
+  const reconciliationMatches =
+    reconciliationDifference == null || Math.abs(reconciliationDifference) <= 1;
+
   async function sendDraft() {
     if (!result || !confirmedSupplier) {
       setMessage("Confirm the supplier first.");
@@ -792,6 +849,13 @@ export default function AutomationHub() {
 
     if (unresolved) {
       setMessage(`${unresolved} invoice line(s) still need product/quantity confirmation.`);
+      return;
+    }
+
+    if (!reconciliationMatches) {
+      setMessage(
+        `Invoice financials do not reconcile. Difference: ₹${Math.abs(reconciliationDifference).toFixed(2)}. Review landed-cost adjustments before Receive Stock.`,
+      );
       return;
     }
 
@@ -821,10 +885,19 @@ export default function AutomationHub() {
         });
       }
 
+      const invoiceReference =
+        String(result.invoiceNumber || "").trim() ||
+        autoInvoiceReference({
+          invoiceDate: result.invoiceDate,
+          ingestionId,
+          sourceFileName,
+        });
+
       const purchaseDraft = {
         supplierId: confirmedSupplier.id,
         supplierName: confirmedSupplier.supplier_name,
-        invoiceNumber: result.invoiceNumber || "",
+        invoiceNumber: invoiceReference,
+        invoiceNumberSource: result.invoiceNumber ? "OCR" : "AUTO",
         invoiceDate: result.invoiceDate || new Date().toISOString().slice(0, 10),
         items: lines,
         charges,
@@ -833,6 +906,11 @@ export default function AutomationHub() {
           totalTax: result.totalTax ?? null,
           total: result.total ?? null,
           amountDue: result.amountDue ?? null,
+          reviewedProductValue,
+          reviewedInvoiceTotal,
+          difference: reconciliationDifference,
+          reconciliationStatus: reconciliationMatches ? "MATCH" : "REVIEW",
+          financialAdjustments: result.financialAdjustments || null,
         },
         sourceFile: sourceFileName || file?.name || "OCR invoice",
         ingestionId: ingestionId || null,
@@ -991,20 +1069,32 @@ export default function AutomationHub() {
             <div className="metric-card"><span>Amount Due OCR</span><strong>{result.amountDue == null ? "—" : Number(result.amountDue).toLocaleString("en-IN")}</strong></div>
           </div>
           <p className="muted-text">
-            Recognized freight/discount/other charges are carried into Receive Stock. Values not reliably returned by OCR are left at zero for human review.
+            WineShopPOS now recognizes common liquor-invoice summary rows such as Cash Discount, Other Deduction, Freight/Carting, Stamp Duty and TCS. Review the auto-filled values before posting.
           </p>
-          <div className="form-grid">
-            <label>Freight
-              <input type="number" min="0" step="0.01" value={charges.freightAmount}
-                onChange={(e) => setCharges((current) => ({ ...current, freightAmount: Number(e.target.value || 0) }))} />
-            </label>
-            <label>Invoice Discount
-              <input type="number" min="0" step="0.01" value={charges.invoiceDiscountAmount}
-                onChange={(e) => setCharges((current) => ({ ...current, invoiceDiscountAmount: Number(e.target.value || 0) }))} />
-            </label>
-            <label>Miscellaneous
-              <input type="number" min="0" step="0.01" value={charges.miscellaneousAmount}
-                onChange={(e) => setCharges((current) => ({ ...current, miscellaneousAmount: Number(e.target.value || 0) }))} />
+          <div className="metric-grid four" style={{ marginTop: 12 }}>
+            <div className="metric-card"><span>Reviewed Product Value</span><strong>₹{reviewedProductValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Calculated Invoice</span><strong>₹{reviewedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Printed Invoice</span><strong>{printedInvoiceTotal > 0 ? `₹${printedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</strong></div>
+            <div className="metric-card"><span>Reconciliation</span><strong>{reconciliationDifference == null ? "No printed total" : reconciliationMatches ? `MATCH · ₹${Math.abs(reconciliationDifference).toFixed(2)}` : `REVIEW · ₹${Math.abs(reconciliationDifference).toFixed(2)}`}</strong></div>
+          </div>
+          <div className="form-grid" style={{ marginTop: 12 }}>
+            {[
+              ["freightAmount", "Freight / Carting"],
+              ["transportAmount", "Transport"],
+              ["handlingAmount", "Handling"],
+              ["loadingUnloadingAmount", "Loading / Unloading"],
+              ["supplierDiscountAmount", "Cash / Supplier Discount"],
+              ["invoiceDiscountAmount", "Other / Invoice Deduction"],
+              ["miscellaneousAmount", "TCS + Stamp Duty + Other Additions"],
+            ].map(([key, label]) => (
+              <label key={key}>{label}
+                <input type="number" min="0" step="0.01" value={charges[key]}
+                  onChange={(e) => setCharges((current) => ({ ...current, [key]: Number(e.target.value || 0) }))} />
+              </label>
+            ))}
+            <label>Rounding Adjustment
+              <input type="number" step="0.01" value={charges.roundingAdjustment}
+                onChange={(e) => setCharges((current) => ({ ...current, roundingAdjustment: Number(e.target.value || 0) }))} />
             </label>
           </div>
         </section>
@@ -1016,7 +1106,8 @@ export default function AutomationHub() {
             <div>
               <h3>2. Resolve Every Product & Quantity</h3>
               <p>
-                Invoice: <strong>{result.invoiceNumber || "-"}</strong> · Date:{" "}
+                Invoice / Reference: <strong>{result.invoiceNumber || autoInvoiceReference({ invoiceDate: result.invoiceDate, ingestionId, sourceFileName })}</strong>
+                {!result.invoiceNumber ? " (auto-filled)" : ""} · Date:{" "}
                 <strong>{result.invoiceDate || "-"}</strong>
               </p>
             </div>
