@@ -974,3 +974,6 @@ The production demo now uses the V3 invoice reliability flow. Gmail automation u
 
 ### V3-02 invoice finance / intake UX — local verified (20260831T182936Z)
 Feature commit `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310` adds shared Document Intelligence financial-summary reconciliation across manual OCR and Email ingestion. It maps common liquor supplier invoice summary rows into landed-cost adjustments and derives small rounding differences when a printed final total is available. Receive Stock blocks a >₹1 financial mismatch for OCR-linked invoices. Supplier invoice/reference is optional to the operator; OCR is preferred and a deterministic/internal AUTO reference is used when absent. Authorized Gmail invoice intake sends an idempotent "received; allow up to 1 hour" acknowledgement for accepted attachments. Required native fields are visibly starred. This state is locally build/lint/smoke verified and is not yet deployed/pushed.
+
+### V3-03 local verified patch
+Invoice finance matching now uses strict summary labels, rejects date/time false positives, and can override Azure subtotal-as-total using the printed bottom total. Bulk OCR onboarding carries table MRP and suggests first-token Brand plus an existing matching Category. Reconciliation failures use a blocking modal. Feature: `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5`; deployment/push pending.

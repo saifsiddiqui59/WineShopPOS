@@ -167,3 +167,12 @@ Implemented:
 - First-row quantity/case logic was intentionally NOT changed in this patch.
 
 Deployment and Git push remain intentionally pending explicit user instruction.
+
+## V3-03 — Finance Parser + OCR Product Prefill
+Status: VERIFIED LOCALLY; deployment/push pending. Feature: `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5`.
+- Exact finance labels prevent header text such as Mode of Transport from becoming landed-cost values.
+- Date/time text is rejected as money evidence; the printed bottom total can replace an Azure subtotal-as-total mistake.
+- Reconciliation failure opens a large blocking popup and highlights the finance section.
+- OCR MRP is recovered from recognized invoice-table MRP columns.
+- Bulk Product Import suggests Brand from the first product-name word and Category from product/known beverage brand.
+- Quantity/case logic is unchanged.

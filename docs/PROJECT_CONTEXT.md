@@ -318,3 +318,6 @@ V3 invoice reliability plus the demo fixes are deployed to the production static
 
 ### V3-02 local validated patch (20260831T182936Z)
 Feature `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310`: invoice financial-summary reconciliation/landed-cost auto-fill, Gmail receipt acknowledgement (up to 1 hour expectation), optional auto-filled supplier invoice/reference, and required-field star UX. First-row case logic intentionally unchanged. Build/lint/finance smoke passed locally. Deployment and push are pending explicit instruction.
+
+### V3-03 local verified state (20260831T193701Z)
+Feature `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5` hardens invoice finance-row matching/final-total selection, adds a large mismatch popup, recovers OCR MRP from invoice tables, and improves Bulk Product Import Brand/Category prefilling. Quantity/case logic is unchanged. Build/lint and finance/product-prefill smoke tests passed. Deployment/push pending.

@@ -800,3 +800,9 @@ For an authorized shop Email with a supported invoice attachment, WineShopPOS se
 
 ### Required fields
 A red `*` identifies required fields. Fields explicitly labelled **optional** are not required.
+
+### OCR Bulk Product suggestions
+For unmatched OCR products, Bulk Product Import suggests **Brand** from the first word of the product name, **MRP** from a recognized invoice MRP column, and **Category** when the description or beverage brand matches an active category. Review all suggestions before creating products.
+
+### Invoice total mismatch popup
+If the calculated invoice does not match the printed invoice total, WineShopPOS shows a large warning with Calculated Invoice, Printed Invoice and Difference and blocks Receive Stock until reviewed.

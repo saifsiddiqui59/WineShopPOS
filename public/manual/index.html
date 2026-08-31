@@ -675,6 +675,10 @@ Choose <strong>Without Barcode</strong>, open <strong>Edit</strong>, scan/enter 
 <p>For an authorized shop Email with a supported invoice attachment, WineShopPOS sends one automatic acknowledgement confirming that the Email was received and asking the sender to allow up to <strong>1 hour</strong> for it to appear in Invoice Inbox. Oversized attachments continue to use the separate &gt;4 MB rejection message.</p>
 <h3 id="required-fields">Required fields</h3>
 <p>A red <code>*</code> identifies required fields. Fields explicitly labelled <strong>optional</strong> are not required.</p>
+<h3 id="ocr-bulk-product-suggestions">OCR Bulk Product suggestions</h3>
+<p>For unmatched OCR products, Bulk Product Import suggests <strong>Brand</strong> from the first word of the product name, <strong>MRP</strong> from a recognized invoice MRP column, and <strong>Category</strong> when the description or beverage brand matches an active category. Review all suggestions before creating products.</p>
+<h3 id="invoice-total-mismatch-popup">Invoice total mismatch popup</h3>
+<p>If the calculated invoice does not match the printed invoice total, WineShopPOS shows a large warning with Calculated Invoice, Printed Invoice and Difference and blocks Receive Stock until reviewed.</p>
 </article>
     </div>
   </main>
