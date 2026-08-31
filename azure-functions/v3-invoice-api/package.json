@@ -6,13 +6,15 @@
   "main": "src/index.js",
   "scripts": {
     "start": "func start",
-    "check": "node --check src/index.js && node --check src/invoiceStorage.js && node --check src/whatsappWebhook.js",
+    "check": "node --check src/index.js && node --check src/invoiceStorage.js && node --check src/whatsappWebhook.js && node --check src/emailInvoicePoller.js",
     "test": "node --test"
   },
   "dependencies": {
     "@azure/functions": "^4.0.0",
     "@azure/identity": "^4.0.0",
     "@azure/storage-blob": "^12.27.0",
-    "@supabase/supabase-js": "^2.0.0"
+    "@supabase/supabase-js": "^2.0.0",
+    "imapflow": "^1.0.190",
+    "mailparser": "^3.7.4"
   }
 }
