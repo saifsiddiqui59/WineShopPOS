@@ -774,3 +774,6 @@ Choose **Without Barcode**, open **Edit**, scan/enter the physical barcode and s
 ## Invoice Inbox and stored supplier invoices
 <!-- V3_API_AUTOMATION_20260831 -->
 ADMIN/MANAGER users can use **Purchases & Suppliers → Invoice Inbox** in the V3 preview. Filter by Year, Month and Status. **View Original** opens the private invoice through temporary secure access. **Review OCR** reopens stored OCR. `POSSIBLE_DUPLICATE` must be resolved before Receive Stock. An Inbox invoice does not mean stock was received; only **Confirm & Receive Stock** changes inventory. Manual App OCR storage is part of V3. Email remains pending until the real Gmail/Google Workspace connection is authorized and tested.
+
+### Email invoices in V3 (20260831T123139Z)
+V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.

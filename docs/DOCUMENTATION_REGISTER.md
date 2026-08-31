@@ -49,3 +49,6 @@ chapters, Master test matrix and Master handoff.
 - Branch: `V3`; Preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/`
 - Gmail Logic App: AUTHORIZATION REQUIRED / NOT DEPLOYED
 - Main merge: NOT YET
+
+### V3 Email automation documentation (20260831T123139Z)
+V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.

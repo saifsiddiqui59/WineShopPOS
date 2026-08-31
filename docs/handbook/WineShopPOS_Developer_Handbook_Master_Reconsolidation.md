@@ -965,3 +965,6 @@ Architecture: Manual OCR / future Email / future WhatsApp → private Blob → `
 The isolated V3 invoice Function exposes `https://wsp-v3-invoice-53b6e9a1.azurewebsites.net/api/whatsapp/webhook` for Meta WhatsApp Cloud API webhook verification/events. GET verification compares the configured verify token using timing-safe comparison. POST events require valid `x-hub-signature-256` HMAC-SHA256 calculated with the Meta App Secret before JSON is trusted.
 
 Current Step 1 only acknowledges/logs safe metadata for inbound messages. It does not download media and cannot alter inventory. The Meta temporary access token/App Secret/verify token are Azure App Settings only and must never be committed.
+
+### V3 Email invoice automation (20260831T123139Z)
+V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.

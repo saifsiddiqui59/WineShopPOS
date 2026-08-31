@@ -88,3 +88,45 @@ Next Meta-side step:
 5. then implement V3-01B media download → existing private Blob → existing automation/OCR Inbox pipeline.
 
 The WhatsApp access token is deliberately not stored by this webhook-only step. Step 2 will validate the token against the media API before storing/using it. A production long-lived/system-user token is required before production launch.
+
+## V3-01C — Email invoice ingestion via Gmail IMAP
+
+<!-- V3_EMAIL_IMAP_20260831T123139Z -->
+
+Status: DEPLOYED / REAL INVOICE TEST PENDING
+Feature commit: `931d681b9721a2620488dd420e0c7b8fa3bc233c`
+
+Verified deployment:
+- central Gmail mailbox: `wineshoppos@gmail.com`;
+- Gmail authentication uses a dedicated Google App Password stored only in Azure Function App settings;
+- Azure Function connects to Gmail over IMAPS (TLS/993) and polls unread mail every 5 minutes;
+- authorized test sender `royal21beer.wine@gmail.com` resolves to shop `5c94dbca-9bb5-451e-831a-8cfa42d06013` through `invoice_ingestion_channels`;
+- attachments accepted for automated OCR: PDF, JPEG, PNG, maximum 4 MB while Document Intelligence remains on F0;
+- duplicate preflight remains source-message/file SHA-256 based before Blob/OCR;
+- original document is saved to existing private Blob storage;
+- existing `invoice-automation-ingest` records OCR result into `invoice_ingestions` / Invoice Inbox;
+- automation never creates/receives inventory directly; human Review -> Receive Stock remains mandatory;
+- Email health endpoint passed a real IMAP connection test after deployment.
+
+Deployment recovery note:
+- the first local Function publish attempt stopped with `Value cannot be null. (Parameter 'input')` before Function deployment;
+- Supabase Edge Function deployment and Azure App Settings had already completed at that point;
+- no source was reset or recreated;
+- continuation used Microsoft's supported Function ZIP push deployment from the exact dirty safe-stop state;
+- local Azure Functions Core Tools version observed during continuation: `4.7.0`.
+
+Security:
+- normal Gmail password is not used;
+- App Password is not committed/logged/documented;
+- sender-to-shop mapping is database controlled, not hard-coded into application source;
+- unauthorized senders are not ingested.
+
+### WhatsApp status
+V3-01B webhook verification code remains deployed/preserved, but WhatsApp media ingestion is **ON HOLD**. No working code was deleted. Email is the active automation path during current V3 development.
+
+Next real acceptance test:
+1. send one PDF invoice from `royal21beer.wine@gmail.com` to `wineshoppos@gmail.com`;
+2. allow up to 5 minutes for the timer;
+3. confirm it appears in Invoice Inbox with Source = Email;
+4. open View Original and Review OCR;
+5. confirm stock is unchanged until Receive Stock.
