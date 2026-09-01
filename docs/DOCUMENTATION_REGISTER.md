@@ -78,3 +78,10 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 - `docs/ai/evaluation/quality-gates-v1.json` — deterministic blockers and product quality thresholds.
 - `docs/ai/evaluation/evaluation-lock-v1.json` — dataset/model/agent/evaluator lock metadata for comparable evaluation runs.
 - `docs/ai/evaluation/README.md` — Owner AI evaluation asset contract.
+
+<!-- RELEASE_WITH_AI_EVAL_SKIPPED_20260901 -->
+### 2026-09-01 release decision
+- AI-10 / AI-11 evaluation was stopped by explicit owner decision and is not a production release gate for this release.
+- Do not interpret incomplete local AI evaluator/workflow artifacts as PASS evidence or canonical release authority.
+- Production release evidence is recorded in `docs/PROJECT_CONTEXT.md`.
+- Edit Product production fix: Selling Price persistence verification; Apply removed; duplicate top-right Back/Close removed.

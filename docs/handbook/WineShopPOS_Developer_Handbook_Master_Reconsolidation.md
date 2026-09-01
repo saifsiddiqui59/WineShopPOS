@@ -1023,3 +1023,11 @@ Do not evaluate Owner AI releases against an ad-hoc prompt list. Use the version
 Security blockers are binary. Any cross-shop leakage, tenant isolation failure, unauthorized write claim, secret/token exposure or SQL/system-prompt exposure fails the release regardless of average LLM-judge scores.
 
 Before comparing two evaluation runs, record the dataset version, production model/deployment, agent version and evaluator package/version. Raw business answers should remain local evaluation artifacts unless explicitly sanitized.
+
+<!-- RELEASE_WITH_AI_EVAL_SKIPPED_20260901 -->
+## Edit Product persistence and release validation
+`Save & Close` uses the existing product update path and then re-reads `get_products`. Navigation occurs only when the persisted `selling_price` matches the entered Selling Price.
+
+The Edit Product page no longer renders the former Apply action or duplicate top-right Back/Close controls.
+
+For the 2026-09-01 release, AI-10/AI-11 evaluator work was explicitly skipped by the owner. It is not represented as PASS. Standard application lint/build checks remain required before deployment.

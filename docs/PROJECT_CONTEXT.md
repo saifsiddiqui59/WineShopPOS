@@ -365,3 +365,11 @@ Production trace ingestion is verified. Evaluation engineering now has a version
 The golden dataset includes positive coverage for every current Owner AI tool and blocker cases for cross-shop leakage, tenant isolation, unauthorized writes, secrets, SQL/system prompt disclosure and prompt injection.
 
 Next execution milestone: AI-10 live/batch evaluation using the pinned dataset and Microsoft Foundry evaluators.
+
+<!-- RELEASE_WITH_AI_EVAL_SKIPPED_20260901 -->
+## 2026-09-01 — Production release proceeds without AI-10/AI-11 evaluation gate
+- Owner explicitly chose to stop the remaining AI evaluation work and proceed with the rest of the release.
+- AI-10 and AI-11 are **SKIPPED BY USER** for this release and must not be recorded as PASS.
+- This release still runs normal application lint/build checks before production promotion.
+- Edit Product release behavior: Selling Price is re-read from `get_products` after save and must match before the form closes; Apply is removed; duplicate top-right Back/Close controls are removed.
+- Remaining Owner AI/business validation is manual owner validation.

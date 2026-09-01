@@ -861,3 +861,9 @@ WineShopPOS distinguishes a genuine disabled/suspended account from a temporary 
 - **Shop Access Suspended** is shown only for verified disallowed shop access.
 - A transient backend JWT timing error is retried automatically before the user sees an error.
 - A valid active account should enter the application without a browser refresh.
+
+<!-- RELEASE_WITH_AI_EVAL_SKIPPED_20260901 -->
+## Edit Product — Selling Price
+On **Edit Product**, enter the Selling Price and choose **Save & Close**. The screen verifies the saved Selling Price before closing. If the saved value cannot be verified or differs, the form stays open and shows an error so the value can be corrected or retried.
+
+The Edit Product screen uses **Save & Close** and **Cancel**. The former **Apply** action and duplicate top-right **Back** / **Close** controls are removed.
