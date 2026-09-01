@@ -98,3 +98,14 @@ Permanent prevention:
 - never label a visual UX feature PASS based only on grep/lint/build.
 
 Classification: verification-labeling defect, not proof that deployment transport failed.
+
+### 12. Filename-only recovery missed failed-run component
+Observed: a resume script searched only guessed spiritual/devotional tile filenames and found none, despite the prior release step reporting a component installation.
+
+Root cause: recovery logic depended on a guessed filename.
+
+Permanent prevention:
+- do not require discovery of an earlier generated component;
+- create/use one canonical release-owned component path when recovery is safe;
+- preserve unknown leftover dirty files rather than deleting them;
+- use the verified current Layout anchor for insertion.

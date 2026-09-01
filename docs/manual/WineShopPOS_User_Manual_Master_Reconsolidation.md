@@ -917,3 +917,10 @@ Choose **System**, **Light** or **Dark** under **My Account → Account Settings
 <!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
 ## Premium branding and Dark theme
 Royal 21 appears as a large centered gold shop identity with crown and subtle periodic shine. Dark theme uses black/charcoal rather than dark blue. Light theme remains available from **My Account → Account Settings**.
+
+<!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
+## Spiritual image tile
+Below Settings & Admin, click + or drag/drop a JPEG/PNG/WebP image. Drag the bottom handle up/down to change tile height. The tile collapses with the sidebar.
+
+## Sidebar collapse
+Collapse now narrows the whole sidebar and gives the freed space to the main application.

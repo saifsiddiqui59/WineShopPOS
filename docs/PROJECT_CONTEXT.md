@@ -459,3 +459,7 @@ Implementation:
 - Royal 21 gets a dedicated hero lockup with six-second shimmer cycle;
 - Dark theme surfaces move to near-black/charcoal instead of dark blue;
 - Light mode remains available through Account Settings.
+
+<!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
+## 2026-09-01 — Premium brand, real sidebar collapse, spiritual image tile
+WineShop POS now uses a five-stage 1.6-second gold-glass / burgundy-splash brand sequence. Sidebar collapse physically shrinks the rail to 76px and expands main content. A browser-local shop-specific spiritual image tile sits below Settings & Admin with + upload, drag/drop, remove and vertical resizing.

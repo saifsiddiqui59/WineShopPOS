@@ -126,3 +126,7 @@ Custom SVG cheers/splash wordmark, Royal 21 six-second gold shimmer, Light/Dark 
 <!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
 ### Reference branding + true-black Dark mode
 Dedicated center shop-brand zone, large Royal 21 crown/gold/ornament lockup, true-black Dark theme, Light theme preserved.
+
+<!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
+### Premium brand / real collapse / spiritual tile
+Canonical spiritual image tile, physical sidebar collapse and five-stage premium brand sequence.

@@ -6,6 +6,7 @@ import OfflineStatus from "./OfflineStatus";
 import ShopSelector from "./ShopSelector";
 import UserMenu from "./UserMenu";
 import AnimatedBrand from "./AnimatedBrand";
+import SpiritualImageTile from "./SpiritualImageTile";
 import { watchThemePreference } from "../lib/theme";
 import { MAIN_MODULES } from "../config/navigation";
 
@@ -50,6 +51,7 @@ export default function Layout() {
           </NavLink>;
         })}
       </nav>
+      <SpiritualImageTile shopId={profile?.shop_id} collapsed={collapsed}/>
       <button className="sidebar-collapse" onClick={() => setCollapsed((v) => !v)} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
         {collapsed ? <PanelLeftOpen size={18}/> : <><PanelLeftClose size={18}/><span>Collapse</span></>}
       </button>

@@ -2764,3 +2764,416 @@ html[data-theme="light"] .consolidated-topbar {
 @media (prefers-reduced-motion:reduce) {
   .royal-shimmer { animation:none !important; display:none !important; }
 }
+
+/* BRAND_SPIRIT_TILE_V6_CANONICAL */
+
+/* Real structural collapse */
+.sidebar,
+.main-area {
+  transition: width 180ms ease, margin-left 180ms ease;
+}
+
+.sidebar-collapsed .sidebar {
+  width: 76px !important;
+}
+
+.sidebar-collapsed .main-area {
+  width: calc(100% - 76px) !important;
+  margin-left: 76px !important;
+}
+
+.sidebar-collapsed .nav-menu {
+  padding-left: 9px !important;
+  padding-right: 9px !important;
+}
+
+.sidebar-collapsed .nav-item {
+  width: 54px !important;
+  min-height: 46px !important;
+  padding: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+.sidebar-collapsed .sidebar-collapse {
+  width: 52px !important;
+  min-width: 52px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  justify-content: center !important;
+}
+
+/* Five-stage 1.6 second premium storyboard sequence */
+.brand-premium-v6 {
+  overflow: visible !important;
+}
+
+.ws-brand-sequence {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ws-brand-art {
+  width: 94px;
+  height: 78px;
+  flex: 0 0 94px;
+  display: grid;
+  place-items: center;
+}
+
+.ws-premium-logo-svg {
+  width: 116px;
+  height: 80px;
+  overflow: visible;
+  filter:
+    drop-shadow(0 2px 5px rgba(0,0,0,.5))
+    drop-shadow(0 0 6px rgba(212,175,55,.08));
+}
+
+.ws-brand-dots {
+  opacity: 0;
+  animation: ws-brand-v6-dots 1.6s ease-out both;
+}
+
+.ws-brand-glass {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 50% 92%;
+}
+
+.ws-brand-glass-left {
+  animation: ws-brand-v6-left 1.6s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.ws-brand-glass-right {
+  animation: ws-brand-v6-right 1.6s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.ws-brand-clink {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ws-brand-v6-clink 1.6s ease-out both;
+}
+
+.ws-brand-splash {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 50% 88%;
+  animation: ws-brand-v6-splash 1.6s cubic-bezier(.16,.8,.25,1) both;
+}
+
+.ws-brand-copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: visible;
+}
+
+.ws-brand-wordmark {
+  position: relative;
+  z-index: 3;
+  width: max-content;
+  max-width: 142px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  line-height: .94;
+  font-weight: 650;
+  letter-spacing: -.65px;
+  background: linear-gradient(102deg,#8e590f,#dda838 23%,#fff0aa 43%,#d4af37 62%,#f6de88 80%,#84500a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  animation: ws-brand-v6-name 1.6s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.ws-brand-wine-wipe {
+  position: absolute;
+  z-index: 2;
+  left: -8px;
+  top: 6px;
+  width: 0;
+  height: 19px;
+  border-radius: 65% 35% 70% 28%;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 18% 22%,#d34365 0 5%,transparent 6%),
+    radial-gradient(circle at 72% 68%,#a01c43 0 7%,transparent 8%),
+    linear-gradient(90deg,rgba(73,4,22,0),rgba(133,14,49,.98),rgba(183,37,74,.94),rgba(96,8,35,.08));
+  transform: rotate(-2deg);
+  animation: ws-brand-v6-wipe 1.6s ease-out both;
+}
+
+.ws-brand-ornament {
+  width: 126px;
+  height: 7px;
+  margin-top: 4px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 5px;
+  color: #a52c4f;
+  opacity: 0;
+  animation: ws-brand-v6-final 1.6s ease-out both;
+}
+
+.ws-brand-ornament i {
+  height: 1px;
+  background: linear-gradient(90deg,transparent,#b48624);
+}
+.ws-brand-ornament i:last-child {
+  background: linear-gradient(90deg,#b48624,transparent);
+}
+.ws-brand-ornament b {
+  font-size: 6px;
+}
+
+.ws-brand-copy .brand-subtitle {
+  opacity: 0;
+  animation: ws-brand-v6-final 1.6s ease-out both;
+}
+
+@keyframes ws-brand-v6-dots {
+  0% { opacity:0; transform:scale(.4); }
+  7% { opacity:1; transform:scale(1); }
+  18% { opacity:.55; }
+  27%,100% { opacity:0; }
+}
+
+@keyframes ws-brand-v6-left {
+  0%,8% { opacity:0; transform:translateX(-22px) scale(.82) rotate(-14deg); }
+  20% { opacity:1; }
+  37% { transform:translateX(6px) scale(1) rotate(9deg); }
+  46% { transform:translateX(4px) rotate(5deg); }
+  65% { transform:translateX(0) rotate(-3deg); }
+  100% { opacity:1; transform:translateX(0) rotate(-3deg); }
+}
+
+@keyframes ws-brand-v6-right {
+  0%,8% { opacity:0; transform:translateX(22px) scale(.82) rotate(14deg); }
+  20% { opacity:1; }
+  37% { transform:translateX(-6px) scale(1) rotate(-9deg); }
+  46% { transform:translateX(-4px) rotate(-5deg); }
+  65% { transform:translateX(0) rotate(3deg); }
+  100% { opacity:1; transform:translateX(0) rotate(3deg); }
+}
+
+@keyframes ws-brand-v6-clink {
+  0%,32% { opacity:0; transform:scale(.22); }
+  38% { opacity:1; transform:scale(1.25) rotate(7deg); }
+  49% { opacity:.55; transform:scale(.72) rotate(19deg); }
+  59%,100% { opacity:0; transform:scale(.4) rotate(30deg); }
+}
+
+@keyframes ws-brand-v6-splash {
+  0%,38% { opacity:0; transform:translateY(15px) scaleX(.28) scaleY(.18); }
+  51% { opacity:.98; transform:translateY(0) scaleX(1.05) scaleY(1); }
+  67% { opacity:.84; transform:translateY(4px) scaleX(.96) scaleY(.86); }
+  83%,100% { opacity:.16; transform:translateY(8px) scaleX(.78) scaleY(.57); }
+}
+
+@keyframes ws-brand-v6-wipe {
+  0%,47% { width:0; opacity:0; transform:translateX(-12px) rotate(-2deg); }
+  56% { width:52%; opacity:.98; }
+  69% { width:112%; opacity:.72; transform:translateX(0) rotate(-2deg); }
+  81%,100% { width:118%; opacity:0; transform:translateX(9px) rotate(-2deg); }
+}
+
+@keyframes ws-brand-v6-name {
+  0%,52% { opacity:0; clip-path:inset(0 100% 0 0); transform:translateX(-8px); }
+  73% { opacity:1; clip-path:inset(0 0 0 0); transform:translateX(0); }
+  100% { opacity:1; clip-path:inset(0 0 0 0); transform:translateX(0); }
+}
+
+@keyframes ws-brand-v6-final {
+  0%,68% { opacity:0; transform:translateY(3px); }
+  83%,100% { opacity:1; transform:translateY(0); }
+}
+
+.sidebar-collapsed .brand.brand-animated {
+  min-height: 78px !important;
+  padding: 10px 6px !important;
+}
+
+.sidebar-collapsed .ws-brand-sequence {
+  justify-content: center;
+}
+
+.sidebar-collapsed .ws-brand-art {
+  width: 56px;
+  height: 56px;
+  flex-basis: 56px;
+}
+
+.sidebar-collapsed .ws-premium-logo-svg {
+  width: 68px;
+  height: 54px;
+}
+
+.sidebar-collapsed .ws-brand-splash {
+  display: none;
+}
+
+/* Spiritual tile */
+.spiritual-tile {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 88px;
+  max-height: 340px;
+  margin: 4px 12px 10px;
+  overflow: hidden;
+  border: 1px solid rgba(212,175,55,.2);
+  border-radius: 11px;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(212,175,55,.07),transparent 55%),
+    rgba(255,255,255,.022);
+}
+
+.spiritual-tile.is-drop-active {
+  border-color: rgba(244,210,111,.72);
+  box-shadow: inset 0 0 0 1px rgba(244,210,111,.16);
+}
+
+.spiritual-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
+.spiritual-empty {
+  width: 100%;
+  height: 100%;
+  min-height: 88px;
+  border: 0;
+  background: transparent;
+  color: #beb7b1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.spiritual-empty svg { color:#d3a83b; }
+.spiritual-empty strong { font-size:11px; }
+.spiritual-empty small { font-size:9px; opacity:.62; }
+
+.spiritual-controls {
+  position: absolute;
+  z-index: 4;
+  top: 7px;
+  right: 7px;
+  display: flex;
+  gap: 5px;
+}
+
+.spiritual-controls button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(229,191,84,.24);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #e2bc52;
+  background: rgba(5,5,5,.8);
+}
+
+.spiritual-message {
+  position: absolute;
+  z-index: 5;
+  left: 7px;
+  right: 7px;
+  bottom: 18px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: rgba(7,7,7,.88);
+  color: #f0d8d8;
+  font-size: 9px;
+}
+
+.spiritual-resize-handle {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.spiritual-resize-handle span {
+  width: 36px;
+  height: 3px;
+  border-radius: 99px;
+  background: rgba(221,185,85,.52);
+}
+
+.spiritual-tile-collapsed {
+  width: 54px !important;
+  height: 54px !important;
+  min-height: 54px !important;
+  margin: 4px auto 9px !important;
+  border-radius: 10px;
+}
+
+.spiritual-collapsed-button {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #dab145;
+  background: transparent;
+}
+
+.spiritual-collapsed-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-brand-dots,
+  .ws-brand-glass-left,
+  .ws-brand-glass-right,
+  .ws-brand-clink,
+  .ws-brand-splash,
+  .ws-brand-wine-wipe,
+  .ws-brand-wordmark,
+  .ws-brand-ornament,
+  .ws-brand-copy .brand-subtitle {
+    animation: none !important;
+  }
+
+  .ws-brand-glass,
+  .ws-brand-wordmark,
+  .ws-brand-ornament,
+  .ws-brand-copy .brand-subtitle {
+    opacity:1 !important;
+    clip-path:none !important;
+    transform:none !important;
+  }
+
+  .ws-brand-dots,
+  .ws-brand-clink,
+  .ws-brand-splash,
+  .ws-brand-wine-wipe {
+    display:none !important;
+  }
+}

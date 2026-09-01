@@ -1077,3 +1077,7 @@ Never claim visual-animation PASS from grep/lint/build. Authenticated production
 <!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
 ## Reference brand-zone rule
 Premium shop identity belongs in a dedicated center topbar zone, not inside `topbar-actions`. Dark theme must use true near-black/charcoal core surfaces; burgundy and gold remain accents.
+
+<!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
+## Spiritual tile / sidebar collapse
+Spiritual image is browser-local presentation data only. Sidebar collapse must physically change width to 76px. The brand sequence is lightweight inline SVG/CSS and respects reduced-motion.
