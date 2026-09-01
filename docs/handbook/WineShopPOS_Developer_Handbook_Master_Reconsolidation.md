@@ -1043,3 +1043,7 @@ Before transition to Receive Stock, OCR Send Draft performs a fresh `get_product
 <!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
 ## Durable POS completion and list sorting
 A committed sale remains authoritative even if another UI refresh domain fails. Sales and Purchases refresh independently. Sale Details falls back to a direct shop-authorized Supabase read by sale ID and can auto-print after checkout. Reports refreshes shop state before metrics. Read-only list views use `SortableTable`; editable OCR/receipt/stock-count/transfer grids remain unsorted during data entry.
+
+<!-- SALES_SPLIT_LOADER_20260902 -->
+## Sales read resilience
+A committed checkout must never be retried solely because the Sales list is stale. Sales history loads sale headers under RLS first, then sale items and payments separately, then merges them in React. Receipt fallback follows the same pattern for one sale ID. Read failures are surfaced to the operator.

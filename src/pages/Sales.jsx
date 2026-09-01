@@ -11,7 +11,7 @@ const money = new Intl.NumberFormat("en-IN", {
 });
 
 export default function Sales() {
-  const { sales, refreshAll, loadingData } = useShop();
+  const { sales, refreshAll, loadingData, dataError } = useShop();
   const { profile } = useAuth();
 
   useEffect(() => {
@@ -29,6 +29,18 @@ export default function Sales() {
           {loadingData ? "Refreshing..." : "Refresh Sales"}
         </button>
       </div>
+
+      {dataError ? (
+        <div className="purchase-message" style={{ marginBottom: 12 }}>
+          Data refresh notice: {dataError}
+        </div>
+      ) : null}
+
+      {!loadingData && sales.length === 0 ? (
+        <div className="purchase-message" style={{ marginBottom: 12 }}>
+          No Sales rows are loaded in this browser. Do not repeat a completed checkout just to make this list appear. Use Refresh Sales and review the data notice above.
+        </div>
+      ) : null}
 
       <div className="panel data-table-wrapper">
         <SortableTable className="data-table">

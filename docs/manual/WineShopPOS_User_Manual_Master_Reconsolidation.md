@@ -881,3 +881,7 @@ Creating Product Master records does not increase stock. Stock changes only thro
 <!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
 ## POS receipt, Sales and Reports
 After successful payment, WineShopPOS opens the completed receipt and requests the browser print dialog. Use **Print Receipt** if automatic printing is dismissed. Sales reloads from Supabase and includes **Refresh Sales**. Reports refreshes current transactions before charts/totals. On read-only lists, click headers: `↕` sortable, `↑` ascending, `↓` descending. Click again to reverse direction.
+
+<!-- SALES_SPLIT_LOADER_20260902 -->
+## If stock reduced but Sales looks empty
+Do not repeat the bill immediately. Open POS & Billing > Sales and click Refresh Sales. Existing completed invoices should load from Supabase. If a read fails, WineShopPOS shows a visible data-refresh notice. Use View to open and print an existing receipt.

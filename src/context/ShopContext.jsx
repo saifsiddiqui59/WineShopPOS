@@ -33,6 +33,70 @@ function normalizeSale(row, productById) {
   };
 }
 
+async function loadSalesRows(profile, productById) {
+  let headersQuery = supabase
+    .from("sales")
+    .select("id,invoice_number,subtotal,discount,grand_total,payment_status,cashier_id,status,notes,created_at,shift_id,client_sale_id,offline_created_at")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+
+  if (profile?.role === "CASHIER") {
+    headersQuery = headersQuery.eq("cashier_id", profile.user_id);
+  }
+
+  const headersResult = await headersQuery;
+  if (headersResult.error) {
+    return { data: [], error: headersResult.error, warning: "", headerCount: 0 };
+  }
+
+  const headers = headersResult.data || [];
+  if (!headers.length) {
+    return { data: [], error: null, warning: "", headerCount: 0 };
+  }
+
+  const saleIds = headers.map((row) => row.id);
+  const [itemsResult, paymentsResult] = await Promise.all([
+    supabase
+      .from("sale_items")
+      .select("id,sale_id,product_id,product_name_snapshot,barcode_snapshot,quantity,unit_price,discount,line_total,fifo_unit_cost,fifo_line_cost")
+      .in("sale_id", saleIds),
+    supabase
+      .from("payments")
+      .select("id,sale_id,payment_method,amount,reference_number,payment_type,created_at")
+      .in("sale_id", saleIds),
+  ]);
+
+  const itemsBySale = {};
+  for (const item of itemsResult.data || []) {
+    (itemsBySale[item.sale_id] ||= []).push(item);
+  }
+
+  const paymentsBySale = {};
+  for (const payment of paymentsResult.data || []) {
+    (paymentsBySale[payment.sale_id] ||= []).push(payment);
+  }
+
+  const warnings = [];
+  if (itemsResult.error) warnings.push(`Sale items: ${itemsResult.error.message || itemsResult.error}`);
+  if (paymentsResult.error) warnings.push(`Payments: ${paymentsResult.error.message || paymentsResult.error}`);
+
+  return {
+    data: headers.map((row) =>
+      normalizeSale(
+        {
+          ...row,
+          sale_items: itemsBySale[row.id] || [],
+          payments: paymentsBySale[row.id] || [],
+        },
+        productById,
+      ),
+    ),
+    error: null,
+    warning: warnings.join(" · "),
+    headerCount: headers.length,
+  };
+}
+
 function normalizePurchase(row, productById) {
   const items = (row.purchase_items || []).map((item) => ({ id: item.id, productId: item.product_id,
     productName: productById[item.product_id]?.name ?? "Product", barcode: productById[item.product_id]?.barcode ?? "",
@@ -91,23 +155,25 @@ export function ShopProvider({ children }) {
       setProducts(normalizedProducts);
       setInventory(stockMap);
 
-      let salesQuery = supabase.from("sales").select(`id,invoice_number,subtotal,discount,grand_total,payment_status,cashier_id,status,notes,created_at,shift_id,client_sale_id,offline_created_at,sale_items(id,product_id,product_name_snapshot,barcode_snapshot,quantity,unit_price,discount,line_total,fifo_unit_cost,fifo_line_cost),payments(id,payment_method,amount,reference_number,payment_type,created_at)`).order("created_at", { ascending: false }).limit(1000);
-      if (profile?.role === "CASHIER") salesQuery = salesQuery.eq("cashier_id", profile.user_id);
       const [salesResult, purchasesResult] = await Promise.all([
-        salesQuery,
-        profile?.role === "CASHIER" ? Promise.resolve({ data: [], error: null }) : supabase.from("purchases").select(`id,purchase_number,supplier_id,supplier_name_snapshot,invoice_number,invoice_date,subtotal,tax,total,status,notes,created_at,freight_amount,transport_amount,handling_amount,loading_unloading_amount,supplier_discount_amount,invoice_discount_amount,miscellaneous_amount,rounding_adjustment,total_landed_cost,purchase_items(id,product_id,quantity,purchase_unit,case_count,units_per_case,loose_bottles,purchase_price,line_total)`).order("created_at", { ascending: false }).limit(1000),
+        loadSalesRows(profile, productById),
+        profile?.role === "CASHIER"
+          ? Promise.resolve({ data: [], error: null })
+          : supabase.from("purchases").select(`id,purchase_number,supplier_id,supplier_name_snapshot,invoice_number,invoice_date,subtotal,tax,total,status,notes,created_at,freight_amount,transport_amount,handling_amount,loading_unloading_amount,supplier_discount_amount,invoice_discount_amount,miscellaneous_amount,rounding_adjustment,total_landed_cost,purchase_items(id,product_id,quantity,purchase_unit,case_count,units_per_case,loose_bottles,purchase_price,line_total)`).order("created_at", { ascending: false }).limit(1000),
       ]);
       const operationalErrors = [];
       const cacheSnapshot = readCache() || {};
-      const nextSales = salesResult.error
-        ? (cacheSnapshot.sales || [])
-        : (salesResult.data || []).map((r) => normalizeSale(r, productById));
+      const nextSales = salesResult.error ? (cacheSnapshot.sales || []) : (salesResult.data || []);
       const nextPurchases = purchasesResult.error
         ? (cacheSnapshot.purchases || [])
         : (purchasesResult.data || []).map((r) => normalizePurchase(r, productById));
 
-      if (salesResult.error) operationalErrors.push(`Sales: ${salesResult.error.message || salesResult.error}`);
-      else setSales(nextSales);
+      if (salesResult.error) {
+        operationalErrors.push(`Sales headers: ${salesResult.error.message || salesResult.error}`);
+      } else {
+        setSales(nextSales);
+        if (salesResult.warning) operationalErrors.push(salesResult.warning);
+      }
 
       if (purchasesResult.error) operationalErrors.push(`Purchases: ${purchasesResult.error.message || purchasesResult.error}`);
       else setPurchases(nextPurchases);
@@ -117,9 +183,9 @@ export function ShopProvider({ children }) {
       if (operationalErrors.length) {
         const message = `Core shop data refreshed. ${operationalErrors.join(" · ")}`;
         setDataError(message);
-        return { ok: true, partial: true, message, salesOk: !salesResult.error, purchasesOk: !purchasesResult.error };
+        return { ok: true, partial: true, message, salesOk: !salesResult.error, salesHeaderCount: Number(salesResult.headerCount || nextSales.length || 0), purchasesOk: !purchasesResult.error };
       }
-      return { ok: true, salesOk: true, purchasesOk: true };
+      return { ok: true, salesOk: true, salesHeaderCount: Number(salesResult.headerCount || nextSales.length || 0), purchasesOk: true };
     } catch (error) {
       const message = error?.message || String(error); setDataError(message);
       const c = readCache();

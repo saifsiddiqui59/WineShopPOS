@@ -106,3 +106,7 @@ Updated ShopContext, POS, Sales, Sale Details, Reports, sortable read-only list 
 
 <!-- POS_SALES_RECEIPT_REPORT_SORT_DEPLOYED_20260902 -->
 Production deployment recorded for independent Sales refresh, durable receipt loading/printing, Reports refresh and sortable read-only list columns. Code SHA `e592877cf57954ee4b29fcc7daf6e98b395bc5d1`; public frontend verification PASS.
+
+<!-- SALES_SPLIT_LOADER_20260902 -->
+### 2026-09-02 Sales split-loader hardening
+Updated ShopContext, Sales and Sale Details to replace the fragile embedded Sales read with header/items/payments split reads. No DB migration or Logic App change.

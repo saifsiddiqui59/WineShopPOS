@@ -410,3 +410,9 @@ Live verification found completed POS sales and stock deductions in Supabase whi
 POS/Sales/Receipt/Reports/list-sorting reliability release deployed from code SHA `e592877cf57954ee4b29fcc7daf6e98b395bc5d1`. Public root, referenced assets and Vite runtime configuration verification passed. Production URL: `https://wineshoppos.z29.web.core.windows.net/`.
 
 Live Supabase verification before this release showed three completed Royal 21 POS sales already committed with sale items/payments; those historical sales must not be repeated merely because the old frontend list was stale.
+
+<!-- SALES_SPLIT_LOADER_20260902 -->
+## 2026-09-02 - Sales split-loader hardening
+Live verification confirmed three completed POS sales already exist with sale items/payments and ADMIN RLS can read them. Do not repeat those bills merely because the browser list is empty.
+
+Sales history now loads authorized sale headers first, then sale items and payments separately and merges them in React. Child enrichment failure can no longer erase valid sale headers. Receipt fallback uses the same split direct-read pattern. Sales UI also displays refresh errors instead of silently showing an empty table. No DB migration is required.
