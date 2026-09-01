@@ -373,3 +373,14 @@ Next execution milestone: AI-10 live/batch evaluation using the pinned dataset a
 - This release still runs normal application lint/build checks before production promotion.
 - Edit Product release behavior: Selling Price is re-read from `get_products` after save and must match before the form closes; Apply is removed; duplicate top-right Back/Close controls are removed.
 - Remaining Owner AI/business validation is manual owner validation.
+
+<!-- PRODUCTION_RELEASE_AI_EVAL_SKIPPED_20260901 -->
+## 2026-09-01 — Production frontend promoted
+- AI-10: **SKIPPED BY USER**.
+- AI-11: **SKIPPED BY USER**.
+- Standard application build checks: PASS.
+- Production code SHA: `f43e70590b9b1aed1dc1ceeed66fa08558fb050f`.
+- Production static frontend deployed to `https://wineshoppos.z29.web.core.windows.net/`.
+- Production `index.html` SHA-256 matched the exact clean release build: `97f716ec879e9e0bafcff02fc1128af4ed33b755df9dd0e1af9f45e7536ae0c6`.
+- Edit Product release fix: Selling Price persistence verification; Apply removed; duplicate top-right Back/Close removed.
+- Remaining application/Owner AI validation is manual owner validation.
