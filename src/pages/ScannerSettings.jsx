@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useState } from "react";
 import { SCANNER_DEFAULTS, useScanner } from "../context/ScannerContext";
 
@@ -31,7 +32,7 @@ export default function ScannerSettings() {
           <div className="button-row"><button className="secondary-button" onClick={successBeep}>Test success beep</button><button className="secondary-button" onClick={errorBeep}>Test error beep</button></div>
         </section>
       </div>
-      <section className="panel" style={{marginTop:16}}><h3>Temporary Scan History</h3><p className="muted-text">Temporary diagnostic history only; it clears when this screen unmounts.</p><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Barcode</th><th>Time</th><th>Avg gap</th></tr></thead><tbody>{history.map((s)=><tr key={s.id}><td>{s.barcode}</td><td>{new Date(s.at).toLocaleTimeString()}</td><td>{s.averageGapMs} ms</td></tr>)}</tbody></table></div></section>
+      <section className="panel" style={{marginTop:16}}><h3>Temporary Scan History</h3><p className="muted-text">Temporary diagnostic history only; it clears when this screen unmounts.</p><div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Barcode</th><th>Time</th><th>Avg gap</th></tr></thead><tbody>{history.map((s)=><tr key={s.id}><td>{s.barcode}</td><td>{new Date(s.at).toLocaleTimeString()}</td><td>{s.averageGapMs} ms</td></tr>)}</tbody></SortableTable></div></section>
     </div>
   );
 }

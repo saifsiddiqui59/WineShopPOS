@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect,useMemo,useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -203,7 +204,7 @@ export default function InvoiceInbox(){
         <span><b>Completed</b> = stock was received and a purchase receipt is linked.</span>
         <span><b>Cancelled</b> = review was closed only; original invoice remains saved and inventory was not changed.</span>
       </div>
-      <div className="data-table-wrapper"><table className="data-table">
+      <div className="data-table-wrapper"><SortableTable className="data-table">
         <thead><tr>
           <th>Received</th><th>Invoice</th><th>Supplier</th><th>Source</th><th>Status</th>
           <th>Total</th><th>Draft</th><th>Purchase</th><th>Actions</th>
@@ -239,7 +240,7 @@ export default function InvoiceInbox(){
           </tr>)}
           {!rows.length&&!busy?<tr><td colSpan="9">No invoices for selected month/status.</td></tr>:null}
         </tbody>
-      </table></div>
+      </SortableTable></div>
     </section>
   </div>;
 }

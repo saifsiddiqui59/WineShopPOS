@@ -99,3 +99,7 @@ Updated AutomationHub, BulkProductImport, ShopContext, Developer Handbook and Us
 
 <!-- OCR_BULK_PRODUCT_SYNC_DEPLOYED_20260902 -->
 Production deployment recorded for OCR bulk-created Product Master synchronization fix. Code SHA `81fec0f2a683e22b2b033d3393567c25603d3886`; public frontend verification PASS.
+
+<!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
+### 2026-09-02 POS/Reports/list reliability
+Updated ShopContext, POS, Sales, Sale Details, Reports, sortable read-only list UI, Developer Handbook and User Manual. No DB migration or Logic App change.

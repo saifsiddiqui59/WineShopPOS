@@ -284,7 +284,7 @@ export default function POS(){
     setQuote(null);
 
     if(r.offline){setMessage(r.message);return}
-    navigate(`/sales/${r.sale.id}`);
+    navigate(`/sales/${r.sale.id}?print=1`);
   }
 
   const finalDue=quote?Number(quote.external_payment_due||0):manualTotal;

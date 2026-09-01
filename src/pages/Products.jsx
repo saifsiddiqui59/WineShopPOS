@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
@@ -84,7 +85,7 @@ export default function Products() {
 
       <div className="panel data-table-wrapper" style={{ marginTop: 14 }}>
         {loadingData ? <p>Loading...</p> : (
-          <table className="data-table">
+          <SortableTable className="data-table">
             <thead>
               <tr>
                 <th>Product</th><th>Barcode</th><th>Category</th><th>Stock</th>
@@ -110,7 +111,7 @@ export default function Products() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </SortableTable>
         )}
       </div>
     </div>

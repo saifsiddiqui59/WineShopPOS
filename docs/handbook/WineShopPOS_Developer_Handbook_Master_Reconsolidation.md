@@ -1039,3 +1039,7 @@ Bulk Product Import verifies returned `bulk_create_products` IDs against shop-sc
 `ShopContext.refreshAll()` publishes catalogue/categories/suppliers/inventory immediately after their own successful queries. Later Sales/Purchases failures are partial refresh failures and must not hide a valid catalogue.
 
 Before transition to Receive Stock, OCR Send Draft performs a fresh `get_products()` verification. The review grid also shows Invoice Rate/Case, editable Reviewed Rate/Case, Price/Bottle, Invoice Line Amount, Reviewed Line Amount and Gap (Invoice - Reviewed). Reviewed Rate/Case is converted back to bottle cost using Bottles/Case so FIFO stays bottle-based. Catalogue creation remains zero-stock; Receive Stock remains the authoritative physical inventory posting step.
+
+<!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
+## Durable POS completion and list sorting
+A committed sale remains authoritative even if another UI refresh domain fails. Sales and Purchases refresh independently. Sale Details falls back to a direct shop-authorized Supabase read by sale ID and can auto-print after checkout. Reports refreshes shop state before metrics. Read-only list views use `SortableTable`; editable OCR/receipt/stock-count/transfer grids remain unsorted during data entry.

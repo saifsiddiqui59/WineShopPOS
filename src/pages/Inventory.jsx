@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useMemo, useState } from "react";
 import { useShop } from "../context/ShopContext";
 
@@ -47,7 +48,7 @@ export default function Inventory() {
           <h3>Current Stock</h3>
           <div className="data-table-wrapper">
             {loadingData ? <p>Loading...</p> : (
-              <table className="data-table">
+              <SortableTable className="data-table">
                 <thead><tr><th>Product</th><th>Stock</th><th>Minimum</th><th>Status</th></tr></thead>
                 <tbody>
                   {active.map((p) => {
@@ -62,7 +63,7 @@ export default function Inventory() {
                     );
                   })}
                 </tbody>
-              </table>
+              </SortableTable>
             )}
           </div>
         </section>

@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
@@ -17,7 +18,7 @@ function downloadCsv(name,headers,rows){
 }
 
 export default function ReportsConsolidated(){
-  const{sales,purchases,products,getStock}=useShop();
+  const{sales,purchases,products,getStock,refreshAll}=useShop();
   const now=new Date();
   const[from,setFrom]=useState(new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10));
   const[to,setTo]=useState(now.toISOString().slice(0,10));
@@ -25,8 +26,13 @@ export default function ReportsConsolidated(){
   const[message,setMessage]=useState("");
 
   async function load(){
+    const shopRefresh = await refreshAll();
     const{data,error}=await supabase.from("expenses").select("expense_date,amount,description,payment_method,status,expense_categories(name)").gte("expense_date",from).lte("expense_date",to).order("expense_date",{ascending:false});
-    if(error)setMessage("Unable to load expenses for report.");else setExpenses(data||[]);
+    const notices=[];
+    if(!shopRefresh?.ok) notices.push(shopRefresh?.message||"Unable to refresh shop transactions for report.");
+    else if(shopRefresh?.partial) notices.push(shopRefresh.message);
+    if(error) notices.push("Unable to load expenses for report."); else setExpenses(data||[]);
+    setMessage(notices.join(" "));
   }
   useEffect(()=>{load()},[]);
 
@@ -106,7 +112,7 @@ export default function ReportsConsolidated(){
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Sales Summary</h3>
-      <div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Invoice</th><th>Date</th><th>Payment</th><th>Discount</th><th>Total</th></tr></thead><tbody>{fs.slice(0,100).map(s=><tr key={s.id}><td>{s.invoiceNumber}</td><td>{new Date(s.createdAt).toLocaleString("en-IN")}</td><td>{s.paymentMethod}</td><td>{money.format(s.discount)}</td><td>{money.format(s.grandTotal)}</td></tr>)}</tbody></table></div>
+      <div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Invoice</th><th>Date</th><th>Payment</th><th>Discount</th><th>Total</th></tr></thead><tbody>{fs.slice(0,100).map(s=><tr key={s.id}><td>{s.invoiceNumber}</td><td>{new Date(s.createdAt).toLocaleString("en-IN")}</td><td>{s.paymentMethod}</td><td>{money.format(s.discount)}</td><td>{money.format(s.grandTotal)}</td></tr>)}</tbody></SortableTable></div>
     </section>
   </div>
 }

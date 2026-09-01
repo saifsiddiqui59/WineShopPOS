@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -157,7 +158,7 @@ export default function PurchaseDetails() {
 
     <section className="panel" style={{ marginTop: 16 }}>
       <h3>Posted Purchase Lines</h3>
-      <div className="data-table-wrapper"><table className="data-table">
+      <div className="data-table-wrapper"><SortableTable className="data-table">
         <thead><tr><th>Product</th><th>Cases</th><th>Bottles/Case</th><th>Loose</th><th>Final Bottles</th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Line Value</th></tr></thead>
         <tbody>
           {(purchase.purchase_items || []).map((item) => <tr key={item.id}>
@@ -172,13 +173,13 @@ export default function PurchaseDetails() {
             <td>{money.format(Number(item.line_total || 0))}</td>
           </tr>)}
         </tbody>
-      </table></div>
+      </SortableTable></div>
     </section>
 
     {ocrPackAudit.rows.length ? <section className="panel" style={{ marginTop: 16 }}>
       <h3>OCR Evidence Used for Physical Cross-check</h3>
       <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Uncertain pack inference remains visibly marked for review.</p>
-      <div className="data-table-wrapper"><table className="data-table">
+      <div className="data-table-wrapper"><SortableTable className="data-table">
         <thead><tr><th>OCR Description</th><th>Cases</th><th>Pack Hint</th><th>Expected Bottles</th><th>Rate/Case</th><th>Amount</th><th>Batch OCR</th></tr></thead>
         <tbody>{ocrPackAudit.rows.map((row, index) => <tr key={index}>
           <td>{row.description}</td>
@@ -189,7 +190,7 @@ export default function PurchaseDetails() {
           <td>{row.amount ? money.format(row.amount) : "—"}</td>
           <td>{row.batchNumber || "—"}</td>
         </tr>)}</tbody>
-      </table></div>
+      </SortableTable></div>
     </section> : null}
 
     <section className="panel" style={{ marginTop: 16 }}>

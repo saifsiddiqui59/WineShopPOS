@@ -877,3 +877,7 @@ Before products exist, `No existing product match found` is normal. After Bulk C
 For reconciliation, compare **Invoice Rate/Case** with **Reviewed Rate/Case** and use the **Gap (Inv - Rev)** column to identify the exact line causing a mismatch. Changing Reviewed Rate/Case automatically recalculates Price/Bottle from Bottles/Case.
 
 Creating Product Master records does not increase stock. Stock changes only through Receive Stock.
+
+<!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
+## POS receipt, Sales and Reports
+After successful payment, WineShopPOS opens the completed receipt and requests the browser print dialog. Use **Print Receipt** if automatic printing is dismissed. Sales reloads from Supabase and includes **Refresh Sales**. Reports refreshes current transactions before charts/totals. On read-only lists, click headers: `↕` sortable, `↑` ascending, `↓` descending. Click again to reverse direction.

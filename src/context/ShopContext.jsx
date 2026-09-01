@@ -97,18 +97,29 @@ export function ShopProvider({ children }) {
         salesQuery,
         profile?.role === "CASHIER" ? Promise.resolve({ data: [], error: null }) : supabase.from("purchases").select(`id,purchase_number,supplier_id,supplier_name_snapshot,invoice_number,invoice_date,subtotal,tax,total,status,notes,created_at,freight_amount,transport_amount,handling_amount,loading_unloading_amount,supplier_discount_amount,invoice_discount_amount,miscellaneous_amount,rounding_adjustment,total_landed_cost,purchase_items(id,product_id,quantity,purchase_unit,case_count,units_per_case,loose_bottles,purchase_price,line_total)`).order("created_at", { ascending: false }).limit(1000),
       ]);
-      if (salesResult.error || purchasesResult.error) {
-        const operationalError = salesResult.error || purchasesResult.error;
-        const message =
-          `Product Master refreshed successfully, but operational history refresh failed: ${operationalError.message || operationalError}`;
-        setDataError(message);
-        return { ok: true, partial: true, message };
-      }
-      const nextSales = (salesResult.data || []).map((r) => normalizeSale(r, productById));
-      const nextPurchases = (purchasesResult.data || []).map((r) => normalizePurchase(r, productById));
-      setSales(nextSales); setPurchases(nextPurchases);
+      const operationalErrors = [];
+      const cacheSnapshot = readCache() || {};
+      const nextSales = salesResult.error
+        ? (cacheSnapshot.sales || [])
+        : (salesResult.data || []).map((r) => normalizeSale(r, productById));
+      const nextPurchases = purchasesResult.error
+        ? (cacheSnapshot.purchases || [])
+        : (purchasesResult.data || []).map((r) => normalizePurchase(r, productById));
+
+      if (salesResult.error) operationalErrors.push(`Sales: ${salesResult.error.message || salesResult.error}`);
+      else setSales(nextSales);
+
+      if (purchasesResult.error) operationalErrors.push(`Purchases: ${purchasesResult.error.message || purchasesResult.error}`);
+      else setPurchases(nextPurchases);
+
       writeCache({ products: normalizedProducts, inventory: stockMap, sales: nextSales, purchases: nextPurchases, categories: categoriesResult.data || [], suppliers: suppliersResult.data || [] });
-      return { ok: true };
+
+      if (operationalErrors.length) {
+        const message = `Core shop data refreshed. ${operationalErrors.join(" · ")}`;
+        setDataError(message);
+        return { ok: true, partial: true, message, salesOk: !salesResult.error, purchasesOk: !purchasesResult.error };
+      }
+      return { ok: true, salesOk: true, purchasesOk: true };
     } catch (error) {
       const message = error?.message || String(error); setDataError(message);
       const c = readCache();

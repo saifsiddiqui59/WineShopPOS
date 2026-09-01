@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
@@ -14,7 +15,7 @@ export default function ProductCleanup(){
   return <div><div className="page-heading"><div><h2>Product Cleanup</h2><p>Admin-only cleanup for mistakenly created test products. Transaction history is protected.</p></div></div>
   {message&&<div className="purchase-message">{message}</div>}
   <section className="panel"><h3>Find Product</h3><input data-scanner-capture="barcode" value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search product or barcode..." style={{width:"100%",maxWidth:520}}/>
-  <div className="data-table-wrapper" style={{marginTop:12}}><table className="data-table"><thead><tr><th>Product</th><th>Barcode</th><th>Stock</th><th>Action</th></tr></thead><tbody>{rows.map((p)=><tr key={p.id}><td>{p.name}</td><td>{p.barcode||"-"}</td><td>{getStock(p.id)}</td><td><button type="button" className="secondary-button" onClick={()=>inspect(p.id)}>Inspect</button></td></tr>)}</tbody></table></div></section>
+  <div className="data-table-wrapper" style={{marginTop:12}}><SortableTable className="data-table"><thead><tr><th>Product</th><th>Barcode</th><th>Stock</th><th>Action</th></tr></thead><tbody>{rows.map((p)=><tr key={p.id}><td>{p.name}</td><td>{p.barcode||"-"}</td><td>{getStock(p.id)}</td><td><button type="button" className="secondary-button" onClick={()=>inspect(p.id)}>Inspect</button></td></tr>)}</tbody></SortableTable></div></section>
   {selected&&check?<section className="panel" style={{marginTop:16}}><h3>Deletion Safety Check</h3><p><strong>{selected.name}</strong> · {selected.barcode||"-"}</p><p>Sales: <strong>{check.sale_references||0}</strong> · Purchases: <strong>{check.purchase_references||0}</strong> · Protected references: <strong>{check.protected_references||0}</strong></p>
   {check.deletable?<><div className="purchase-message success">SAFE TEST-DATA PURGE. Type DELETE to confirm.</div><label>Confirmation<input value={confirmation} onChange={(e)=>setConfirmation(e.target.value)} placeholder="DELETE"/></label><button type="button" className="danger-button" disabled={busy||confirmation!=="DELETE"} onClick={purge}>Permanently Delete Test Product</button></>:<div className="purchase-message">HARD DELETE BLOCKED. Deactivate or correct this product instead.</div>}
   {check.blockers?.length?<ul>{check.blockers.map((b)=><li key={b}>{b}</li>)}</ul>:null}</section>:null}</div>;

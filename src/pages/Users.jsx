@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -81,7 +82,7 @@ export default function Users() {
 
     <section className="panel" style={{marginTop:18}}>
       <div className="section-row"><div><h3>Shop Users</h3><p className="muted-text">Role changes take effect after the user's access state refreshes/signs in again.</p></div></div>
-      {users.length === 0 ? <EmptyState title="No shop users" message="Create the first Manager or Cashier account above."/> : <div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Access Management</th></tr></thead><tbody>{users.map((item)=><tr key={item.id}><td><strong>{item.full_name}</strong></td><td>{item.email || "-"}</td><td>{item.role === "ADMIN" ? <StatusBadge status="ADMIN"/> : <select className="role-select" value={item.role} disabled={busyId===item.id} onChange={(e)=>setRole(item.id,e.target.value)}><option value="CASHIER">Cashier</option><option value="MANAGER">Manager</option></select>}</td><td><StatusBadge status={item.active ? "ACTIVE" : "INACTIVE"}/></td><td>{item.role === "ADMIN" ? <span className="muted-text">Platform controlled</span> : <button className="secondary-button" disabled={busyId===item.id} onClick={()=>setActive(item.id,!item.active)}>{item.active ? "Disable Access" : "Enable Access"}</button>}</td></tr>)}</tbody></table></div>}
+      {users.length === 0 ? <EmptyState title="No shop users" message="Create the first Manager or Cashier account above."/> : <div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Access Management</th></tr></thead><tbody>{users.map((item)=><tr key={item.id}><td><strong>{item.full_name}</strong></td><td>{item.email || "-"}</td><td>{item.role === "ADMIN" ? <StatusBadge status="ADMIN"/> : <select className="role-select" value={item.role} disabled={busyId===item.id} onChange={(e)=>setRole(item.id,e.target.value)}><option value="CASHIER">Cashier</option><option value="MANAGER">Manager</option></select>}</td><td><StatusBadge status={item.active ? "ACTIVE" : "INACTIVE"}/></td><td>{item.role === "ADMIN" ? <span className="muted-text">Platform controlled</span> : <button className="secondary-button" disabled={busyId===item.id} onClick={()=>setActive(item.id,!item.active)}>{item.active ? "Disable Access" : "Enable Access"}</button>}</td></tr>)}</tbody></SortableTable></div>}
     </section>
   </div>;
 }

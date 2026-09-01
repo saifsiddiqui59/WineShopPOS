@@ -2046,3 +2046,9 @@ label:has(> textarea[required])::before {
 .finance-review-flash{outline:2px solid #ef4444;outline-offset:2px;animation:finance-review-pulse 1s ease-in-out 2}
 @keyframes finance-review-pulse{50%{box-shadow:0 0 0 7px rgba(239,68,68,.2)}}
 @media(max-width:700px){.finance-warning-values{grid-template-columns:1fr}}
+
+/* GLOBAL_SORTABLE_LIST_TABLES_20260902 */
+.table-sort-button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;padding:0;width:100%;display:inline-flex;align-items:center;justify-content:space-between;gap:8px;text-align:inherit;cursor:pointer}
+.table-sort-button:hover,.table-sort-button:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.table-sort-arrow{flex:0 0 auto;font-size:.95em;opacity:.58}
+.table-sort-button.active .table-sort-arrow{opacity:1;font-weight:800}
