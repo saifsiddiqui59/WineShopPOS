@@ -343,3 +343,7 @@ This local V3 change does not by itself deploy the production Owner AI Function.
 ## V3-07 PGRST303 login resilience
 
 The login reliability fix now handles an observed Supabase/PostgREST transient `PGRST303: JWT issued at future` condition with bounded retry/backoff. This is separate from the original frontend null-profile/false-disabled bug.
+
+## V3-07 hosted preview verification — 20260901T140823Z
+
+V3-07 passed five sequential hosted login/no-refresh checks and the full hosted read-only Playwright suite on the V3 preview. Production promotion remains a separate explicit step.
