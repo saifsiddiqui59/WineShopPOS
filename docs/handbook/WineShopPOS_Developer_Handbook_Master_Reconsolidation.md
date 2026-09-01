@@ -1081,3 +1081,7 @@ Premium shop identity belongs in a dedicated center topbar zone, not inside `top
 <!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
 ## Spiritual tile / sidebar collapse
 Spiritual image is browser-local presentation data only. Sidebar collapse must physically change width to 76px. The brand sequence is lightweight inline SVG/CSS and respects reduced-motion.
+
+<!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
+## Exact-reference brand assets
+When pixel fidelity to the approved storyboard is required, do not replace the raster source with a hand-redrawn SVG. The three `/public/brand/` assets are the visual source of truth. Animation code is limited to frame selection, timing, final lockup transition and reduced-motion behavior.

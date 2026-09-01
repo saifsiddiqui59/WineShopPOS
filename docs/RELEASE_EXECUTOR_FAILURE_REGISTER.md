@@ -109,3 +109,14 @@ Permanent prevention:
 - create/use one canonical release-owned component path when recovery is safe;
 - preserve unknown leftover dirty files rather than deleting them;
 - use the verified current Layout anchor for insertion.
+
+### 13. Redrawing an approved raster storyboard cannot be pixel-exact
+Observed: multiple SVG/CSS implementations reproduced the requested cheers/splash mechanics but still looked materially simpler than the approved storyboard.
+
+Root cause: the executor attempted to recreate detailed generated artwork using hand-authored SVG paths and CSS. Matching motion semantics is not the same as matching artwork pixels.
+
+Permanent prevention:
+- when the user explicitly requires the approved storyboard itself to be visually exact, use the user-approved storyboard pixels as the production frame source instead of redrawing them;
+- store cropped production sprite assets in Git with SHA-256 verification;
+- CSS/React may control frame timing/replay only; it must not reconstruct or recolor the artwork;
+- keep visual fidelity status `MANUAL_UAT=PENDING` until the user confirms production.

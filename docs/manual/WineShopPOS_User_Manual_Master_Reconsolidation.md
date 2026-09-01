@@ -924,3 +924,7 @@ Below Settings & Admin, click + or drag/drop a JPEG/PNG/WebP image. Drag the bot
 
 ## Sidebar collapse
 Collapse now narrows the whole sidebar and gives the freed space to the main application.
+
+<!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
+## Premium brand animation
+WineShop POS now plays the same five visual stages shown in the approved reference artwork. Hover, focus or click the logo to replay it. Royal 21 uses the same approved gold/crown stages and repeats its short sequence approximately every six seconds.

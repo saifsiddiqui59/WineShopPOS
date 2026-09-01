@@ -1,21 +1,16 @@
 import { useEffect, useState } from "react";
-import { Crown, Store } from "lucide-react";
+import { Store } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
 function RoyalHero({ shopName, interactive = false, children }) {
   return (
     <div
-      className={`royal-shop-hero${interactive ? " royal-shop-hero-interactive" : ""}`}
+      className={`royal-exact-reference${interactive ? " royal-exact-reference-interactive" : ""}`}
       title={shopName}
+      aria-label={shopName}
     >
-      <span className="royal-rays" aria-hidden="true" />
-      <Crown className="royal-crown" size={23} strokeWidth={1.7} aria-hidden="true" />
-      <span className="royal-name">{shopName}</span>
-      <span className="royal-ornament" aria-hidden="true">
-        <i /><b>◇</b><em>◇</em><i />
-      </span>
-      <span className="royal-shimmer" aria-hidden="true" />
+      <span className="royal-exact-reference-sprite" aria-hidden="true" />
       {children}
     </div>
   );
@@ -31,19 +26,25 @@ export default function ShopSelector() {
     supabase.rpc("my_shop_memberships").then(({ data }) => {
       if (alive) setShops(data || []);
     });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [profile?.shop_id]);
 
   async function change(shopId) {
     if (!shopId || shopId === profile?.shop_id) return;
     setBusy(true);
-    const { error } = await supabase.rpc("switch_shop", { p_shop_id: shopId });
+
+    const { error } = await supabase.rpc("switch_shop", {
+      p_shop_id: shopId,
+    });
 
     if (!error) {
       await refreshAccess();
       window.location.assign("#/owner");
       window.location.reload();
     }
+
     setBusy(false);
   }
 
@@ -57,7 +58,7 @@ export default function ShopSelector() {
 
     return (
       <RoyalHero shopName={shopName} interactive>
-        <label className="royal-shop-select-layer">
+        <label className="royal-exact-select-layer">
           <span className="sr-only">Current shop</span>
           <select
             value={profile?.shop_id || ""}

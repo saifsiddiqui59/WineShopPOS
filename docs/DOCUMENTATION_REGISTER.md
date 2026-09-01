@@ -130,3 +130,7 @@ Dedicated center shop-brand zone, large Royal 21 crown/gold/ornament lockup, tru
 <!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
 ### Premium brand / real collapse / spiritual tile
 Canonical spiritual image tile, physical sidebar collapse and five-stage premium brand sequence.
+
+<!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
+### Exact storyboard pixel animation
+Replaced hand-redrawn brand artwork with SHA-verified raster sprite frames cropped from the approved reference. Includes exact WineShop POS five-stage frames, exact final sidebar lockup and Royal 21 four-stage frames.

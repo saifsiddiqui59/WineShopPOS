@@ -463,3 +463,14 @@ Implementation:
 <!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
 ## 2026-09-01 — Premium brand, real sidebar collapse, spiritual image tile
 WineShop POS now uses a five-stage 1.6-second gold-glass / burgundy-splash brand sequence. Sidebar collapse physically shrinks the rail to 76px and expands main content. A browser-local shop-specific spiritual image tile sits below Settings & Admin with + upload, drag/drop, remove and vertical resizing.
+
+<!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
+## 2026-09-01 — Exact approved storyboard pixels used for brand animation
+The previous custom SVG versions were rejected in manual UAT because their artwork was simpler than the approved storyboard. V7 changes implementation strategy: the approved storyboard itself is the source.
+
+Production assets:
+- `/brand/wineshoppos-storyboard-sprite.png` — five exact cropped WineShop POS storyboard stages.
+- `/brand/wineshoppos-final-lockup.png` — exact final sidebar lockup from the approved "How it looks in the app" reference.
+- `/brand/royal21-storyboard-sprite.png` — four exact Royal 21 storyboard stages.
+
+React/CSS only sequences these pixels. WineShop POS uses the five stages across 1.6 seconds and replays on hover/focus/click. Royal 21 runs the exact four-stage sequence at the start of each six-second cycle and holds the final state for the remainder. Light mode intentionally keeps the black premium artwork card rather than altering the approved pixels.
