@@ -438,3 +438,14 @@ Sales history now loads authorized sale headers first, then sale items and payme
 - Normal read-only sortable lists retain Sr. No.
 - Ageing/FIFO deliberately disable generic Sr. No. and use stable Product Ref + per-product Age/FIFO Priority. FIFO Priority 1 means SELL FIRST and does not change when another column is sorted.
 - Auto Print and Shift Actual Cash controls are inherited from the immediately previous successful release.
+
+<!-- BRAND_THEME_REFINEMENT_20260902_V3 -->
+## 2026-09-01 — Approved brand animation + theme refinement
+- Replaced the weak outline-icon animation with a custom SVG mark containing two gold-rimmed wine glasses with burgundy wine.
+- On layout load the glasses move together for a brief cheers, a small clink spark/wine droplet effect appears, a burgundy reveal streak crosses the brand name, and WineShop POS settles into a metallic-gold wordmark.
+- Brand animation replays on hover/focus/click and does not automatically loop.
+- Royal 21 is visibly larger and uses metallic gold text with an approximately one-second shimmer sweep within each six-second cycle.
+- Existing Account Settings theme model remains authoritative: SYSTEM, LIGHT, DARK. The topbar theme shortcut remains removed.
+- Dark theme receives charcoal/black + wine/burgundy + restrained gold accents. Light theme receives warm white/light-neutral surfaces + wine/burgundy + restrained gold accents.
+- All brand/shimmer motion respects `prefers-reduced-motion`.
+- Visual UAT remains manual; automated checks must not label animation appearance PASS before authenticated browser confirmation.

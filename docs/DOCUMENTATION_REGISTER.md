@@ -118,3 +118,7 @@ Updated POS auto-print preference, Printer Settings, SortableTable serial number
 <!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
 ### Premium UI / product images / stable FIFO priority / executor hardening
 Added dynamic-base release rule, executor failure register, static product image frontend/migration record, cheers brand, Royal 21 gold badge, Account-only theme control, user-menu layering fix, micro-animations and stable Age/FIFO product-lot priority.
+
+<!-- BRAND_THEME_REFINEMENT_20260902_V3 -->
+### Approved WineShop POS brand + Royal 21 + dual-theme refinement
+Custom SVG cheers/splash wordmark, Royal 21 six-second gold shimmer, Light/Dark theme-aware premium surface overrides, reduced-motion behavior and visual-UAT verification rule documented.

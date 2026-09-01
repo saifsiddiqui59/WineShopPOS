@@ -85,3 +85,16 @@ Permanent prevention:
 - if self-location is genuinely required, resolve an absolute script path at startup using `BASH_SOURCE[0]` before any `cd`.
 
 Classification: executor validation defect, not application source/build failure.
+
+### 9. Automated source check mislabeled as visual UAT
+Observed: release summaries reported the WineShop POS animation and Royal 21 visual treatment as PASS because source/CSS markers existed, but the authenticated production UI showed no meaningful visible animation and the shop-name size looked unchanged.
+
+Root cause: automated source validation was incorrectly presented as proof of visual browser behavior.
+
+Permanent prevention:
+- automated checks may report `*_SOURCE_IMPLEMENTATION=PASS`;
+- transport/runtime checks may report their own PASS;
+- animation, layout, clipping, font sizing, shimmer and other visual behavior must remain `MANUAL_VISUAL_UAT=PENDING` until an authenticated production browser screenshot/user confirmation verifies them;
+- never label a visual UX feature PASS based only on grep/lint/build.
+
+Classification: verification-labeling defect, not proof that deployment transport failed.

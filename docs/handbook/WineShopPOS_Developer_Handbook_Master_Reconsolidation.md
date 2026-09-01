@@ -1063,3 +1063,13 @@ Product images are optional static assets in Supabase Storage bucket `product-im
 Ageing/FIFO use `showSerial={false}` and precomputed stable product-lot priority. Display sorting must never mutate operational FIFO meaning.
 
 UI motion must remain CSS transform/opacity based, subtle, and honor `prefers-reduced-motion`.
+
+<!-- BRAND_THEME_REFINEMENT_20260902_V3 -->
+## Brand motion and theme rules
+The WineShop POS brand uses a custom inline SVG rather than an external animation library. It plays once on mount because CSS animations start with the mounted `brand-motion-sequence`. Hover/focus/click increments a React key to remount the motion sequence and replay it.
+
+Royal 21 shimmer uses a six-second CSS keyframe cycle with visible travel only during a short portion of the cycle.
+
+Theme authority remains `profile.theme` through `lib/theme.js`: SYSTEM resolves to OS preference; LIGHT and DARK are explicit. Brand/theme refinement is CSS-only and must preserve Account Settings as the sole user-facing theme control.
+
+Never claim visual-animation PASS from grep/lint/build. Authenticated production UAT is required.

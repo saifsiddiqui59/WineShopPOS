@@ -905,3 +905,11 @@ Normal read-only lists may use Sr. No. Ageing and FIFO instead show stable Produ
 
 ## UI polish
 WineShop POS uses a short cheers/reveal brand animation, subtle Royal 21 gold treatment, lightweight menu/page feedback, and a user menu that stays above page content. Theme remains under My Account → Account Settings.
+
+<!-- BRAND_THEME_REFINEMENT_20260902_V3 -->
+## Brand animation and themes
+WineShop POS shows a short two-glass cheers animation when the app layout loads. The mark can replay when you hover, focus or click the logo. It does not continuously loop.
+
+Royal 21 uses a subtle gold highlight approximately every six seconds.
+
+Choose **System**, **Light** or **Dark** under **My Account → Account Settings**. System follows the device preference. Both Light and Dark use the same WineShop POS wine-and-gold brand language. Reduced-motion device settings disable decorative motion.
