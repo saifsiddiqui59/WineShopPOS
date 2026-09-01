@@ -184,3 +184,20 @@ Status: deployed to preview/production before final Git push.
 - V3-03 finance parser, actual printed-total reconciliation, MRP extraction, Brand/Category suggestions and mismatch popup were deployed with this build.
 - Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally **Disabled** after testing. Automatic 5-minute Email polling remains paused until manually enabled.
 Barcode commit: `94e65616a4df66148dfcf1e9d8da13f6c7970d53`.
+
+## V3-04 — Liquor Invoice OCR Accuracy / Precision / Batch / FIFO
+Status: DEPLOYED AND LIVE-AZURE VERIFIED; final Git push pending in this executor.
+Feature: `7340fac6604d9e0e6281dd7c82070ffb818d4c9f`.
+
+- Azure Document Intelligence remains the OCR engine.
+- Manual OCR uses `prebuilt-invoice` plus free `keyValuePairs` on API `2024-11-30`.
+- WineShopPOS now prefers a coherent supplier item table over misleading generic Invoice Items.
+- Supported header variants include Brand/Name of Item/Description, Batch No/Lot, Packing, Qty/Cs/No. Cs/Cases, Qty/Btl/No. Btl, Rate/Cs/Rate per, MRP and Amount.
+- Rate/Case and printed Amount come from the supplier table. Cases use a clean case column when available; otherwise WineShopPOS derives Cases from Amount / Rate/Case only when the ratio is near an integer. Batch/Lot and MRP OCR are preserved, with uncertain values review-flagged rather than silently corrected.
+- Financial aliases include Cash Discount(s), Other Discount/Deduction, Freight/Carting, Carrying & Forwarding, Stamp Fee(s)/Duty and TCS.
+- Wrong generic subtotal/total values are rejected when line-table math and a better printed total disagree.
+- Auto-derived purchase unit cost is preserved to 6 decimals; accounting totals remain 2 decimals.
+- FIFO shows SELL FIRST and a lightweight derived BOX mark instead of implementing warehouse rack/bin management.
+
+### Live METRI invoice regression
+The supplied METRI SPIRITS invoice was sent to the real configured Azure Document Intelligence resource. The executor blocks deploy/push unless it verifies 7 rows; cases 20,2,5,13,5,5,2; derived case total 52 matching printed case total 52; product value ₹148,050; Other Discount ₹2,475; Cash Discount ₹1,497; Carrying & Forwarding ₹1,144; Stamp+TCS ₹2,910; final invoice ₹148,132; raw Batch/Lot OCR preserved with review flags when uncertain; reconciliation MATCH.

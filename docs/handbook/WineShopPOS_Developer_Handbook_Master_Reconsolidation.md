@@ -980,3 +980,10 @@ Invoice finance matching now uses strict summary labels, rejects date/time false
 
 ### V3-03B scanner capture and Email scheduler
 ScannerContext now supports explicit barcode inputs using `data-scanner-capture="barcode"`; these fields retain the completed HID scan while ordinary editable fields keep the existing protection behavior. Bulk Product Import also listens to the scanner event as a React-state fallback. Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally Disabled after testing and must be explicitly enabled before automatic Email polling resumes.
+
+### V3-04 OCR normalization
+Do not treat `prebuilt-invoice.fields.Items` as authoritative when a stronger supplier item table exists. Shared `invoiceDocument.js` maps table-header synonyms into WineShopPOS item semantics before quantity/cost logic. This prevents pack size from becoming quantity and preserves Batch/MRP/Case/Rate/Amount relationships.
+
+Purchase/base unit cost storage now preserves numeric(14,6) precision. Posted invoice and line totals remain two-decimal accounting amounts.
+
+FIFO stays lightweight: the oldest tracked lot is SELL FIRST and the derived BOX code can be written on the carton. Full rack/bin management is intentionally deferred.

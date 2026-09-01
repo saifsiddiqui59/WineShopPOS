@@ -683,6 +683,14 @@ Choose <strong>Without Barcode</strong>, open <strong>Edit</strong>, scan/enter 
 <p>Click the Barcode field for the desired row and scan the bottle/can. The complete barcode should remain in that row. You can still type the barcode manually.</p>
 <h3 id="automatic-email-polling-paused">Automatic Email polling paused</h3>
 <p>When the Email scheduler is paused, invoice Emails remain in the mailbox until the administrator enables automatic polling again.</p>
+<h3 id="better-liquor-invoice-ocr">Better liquor invoice OCR</h3>
+<p>Invoice OCR now checks the supplier&#39;s printed item table rather than trusting only generic invoice fields. It recognizes common liquor-invoice columns even when suppliers use different headings, including combined headings such as MRP Brand. If Azure misses the Cases header/value but Rate/Case and Amount are reliable, WineShopPOS derives Cases only when the ratio is near an integer and validates the invoice-level case total when printed.</p>
+<h3 id="batch-lot">Batch / Lot</h3>
+<p>When a Batch/Lot column exists, WineShopPOS preserves the raw OCR value during review and carries the reviewed value into Receive Stock and FIFO history. It does not invent corrected batch numbers when OCR is uncertain.</p>
+<h3 id="price-bottle-precision">Price/Bottle precision</h3>
+<p>Price/Bottle can contain more than two decimal places because it may be calculated from the printed line amount divided by final bottles. Precise unit cost is retained; invoice totals remain two-decimal currency amounts.</p>
+<h3 id="fifo-what-to-sell">FIFO: what to sell</h3>
+<p>Inventory → Ageing &amp; FIFO marks the oldest tracked lot for each product as <strong>SELL FIRST</strong> and shows a <strong>BOX-xxxxxx</strong> code. Write that code on the physical carton/box. A full warehouse rack system is not required.</p>
 </article>
     </div>
   </main>

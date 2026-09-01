@@ -60,3 +60,5 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 - V3-03 (20260831T193701Z): local verified feature `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5` — finance parser false-match repair, printed-total reconciliation, mismatch popup, OCR MRP extraction, first-token Brand and Category suggestion. Deployment/push pending.
 
 - V3-03B (20260831T195134Z): deployed Bulk Product Import barcode scanner capture `94e65616a4df66148dfcf1e9d8da13f6c7970d53`; V3-03 finance/MRP/category improvements deployed; Logic App scheduler intentionally paused.
+
+- V3-04 (20260901T055315Z): `7340fac6604d9e0e6281dd7c82070ffb818d4c9f` — live-Azure-verified semantic liquor invoice table extraction, finance reconciliation hardening, review-safe Batch/MRP handling, validated case derivation, 6-decimal unit-cost precision, FIFO SELL FIRST/BOX mark, and clarification that prior V3-02 Email acknowledgement features were already pushed to main. Logic App remains Disabled.

@@ -812,3 +812,15 @@ Click the Barcode field for the desired row and scan the bottle/can. The complet
 
 ### Automatic Email polling paused
 When the Email scheduler is paused, invoice Emails remain in the mailbox until the administrator enables automatic polling again.
+
+### Better liquor invoice OCR
+Invoice OCR now checks the supplier's printed item table rather than trusting only generic invoice fields. It recognizes common liquor-invoice columns even when suppliers use different headings, including combined headings such as MRP Brand. If Azure misses the Cases header/value but Rate/Case and Amount are reliable, WineShopPOS derives Cases only when the ratio is near an integer and validates the invoice-level case total when printed.
+
+### Batch / Lot
+When a Batch/Lot column exists, WineShopPOS preserves the raw OCR value during review and carries the reviewed value into Receive Stock and FIFO history. It does not invent corrected batch numbers when OCR is uncertain.
+
+### Price/Bottle precision
+Price/Bottle can contain more than two decimal places because it may be calculated from the printed line amount divided by final bottles. Precise unit cost is retained; invoice totals remain two-decimal currency amounts.
+
+### FIFO: what to sell
+Inventory → Ageing & FIFO marks the oldest tracked lot for each product as **SELL FIRST** and shows a **BOX-xxxxxx** code. Write that code on the physical carton/box. A full warehouse rack system is not required.

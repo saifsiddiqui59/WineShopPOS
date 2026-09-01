@@ -324,3 +324,9 @@ Feature `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5` hardens invoice finance-row m
 
 ### V3-03B production state (20260831T195134Z)
 V3-03 finance/product-prefill improvements and Bulk Product Import scanner capture are deployed to preview and production. Barcode feature `94e65616a4df66148dfcf1e9d8da13f6c7970d53` fixes the flash-then-blank input behavior. Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally Disabled until testing resumes.
+
+### V3-02/V3-03 production clarification
+The V3-02 Email receipt acknowledgement ("received; allow up to 1 hour to reflect"), >4 MB rejection feedback, invoice finance UX, barcode capture and the other previous-build features are already in the production/main baseline. The Email Logic App is intentionally Disabled after testing; that pause does not remove deployed Email code.
+
+### V3-04 production state (20260901T055315Z)
+Feature `7340fac6604d9e0e6281dd7c82070ffb818d4c9f` passed synthetic tests plus a live Azure Document Intelligence regression using the supplied METRI SPIRITS invoice before deployment was allowed. Semantic-table-first liquor OCR, review-safe Batch/MRP handling, validated case derivation, 6-decimal unit-cost precision and FIFO SELL FIRST/BOX guidance are deployed. METRI normalized total: ₹148,132 with MATCH reconciliation. Logic App remains Disabled.
