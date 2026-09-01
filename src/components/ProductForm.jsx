@@ -25,6 +25,7 @@ const emptyProduct = {
   barcode: "", name: "", brand: "", category: "Whisky", subcategory: "",
   sizeMl: 750, alcoholPercentage: "", purchasePrice: "0.00", mrp: "0.00",
   price: "0.00", minimumStock: 5, unitsPerCase: 12,
+  imagePath: "", imageUrl: "", imageFile: null, removeImage: false,
 };
 
 function moneyText(value) {
@@ -50,6 +51,7 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
   const [form, setForm] = useState(emptyProduct);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
 
   useEffect(() => {
     if (initialValue) {
@@ -58,11 +60,21 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
         purchasePrice: moneyText(initialValue.purchasePrice ?? 0),
         mrp: moneyText(initialValue.mrp ?? 0),
         price: moneyText(initialValue.price ?? 0),
+        imageFile: null,
+        removeImage: false,
       });
+      setImagePreview(initialValue.imageUrl || "");
     } else {
       setForm(emptyProduct);
+      setImagePreview("");
     }
   }, [initialValue]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
 
   const subcategoryOptions = useMemo(() => {
     const direct = SUBCATEGORY_BY_CATEGORY[form.category] || [];
@@ -76,6 +88,34 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
 
   function normalizeMoneyField(name) {
     set(name, moneyText(form[name] || 0));
+  }
+
+  function chooseImage(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setMessage("Use a JPEG, PNG or WebP bottle/can image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage("Product image must be 5 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    setImagePreview(URL.createObjectURL(file));
+    setForm((current) => ({...current,imageFile:file,removeImage:false}));
+    setMessage("");
+  }
+
+  function clearImage() {
+    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    setImagePreview("");
+    setForm((current) => ({...current,imageFile:null,removeImage:Boolean(current.imagePath)}));
   }
 
   async function run(handler, successMessage = "") {
@@ -105,6 +145,25 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
         SKU is generated automatically. Barcode is required when adding one product.
         Click the Barcode field before scanning on this form. For invoice/OCR or manual bulk onboarding, use{" "}
         <a href="#/products/bulk-import">Bulk Product Import</a>.
+      </div>
+
+      <div className="product-image-editor">
+        <div className="product-image-preview">
+          {imagePreview ? <img src={imagePreview} alt="Product bottle or can preview" /> : <span>No image</span>}
+        </div>
+        <div>
+          <strong>Original Bottle / Can Image</strong>
+          <p className="muted-text">
+            Optional. JPEG, PNG or WebP up to 5 MB. Use an image you own or are
+            permitted to use from the manufacturer/distributor.
+          </p>
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage} />
+          {imagePreview ? (
+            <button type="button" className="secondary-button" onClick={clearImage} style={{marginLeft:8}}>
+              Remove Image
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="form-grid">

@@ -114,3 +114,7 @@ Updated ShopContext, Sales and Sale Details to replace the fragile embedded Sale
 <!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
 ### 2026-09-02 POS/Lists/Shift controls
 Updated POS auto-print preference, Printer Settings, SortableTable serial numbering, Inventory Ageing/FIFO, Shift close cash controls, and recorded live Supabase migrations 20260901204924 and 20260901211003.
+
+<!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
+### Premium UI / product images / stable FIFO priority / executor hardening
+Added dynamic-base release rule, executor failure register, static product image frontend/migration record, cheers brand, Royal 21 gold badge, Account-only theme control, user-menu layering fix, micro-animations and stable Age/FIFO product-lot priority.

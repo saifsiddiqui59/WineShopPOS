@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import { listOfflineSales, queueOfflineSale, removeOfflineSale, setOfflineSaleStatus } from "../lib/offlineQueue";
+import { productImageUrl, removeProductImage, uploadProductImage } from "../lib/productImages";
 
 const ShopContext = createContext(null);
 const DATA_CACHE_KEY = "wineshop_cloud_cache_v2";
@@ -138,14 +139,22 @@ export function ShopProvider({ children }) {
     }
     setLoadingData(true); setDataError("");
     try {
-      const [categoriesResult, suppliersResult, productsResult, inventoryResult] = await Promise.all([
+      const [categoriesResult, suppliersResult, productsResult, inventoryResult, productImagesResult] = await Promise.all([
         supabase.from("categories").select("id,name,active").order("name"),
         profile?.role === "CASHIER" ? Promise.resolve({ data: [], error: null }) : supabase.from("suppliers").select("id,supplier_name,active").order("supplier_name"),
         supabase.rpc("get_products"),
         supabase.from("inventory").select("product_id,quantity,reserved_quantity"),
+        supabase.rpc("get_product_images"),
       ]);
-      for (const r of [categoriesResult, suppliersResult, productsResult, inventoryResult]) if (r.error) throw r.error;
-      const normalizedProducts = (productsResult.data || []).map(normalizeProduct);
+      for (const r of [categoriesResult, suppliersResult, productsResult, inventoryResult, productImagesResult]) if (r.error) throw r.error;
+      const imagePathById = Object.fromEntries(
+        (productImagesResult.data || []).map((row) => [row.product_id, row.image_path || ""]),
+      );
+      const normalizedProducts = (productsResult.data || []).map((row) => {
+        const product = normalizeProduct(row);
+        const imagePath = imagePathById[product.id] || "";
+        return { ...product, imagePath, imageUrl: productImageUrl(imagePath) };
+      });
       const productById = Object.fromEntries(normalizedProducts.map((p) => [p.id, p]));
       const stockMap = Object.fromEntries((inventoryResult.data || []).map((r) => [r.product_id, num(r.quantity)]));
 
@@ -216,16 +225,47 @@ export function ShopProvider({ children }) {
   }
 
   async function addProduct(data) {
-    try { const check=validateProduct(data); if(!check.ok)return check; const v=check.value; const categoryId=await ensureCategory(v.category);
+    try {
+      const check=validateProduct(data); if(!check.ok)return check;
+      const v=check.value; const categoryId=await ensureCategory(v.category);
       const {data:id,error}=await supabase.rpc("create_new_product",{p_barcode:v.barcode,p_sku:"AUTO",p_product_name:v.name,p_brand:v.brand,p_category_id:categoryId,p_subcategory:v.subcategory||null,p_size_ml:v.sizeMl,p_alcohol_percentage:v.alcoholPercentage,p_purchase_price:v.purchasePrice,p_mrp:v.mrp,p_selling_price:v.price,p_minimum_stock:v.minimumStock,p_units_per_case:v.unitsPerCase,p_opening_stock:0});
-      if(error)throw error; await refreshAll(); return {ok:true,productId:id,message:`${v.name} created successfully.`};
+      if(error)throw error;
+
+      let imageWarning="";
+      if(data.imageFile){
+        try{
+          await uploadProductImage({shopId:profile.shop_id,productId:id,file:data.imageFile});
+        }catch(imageError){
+          imageWarning=` Product was created, but image upload failed: ${imageError.message||String(imageError)}`;
+        }
+      }
+
+      await refreshAll();
+      return {ok:true,productId:id,message:`${v.name} created successfully.${imageWarning}`,imageWarning:Boolean(imageWarning)};
     } catch(e){return {ok:false,message:e.message||String(e)}}
   }
 
   async function updateProduct(id,data) {
-    try { const check=validateProduct(data); if(!check.ok)return check; const v=check.value; const categoryId=await ensureCategory(v.category);
+    try {
+      const check=validateProduct(data); if(!check.ok)return check;
+      const v=check.value; const categoryId=await ensureCategory(v.category);
       const {error}=await supabase.rpc("update_product_details",{p_product_id:id,p_barcode:v.barcode,p_sku:data.sku,p_product_name:v.name,p_brand:v.brand,p_category_id:categoryId,p_subcategory:v.subcategory||"",p_size_ml:v.sizeMl,p_alcohol_percentage:v.alcoholPercentage,p_purchase_price:v.purchasePrice,p_mrp:v.mrp,p_selling_price:v.price,p_minimum_stock:v.minimumStock,p_units_per_case:v.unitsPerCase});
-      if(error)throw error;await refreshAll();return {ok:true,message:`${v.name} updated successfully.`};
+      if(error)throw error;
+
+      let imageError=null;
+      try{
+        if(data.removeImage && data.imagePath){
+          await removeProductImage(id,data.imagePath);
+        }else if(data.imageFile){
+          await uploadProductImage({shopId:profile.shop_id,productId:id,file:data.imageFile,previousPath:data.imagePath||""});
+        }
+      }catch(errorDuringImage){imageError=errorDuringImage;}
+
+      await refreshAll();
+      if(imageError){
+        return {ok:false,message:`Product details were saved, but image update failed: ${imageError.message||String(imageError)}`};
+      }
+      return {ok:true,message:`${v.name} updated successfully.`};
     }catch(e){return {ok:false,message:e.message||String(e)}}
   }
   async function setProductStatus(id,active){try{const {error}=await supabase.rpc("set_product_active",{p_product_id:id,p_active:active});if(error)throw error;await refreshAll();return{ok:true,message:active?"Product activated.":"Product deactivated."}}catch(e){return{ok:false,message:e.message||String(e)}}}

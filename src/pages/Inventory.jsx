@@ -1,6 +1,7 @@
 import SortableTable from "../components/ui/SortableTable";
 import { useMemo, useState } from "react";
 import { useShop } from "../context/ShopContext";
+import ProductThumb from "../components/ui/ProductThumb";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -55,7 +56,7 @@ export default function Inventory() {
                     const stock = getStock(p.id);
                     return (
                       <tr key={p.id}>
-                        <td>{p.name}</td>
+                        <td><div className="product-cell-with-image"><ProductThumb product={p} size="sm"/><span>{p.name}</span></div></td>
                         <td>{stock}</td>
                         <td>{p.minimumStock}</td>
                         <td>{stock <= p.minimumStock ? "LOW STOCK" : "IN STOCK"}</td>

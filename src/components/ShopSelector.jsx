@@ -10,7 +10,9 @@ export default function ShopSelector() {
 
   useEffect(() => {
     let alive = true;
-    supabase.rpc("my_shop_memberships").then(({ data }) => { if (alive) setShops(data || []); });
+    supabase.rpc("my_shop_memberships").then(({ data }) => {
+      if (alive) setShops(data || []);
+    });
     return () => { alive = false; };
   }, [profile?.shop_id]);
 
@@ -26,6 +28,13 @@ export default function ShopSelector() {
     setBusy(false);
   }
 
-  if (profile?.role === "CASHIER" || shops.length <= 1) return <div className="shop-context-pill"><Store size={15}/><span>{profile?.shop_name || "Shop"}</span></div>;
-  return <label className="shop-selector"><Store size={15}/><span className="sr-only">Current shop</span><select value={profile?.shop_id || ""} disabled={busy} onChange={(e) => change(e.target.value)}>{shops.map((shop) => <option key={shop.shop_id} value={shop.shop_id}>{shop.shop_name}</option>)}</select></label>;
+  const shopName=profile?.shop_name||"Shop";
+  const premium=/royal\s*.*21/i.test(shopName);
+  const premiumClass=premium?" shop-premium-gold":"";
+
+  if (profile?.role === "CASHIER" || shops.length <= 1) {
+    return <div className={`shop-context-pill${premiumClass}`}><Store size={15}/><span>{shopName}</span></div>;
+  }
+
+  return <label className={`shop-selector${premiumClass}`}><Store size={15}/><span className="sr-only">Current shop</span><select value={profile?.shop_id||""} disabled={busy} onChange={(e)=>change(e.target.value)}>{shops.map((shop)=><option key={shop.shop_id} value={shop.shop_id}>{shop.shop_name}</option>)}</select></label>;
 }

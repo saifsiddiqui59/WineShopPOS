@@ -1053,3 +1053,13 @@ A committed checkout must never be retried solely because the Sales list is stal
 Receipt auto-print is intentionally device-local. Default OFF still routes to the durable receipt screen; ON adds the print request. SortableTable provides presentation-only Sr. No.; it is not a database identifier. FIFO/Ageing keep their default operational ordering until a user explicitly sorts.
 
 Expected Cash is system-calculated. Actual Cash is the physical drawer count and must never be auto-filled from Expected Cash. revise_shift_actual_cash allows the owning cashier or ADMIN/MANAGER to correct a CLOSE_REQUESTED count before approval and writes an audit event. Non-zero variance approval requires explicit confirmation.
+
+<!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
+## Release executor and premium UI rules
+Every new executor must fetch `origin/main` and `origin/V3`, derive the shared base dynamically, require remote equality and require local V3 HEAD to match that derived base. Do not hardcode the base SHA from a previous chat turn. See `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md`.
+
+Product images are optional static assets in Supabase Storage bucket `product-images`, path `{shop_id}/{product_id}/{timestamp}.{ext}`, JPEG/PNG/WebP, max 5 MB. Optional image failure must never cause a successfully created product to be created twice.
+
+Ageing/FIFO use `showSerial={false}` and precomputed stable product-lot priority. Display sorting must never mutate operational FIFO meaning.
+
+UI motion must remain CSS transform/opacity based, subtle, and honor `prefers-reduced-motion`.

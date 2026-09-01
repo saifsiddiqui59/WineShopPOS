@@ -13,6 +13,13 @@ export default function SortableTable({children,showSerial=true,...props}){
   const head=parts[hi],body=parts[bi];
   const headRows=Children.toArray(head.props.children).map((row)=>{if(!isValidElement(row)||row.type!=="tr")return row;const headers=Children.toArray(row.props.children).map((th,column)=>{if(!sortable(th))return th;const active=sort.column===column;const arrow=!active?"↕":sort.direction==="asc"?"↑":"↓";return cloneElement(th,th.props,<button type="button" className={`table-sort-button${active?" active":""}`} onClick={()=>setSort((s)=>({column,direction:s.column===column&&s.direction==="asc"?"desc":"asc"}))}><span>{th.props.children}</span><span className="table-sort-arrow" aria-hidden="true">{arrow}</span></button>);});return cloneElement(row,row.props,showSerial?[<th key="__sr" data-sort="false">Sr. No.</th>,...headers]:headers);});
   const rows=Children.toArray(body.props.children);if(sort.column!=null)rows.sort((a,b)=>{const c=compare(cellText(a,sort.column),cellText(b,sort.column));return sort.direction==="asc"?c:-c;});
-  const displayRows=showSerial?rows.map((row,index)=>isValidElement(row)&&row.type==="tr"?cloneElement(row,row.props,[<td key="__sr_cell">{index+1}</td>,...Children.toArray(row.props.children)]):row):rows;
+  const displayRows=showSerial?rows.map((row,index)=>{
+    if(!isValidElement(row)||row.type!=="tr")return row;
+    const cells=Children.toArray(row.props.children);
+    if(cells.length===1&&isValidElement(cells[0])&&cells[0].props?.colSpan){
+      return cloneElement(row,row.props,cloneElement(cells[0],{...cells[0].props,colSpan:Number(cells[0].props.colSpan)+1}));
+    }
+    return cloneElement(row,row.props,[<td key="__sr_cell">{index+1}</td>,...cells]);
+  }):rows;
   const next=[...parts];next[hi]=cloneElement(head,head.props,headRows);next[bi]=cloneElement(body,body.props,displayRows);return <table {...props}>{next}</table>;
 }

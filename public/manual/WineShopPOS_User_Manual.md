@@ -895,3 +895,13 @@ Read-only sortable lists show **Sr. No.**. Ageing and FIFO Rotation Queue also s
 
 ## Shift Actual Cash
 Expected Cash is calculated by WineShopPOS. Actual Cash is the physical cash counted in the drawer. Enter it explicitly before Request Close. If a CLOSE_REQUESTED amount is wrong, use **Update Actual** before **Approve Close**. WineShopPOS recalculates variance and records the correction in the audit trail.
+
+<!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
+## Product bottle/can images
+Add Product and Edit Product support an optional JPEG, PNG or WebP bottle/can image up to 5 MB. Use an image you own or are permitted to use. Images appear in Products, Inventory and POS.
+
+## Ageing and FIFO priority
+Normal read-only lists may use Sr. No. Ageing and FIFO instead show stable Product Ref plus Age Priority/FIFO Priority. FIFO Priority 1 means SELL FIRST. Sorting another column changes only the view and does not renumber the operational priority.
+
+## UI polish
+WineShop POS uses a short cheers/reveal brand animation, subtle Royal 21 gold treatment, lightweight menu/page feedback, and a user menu that stays above page content. Theme remains under My Account → Account Settings.

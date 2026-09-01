@@ -425,3 +425,16 @@ Sales history now loads authorized sale headers first, then sale items and payme
 - Shift Actual Cash is no longer initialized to zero. Cashiers must physically count and explicitly enter Actual Cash before Request Close.
 - CLOSE_REQUESTED Actual Cash can be corrected through audited RPC revise_shift_actual_cash; variance is recalculated before approval. Non-zero variance requires explicit approval confirmation.
 - Live migrations 20260901204924 (sale_items authenticated SELECT) and 20260901211003 (shift actual-cash correction) are now recorded in Git.
+
+<!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
+## 2026-09-01 — Premium UI / product images / stable FIFO-Age priority / executor hardening
+- New release executors derive live shared `origin/main == origin/V3` base at runtime; stale hardcoded release SHA is forbidden. Failure history is tracked in `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md`.
+- Subtle WineShop POS cheers/splash/name reveal animation with reduced-motion support.
+- Royal 21 shop context receives subtle gold treatment.
+- Duplicate topbar Light/Dark removed; Theme remains under My Account → Account Settings.
+- Top-right User Menu layering hardened against clipping/burial.
+- Static product images use live migration `20260901213751_product_images_v1`: `products.image_path`, `product-images` bucket, 5 MB JPEG/PNG/WebP limit, shop-scoped ADMIN/MANAGER writes, and narrow image RPCs.
+- Images display in Product Master, Inventory and POS.
+- Normal read-only sortable lists retain Sr. No.
+- Ageing/FIFO deliberately disable generic Sr. No. and use stable Product Ref + per-product Age/FIFO Priority. FIFO Priority 1 means SELL FIRST and does not change when another column is sorted.
+- Auto Print and Shift Actual Cash controls are inherited from the immediately previous successful release.

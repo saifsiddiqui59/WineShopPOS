@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { findProductByBarcode, normalizeBarcode } from "../lib/barcode";
 import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPreference";
+import ProductThumb from "../components/ui/ProductThumb";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -318,7 +319,10 @@ export default function POS(){
       <div className="pos-left">
         <div className="panel pos-search-card">
           <label>Manual Search<input style={{width:"100%"}} value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Name, barcode, SKU, brand..."/></label>
-          {results.map((p)=><button key={p.id} className="search-result" onClick={()=>add(p)}><span>{p.name}</span><span>{money.format(p.price)} · Stock {getStock(p.id)}</span></button>)}
+          {results.map((p)=><button key={p.id} className="search-result" onClick={()=>add(p)}>
+            <span className="pos-product-result-main"><ProductThumb product={p} size="sm"/><span><strong>{p.name}</strong><small>{p.brand} · {p.size}</small></span></span>
+            <span>{money.format(p.price)} · Stock {getStock(p.id)}</span>
+          </button>)}
           <div className="purchase-message" style={{marginTop:10}}>{message}</div>
         </div>
 
@@ -349,7 +353,7 @@ export default function POS(){
             <tbody>{cart.map((i)=>{
               const changed=Math.abs(Number(i.unitPrice??i.product.price)-Number(i.product.price))>0.001;
               return <tr key={i.product.id}>
-                <td>{i.product.name}</td>
+                <td><div className="product-cell-with-image"><ProductThumb product={i.product} size="sm"/><span>{i.product.name}</span></div></td>
                 <td><button onClick={()=>change(i.product.id,-1)}>-</button> {i.quantity} <button onClick={()=>change(i.product.id,1)}>+</button></td>
                 <td>{money.format(i.product.price)}</td>
                 <td><input type="number" min="0" step="0.01" value={i.unitPrice} onChange={(e)=>setUnitPrice(i.product.id,e.target.value)} style={{maxWidth:110}}/>{changed?<small style={{display:"block"}}>Override</small>:null}</td>

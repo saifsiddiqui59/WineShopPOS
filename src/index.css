@@ -2052,3 +2052,53 @@ label:has(> textarea[required])::before {
 .table-sort-button:hover,.table-sort-button:focus-visible{text-decoration:underline;text-underline-offset:3px}
 .table-sort-arrow{flex:0 0 auto;font-size:.95em;opacity:.58}
 .table-sort-button.active .table-sort-arrow{opacity:1;font-weight:800}
+
+/* PREMIUM_UI_POLISH_20260902_V2 */
+.consolidated-topbar{position:sticky;top:0;z-index:800;overflow:visible;isolation:isolate}
+.topbar-page-context{min-width:0;flex:1 1 auto}
+.topbar-actions{position:relative;z-index:820;overflow:visible;flex:0 0 auto}
+.user-menu{position:relative;z-index:850;overflow:visible}
+.user-menu-popover{position:absolute!important;top:calc(100% + 10px)!important;right:0!important;left:auto!important;z-index:9999!important;width:min(320px,calc(100vw - 24px));max-height:calc(100vh - 92px);overflow-y:auto;transform-origin:top right;animation:ws-menu-enter 160ms ease-out}
+.main-area,.page-area{overflow:visible}
+.user-menu-trigger-text{min-width:0;max-width:150px}
+.user-menu-trigger-text strong,.user-menu-trigger-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.brand-animated{overflow:hidden}
+.brand-cheers-mark{position:relative;width:46px;height:46px;flex:0 0 46px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(145deg,#168dff,#0877df);box-shadow:0 8px 22px rgba(0,122,255,.18)}
+.brand-glass{position:absolute;color:#fff;transform-origin:50% 90%}
+.brand-glass-left{left:7px;animation:ws-cheers-left 1.35s cubic-bezier(.2,.8,.2,1) both}
+.brand-glass-right{right:7px;animation:ws-cheers-right 1.35s cubic-bezier(.2,.8,.2,1) both}
+.brand-splash-dot{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.9);opacity:0;animation:ws-wine-splash 1.35s ease-out both}
+.brand-splash-dot-one{top:8px;left:20px}.brand-splash-dot-two{top:11px;left:25px;animation-delay:45ms}.brand-splash-dot-three{top:13px;left:17px;animation-delay:80ms}
+.brand-copy{min-width:0;transform-origin:left center;animation:ws-brand-reveal 1.15s .28s cubic-bezier(.2,.8,.2,1) both}
+
+@keyframes ws-cheers-left{0%{transform:translateX(-5px) rotate(-14deg);opacity:.72}35%{transform:translateX(4px) rotate(8deg);opacity:1}48%{transform:translateX(3px) rotate(4deg)}100%{transform:translateX(0) rotate(-5deg);opacity:1}}
+@keyframes ws-cheers-right{0%{transform:translateX(5px) rotate(14deg);opacity:.72}35%{transform:translateX(-4px) rotate(-8deg);opacity:1}48%{transform:translateX(-3px) rotate(-4deg)}100%{transform:translateX(0) rotate(5deg);opacity:1}}
+@keyframes ws-wine-splash{0%,28%{opacity:0;transform:translateY(4px) scale(.4)}38%{opacity:.95;transform:translateY(-3px) scale(1)}62%,100%{opacity:0;transform:translateY(-7px) scale(.6)}}
+@keyframes ws-brand-reveal{0%,20%{opacity:0;transform:translateX(-7px);filter:blur(2px)}100%{opacity:1;transform:translateX(0);filter:blur(0)}}
+
+.shop-premium-gold{position:relative;border-color:rgba(212,175,55,.48)!important;background:linear-gradient(110deg,rgba(212,175,55,.08) 10%,rgba(255,232,148,.18) 30%,rgba(212,175,55,.08) 50%);background-size:220% 100%;color:#d4af37!important;box-shadow:0 0 0 1px rgba(212,175,55,.08),0 6px 24px rgba(212,175,55,.08);animation:ws-gold-shimmer 6s ease-in-out infinite}
+.shop-premium-gold select{color:#d4af37!important;font-weight:800}
+@keyframes ws-gold-shimmer{0%,72%,100%{background-position:100% 0}86%{background-position:0 0}}
+
+.product-thumb{flex:0 0 auto;display:inline-grid;place-items:center;overflow:hidden;border-radius:9px;border:1px solid rgba(127,127,127,.18);background:rgba(127,127,127,.07);color:rgba(127,127,127,.72)}
+.product-thumb-md{width:42px;height:42px}.product-thumb-sm{width:32px;height:32px}
+.product-thumb img{width:100%;height:100%;object-fit:contain;background:#fff;transition:transform 160ms ease}
+.product-thumb:hover img{transform:scale(1.045)}
+.product-cell-with-image,.pos-product-result-main{display:inline-flex;align-items:center;gap:9px;min-width:0}
+.pos-product-result-main>span:last-child{display:flex;flex-direction:column;min-width:0}.pos-product-result-main small{opacity:.7}
+
+.product-image-editor{display:grid;grid-template-columns:118px minmax(0,1fr);gap:18px;align-items:center;padding:14px;margin-bottom:16px;border:1px solid rgba(127,127,127,.18);border-radius:12px;background:rgba(127,127,127,.035)}
+.product-image-preview{width:118px;height:118px;display:grid;place-items:center;overflow:hidden;border-radius:12px;border:1px dashed rgba(127,127,127,.3);background:rgba(127,127,127,.06);color:rgba(127,127,127,.8);font-size:12px}
+.product-image-preview img{width:100%;height:100%;object-fit:contain;background:#fff}
+
+.nav-item,.primary-button,.secondary-button,.danger-button,.payment-button,.search-result{transition:transform 120ms ease,box-shadow 140ms ease,background-color 140ms ease,border-color 140ms ease,opacity 140ms ease}
+.primary-button:active,.secondary-button:active,.danger-button:active,.payment-button:active{transform:translateY(1px) scale(.99)}
+.search-result:hover{transform:translateX(2px)}
+.purchase-message{animation:ws-message-enter 180ms ease-out}.page-area>div{animation:ws-page-enter 180ms ease-out}
+@keyframes ws-menu-enter{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ws-message-enter{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ws-page-enter{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1080px){.user-menu-trigger-text{display:none}.product-image-editor{grid-template-columns:92px minmax(0,1fr)}.product-image-preview{width:92px;height:92px}}
+@media(prefers-reduced-motion:reduce){.brand-glass,.brand-splash-dot,.brand-copy,.shop-premium-gold,.user-menu-popover,.purchase-message,.page-area>div{animation:none!important}.nav-item,.primary-button,.secondary-button,.danger-button,.payment-button,.search-result,.product-thumb img{transition:none!important}}

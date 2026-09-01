@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChevronRight, PanelLeftClose, PanelLeftOpen, Wine } from "lucide-react";
+import { ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import OfflineStatus from "./OfflineStatus";
 import ShopSelector from "./ShopSelector";
 import UserMenu from "./UserMenu";
-import ThemeToggle from "./ThemeToggle";
+import AnimatedBrand from "./AnimatedBrand";
 import { watchThemePreference } from "../lib/theme";
 import { MAIN_MODULES } from "../config/navigation";
 
@@ -41,10 +41,7 @@ export default function Layout() {
 
   return <div className={collapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
     <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-icon"><Wine size={24}/></div>
-        {!collapsed ? <div><div className="brand-name">WineShop POS</div><div className="brand-subtitle">Retail Management</div></div> : null}
-      </div>
+      <AnimatedBrand collapsed={collapsed}/>
       <nav className="nav-menu" aria-label="Main navigation">
         {MAIN_MODULES.filter((item) => item.roles.includes(profile?.role)).map((item) => {
           const Icon = item.icon;
@@ -64,7 +61,7 @@ export default function Layout() {
           <button className="mobile-sidebar-toggle" onClick={() => setCollapsed((v) => !v)} aria-label="Toggle navigation"><PanelLeftOpen size={19}/></button>
           <div><h1>{meta.title}</h1><div className="breadcrumbs">{meta.crumbs.map((crumb, index) => <span key={`${crumb}-${index}`}>{index ? <ChevronRight size={13}/> : null}{crumb}</span>)}</div></div>
         </div>
-        <div className="topbar-actions"><ShopSelector/><OfflineStatus/><ThemeToggle/><UserMenu/></div>
+        <div className="topbar-actions"><ShopSelector/><OfflineStatus/><UserMenu/></div>
       </header>
       <div className="page-area"><Outlet/></div>
     </main>

@@ -2,6 +2,7 @@ import SortableTable from "../components/ui/SortableTable";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
+import ProductThumb from "../components/ui/ProductThumb";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -95,7 +96,7 @@ export default function Products() {
             <tbody>
               {filtered.map((p) => (
                 <tr key={p.id}>
-                  <td><strong>{p.name}</strong><br/><small>{p.brand} · {p.size}</small></td>
+                  <td><div className="product-cell-with-image"><ProductThumb product={p}/><span><strong>{p.name}</strong><br/><small>{p.brand} · {p.size}</small></span></div></td>
                   <td>{p.barcode || <strong>Missing barcode</strong>}</td>
                   <td>{p.category}</td>
                   <td>{getStock(p.id)}</td>
