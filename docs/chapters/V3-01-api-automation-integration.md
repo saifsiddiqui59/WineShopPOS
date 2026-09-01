@@ -201,3 +201,6 @@ Feature: `7340fac6604d9e0e6281dd7c82070ffb818d4c9f`.
 
 ### Live METRI invoice regression
 The supplied METRI SPIRITS invoice was sent to the real configured Azure Document Intelligence resource. The executor blocks deploy/push unless it verifies 7 rows; cases 20,2,5,13,5,5,2; derived case total 52 matching printed case total 52; product value ₹148,050; Other Discount ₹2,475; Cash Discount ₹1,497; Carrying & Forwarding ₹1,144; Stamp+TCS ₹2,910; final invoice ₹148,132; raw Batch/Lot OCR preserved with review flags when uncertain; reconciliation MATCH.
+
+## V3-05 OCR finalization
+Manual OCR and automation ingestion use the same shared parser. Original evidence is stored before analysis, Azure typed invoice dates are preferred, and every new Analyze begins with fresh supplier/date/product review state.

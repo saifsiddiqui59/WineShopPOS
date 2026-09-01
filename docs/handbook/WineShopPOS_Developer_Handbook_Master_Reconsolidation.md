@@ -987,3 +987,6 @@ Do not treat `prebuilt-invoice.fields.Items` as authoritative when a stronger su
 Purchase/base unit cost storage now preserves numeric(14,6) precision. Posted invoice and line totals remain two-decimal accounting amounts.
 
 FIFO stays lightweight: the oldest tracked lot is SELL FIRST and the derived BOX code can be written on the carton. Full rack/bin management is intentionally deferred.
+
+## V3-05 final reliability contract
+OCR never posts inventory directly; Receive Stock is the purchase-posting boundary. Scanner events are ephemeral and POS cart state is session-scoped by shop. Forward FIFO stock-out allocation records untracked opening balance before tracked receipt lots, then consumes tracked lots oldest-first and snapshots FIFO COGS on new sale items. Admin hard deletion is restricted to non-transactional test products.

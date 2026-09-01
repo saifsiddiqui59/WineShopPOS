@@ -824,3 +824,6 @@ Price/Bottle can contain more than two decimal places because it may be calculat
 
 ### FIFO: what to sell
 Inventory → Ageing & FIFO marks the oldest tracked lot for each product as **SELL FIRST** and shows a **BOX-xxxxxx** code. Write that code on the physical carton/box. A full warehouse rack system is not required.
+
+## Product Cleanup (Admin)
+Settings & Admin -> Product Cleanup can permanently purge only a non-transactional test product after typing DELETE. Products with sales, purchases, returns, transfers, stock-count or transactional stock movement history are blocked and should be deactivated/corrected instead. POS Current Bill survives navigation to Scanner Test; use × Remove or Clear Cart explicitly.
