@@ -357,3 +357,11 @@ Production Owner AI is verified after V3-07 deployment. Health is passing and au
 A fresh authenticated production Owner AI interaction produced qualifying AI/Foundry telemetry in the dedicated Application Insights / Log Analytics observability path. Trace ingestion is now verified end to end.
 
 The next AI milestone is evaluation engineering: golden dataset, deterministic tool/scope/security checks, LLM quality evaluators, release gates, and monitoring/alerting.
+
+## AI-09 golden dataset and quality gates
+
+Production trace ingestion is verified. Evaluation engineering now has a versioned golden dataset and deterministic release-gate policy.
+
+The golden dataset includes positive coverage for every current Owner AI tool and blocker cases for cross-shop leakage, tenant isolation, unauthorized writes, secrets, SQL/system prompt disclosure and prompt injection.
+
+Next execution milestone: AI-10 live/batch evaluation using the pinned dataset and Microsoft Foundry evaluators.

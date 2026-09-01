@@ -73,3 +73,8 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 - `docs/testing/V3_07_AI_PRODUCTION_VERIFICATION.md` — V3-07 production Owner AI deployment and authenticated app-help verification evidence.
 
 - `docs/testing/AI_PRODUCTION_TRACE_INGESTION_VERIFICATION.md` — authenticated production Foundry/Application Insights trace-ingestion evidence.
+
+- `docs/ai/evaluation/golden-owner-assistant-v1.jsonl` — versioned Owner AI golden evaluation dataset.
+- `docs/ai/evaluation/quality-gates-v1.json` — deterministic blockers and product quality thresholds.
+- `docs/ai/evaluation/evaluation-lock-v1.json` — dataset/model/agent/evaluator lock metadata for comparable evaluation runs.
+- `docs/ai/evaluation/README.md` — Owner AI evaluation asset contract.

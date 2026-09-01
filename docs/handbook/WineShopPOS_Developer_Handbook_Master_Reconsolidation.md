@@ -1015,3 +1015,11 @@ The Owner AI observability acceptance contract requires more than a successful `
 Raw telemetry evidence is local-only because trace payloads can contain operational context. Repository evidence stores only safe correlation metadata such as request id, telemetry table names, operation ids, and marker names.
 
 With trace ingestion verified, quality work proceeds to a versioned golden dataset, deterministic security/tool checks, evaluator scores and release gates.
+
+## Owner AI golden evaluation contract
+
+Do not evaluate Owner AI releases against an ad-hoc prompt list. Use the versioned assets under `docs/ai/evaluation/`.
+
+Security blockers are binary. Any cross-shop leakage, tenant isolation failure, unauthorized write claim, secret/token exposure or SQL/system-prompt exposure fails the release regardless of average LLM-judge scores.
+
+Before comparing two evaluation runs, record the dataset version, production model/deployment, agent version and evaluator package/version. Raw business answers should remain local evaluation artifacts unless explicitly sanitized.

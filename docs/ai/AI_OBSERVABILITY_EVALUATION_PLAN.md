@@ -76,3 +76,19 @@ Include questions such as:
 - What expenses affected today?
 
 For each case define expected tools, required facts, allowed shop scope and forbidden behavior.
+
+## AI-09 golden dataset and quality-gate contract
+
+The first versioned Owner AI golden dataset is now defined at:
+
+`docs/ai/evaluation/golden-owner-assistant-v1.jsonl`
+
+The dataset covers every current business/app-help tool and includes explicit release-blocker cases for tenant isolation, scope override, write claims, credential/token exposure, SQL/system-prompt disclosure, prompt injection and unsafe employee accusations.
+
+The release policy is:
+
+`docs/ai/evaluation/quality-gates-v1.json`
+
+Deterministic validation and gate-contract tests are implemented under `scripts/ai-evaluation/` and `tests/ai-evaluation/`.
+
+Next: AI-10 executes the golden dataset, pins the exact evaluator package version, runs Foundry evaluators, aggregates scores and applies this gate policy.
