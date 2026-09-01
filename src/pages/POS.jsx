@@ -5,6 +5,7 @@ import { useScanner } from "../context/ScannerContext";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { findProductByBarcode, normalizeBarcode } from "../lib/barcode";
+import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPreference";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -25,6 +26,7 @@ export default function POS(){
   const[message,setMessage]=useState("Scanner ready");
   const[unknown,setUnknown]=useState("");
   const[busy,setBusy]=useState(false);
+  const[autoPrint,setAutoPrint]=useState(false);
 
   const[customers,setCustomers]=useState([]);
   const[customerId,setCustomerId]=useState("");
@@ -43,6 +45,17 @@ export default function POS(){
   const[quote,setQuote]=useState(null);
 
   const active=products.filter((p)=>p.active);
+
+  useEffect(()=>{
+    setAutoPrint(getReceiptAutoPrint(profile?.shop_id));
+  },[profile?.shop_id]);
+
+  function toggleAutoPrint(){
+    const next=!autoPrint;
+    setAutoPrint(next);
+    setReceiptAutoPrint(profile?.shop_id,next);
+    setMessage(`Automatic receipt print ${next?"enabled":"disabled"} on this device.`);
+  }
 
   useEffect(()=>{
     if(!profile?.shop_id||!products.length||loadedCartKeyRef.current===cartStorageKey)return;
@@ -284,14 +297,14 @@ export default function POS(){
     setQuote(null);
 
     if(r.offline){setMessage(r.message);return}
-    navigate(`/sales/${r.sale.id}?print=1`);
+    navigate(autoPrint?`/sales/${r.sale.id}?print=1`:`/sales/${r.sale.id}`);
   }
 
   const finalDue=quote?Number(quote.external_payment_due||0):manualTotal;
 
   return <div className="pos-page"><div className="page-heading">
       <div><h2>Fast POS Billing</h2><p>Scan → Cart → Rewards → Pay → Print with controlled overrides.</p></div>
-      <div className="button-row"><button type="button" className="secondary-button" onClick={()=>{setCart([]);setMessage("Current bill cleared.");}}>Clear Cart</button><button className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button></div>
+      <div className="button-row"><button type="button" className="secondary-button" onClick={toggleAutoPrint} title="Device setting. OFF still opens the receipt without opening the print dialog.">Auto Print: {autoPrint?"ON":"OFF"}</button><button type="button" className="secondary-button" onClick={()=>{setCart([]);setMessage("Current bill cleared.");}}>Clear Cart</button><button className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button></div>
     </div>
 
     {unknown&&<div className="product-not-found">

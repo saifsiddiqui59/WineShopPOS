@@ -885,3 +885,13 @@ After successful payment, WineShopPOS opens the completed receipt and requests t
 <!-- SALES_SPLIT_LOADER_20260902 -->
 ## If stock reduced but Sales looks empty
 Do not repeat the bill immediately. Open POS & Billing > Sales and click Refresh Sales. Existing completed invoices should load from Supabase. If a read fails, WineShopPOS shows a visible data-refresh notice. Use View to open and print an existing receipt.
+
+<!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
+## Automatic receipt printing
+Use **Auto Print: ON/OFF** in POS Billing or Printer Settings. OFF opens the receipt without automatically opening the print dialog. ON opens both the receipt and print dialog. This preference belongs to the current browser/device.
+
+## Sr. No. and list sorting
+Read-only sortable lists show **Sr. No.**. Ageing and FIFO Rotation Queue also support sorting. FIFO starts in its operational FIFO order until you click a header.
+
+## Shift Actual Cash
+Expected Cash is calculated by WineShopPOS. Actual Cash is the physical cash counted in the drawer. Enter it explicitly before Request Close. If a CLOSE_REQUESTED amount is wrong, use **Update Actual** before **Approve Close**. WineShopPOS recalculates variance and records the correction in the audit trail.

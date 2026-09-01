@@ -1047,3 +1047,9 @@ A committed sale remains authoritative even if another UI refresh domain fails. 
 <!-- SALES_SPLIT_LOADER_20260902 -->
 ## Sales read resilience
 A committed checkout must never be retried solely because the Sales list is stale. Sales history loads sale headers under RLS first, then sale items and payments separately, then merges them in React. Receipt fallback follows the same pattern for one sale ID. Read failures are surfaced to the operator.
+
+<!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
+## Receipt auto-print, list numbering and Shift cash control
+Receipt auto-print is intentionally device-local. Default OFF still routes to the durable receipt screen; ON adds the print request. SortableTable provides presentation-only Sr. No.; it is not a database identifier. FIFO/Ageing keep their default operational ordering until a user explicitly sorts.
+
+Expected Cash is system-calculated. Actual Cash is the physical drawer count and must never be auto-filled from Expected Cash. revise_shift_actual_cash allows the owning cashier or ADMIN/MANAGER to correct a CLOSE_REQUESTED count before approval and writes an audit event. Non-zero variance approval requires explicit confirmation.

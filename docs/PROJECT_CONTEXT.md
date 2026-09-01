@@ -416,3 +416,12 @@ Live Supabase verification before this release showed three completed Royal 21 P
 Live verification confirmed three completed POS sales already exist with sale items/payments and ADMIN RLS can read them. Do not repeat those bills merely because the browser list is empty.
 
 Sales history now loads authorized sale headers first, then sale items and payments separately and merges them in React. Child enrichment failure can no longer erase valid sale headers. Receipt fallback uses the same split direct-read pattern. Sales UI also displays refresh errors instead of silently showing an empty table. No DB migration is required.
+
+<!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
+## 2026-09-02 — Auto Print, list serial numbers, FIFO/Ageing sorting and Shift actual-cash controls
+- Receipt auto-print is a per-device preference, default OFF. Checkout always opens the saved receipt; ON additionally requests the browser print dialog.
+- POS Billing and Printer Settings expose the same Auto Print ON/OFF device preference.
+- Shared SortableTable injects Sr. No. after current sorting. Inventory Ageing and FIFO Rotation Queue now also use SortableTable.
+- Shift Actual Cash is no longer initialized to zero. Cashiers must physically count and explicitly enter Actual Cash before Request Close.
+- CLOSE_REQUESTED Actual Cash can be corrected through audited RPC revise_shift_actual_cash; variance is recalculated before approval. Non-zero variance requires explicit approval confirmation.
+- Live migrations 20260901204924 (sale_items authenticated SELECT) and 20260901211003 (shift actual-cash correction) are now recorded in Git.

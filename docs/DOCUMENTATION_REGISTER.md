@@ -110,3 +110,7 @@ Production deployment recorded for independent Sales refresh, durable receipt lo
 <!-- SALES_SPLIT_LOADER_20260902 -->
 ### 2026-09-02 Sales split-loader hardening
 Updated ShopContext, Sales and Sale Details to replace the fragile embedded Sales read with header/items/payments split reads. No DB migration or Logic App change.
+
+<!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
+### 2026-09-02 POS/Lists/Shift controls
+Updated POS auto-print preference, Printer Settings, SortableTable serial numbering, Inventory Ageing/FIFO, Shift close cash controls, and recorded live Supabase migrations 20260901204924 and 20260901211003.
