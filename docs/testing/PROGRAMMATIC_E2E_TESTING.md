@@ -48,3 +48,9 @@ Owner AI tests/checks
 Playwright read-only E2E
 transactional E2E in isolated test shop
 ```
+
+## V3-07 sequential login resilience gate
+
+The acceptance gate runs five fresh-browser login/no-refresh tests sequentially (`--workers=1 --repeat-each=5`) and then runs the full authenticated read-only suite.
+
+The prior three-worker stress run discovered a backend JWT timing rejection and is retained as diagnostic evidence, not the normal-user acceptance pattern.

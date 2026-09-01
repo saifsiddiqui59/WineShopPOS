@@ -39,3 +39,12 @@ test("invoice inbox help explains friendly workflow", () => {
   assert.match(text,/inventory is not changed/i);
   assert.match(text,/Reopen Review/i);
 });
+
+test("login access help distinguishes verification from disabled", () => {
+  const result = searchAppKnowledge("why does login say account disabled or jwt issued at future?");
+  assert.equal(result.found, true);
+  assert.equal(result.matches[0].route, "/login");
+  const text=JSON.stringify(result.matches[0]);
+  assert.match(text,/explicitly inactive/i);
+  assert.match(text,/verification/i);
+});

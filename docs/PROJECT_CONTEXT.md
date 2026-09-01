@@ -339,3 +339,7 @@ V3-05 consolidates OCR evidence/review reliability, durable invoice routing, POS
 Invoice Inbox now uses business-friendly labels while preserving database workflow values. The actual Owner AI app knowledge source also contains the same semantics. A Playwright read-only E2E smoke framework is included.
 
 This local V3 change does not by itself deploy the production Owner AI Function.
+
+## V3-07 PGRST303 login resilience
+
+The login reliability fix now handles an observed Supabase/PostgREST transient `PGRST303: JWT issued at future` condition with bounded retry/backoff. This is separate from the original frontend null-profile/false-disabled bug.

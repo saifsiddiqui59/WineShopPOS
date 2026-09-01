@@ -19,6 +19,22 @@ const TOPICS = [
     cautions: ["Role and shop authorization still control available actions."]
   },
   {
+    id: "login_access_status",
+    title: "Understand login account status messages",
+    route: "/login",
+    area: "Login & Access",
+    roles: ["ADMIN","MANAGER","CASHIER"],
+    keywords: ["account disabled","shop access suspended","unable to verify account","jwt issued at future","login refresh","cannot login"],
+    summary: "WineShopPOS separates verified disabled/suspended states from temporary account-verification failures.",
+    steps: [
+      "Account Disabled means the verified profile is explicitly inactive.",
+      "Shop Access Suspended means verified shop access is explicitly disallowed.",
+      "Temporary authorization verification failures are retried before an error is shown.",
+      "A valid active user should not need a browser refresh after login."
+    ],
+    cautions: ["Do not describe a transient verification failure as a disabled account."]
+  },
+  {
     id: "receive_bulk_inventory",
     title: "Receive multiple / bulk inventory lines",
     route: "/purchasing/receive",
@@ -330,7 +346,7 @@ export function searchAppKnowledge(question) {
 
   return {
     question: cleaned,
-    knowledge_version: "2026-09-01-v4",
+    knowledge_version: "2026-09-01-v5",
     read_only: true,
     manual_reference: USER_MANUAL_REFERENCE,
     found: selected.length > 0,

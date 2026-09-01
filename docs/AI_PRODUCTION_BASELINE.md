@@ -155,3 +155,7 @@ The repository Owner Assistant knowledge source now contains `invoice_inbox_work
 Knowledge source version: `2026-09-01-v4`.
 
 Committing this source does not automatically alter the running production Azure Function. Runtime AI knowledge changes only after an explicit tested AI Function deployment.
+
+## V3-07 login/access knowledge
+
+Repository Owner AI knowledge distinguishes verified disabled/suspended states from temporary verification failures. The application also retries the observed transient Supabase/PostgREST JWT timing rejection before surfacing an access-verification error.

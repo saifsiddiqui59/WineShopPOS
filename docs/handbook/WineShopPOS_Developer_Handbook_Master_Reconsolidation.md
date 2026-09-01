@@ -999,3 +999,11 @@ Persisted `invoice_ingestions.review_status` values are unchanged. UI mapping:
 Do not rename DB enum values merely to change UI copy. Cancel Review retains evidence and does not change inventory.
 
 Playwright read-only E2E is now repository-supported. Write-path E2E must use an isolated test shop.
+
+## V3-07 Supabase PGRST303 retry
+
+Observed production/test evidence showed successful Supabase Auth password grants followed immediately by intermittent PostgREST `401 PGRST303: JWT issued at future` on `my_profile` or `my_shop_access`. In the same interval the companion RPC could return 200.
+
+The auth bootstrap therefore retries only the precise JWT-timing condition (`PGRST303` or message `JWT issued at future`) with bounded backoff. Both profile and access RPCs are rerun as a pair. Other authorization errors are not hidden or generically retried.
+
+The browser regression uses sequential fresh-browser logins. Parallel same-account workers are not used as the acceptance criterion because they test backend concurrency rather than normal interactive login.

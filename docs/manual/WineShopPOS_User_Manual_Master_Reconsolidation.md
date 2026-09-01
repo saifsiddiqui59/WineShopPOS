@@ -852,3 +852,12 @@ Open **Purchasing → Invoice Inbox** to see retained supplier invoice reviews.
 - **Apply** saves and keeps the Edit Product screen open.
 
 Selling Price remains a manual product-master value. POS blocks zero Selling Price instead of silently substituting MRP.
+
+## Login status troubleshooting — V3-07
+
+WineShopPOS distinguishes a genuine disabled/suspended account from a temporary authorization verification failure.
+
+- **Account Disabled** is shown only for a verified inactive profile.
+- **Shop Access Suspended** is shown only for verified disallowed shop access.
+- A transient backend JWT timing error is retried automatically before the user sees an error.
+- A valid active account should enter the application without a browser refresh.
