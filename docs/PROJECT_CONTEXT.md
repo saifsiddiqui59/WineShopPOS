@@ -347,3 +347,7 @@ The login reliability fix now handles an observed Supabase/PostgREST transient `
 ## V3-07 hosted preview verification — 20260901T140823Z
 
 V3-07 passed five sequential hosted login/no-refresh checks and the full hosted read-only Playwright suite on the V3 preview. Production promotion remains a separate explicit step.
+
+## V3-07 production AI complete — 20260901T143945Z
+
+Production Owner AI is verified after V3-07 deployment. Health is passing and authenticated SHOP-scope app-help successfully uses the `/login` knowledge route. The verification continuation fixed only a Git Bash CRLF issue in its local Azure-CLI parsing; no database or local-main mutation occurred.

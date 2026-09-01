@@ -159,3 +159,11 @@ Committing this source does not automatically alter the running production Azure
 ## V3-07 login/access knowledge
 
 Repository Owner AI knowledge distinguishes verified disabled/suspended states from temporary verification failures. The application also retries the observed transient Supabase/PostgREST JWT timing rejection before surfacing an access-verification error.
+
+## V3-07 Owner AI production verification — 20260901T143945Z
+
+The Owner AI V3-07 Function package is live on `wineshoppos-ai-1a61d5885c`. Production health passed and an authenticated SHOP-scope chat successfully invoked `get_app_help` with source `/login`.
+
+The earlier authenticated-smoke interruption was a Git Bash CRLF parsing issue in the verification executor, not an Azure Function runtime failure. The continuation normalized Azure CLI output and completed the authenticated production verification.
+
+V3-06 Invoice Inbox workflow knowledge and V3-07 login/access-status knowledge are now verified live in production.

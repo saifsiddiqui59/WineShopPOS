@@ -69,3 +69,5 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 - `docs/testing/PROGRAMMATIC_E2E_TESTING.md` — Playwright read-only E2E framework and safe transactional E2E design.
 
 - `docs/testing/V3_07_LOGIN_E2E_VERIFICATION.md` — hosted V3 preview evidence for V3-07 login reliability and Playwright E2E.
+
+- `docs/testing/V3_07_AI_PRODUCTION_VERIFICATION.md` — V3-07 production Owner AI deployment and authenticated app-help verification evidence.
