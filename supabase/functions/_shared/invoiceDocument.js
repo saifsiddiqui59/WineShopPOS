@@ -20,6 +20,54 @@ function whole(value) {
   const rounded = Math.round(n);
   return Math.abs(n - rounded) <= 0.08 ? rounded : null;
 }
+
+function validIsoDate(value) {
+  const text = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const [year, month, day] = text.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.getUTCFullYear() === year && d.getUTCMonth() + 1 === month && d.getUTCDate() === day;
+}
+
+function toIsoDate(parts) {
+  let [a, b, c] = parts.map(Number);
+  let year;
+  let month;
+  let day;
+  if (String(parts[0]).length === 4) {
+    year = a;
+    month = b;
+    day = c;
+  } else {
+    day = a;
+    month = b;
+    year = c < 100 ? 2000 + c : c;
+  }
+  const iso = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return validIsoDate(iso) ? iso : null;
+}
+
+function invoiceDateValue(field) {
+  const raw = String(field?.content ?? field?.valueString ?? "").trim();
+  const typed = String(field?.valueDate || "").trim();
+  if (validIsoDate(typed)) {
+    return { value: typed, raw, reviewRequired: false, source: "AZURE_TYPED_DATE" };
+  }
+  const matches = [...raw.matchAll(/\b(\d{1,4})[-/.](\d{1,2})[-/.](\d{1,4})\b/g)]
+    .map((match) => toIsoDate([match[1], match[2], match[3]]))
+    .filter(Boolean);
+  const unique = [...new Set(matches)];
+  if (unique.length === 1) {
+    return { value: unique[0], raw, reviewRequired: false, source: "RAW_SINGLE_DATE" };
+  }
+  return {
+    value: "",
+    raw,
+    reviewRequired: true,
+    source: unique.length > 1 ? "RAW_AMBIGUOUS_DATE" : "DATE_NOT_RESOLVED",
+  };
+}
+
 function headerRole(value) {
   const n = normalize(value);
   const c = compact(value);
@@ -34,6 +82,7 @@ function headerRole(value) {
     c === "qtybtl" || c === "qtybottle" || c === "qtybottles" ||
     c === "nobtl" || c === "nobottle" || c === "btl" || c === "bottles"
   ) return "bottles";
+  if (c === "quantity" || c === "qty" || c === "totalquantity" || c === "totalqty") return "quantity";
   if (c.includes("ratecs") || c.includes("ratecase") || c.includes("ratepercase")) return "rateCase";
   if (n === "rate per" || n === "rate" || c === "unitrate" || c === "rateper") return "rate";
   if (n === "amount" || n === "amt" || c === "linetotal" || c === "netamount") return "amount";
@@ -95,9 +144,27 @@ function findHeader(table) {
     }
     const rateCol = roles.rateCase ?? roles.rate;
     const itemAnchor = combinedMrpDescriptionCol ?? roles.description ?? roles.mrp;
-    const required = roles.batch != null && roles.packing != null && rateCol != null && roles.amount != null && itemAnchor != null;
+    const quantitySignal =
+      roles.packing != null || roles.cases != null || roles.bottles != null || roles.quantity != null;
+    const required = rateCol != null && roles.amount != null && itemAnchor != null && quantitySignal;
     if (!required) continue;
-    const score = 5 + (roles.cases != null ? 1 : 0) + (roles.bottles != null ? 1 : 0) + (roles.mrp != null ? 1 : 0) + (combinedMrpDescriptionCol != null ? 1 : 0);
+
+    const structuralCols = [
+      roles.batch, roles.packing, roles.cases, roles.bottles, roles.quantity,
+      roles.rateCase, roles.rate, roles.amount,
+    ].filter((col) => Number.isFinite(Number(col)) && Number(col) > itemAnchor).map(Number);
+    const firstStructural = structuralCols.length ? Math.min(...structuralCols) : itemAnchor + 1;
+    const itemEndCol = Math.max(itemAnchor, firstStructural - 1);
+
+    const score =
+      4 +
+      (roles.batch != null ? 1 : 0) +
+      (roles.packing != null ? 1 : 0) +
+      (roles.cases != null ? 2 : 0) +
+      (roles.bottles != null ? 1 : 0) +
+      (roles.quantity != null ? 1 : 0) +
+      (roles.mrp != null ? 1 : 0) +
+      (combinedMrpDescriptionCol != null ? 1 : 0);
     if (!best || score > best.score) {
       best = {
         rowIndex,
@@ -105,7 +172,7 @@ function findHeader(table) {
         rateCol,
         combinedMrpDescriptionCol,
         itemStartCol: Math.min(itemAnchor, roles.mrp ?? itemAnchor, roles.description ?? itemAnchor),
-        itemEndCol: roles.batch - 1,
+        itemEndCol,
         score,
       };
     }
@@ -164,6 +231,7 @@ function parseTable(table) {
     const batchCell = getCell(cells, ri, header.roles.batch);
     const caseCell = getCell(cells, ri, header.roles.cases);
     const bottleCell = getCell(cells, ri, header.roles.bottles);
+    const quantityCell = getCell(cells, ri, header.roles.quantity);
     const rateCell = getCell(cells, ri, header.rateCol);
     const amountCell = getCell(cells, ri, header.roles.amount);
     const explicitMrpCell = getCell(cells, ri, header.roles.mrp);
@@ -188,7 +256,7 @@ function parseTable(table) {
         .map((c) => String(c.content || "").trim())
         .filter(Boolean);
       description = [split.descriptionRemainder, ...remaining].filter(Boolean).join(" ").trim();
-    } else if (header.roles.mrp != null && header.roles.description != null) {
+    } else if (header.roles.description != null) {
       description = String(getCell(cells, ri, header.roles.description)?.content || "").trim();
     }
 
@@ -201,12 +269,27 @@ function parseTable(table) {
     const derivedCases = roundedRatio > 0 && roundedRatio <= 1000 && Math.abs(ratio - roundedRatio) <= 0.08 ? roundedRatio : null;
     const caseCount = derivedCases ?? directCases;
     if (!(caseCount > 0)) continue;
-    if (!(amount > 0) && caseCount > 0 && ratePerCase > 0) amount = Number((caseCount * ratePerCase).toFixed(2));
 
-    const looseBottles = whole(bottleCell?.content) || 0;
+    const directBottleCount = whole(bottleCell?.content);
+    const quantityBottleCount = whole(quantityCell?.content);
+    const printedBottleQuantity =
+      Number.isInteger(quantityBottleCount) && quantityBottleCount > caseCount
+        ? quantityBottleCount
+        : Number.isInteger(directBottleCount) && directBottleCount > caseCount
+          ? directBottleCount
+          : null;
+    const perCaseRatio = printedBottleQuantity && caseCount > 0 ? printedBottleQuantity / caseCount : null;
+    const unitsPerCaseHint =
+      Number.isFinite(perCaseRatio) &&
+      Math.abs(perCaseRatio - Math.round(perCaseRatio)) <= 0.02 &&
+      Math.round(perCaseRatio) >= 1 &&
+      Math.round(perCaseRatio) <= 100
+        ? Math.round(perCaseRatio)
+        : null;
+
     const packText = String(packCell?.content || "").trim();
     const batchNumber = String(batchCell?.content || "").trim();
-    const confidences = [packCell, batchCell, caseCell, bottleCell, rateCell, amountCell, explicitMrpCell]
+    const confidences = [packCell, batchCell, caseCell, bottleCell, quantityCell, rateCell, amountCell, explicitMrpCell]
       .map((cell) => Number(cell?.confidence))
       .filter(Number.isFinite);
 
@@ -222,13 +305,15 @@ function parseTable(table) {
       mrpRaw,
       mrpReviewRequired,
       batchNumber,
-      batchReviewRequired: !plausibleBatch(batchNumber, batchCell?.confidence),
+      batchReviewRequired: batchNumber ? !plausibleBatch(batchNumber, batchCell?.confidence) : false,
       expiryDate: "",
       taxAmount: null,
       caseCount,
       caseCountSource: derivedCases != null ? "DERIVED_AMOUNT_RATE" : "OCR_CASE_COLUMN",
       directCaseCount: directCases,
-      looseBottles,
+      looseBottles: 0,
+      printedBottleQuantity,
+      unitsPerCaseHint,
       packing: packText,
       confidence: confidences.length ? Math.min(...confidences) : null,
       extractionSource: "SEMANTIC_TABLE",
@@ -236,12 +321,16 @@ function parseTable(table) {
   }
 
   const derivedCaseTotal = output.reduce((sum, item) => sum + Number(item.caseCount || 0), 0);
+  const derivedBottleTotal = output.every((item) => Number(item.printedBottleQuantity || 0) > 0)
+    ? output.reduce((sum, item) => sum + Number(item.printedBottleQuantity || 0), 0)
+    : null;
   const printedCaseTotal = findPrintedCaseTotal(table, header, derivedCaseTotal);
   return {
     items: output,
     meta: {
       headerRow: header.rowIndex,
       derivedCaseTotal,
+      derivedBottleTotal,
       printedCaseTotal,
       caseTotalMatches: printedCaseTotal == null ? null : printedCaseTotal === derivedCaseTotal,
     },
@@ -305,6 +394,8 @@ export function normalizeDocumentIntelligenceResult(result) {
       taxAmount: numberValue(item.Tax),
       caseCount: null,
       looseBottles: 0,
+      printedBottleQuantity: null,
+      unitsPerCaseHint: null,
       packing: "",
       confidence: row?.confidence ?? item?.Description?.confidence ?? null,
       extractionSource: "PREBUILT_INVOICE",
@@ -314,13 +405,17 @@ export function normalizeDocumentIntelligenceResult(result) {
   const semantic = semanticTableExtraction(result);
   const items = mergeTableHints(rawItems, semantic.items);
   const financial = extractInvoiceFinancials(result, fields, items);
+  const invoiceDate = invoiceDateValue(fields.InvoiceDate);
   return {
     supplierName: String(fieldContent(fields.VendorName) || ""),
     vendorAddress: String(fieldContent(fields.VendorAddress) || ""),
     vendorTaxId: String(fieldContent(fields.VendorTaxId) || ""),
     paymentTerm: String(fieldContent(fields.PaymentTerm) || ""),
     invoiceNumber: String(fieldContent(fields.InvoiceId) || ""),
-    invoiceDate: String(fieldContent(fields.InvoiceDate) || ""),
+    invoiceDate: invoiceDate.value,
+    invoiceDateRaw: invoiceDate.raw,
+    invoiceDateReviewRequired: invoiceDate.reviewRequired,
+    invoiceDateSource: invoiceDate.source,
     ...financial,
     items,
     ocrQuality: {
@@ -330,6 +425,7 @@ export function normalizeDocumentIntelligenceResult(result) {
       genericItemLineCount: rawItems.length,
       extractionMode: semantic.items.length >= 2 ? "SEMANTIC_TABLE_FIRST" : "PREBUILT_INVOICE_FALLBACK",
       derivedCaseTotal: semantic.meta?.derivedCaseTotal ?? null,
+      derivedBottleTotal: semantic.meta?.derivedBottleTotal ?? null,
       printedCaseTotal: semantic.meta?.printedCaseTotal ?? null,
       caseTotalMatches: semantic.meta?.caseTotalMatches ?? null,
     },

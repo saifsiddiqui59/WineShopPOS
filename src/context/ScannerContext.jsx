@@ -4,14 +4,16 @@ import { normalizeBarcode, scannerSequenceLooksValid } from "../lib/barcode";
 const ScannerContext = createContext(null);
 const SETTINGS_KEY = "wineshop_scanner_settings_v1";
 
-const defaults = {
+export const SCANNER_DEFAULTS = {
   enabled: true,
   minLength: 6,
   maxAverageGapMs: 100,
   resetGapMs: 400,
+  suffixlessIdleMs: 160,
   successFrequency: 1046,
   errorFrequency: 220,
 };
+const defaults = SCANNER_DEFAULTS;
 
 function loadSettings() {
   try {
@@ -79,6 +81,7 @@ export function ScannerProvider({ children }) {
   const times = useRef([]);
   const initialFocusSnapshot = useRef(null);
   const lastKeyAt = useRef(0);
+  const idleTimer = useRef(null);
 
   function saveSettings(next) {
     const merged = { ...settings, ...next };
@@ -96,10 +99,53 @@ export function ScannerProvider({ children }) {
 
   useEffect(() => {
     function reset() {
+      if (idleTimer.current) window.clearTimeout(idleTimer.current);
+      idleTimer.current = null;
       buffer.current = [];
       times.current = [];
       initialFocusSnapshot.current = null;
       lastKeyAt.current = 0;
+    }
+
+    function finalizeScan(event = null) {
+      if (!buffer.current.length) return false;
+      const rawChars = buffer.current.join("");
+      const chars = normalizeBarcode(rawChars);
+      const gaps = times.current.slice(1).map((t, i) => t - times.current[i]);
+      const avgGap = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 999;
+      const scannerLike = scannerSequenceLooksValid(rawChars, times.current, settings);
+
+      if (!scannerLike) {
+        reset();
+        return false;
+      }
+
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+
+      const snapshot = initialFocusSnapshot.current;
+      const directCapture = snapshot?.element?.dataset?.scannerCapture === "barcode";
+
+      if (directCapture && snapshot?.element?.isConnected) {
+        const el = snapshot.element;
+        const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value")?.set;
+        if (setter) setter.call(el, chars);
+        else el.value = chars;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      } else {
+        restoreEditable(snapshot);
+      }
+
+      setLastScan({
+        id: crypto.randomUUID(),
+        barcode: chars,
+        at: new Date().toISOString(),
+        averageGapMs: Math.round(avgGap),
+        length: chars.length,
+      });
+      requestAnimationFrame(() => snapshot?.element?.focus?.());
+      reset();
+      return true;
     }
 
     function onKeyDown(event) {
@@ -111,43 +157,7 @@ export function ScannerProvider({ children }) {
 
       if (event.key === "Enter" || event.key === "Tab") {
         if (!buffer.current.length) return;
-        const rawChars = buffer.current.join("");
-        const chars = normalizeBarcode(rawChars);
-        const gaps = times.current.slice(1).map((t, i) => t - times.current[i]);
-        const avgGap = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 999;
-        const scannerLike = scannerSequenceLooksValid(rawChars, times.current, settings);
-
-        if (scannerLike) {
-          event.preventDefault();
-          event.stopPropagation();
-
-          const snapshot = initialFocusSnapshot.current;
-          const directCapture =
-            snapshot?.element?.dataset?.scannerCapture === "barcode";
-
-          if (directCapture && snapshot?.element?.isConnected) {
-            const el = snapshot.element;
-            const setter = Object.getOwnPropertyDescriptor(
-              Object.getPrototypeOf(el),
-              "value",
-            )?.set;
-            if (setter) setter.call(el, chars);
-            else el.value = chars;
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-          } else {
-            restoreEditable(snapshot);
-          }
-
-          setLastScan({
-            id: crypto.randomUUID(),
-            barcode: chars,
-            at: new Date().toISOString(),
-            averageGapMs: Math.round(avgGap),
-            length: chars.length,
-          });
-          requestAnimationFrame(() => snapshot?.element?.focus?.());
-        }
-        reset();
+        finalizeScan(event);
         return;
       }
 
@@ -168,11 +178,27 @@ export function ScannerProvider({ children }) {
           event.stopPropagation();
         }
       }
+
+      if (idleTimer.current) window.clearTimeout(idleTimer.current);
+      idleTimer.current = window.setTimeout(
+        () => finalizeScan(null),
+        Math.max(80, Number(settings.suffixlessIdleMs || 160)),
+      );
     }
 
     window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
+    return () => {
+      if (idleTimer.current) window.clearTimeout(idleTimer.current);
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
   }, [settings]);
+
+  // V3_05_SCAN_TTL: scanner events are ephemeral; pages must not replay old scans.
+  useEffect(() => {
+    if (!lastScan?.id) return undefined;
+    const timer = window.setTimeout(() => setLastScan(null), 1200);
+    return () => window.clearTimeout(timer);
+  }, [lastScan?.id]);
 
   const value = useMemo(
     () => ({ settings, saveSettings, lastScan, successBeep, errorBeep }),

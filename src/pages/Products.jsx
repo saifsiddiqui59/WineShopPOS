@@ -74,6 +74,7 @@ export default function Products() {
           ))}
         </div>
         <input
+          data-scanner-capture="barcode"
           placeholder="Search name, barcode, SKU, brand..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}

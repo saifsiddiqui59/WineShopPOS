@@ -201,6 +201,7 @@ export default function InvoiceInbox(){
             <td>{row.purchase_id||"Not received"}</td>
             <td><div className="button-row">
               <button type="button" className="secondary-button" onClick={()=>viewOriginal(row)}>View Original</button>
+              {row.purchase_id?<button type="button" className="secondary-button" onClick={()=>navigate(`/purchasing/receipts/${row.purchase_id}`)}>View Receipt</button>:null}
               {(row.normalized_invoice||row.review_draft)&&!["RECEIVED","DUPLICATE","POSSIBLE_DUPLICATE","CANCELLED"].includes(row.review_status)?
                 <button type="button" className="secondary-button" onClick={()=>reviewInvoice(row)}>
                   {row.review_draft?"Resume Draft":"Review OCR"}

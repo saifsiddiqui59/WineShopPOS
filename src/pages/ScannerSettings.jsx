@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useScanner } from "../context/ScannerContext";
+import { SCANNER_DEFAULTS, useScanner } from "../context/ScannerContext";
 
 export default function ScannerSettings() {
   const { settings, saveSettings, lastScan, successBeep, errorBeep } = useScanner();
@@ -20,8 +20,9 @@ export default function ScannerSettings() {
             <label>Minimum barcode length<input type="number" min="3" max="40" value={draft.minLength} onChange={(e)=>setDraft({...draft,minLength:Number(e.target.value)})}/></label>
             <label>Maximum average key gap (ms)<input type="number" min="10" max="150" value={draft.maxAverageGapMs} onChange={(e)=>setDraft({...draft,maxAverageGapMs:Number(e.target.value)})}/></label>
             <label>Sequence reset gap (ms)<input type="number" min="80" max="1000" value={draft.resetGapMs} onChange={(e)=>setDraft({...draft,resetGapMs:Number(e.target.value)})}/></label>
+            <label>Suffixless scan idle (ms)<input type="number" min="80" max="500" value={draft.suffixlessIdleMs ?? 160} onChange={(e)=>setDraft({...draft,suffixlessIdleMs:Number(e.target.value)})}/></label>
           </div>
-          <br/><button className="primary-button" onClick={()=>saveSettings(draft)}>Save Scanner Settings</button>
+          <br/><div className="button-row"><button className="primary-button" onClick={()=>saveSettings(draft)}>Save Scanner Settings</button><button className="secondary-button" onClick={()=>{setDraft(SCANNER_DEFAULTS);saveSettings(SCANNER_DEFAULTS);}}>Reset Scanner Defaults</button></div>
         </section>
         <section className="panel scanner-test-zone">
           <h3>Live Test</h3>
@@ -30,7 +31,7 @@ export default function ScannerSettings() {
           <div className="button-row"><button className="secondary-button" onClick={successBeep}>Test success beep</button><button className="secondary-button" onClick={errorBeep}>Test error beep</button></div>
         </section>
       </div>
-      <section className="panel" style={{marginTop:16}}><h3>Last 10 scans</h3><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Barcode</th><th>Time</th><th>Avg gap</th></tr></thead><tbody>{history.map((s)=><tr key={s.id}><td>{s.barcode}</td><td>{new Date(s.at).toLocaleTimeString()}</td><td>{s.averageGapMs} ms</td></tr>)}</tbody></table></div></section>
+      <section className="panel" style={{marginTop:16}}><h3>Temporary Scan History</h3><p className="muted-text">Temporary diagnostic history only; it clears when this screen unmounts.</p><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Barcode</th><th>Time</th><th>Avg gap</th></tr></thead><tbody>{history.map((s)=><tr key={s.id}><td>{s.barcode}</td><td>{new Date(s.at).toLocaleTimeString()}</td><td>{s.averageGapMs} ms</td></tr>)}</tbody></table></div></section>
     </div>
   );
 }

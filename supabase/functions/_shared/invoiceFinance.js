@@ -53,14 +53,41 @@ function normalizeText(value) {
 }
 
 function normalizeLabelText(value) {
-  return normalizeText(value).replace(/\d+/g, " ").replace(/\s+/g, " ").trim();
+  return normalizeText(value)
+    .replace(/\d+/g, " ")
+    .replace(/([a-z])\1+/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function editDistance(a, b) {
+  const aa = String(a || "");
+  const bb = String(b || "");
+  const row = Array.from({ length: bb.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= aa.length; i += 1) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= bb.length; j += 1) {
+      const saved = row[j];
+      row[j] = Math.min(
+        row[j] + 1,
+        row[j - 1] + 1,
+        prev + (aa[i - 1] === bb[j - 1] ? 0 : 1),
+      );
+      prev = saved;
+    }
+  }
+  return row[bb.length];
 }
 
 function labelMatches(value, aliases) {
   const label = normalizeLabelText(value);
   return aliases.some((alias) => {
     const a = normalizeLabelText(alias);
-    return label === a || label.startsWith(`${a} `) || label.endsWith(` ${a}`) || label.includes(` ${a} `);
+    if (!a || !label) return false;
+    if (label === a || label.startsWith(`${a} `) || label.endsWith(` ${a}`) || label.includes(` ${a} `)) return true;
+    const maxDistance = Math.max(1, Math.floor(Math.max(label.length, a.length) * 0.08));
+    return Math.min(label.length, a.length) >= 5 && editDistance(label, a) <= maxDistance;
   });
 }
 
@@ -234,8 +261,52 @@ function findTableLabeledAmount(analyzeResult, aliases) {
   return null;
 }
 
+function findKeyValueLabeledAmount(analyzeResult, aliases) {
+  const pairs = analyzeResult?.analyzeResult?.keyValuePairs || [];
+  for (const pair of pairs) {
+    const keyText = String(pair?.key?.content || "");
+    if (!labelMatches(keyText, aliases)) continue;
+    const valueText = String(pair?.value?.content || "");
+    const value = parseMoneyText(valueText);
+    if (!Number.isFinite(value)) continue;
+    const region = pair?.key?.boundingRegions?.[0] || pair?.value?.boundingRegions?.[0];
+    const pageIndex = Math.max(0, Number(region?.pageNumber || 1) - 1);
+    const b = bounds(region?.polygon || []) || {};
+    return {
+      value,
+      label: keyText,
+      evidence: `${keyText} -> ${valueText}`,
+      pageIndex,
+      y: Number.isFinite(b.y) ? b.y : 0,
+      source: "key-value",
+    };
+  }
+  return null;
+}
+
+function tableHasMatchingLabel(analyzeResult, aliases) {
+  for (const table of analyzeResult?.analyzeResult?.tables || []) {
+    for (const cell of table?.cells || []) {
+      if (labelMatches(cell?.content || "", aliases)) return true;
+    }
+  }
+  return false;
+}
+
 function findLabeledAmount(analyzeResult, evidence, aliases) {
-  return findTableLabeledAmount(analyzeResult, aliases) || findSpatialLabeledAmount(evidence, aliases);
+  const tableMatch = findTableLabeledAmount(analyzeResult, aliases);
+  if (tableMatch) return tableMatch;
+
+  const keyValueMatch = findKeyValueLabeledAmount(analyzeResult, aliases);
+  if (keyValueMatch) return keyValueMatch;
+
+  // A structured table label with no row amount is meaningful evidence that
+  // the field is blank. Do not borrow a neighboring finance row's amount.
+  if (tableHasMatchingLabel(analyzeResult, aliases)) return null;
+
+  // Keep spatial fallback for invoices whose finance summary exists only as
+  // ordinary page lines (for example older supplier layouts).
+  return findSpatialLabeledAmount(evidence, aliases);
 }
 
 function findPrintedTotal(evidence, summaryEvidence, baseValue, expectedValue) {

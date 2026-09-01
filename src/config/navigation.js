@@ -74,5 +74,6 @@ export const MODULE_TABS = {
     { path: "/admin/backup", label: "Backup & Recovery", roles: ["ADMIN"] },
     { path: "/admin/audit", label: "Audit Log", roles: ["ADMIN"] },
     { path: "/admin/settings", label: "Shop Settings", roles: ["ADMIN"] },
+    { path: "/admin/product-cleanup", label: "Product Cleanup", roles: ["ADMIN"] },
   ],
 };

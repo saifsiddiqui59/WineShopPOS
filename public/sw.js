@@ -1,4 +1,4 @@
-const CACHE = "wineshoppos-shell-v16";
+const CACHE = "wineshoppos-shell-v18-v3-05-final";
 const SHELL = ["./", "./index.html"];
 
 self.addEventListener("install", (event) => {

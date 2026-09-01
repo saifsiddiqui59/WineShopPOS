@@ -5,6 +5,7 @@ import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import SupplierEditor from "../components/SupplierEditor";
 import { storeManualInvoice } from "../lib/invoiceClient";
+import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
 
 const STRONG_MATCH = 0.90;
 const REVIEW_KEY = "wineshop_ocr_review_state";
@@ -79,26 +80,6 @@ function autoInvoiceReference({ invoiceDate, ingestionId, sourceFileName }) {
   return `AUTO-${date}-${shortHash(ingestionId || sourceFileName || "OCR").slice(0, 8)}`;
 }
 
-function inferSizeMl(description) {
-  const matches = [...String(description || "").matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
-  if (!matches.length) return 0;
-  const [, raw, unit] = matches[matches.length - 1];
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) return 0;
-  if (unit.toLowerCase() === "l") return Math.round(value * 1000);
-  if (unit.toLowerCase() === "cl") return Math.round(value * 10);
-  return Math.round(value);
-}
-
-function inferUnitsPerCase(item, product) {
-  if (Number(product?.unitsPerCase) > 0) return Number(product.unitsPerCase);
-  const text = String(item?.description || "").toLowerCase();
-  const size = inferSizeMl(text);
-  if (/\b(can|cans)\b/.test(text) && size > 0 && size <= 500) return 24;
-  if (/\b(beer|lager|witbier|stout)\b/.test(text) && size > 0 && size <= 500) return 24;
-  return 12;
-}
-
 function nearWhole(value, tolerance = 0.06) {
   if (!Number.isFinite(value) || value <= 0) return null;
   const rounded = Math.round(value);
@@ -109,7 +90,8 @@ function interpretQuantity(item, product) {
   const rawQuantity = Math.max(0, Number(item?.quantity ?? 0));
   const amount = Math.max(0, Number(item?.amount || 0));
   const explicitUnitPrice = Math.max(0, Number(item?.unitPrice || 0));
-  const unitsPerCase = Math.max(1, inferUnitsPerCase(item, product));
+  const packResolution = resolveInvoiceUnitsPerCase(item, product);
+  const unitsPerCase = Math.max(1, Number(packResolution.value || 1));
   const unitText = String(item?.unitText || "").toLowerCase();
   const caseUnit = /\b(case|cases|cs|ctn|carton|cartons)\b/.test(unitText);
 
@@ -235,6 +217,12 @@ function interpretQuantity(item, product) {
       "OCR produced an unsafe/implausible quantity. WineShopPOS did not calculate stock; enter the reviewed case/bottle quantity manually.";
   }
 
+  if (packResolution.conflict) {
+    interpretation += ` PACK CONFLICT: invoice evidence suggests ${packResolution.invoiceValue} bottles/case while Product Master has ${packResolution.productValue}. Invoice evidence is used until a manager confirms the line.`;
+  } else if (packResolution.source === "PRINTED_BOTTLE_TOTAL") {
+    interpretation += " Bottles/Case is verified from the invoice's printed bottle quantity.";
+  }
+
   return {
     caseCount,
     unitsPerCase,
@@ -244,6 +232,11 @@ function interpretQuantity(item, product) {
     ocrUnitPrice,
     purchasePrice: Number.isFinite(purchasePrice) ? Number(purchasePrice.toFixed(6)) : 0,
     interpretation,
+    unitsPerCaseSource: packResolution.source,
+    invoiceUnitsPerCase: packResolution.invoiceValue,
+    productUnitsPerCase: packResolution.productValue,
+    packConflict: packResolution.conflict,
+    packReviewRequired: packResolution.reviewRequired,
   };
 }
 
@@ -414,6 +407,12 @@ export default function AutomationHub() {
 
   async function analyze() {
     if (!file) return;
+    // V3_05_FRESH_ANALYZE_RESET
+    sessionStorage.removeItem(REVIEW_KEY);
+    setResult(null);setMatches({});setResolution({});
+    setSupplierId("");setConfirmedSupplier(null);
+    setIngestionId(null);setSourceFileName("");
+    setCharges(emptyCharges());setFinanceWarning(null);
     if (file.size > 4 * 1024 * 1024) {
       setMessage(
         "OCR accepts files up to 4 MB in the current configuration. Compress or split this invoice first.",
@@ -428,25 +427,39 @@ export default function AutomationHub() {
     setMatches({});
     setResolution({});
     setCharges(emptyCharges());
+    setResult(null);
+    setIngestionId(null);
 
     try {
       const contentBase64 = await toBase64(file);
       let nextIngestionId = null;
-      let storageWarning = "";
       let duplicateStatus = "";
-      setIngestionId(null);
       setSourceFileName(file.name || "");
-      try {
-        const stored = await storeManualInvoice({ token: session?.access_token, fileName: file.name, contentType: file.type || "application/octet-stream", contentBase64 });
-        if (stored?.duplicate) {
-          setMessage(`Duplicate invoice file detected. Existing status: ${stored.existing_status || "UNKNOWN"}. Open Invoice Inbox instead of receiving it again.`);
+
+      const stored = await storeManualInvoice({
+        token: session?.access_token,
+        fileName: file.name,
+        contentType: file.type || "application/octet-stream",
+        contentBase64,
+      });
+
+      if (stored?.duplicate) {
+        const existingStatus = String(stored.existing_status || "UNKNOWN");
+        const recoverable = ["NEEDS_REVIEW", "OCR_FAILED", "FAILED"].includes(existingStatus);
+        if (!recoverable) {
+          setMessage(`Duplicate invoice file detected. Existing status: ${existingStatus}. Open Invoice Inbox instead of receiving it again.`);
           return;
         }
         nextIngestionId = stored?.ingestion_id || null;
-        setIngestionId(nextIngestionId);
-      } catch (storageError) {
-        storageWarning = ` Original invoice storage is temporarily unavailable (${storageError?.message || "storage error"}). Existing OCR will continue.`;
+        duplicateStatus = existingStatus;
+      } else {
+        nextIngestionId = stored?.ingestion_id || null;
       }
+
+      if (!nextIngestionId) {
+        throw new Error("Original invoice was not safely stored. OCR is blocked so stock cannot be received without audit evidence.");
+      }
+      setIngestionId(nextIngestionId);
       const { data, error } = await supabase.functions.invoke("ocr-invoice", { body: { contentBase64, contentType: file.type || "application/octet-stream" } });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.message || "OCR failed");
@@ -454,8 +467,10 @@ export default function AutomationHub() {
       setCharges(chargesFromInvoice(data.invoice));
       if (nextIngestionId) {
         const { data: metadata, error: metadataError } = await supabase.rpc("invoice_record_ocr_result", { p_ingestion_id: nextIngestionId, p_supplier_name: data.invoice?.supplierName || null, p_invoice_number: data.invoice?.invoiceNumber || null, p_invoice_date: data.invoice?.invoiceDate || null, p_total: data.invoice?.total ?? null, p_normalized_invoice: data.invoice });
-        if (metadataError) storageWarning += ` Invoice history metadata could not be updated (${metadataError.message}).`;
-        else duplicateStatus = metadata?.review_status || "";
+        if (metadataError) {
+          throw new Error(`Original invoice is stored, but OCR history metadata could not be updated (${metadataError.message}). Receive Stock is blocked until the audit record is complete.`);
+        }
+        duplicateStatus = metadata?.review_status || duplicateStatus || "";
       }
 
       const ranked = suppliers
@@ -475,8 +490,8 @@ export default function AutomationHub() {
 
       setMessage(
         duplicateStatus === "POSSIBLE_DUPLICATE"
-          ? `OCR complete, but this looks like a possible duplicate. Resolve it in Invoice Inbox before Receive Stock.${storageWarning}`
-          : `OCR complete. Confirm the supplier, then resolve and confirm every invoice line before stock receipt.${storageWarning}`,
+          ? "OCR complete, but this looks like a possible duplicate. Resolve it in Invoice Inbox before Receive Stock."
+          : "Original invoice saved. OCR complete. Confirm invoice date, supplier, products and quantities before stock receipt.",
       );
     } catch (error) {
       setMessage(error.message || String(error));
@@ -534,8 +549,14 @@ export default function AutomationHub() {
       };
 
       if (productId) {
-        row.unitsPerCase = Number(product?.unitsPerCase || row.unitsPerCase || 12);
-        if (row.priceBasis === "CASE") {
+        const packResolution = resolveInvoiceUnitsPerCase(result?.items?.[index] || {}, product);
+        row.unitsPerCase = Math.max(1, Number(packResolution.value || row.unitsPerCase || 12));
+        row.unitsPerCaseSource = packResolution.source;
+        row.invoiceUnitsPerCase = packResolution.invoiceValue;
+        row.productUnitsPerCase = packResolution.productValue;
+        row.packConflict = packResolution.conflict;
+        row.packReviewRequired = packResolution.reviewRequired;
+        if (row.priceBasis === "CASE" || row.priceBasis === "TABLE_CASE") {
           row.purchasePrice =
             Number(row.ocrUnitPrice || 0) / Math.max(1, row.unitsPerCase);
         }
@@ -564,9 +585,14 @@ export default function AutomationHub() {
       row.caseCount = Math.max(0, Number(row.caseCount || 0));
       row.looseBottles = Math.max(0, Number(row.looseBottles || 0));
 
-      if (key === "unitsPerCase" && row.priceBasis === "CASE") {
-        row.purchasePrice =
-          Number(row.ocrUnitPrice || 0) / row.unitsPerCase;
+      if (key === "unitsPerCase") {
+        row.unitsPerCaseSource = "HUMAN_REVIEW";
+        row.packConflict = false;
+        row.packReviewRequired = false;
+        if (row.priceBasis === "CASE" || row.priceBasis === "TABLE_CASE") {
+          row.purchasePrice =
+            Number(row.ocrUnitPrice || 0) / row.unitsPerCase;
+        }
       }
 
       row.quantity =
@@ -748,7 +774,10 @@ export default function AutomationHub() {
   }
 
   function reviewIsReady() {
+    const dateReady = /^\d{4}-\d{2}-\d{2}$/.test(String(result?.invoiceDate || ""));
     return Boolean(
+      ingestionId &&
+      dateReady &&
       result?.items?.length &&
       confirmedSupplier &&
       result.items.every((_, index) => {
@@ -871,6 +900,14 @@ export default function AutomationHub() {
       setMessage("Confirm the supplier first.");
       return;
     }
+    if (!ingestionId) {
+      setMessage("Original invoice evidence is not stored. Receive Stock is blocked.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(result.invoiceDate || ""))) {
+      setMessage("Review and enter a valid Invoice Date before Receive Stock.");
+      return;
+    }
 
     if (unresolved) {
       setMessage(`${unresolved} invoice line(s) still need product/quantity confirmation.`);
@@ -929,7 +966,7 @@ export default function AutomationHub() {
         supplierName: confirmedSupplier.supplier_name,
         invoiceNumber: invoiceReference,
         invoiceNumberSource: result.invoiceNumber ? "OCR" : "AUTO",
-        invoiceDate: result.invoiceDate || new Date().toISOString().slice(0, 10),
+        invoiceDate: result.invoiceDate,
         items: lines,
         charges,
         financialSummary: {
@@ -1042,6 +1079,35 @@ export default function AutomationHub() {
               </button>
             </div>
           </div>
+          <div className="form-grid" style={{ marginBottom: 12 }}>
+            <label>Invoice / Reference
+              <input
+                value={result.invoiceNumber || ""}
+                onChange={(event) => setResult((current) => ({ ...current, invoiceNumber: event.target.value }))}
+                placeholder="Supplier invoice number"
+              />
+            </label>
+            <label>Invoice Date
+              <input
+                type="date"
+                value={result.invoiceDate || ""}
+                onChange={(event) => setResult((current) => ({
+                  ...current,
+                  invoiceDate: event.target.value,
+                  invoiceDateReviewRequired: false,
+                  invoiceDateSource: "HUMAN_REVIEW",
+                }))}
+              />
+            </label>
+          </div>
+          {result.invoiceDateReviewRequired ? (
+            <div className="purchase-message">
+              Invoice date needs review. Azure raw value: {result.invoiceDateRaw || "not resolved"}. Confirm the physical invoice date before receiving stock.
+            </div>
+          ) : null}
+          <p className="muted-text">
+            Date source: {result.invoiceDateSource || "OCR"} · Original invoice evidence: {ingestionId ? "saved" : "NOT SAVED"}
+          </p>
           <p>
             OCR Supplier: <strong>{result.supplierName || "Not detected"}</strong>
           </p>
@@ -1285,6 +1351,10 @@ export default function AutomationHub() {
                             )
                           }
                         />
+                        <div className="muted-text">{row.unitsPerCaseSource || "Review"}</div>
+                        {row.packConflict ? (
+                          <div className="purchase-message">Pack conflict: invoice {row.invoiceUnitsPerCase} vs Product Master {row.productUnitsPerCase}</div>
+                        ) : null}
                       </td>
 
                       <td>
@@ -1373,4 +1443,3 @@ export default function AutomationHub() {
     </div>
   );
 }
-
