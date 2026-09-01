@@ -404,3 +404,9 @@ OCR Product Master synchronization fix deployed to production from code SHA `81f
 <!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
 ## 2026-09-02 — POS sale visibility, durable receipt, reports refresh and list sorting
 Live verification found completed POS sales and stock deductions in Supabase while the UI Sales collection could remain stale when an unrelated Purchases refresh failed. ShopContext now publishes Sales and Purchases independently. POS opens `/sales/:id?print=1`; Sale Details can fetch the exact committed sale directly from Supabase and auto-request printing. Reports refreshes current shop transactions before chart calculations. Read-only list tables use shared sortable headers (`↕`, `↑`, `↓`); editable transaction-entry/reconciliation grids remain fixed-order. No DB migration or Logic App change.
+
+<!-- POS_SALES_RECEIPT_REPORT_SORT_DEPLOYED_20260902 -->
+### Production evidence
+POS/Sales/Receipt/Reports/list-sorting reliability release deployed from code SHA `e592877cf57954ee4b29fcc7daf6e98b395bc5d1`. Public root, referenced assets and Vite runtime configuration verification passed. Production URL: `https://wineshoppos.z29.web.core.windows.net/`.
+
+Live Supabase verification before this release showed three completed Royal 21 POS sales already committed with sale items/payments; those historical sales must not be repeated merely because the old frontend list was stale.

@@ -103,3 +103,6 @@ Production deployment recorded for OCR bulk-created Product Master synchronizati
 <!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
 ### 2026-09-02 POS/Reports/list reliability
 Updated ShopContext, POS, Sales, Sale Details, Reports, sortable read-only list UI, Developer Handbook and User Manual. No DB migration or Logic App change.
+
+<!-- POS_SALES_RECEIPT_REPORT_SORT_DEPLOYED_20260902 -->
+Production deployment recorded for independent Sales refresh, durable receipt loading/printing, Reports refresh and sortable read-only list columns. Code SHA `e592877cf57954ee4b29fcc7daf6e98b395bc5d1`; public frontend verification PASS.
