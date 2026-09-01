@@ -333,3 +333,9 @@ Feature `7340fac6604d9e0e6281dd7c82070ffb818d4c9f` passed synthetic tests plus a
 
 ## V3-05 FINAL END-TO-END
 V3-05 consolidates OCR evidence/review reliability, durable invoice routing, POS/scanner state reliability, receipt verification, forward FIFO sale allocation/COGS snapshots, and protected Admin Product Cleanup. The V3 preview, both OCR Edge Functions, and the V3-05 FIFO/Product Cleanup migration are deployed. Production static frontend remains pending final preview acceptance.
+
+## V3-06 friendly invoice workflow
+
+Invoice Inbox now uses business-friendly labels while preserving database workflow values. The actual Owner AI app knowledge source also contains the same semantics. A Playwright read-only E2E smoke framework is included.
+
+This local V3 change does not by itself deploy the production Owner AI Function.

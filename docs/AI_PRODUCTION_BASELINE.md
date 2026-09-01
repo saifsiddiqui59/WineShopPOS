@@ -147,3 +147,11 @@ interaction followed by confirmation of the corresponding Foundry trace after
 telemetry ingestion delay. Only then should trace evaluations and quality gates
 be treated as verified.
 <!-- AI_MONITOR_STATUS_20260831_END -->
+
+## V3-06 AI knowledge source update
+
+The repository Owner Assistant knowledge source now contains `invoice_inbox_workflow`, covering Needs Review, Ready for Stock, Completed (`RECEIVED` internally), Resume Review, Continue Receive Stock, Cancel Review, Reopen Review and duplicate handling.
+
+Knowledge source version: `2026-09-01-v4`.
+
+Committing this source does not automatically alter the running production Azure Function. Runtime AI knowledge changes only after an explicit tested AI Function deployment.

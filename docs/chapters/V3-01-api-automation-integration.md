@@ -204,3 +204,7 @@ The supplied METRI SPIRITS invoice was sent to the real configured Azure Documen
 
 ## V3-05 OCR finalization
 Manual OCR and automation ingestion use the same shared parser. Original evidence is stored before analysis, Azure typed invoice dates are preferred, and every new Analyze begins with fresh supplier/date/product review state.
+
+## V3-06 Invoice Inbox terminology
+
+Invoice Inbox presents shop-friendly workflow labels without changing persisted review states. Completed invoices remain linked to received purchases; Cancelled reviews retain original evidence and may be reopened when no purchase was posted.

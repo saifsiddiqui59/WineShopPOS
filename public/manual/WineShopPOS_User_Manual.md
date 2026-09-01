@@ -824,3 +824,31 @@ Price/Bottle can contain more than two decimal places because it may be calculat
 
 ### FIFO: what to sell
 Inventory → Ageing & FIFO marks the oldest tracked lot for each product as **SELL FIRST** and shows a **BOX-xxxxxx** code. Write that code on the physical carton/box. A full warehouse rack system is not required.
+
+## Product Cleanup (Admin)
+Settings & Admin -> Product Cleanup can permanently purge only a non-transactional test product after typing DELETE. Products with sales, purchases, returns, transfers, stock-count or transactional stock movement history are blocked and should be deactivated/corrected instead. POS Current Bill survives navigation to Scanner Test; use × Remove or Clear Cart explicitly.
+
+## Invoice Inbox — friendly workflow labels
+
+Open **Purchasing → Invoice Inbox** to see retained supplier invoice reviews.
+
+| Display label | Meaning | Typical action |
+| --- | --- | --- |
+| **Needs Review** | OCR/human verification is incomplete. | Start Review / Resume Review |
+| **Ready for Stock** | Review is complete and a saved Receive Stock draft is ready. | Continue Receive Stock |
+| **Completed** | Inventory was received and a purchase receipt is linked. | View Receipt / View Original |
+| **Possible Duplicate** | Duplicate decision is required. | Not Duplicate / Confirm Duplicate |
+| **Duplicate — Closed** | Confirmed duplicate; do not receive again. | View evidence |
+| **Cancelled** | Review was closed only; original invoice remains saved and inventory was not changed. | Reopen Review |
+| **OCR Failed / Processing Failed** | Processing needs investigation. | Investigate / Cancel Review |
+
+**Cancel Review is not delete.** It retains the original document and does not change inventory.
+
+**Completed** is the user-facing term for internal status `RECEIVED`.
+
+### Save & Close versus Apply on Product Edit
+
+- **Save & Close** saves and returns to Product Master.
+- **Apply** saves and keeps the Edit Product screen open.
+
+Selling Price remains a manual product-master value. POS blocks zero Selling Price instead of silently substituting MRP.

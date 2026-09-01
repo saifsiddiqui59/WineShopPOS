@@ -990,3 +990,12 @@ FIFO stays lightweight: the oldest tracked lot is SELL FIRST and the derived BOX
 
 ## V3-05 final reliability contract
 OCR never posts inventory directly; Receive Stock is the purchase-posting boundary. Scanner events are ephemeral and POS cart state is session-scoped by shop. Forward FIFO stock-out allocation records untracked opening balance before tracked receipt lots, then consumes tracked lots oldest-first and snapshots FIFO COGS on new sale items. Admin hard deletion is restricted to non-transactional test products.
+
+## V3-06 Invoice Inbox display vocabulary
+
+Persisted `invoice_ingestions.review_status` values are unchanged. UI mapping:
+`NEEDS_REVIEW` → Needs Review; `READY_TO_RECEIVE` → Ready for Stock; `RECEIVED` → Completed; `POSSIBLE_DUPLICATE` → Possible Duplicate; `DUPLICATE` → Duplicate — Closed; `OCR_FAILED` → OCR Failed; `FAILED` → Processing Failed; `CANCELLED` → Cancelled.
+
+Do not rename DB enum values merely to change UI copy. Cancel Review retains evidence and does not change inventory.
+
+Playwright read-only E2E is now repository-supported. Write-path E2E must use an isolated test shop.

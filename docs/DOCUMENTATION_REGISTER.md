@@ -65,3 +65,5 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 
 - `docs/testing/V3_05_END_TO_END_TEST_MATRIX.md` — V3-05 final acceptance matrix.
 - `docs/code-history/v3-05-final-20260901T111035Z.md` — V3-05 deployed feature code history.
+
+- `docs/testing/PROGRAMMATIC_E2E_TESTING.md` — Playwright read-only E2E framework and safe transactional E2E design.
