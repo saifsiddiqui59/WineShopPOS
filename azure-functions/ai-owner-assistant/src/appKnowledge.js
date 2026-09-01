@@ -59,6 +59,28 @@ const TOPICS = [
     cautions: ["Unresolved OCR lines must not post inventory."]
   },
   {
+    id: "invoice_inbox_workflow",
+    title: "Understand Invoice Inbox statuses and actions",
+    route: "/purchasing/invoices",
+    area: "Purchasing → Invoice Inbox",
+    roles: ["ADMIN","MANAGER"],
+    keywords: ["invoice inbox","resume draft","resume review","continue receive stock","cancel review","completed invoice","received invoice","ready for stock","needs review","reopen review"],
+    summary: "Invoice Inbox uses shop-friendly labels while preserving the database workflow underneath.",
+    steps: [
+      "Needs Review means OCR/human checking is still required.",
+      "Ready for Stock means review is complete; use Continue Receive Stock.",
+      "Completed means the invoice is linked to a received purchase; use View Receipt and View Original.",
+      "Resume Review returns to a saved OCR review. Continue Receive Stock returns to a saved receiving draft.",
+      "Cancel Review closes only the review. The original invoice remains stored and inventory is not changed.",
+      "Use Reopen Review to continue a cancelled review that has not been received."
+    ],
+    cautions: [
+      "A received/completed invoice cannot be cancelled through the review workflow.",
+      "Cancelling a review is not deletion and does not reverse inventory.",
+      "Confirmed duplicates must not be received again."
+    ]
+  },
+  {
     id: "add_product",
     title: "Add a new product",
     route: "/products/new",
@@ -308,7 +330,7 @@ export function searchAppKnowledge(question) {
 
   return {
     question: cleaned,
-    knowledge_version: "2026-08-30-v3",
+    knowledge_version: "2026-09-01-v4",
     read_only: true,
     manual_reference: USER_MANUAL_REFERENCE,
     found: selected.length > 0,

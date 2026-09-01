@@ -7,6 +7,18 @@ import { getInvoiceReadUrl } from "../lib/invoiceClient";
 const REVIEW_KEY="wineshop_ocr_review_state";
 const PURCHASE_DRAFT_KEY="wineshop_ocr_purchase_draft";
 const STATUS_OPTIONS=["ALL","NEEDS_REVIEW","READY_TO_RECEIVE","POSSIBLE_DUPLICATE","DUPLICATE","RECEIVED","OCR_FAILED","FAILED","CANCELLED"];
+const STATUS_META={
+  ALL:{label:"All Invoices",tone:"neutral"},
+  NEEDS_REVIEW:{label:"Needs Review",tone:"review"},
+  READY_TO_RECEIVE:{label:"Ready for Stock",tone:"ready"},
+  POSSIBLE_DUPLICATE:{label:"Possible Duplicate",tone:"warning"},
+  DUPLICATE:{label:"Duplicate — Closed",tone:"muted"},
+  RECEIVED:{label:"Completed",tone:"completed"},
+  OCR_FAILED:{label:"OCR Failed",tone:"error"},
+  FAILED:{label:"Processing Failed",tone:"error"},
+  CANCELLED:{label:"Cancelled",tone:"muted"}
+};
+const statusMeta=(value)=>STATUS_META[value]||{label:String(value||"Unknown").replaceAll("_"," "),tone:"neutral"};
 
 function monthRange(year,month){
   return{
@@ -122,7 +134,7 @@ export default function InvoiceInbox(){
   }
 
   async function cancelReview(row){
-    if(!window.confirm("Cancel this invoice review? The original document is retained and inventory is not changed."))return;
+    if(!window.confirm("Cancel this review? This closes only the review. The original invoice stays saved, inventory is not changed, and you can reopen the review later."))return;
     const reason=window.prompt("Optional cancellation reason:","")??"";
     setBusy(true);
     const{error}=await supabase.rpc("invoice_cancel_review",{
@@ -173,7 +185,7 @@ export default function InvoiceInbox(){
         </label>
         <label>Status
           <select value={status} onChange={e=>setStatus(e.target.value)}>
-            {STATUS_OPTIONS.map(v=><option key={v} value={v}>{v.replaceAll("_"," ")}</option>)}
+            {STATUS_OPTIONS.map(v=><option key={v} value={v}>{statusMeta(v).label}</option>)}
           </select>
         </label>
       </div>
@@ -183,6 +195,13 @@ export default function InvoiceInbox(){
       <div className="button-row spread">
         <h3>Invoices</h3>
         <span className="muted-text">{busy?"Loading...":`${rows.length} invoice(s)`}</span>
+      </div>
+      <div className="invoice-status-help">
+        <strong>Workflow:</strong>
+        <span><b>Needs Review</b> = OCR/human checking is still required.</span>
+        <span><b>Ready for Stock</b> = review is complete; continue to Receive Stock.</span>
+        <span><b>Completed</b> = stock was received and a purchase receipt is linked.</span>
+        <span><b>Cancelled</b> = review was closed only; original invoice remains saved and inventory was not changed.</span>
       </div>
       <div className="data-table-wrapper"><table className="data-table">
         <thead><tr>
@@ -195,21 +214,23 @@ export default function InvoiceInbox(){
             <td>{row.extracted_invoice_number||row.original_file_name}</td>
             <td>{row.extracted_supplier_name||"Pending OCR"}</td>
             <td>{row.source}</td>
-            <td>{row.review_status}</td>
+            <td><span className={`invoice-status-badge ${statusMeta(row.review_status).tone}`}>{statusMeta(row.review_status).label}</span></td>
             <td>{row.extracted_total==null?"—":new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(Number(row.extracted_total))}</td>
-            <td>{row.review_draft?`${row.review_draft.stage==="RECEIVE_STOCK"?"Receive Stock":"OCR Review"} saved`:"—"}</td>
-            <td>{row.purchase_id||"Not received"}</td>
+            <td>{row.review_draft?(row.review_draft.stage==="RECEIVE_STOCK"?"Receive Stock draft saved":"Review draft saved"):"—"}</td>
+            <td>{row.purchase_id?<strong>Completed</strong>:"Not received"}</td>
             <td><div className="button-row">
               <button type="button" className="secondary-button" onClick={()=>viewOriginal(row)}>View Original</button>
               {row.purchase_id?<button type="button" className="secondary-button" onClick={()=>navigate(`/purchasing/receipts/${row.purchase_id}`)}>View Receipt</button>:null}
               {(row.normalized_invoice||row.review_draft)&&!["RECEIVED","DUPLICATE","POSSIBLE_DUPLICATE","CANCELLED"].includes(row.review_status)?
                 <button type="button" className="secondary-button" onClick={()=>reviewInvoice(row)}>
-                  {row.review_draft?"Resume Draft":"Review OCR"}
+                  {row.review_draft
+                    ?(row.review_draft.stage==="RECEIVE_STOCK"?"Continue Receive Stock":"Resume Review")
+                    :"Start Review"}
                 </button>:null}
               {["NEEDS_REVIEW","READY_TO_RECEIVE","OCR_FAILED","FAILED"].includes(row.review_status)?
-                <button type="button" className="secondary-button" onClick={()=>cancelReview(row)} disabled={busy}>Cancel</button>:null}
+                <button type="button" className="secondary-button" onClick={()=>cancelReview(row)} disabled={busy}>Cancel Review</button>:null}
               {row.review_status==="CANCELLED"?
-                <button type="button" className="secondary-button" onClick={()=>reopenReview(row)} disabled={busy}>Reopen</button>:null}
+                <button type="button" className="secondary-button" onClick={()=>reopenReview(row)} disabled={busy}>Reopen Review</button>:null}
               {row.review_status==="POSSIBLE_DUPLICATE"?<>
                 <button type="button" className="secondary-button" onClick={()=>resolveDuplicate(row,"NOT_DUPLICATE")} disabled={busy}>Not Duplicate</button>
                 <button type="button" className="secondary-button" onClick={()=>resolveDuplicate(row,"CONFIRMED_DUPLICATE")} disabled={busy}>Confirm Duplicate</button>
