@@ -134,3 +134,7 @@ Canonical spiritual image tile, physical sidebar collapse and five-stage premium
 <!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
 ### Exact storyboard pixel animation
 Replaced hand-redrawn brand artwork with SHA-verified raster sprite frames cropped from the approved reference. Includes exact WineShop POS five-stage frames, exact final sidebar lockup and Royal 21 four-stage frames.
+
+<!-- ROYAL21_CROWN_COST_V8 -->
+### Royal 21 crown-only motion / Azure cost check
+Removed Royal 21 sprite stretching, constrained the lockup to the topbar, added continuous crown rotation, and added a read-only Azure cost diagnostic. WineShop POS brand unchanged.

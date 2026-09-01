@@ -474,3 +474,11 @@ Production assets:
 - `/brand/royal21-storyboard-sprite.png` — four exact Royal 21 storyboard stages.
 
 React/CSS only sequences these pixels. WineShop POS uses the five stages across 1.6 seconds and replays on hover/focus/click. Royal 21 runs the exact four-stage sequence at the start of each six-second cycle and holds the final state for the remainder. Light mode intentionally keeps the black premium artwork card rather than altering the approved pixels.
+
+<!-- ROYAL21_CROWN_COST_V8 -->
+## 2026-09-01 — Royal 21 crown-only motion + Azure cost diagnostic
+- WineShop POS left branding is explicitly frozen and untouched.
+- Royal 21 no longer uses a stretched sprite. It is rendered as stable metallic-gold text with ornament.
+- Only the crown moves: continuous 360-degree rotation over 8 seconds.
+- Royal 21 is constrained to a 72px lockup inside an 82px topbar hero area; consolidated topbar is fixed at 88px so the shop identity cannot overlap the page/POS Billing content below.
+- Added `scripts/diagnostics/check-azure-cost-readonly-v3.sh`, a read-only Azure billing diagnostic covering Logic App state, Function plans, Storage capacity/transactions, AI/Cognitive accounts, monitoring resources and robust month-to-date cost by service/resource/meter.

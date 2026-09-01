@@ -928,3 +928,7 @@ Collapse now narrows the whole sidebar and gives the freed space to the main app
 <!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
 ## Premium brand animation
 WineShop POS now plays the same five visual stages shown in the approved reference artwork. Hover, focus or click the logo to replay it. Royal 21 uses the same approved gold/crown stages and repeats its short sequence approximately every six seconds.
+
+<!-- ROYAL21_CROWN_COST_V8 -->
+## Royal 21 header
+Royal 21 remains stationary in the center header while its crown rotates continuously. The header is contained above the application content and does not cover POS or purchasing screens.

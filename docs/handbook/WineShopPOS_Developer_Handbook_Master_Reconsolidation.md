@@ -1085,3 +1085,9 @@ Spiritual image is browser-local presentation data only. Sidebar collapse must p
 <!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
 ## Exact-reference brand assets
 When pixel fidelity to the approved storyboard is required, do not replace the raster source with a hand-redrawn SVG. The three `/public/brand/` assets are the visual source of truth. Animation code is limited to frame selection, timing, final lockup transition and reduced-motion behavior.
+
+<!-- ROYAL21_CROWN_COST_V8 -->
+## Royal 21 containment rule
+Do not stretch raster Royal 21 artwork in the topbar. Royal 21 uses text/ornament plus a separate crown. The shop lockup must remain fully inside the topbar and must never overlap page content. WineShop POS brand is not part of this release surface.
+
+Azure cost diagnostics are read-only. They must never stop/delete/resize resources automatically.

@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
-import { Store } from "lucide-react";
+import { Crown, Store } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
 function RoyalHero({ shopName, interactive = false, children }) {
   return (
     <div
-      className={`royal-exact-reference${interactive ? " royal-exact-reference-interactive" : ""}`}
+      className={`royal-stable-lockup${interactive ? " royal-stable-lockup-interactive" : ""}`}
       title={shopName}
       aria-label={shopName}
     >
-      <span className="royal-exact-reference-sprite" aria-hidden="true" />
+      <Crown className="royal-rotating-crown" size={23} strokeWidth={1.7} aria-hidden="true" />
+      <span className="royal-stable-name">{shopName}</span>
+      <span className="royal-stable-ornament" aria-hidden="true">
+        <i />
+        <b>◇</b>
+        <em>◇</em>
+        <i />
+      </span>
       {children}
     </div>
   );
@@ -58,7 +65,7 @@ export default function ShopSelector() {
 
     return (
       <RoyalHero shopName={shopName} interactive>
-        <label className="royal-exact-select-layer">
+        <label className="royal-stable-select-layer">
           <span className="sr-only">Current shop</span>
           <select
             value={profile?.shop_id || ""}

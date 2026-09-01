@@ -3353,3 +3353,146 @@ html[data-theme="light"] .royal-exact-reference {
     background-position: 100% 0% !important;
   }
 }
+
+/* ROYAL21_ROTATING_CROWN_V8
+   Narrow correction:
+   - WineShop POS brand is intentionally untouched.
+   - Royal 21 is rendered as text, never stretched as an image.
+   - Crown alone rotates continuously.
+   - Entire Royal lockup is contained inside the topbar hero zone. */
+
+.topbar-shop-hero {
+  height: 82px !important;
+  max-height: 82px !important;
+  min-height: 0 !important;
+  align-self: center !important;
+  overflow: hidden !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.royal-stable-lockup {
+  position: relative;
+  width: clamp(205px, 24vw, 285px);
+  height: 72px;
+  max-height: 72px;
+  display: grid;
+  grid-template-rows: 19px 34px 11px;
+  place-items: center;
+  align-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: transparent;
+  color: #d4af37;
+}
+
+.royal-rotating-crown {
+  grid-row: 1;
+  color: #e0b83f;
+  transform-origin: 50% 50%;
+  filter:
+    drop-shadow(0 0 4px rgba(224,184,63,.22))
+    drop-shadow(0 1px 0 rgba(80,52,7,.5));
+  animation: royal-crown-continuous-rotate 8s linear infinite;
+}
+
+.royal-stable-name {
+  grid-row: 2;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(27px, 2.25vw, 34px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.65px;
+  white-space: nowrap;
+  background: linear-gradient(
+    105deg,
+    #8a5a12 0%,
+    #c68f25 18%,
+    #f5dc8a 39%,
+    #d4af37 56%,
+    #f8e7a1 73%,
+    #a66e17 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 7px 18px rgba(175,120,23,.1);
+}
+
+.royal-stable-ornament {
+  grid-row: 3;
+  width: 145px;
+  height: 9px;
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr;
+  align-items: center;
+  gap: 3px;
+  color: #bd9027;
+}
+
+.royal-stable-ornament i {
+  height: 1px;
+  display: block;
+  background: linear-gradient(90deg, transparent, rgba(206,160,49,.82));
+}
+
+.royal-stable-ornament i:last-child {
+  background: linear-gradient(90deg, rgba(206,160,49,.82), transparent);
+}
+
+.royal-stable-ornament b,
+.royal-stable-ornament em {
+  font-style: normal;
+  font-size: 7px;
+  line-height: 1;
+}
+
+.royal-stable-lockup-interactive {
+  cursor: pointer;
+}
+
+.royal-stable-select-layer,
+.royal-stable-select-layer select {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+}
+
+.royal-stable-select-layer select {
+  opacity: 0;
+  cursor: pointer;
+}
+
+@keyframes royal-crown-continuous-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Keep a hard vertical boundary between header branding and page content. */
+.consolidated-topbar {
+  min-height: 88px !important;
+  height: 88px !important;
+}
+
+.page-area {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 1180px) {
+  .royal-stable-lockup {
+    width: clamp(190px, 22vw, 245px);
+  }
+
+  .royal-stable-name {
+    font-size: clamp(24px, 2.1vw, 29px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .royal-rotating-crown {
+    animation: none !important;
+  }
+}
