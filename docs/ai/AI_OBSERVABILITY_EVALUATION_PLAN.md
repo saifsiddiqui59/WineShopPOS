@@ -4,7 +4,9 @@
 
 The AI Function App already has Application Insights. Basic Function health/failure monitoring exists.
 
-Full Foundry trace integration, continuous AI quality evaluation and release gates are **not yet declared complete**.
+Authenticated production Foundry/Application Insights trace ingestion is **VERIFIED**.
+
+Continuous AI quality evaluation, the versioned golden dataset, automated release gates and production quality dashboard are not yet declared complete.
 
 ## Production monitoring — 100% of requests
 

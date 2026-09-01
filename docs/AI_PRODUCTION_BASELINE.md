@@ -81,7 +81,8 @@ results and critical tool regressions.
 1. Functionality knowledge / `get_app_help` - deployed and live.
 2. Help & User Manual reference - deployed and live.
 3. Foundry server-side tracing infrastructure - configured with dedicated Application Insights and Project Managed Identity authentication.
-4. Next - create one authenticated production interaction, verify it in Foundry Traces, then run trace evaluations and define quality gates.
+4. Authenticated production trace ingestion - VERIFIED.
+5. Next - create the versioned golden dataset, run trace/quality evaluations and enforce quality gates.
 <!-- NEXT_AI_PUSHES_END -->
 
 <!-- APP_HELP_KNOWLEDGE_START -->
@@ -111,7 +112,7 @@ The tool does not write application data and does not introduce a second RAG
 service or database. Unknown workflows return an explicit "not verified"
 fallback so the agent does not invent app functionality.
 
-Foundry/Application Insights tracing infrastructure is configured; authenticated trace ingestion and evaluation execution remain to be verified.
+Foundry/Application Insights tracing infrastructure is configured and authenticated production trace ingestion is VERIFIED. Evaluation execution and automated release gates remain pending.
 <!-- APP_HELP_KNOWLEDGE_END -->
 
 <!-- AI_OBSERVABILITY_START -->
@@ -139,7 +140,7 @@ Current state:
 TRACING INFRASTRUCTURE:  CONFIGURED
 MONITOR ACCESS:          RESOLVED
 TRACE VIEW:              NO RESULTS TO SHOW
-TRACE INGESTION E2E:     NOT YET VERIFIED
+TRACE INGESTION E2E:     VERIFIED
 ```
 
 The next verification is one fresh authenticated production Owner Assistant

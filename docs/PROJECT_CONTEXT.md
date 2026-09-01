@@ -351,3 +351,9 @@ V3-07 passed five sequential hosted login/no-refresh checks and the full hosted 
 ## V3-07 production AI complete — 20260901T143945Z
 
 Production Owner AI is verified after V3-07 deployment. Health is passing and authenticated SHOP-scope app-help successfully uses the `/login` knowledge route. The verification continuation fixed only a Git Bash CRLF issue in its local Azure-CLI parsing; no database or local-main mutation occurred.
+
+## Production AI trace ingestion verified
+
+A fresh authenticated production Owner AI interaction produced qualifying AI/Foundry telemetry in the dedicated Application Insights / Log Analytics observability path. Trace ingestion is now verified end to end.
+
+The next AI milestone is evaluation engineering: golden dataset, deterministic tool/scope/security checks, LLM quality evaluators, release gates, and monitoring/alerting.

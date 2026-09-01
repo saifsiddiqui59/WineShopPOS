@@ -1007,3 +1007,11 @@ Observed production/test evidence showed successful Supabase Auth password grant
 The auth bootstrap therefore retries only the precise JWT-timing condition (`PGRST303` or message `JWT issued at future`) with bounded backoff. Both profile and access RPCs are rerun as a pair. Other authorization errors are not hidden or generically retried.
 
 The browser regression uses sequential fresh-browser logins. Parallel same-account workers are not used as the acceptance criterion because they test backend concurrency rather than normal interactive login.
+
+## AI production trace-ingestion verification
+
+The Owner AI observability acceptance contract requires more than a successful `/api/ai/chat` call. A fresh authenticated production request must be followed by fresh AI/Foundry telemetry in the dedicated `wineshoppos-ai-insights` / `wineshoppos-ai-law` path.
+
+Raw telemetry evidence is local-only because trace payloads can contain operational context. Repository evidence stores only safe correlation metadata such as request id, telemetry table names, operation ids, and marker names.
+
+With trace ingestion verified, quality work proceeds to a versioned golden dataset, deterministic security/tool checks, evaluator scores and release gates.
