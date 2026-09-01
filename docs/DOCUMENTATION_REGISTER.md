@@ -92,3 +92,7 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 - Production code SHA: `f43e70590b9b1aed1dc1ceeed66fa08558fb050f`.
 - Static frontend deployed to `https://wineshoppos.z29.web.core.windows.net/`.
 - Exact-build and production `index.html` SHA-256 verified equal: `97f716ec879e9e0bafcff02fc1128af4ed33b755df9dd0e1af9f45e7536ae0c6`.
+
+<!-- OCR_BULK_PRODUCT_SYNC_FIX_20260902 -->
+### 2026-09-02 OCR Product Master synchronization
+Updated AutomationHub, BulkProductImport, ShopContext, Developer Handbook and User Manual for verified bulk-created product synchronization. No migration or Logic App change.

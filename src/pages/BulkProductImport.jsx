@@ -188,10 +188,30 @@ export default function BulkProductImport() {
 
       const output = Array.isArray(data) ? data : [];
       setResults(output);
-      await refreshAll();
 
       const success = output.filter((item) => item.status === "SUCCESS");
       const failed = output.filter((item) => item.status === "ERROR");
+
+      const { data: verifiedProducts, error: verifyError } =
+        await supabase.rpc("get_products");
+      if (verifyError) {
+        throw new Error(
+          `Products may have been created, but Product Master verification failed: ${verifyError.message}. Do not bulk-create again.`,
+        );
+      }
+
+      const verifiedIds = new Set(
+        (verifiedProducts || []).map((product) => product.id),
+      );
+      const missingCreated = success.filter(
+        (item) => !item.product_id || !verifiedIds.has(item.product_id),
+      );
+
+      if (missingCreated.length) {
+        throw new Error(
+          `${missingCreated.length} created product response(s) could not be verified in Product Master. Do not bulk-create again; refresh and review.`,
+        );
+      }
 
       const ocrCreated = success
         .map((item) => {
@@ -201,6 +221,7 @@ export default function BulkProductImport() {
             lineIndex: sourceRow.ocrLineIndex,
             productId: item.product_id,
             sku: item.sku,
+            productName: sourceRow.productName,
           };
         })
         .filter(Boolean);
@@ -212,8 +233,16 @@ export default function BulkProductImport() {
         );
       }
 
+      const refreshResult = await refreshAll();
+      if (!refreshResult?.ok) {
+        setMessage(
+          `${success.length} product(s) were created and verified, but the screen refresh failed. Do not bulk-create again. Refresh the page and return to Invoice OCR.`,
+        );
+        return;
+      }
+
       setMessage(
-        `${success.length} product(s) created; ${failed.length} row(s) need review. Inventory was not increased.`,
+        `${success.length} product(s) created and verified in Product Master; ${failed.length} row(s) need review. Inventory was not increased.`,
       );
 
       if (fromOcr && failed.length === 0 && ocrCreated.length) {

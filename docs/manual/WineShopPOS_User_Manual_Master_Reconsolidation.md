@@ -867,3 +867,13 @@ WineShopPOS distinguishes a genuine disabled/suspended account from a temporary 
 On **Edit Product**, enter the Selling Price and choose **Save & Close**. The screen verifies the saved Selling Price before closing. If the saved value cannot be verified or differs, the form stays open and shows an error so the value can be corrected or retried.
 
 The Edit Product screen uses **Save & Close** and **Cancel**. The former **Apply** action and duplicate top-right **Back** / **Close** controls are removed.
+
+<!-- OCR_BULK_PRODUCT_SYNC_FIX_20260902 -->
+## First invoice when Product Master is empty
+Use: **Invoice OCR → Confirm Supplier → Bulk Create Unmatched Products → return to OCR → review/confirm each line → reconcile → Send Confirmed Draft to Receive Stock → Receive Stock**.
+
+Before products exist, `No existing product match found` is normal. After Bulk Create succeeds, the rows should show **Created product linked** and the products should appear in Products. Do not run Bulk Create again for products that were already created.
+
+For reconciliation, compare **Invoice Rate/Case** with **Reviewed Rate/Case** and use the **Gap (Inv - Rev)** column to identify the exact line causing a mismatch. Changing Reviewed Rate/Case automatically recalculates Price/Bottle from Bottles/Case.
+
+Creating Product Master records does not increase stock. Stock changes only through Receive Stock.

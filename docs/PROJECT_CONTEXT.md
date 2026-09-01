@@ -384,3 +384,15 @@ Next execution milestone: AI-10 live/batch evaluation using the pinned dataset a
 - Production `index.html` SHA-256 matched the exact clean release build: `97f716ec879e9e0bafcff02fc1128af4ed33b755df9dd0e1af9f45e7536ae0c6`.
 - Edit Product release fix: Selling Price persistence verification; Apply removed; duplicate top-right Back/Close removed.
 - Remaining application/Owner AI validation is manual owner validation.
+
+<!-- OCR_BULK_PRODUCT_SYNC_FIX_20260902 -->
+## 2026-09-02 — OCR bulk-created Product Master synchronization fix
+- Live investigation confirmed OCR Bulk Create persisted products correctly in Supabase while the browser could still show `0 real catalogue products` and stale `No product match found` text.
+- OCR return state now refreshes Product Master and labels newly-created links explicitly.
+- Bulk import verifies every successful created product ID against shop-scoped `get_products()` before linking/navigating.
+- Product Master state is published independently from Sales/Purchases refresh, so an unrelated operational-history error cannot keep an old/empty catalogue visible.
+- Send Confirmed Draft re-verifies product IDs against live `get_products()` before Receive Stock.
+- Reconciliation review now exposes Invoice Rate/Case, editable Reviewed Rate/Case, Invoice Line Amount, Reviewed Line Amount and per-row Gap (Invoice - Reviewed), plus a product-line subtotal gap summary.
+- Editing Reviewed Rate/Case recalculates Price/Bottle using Bottles/Case, preserving bottle-level FIFO costing while making supplier-invoice case rates easy to compare.
+- Inventory invariant is unchanged: product creation does not increase stock; Receive Stock remains authoritative.
+- No database migration is required.

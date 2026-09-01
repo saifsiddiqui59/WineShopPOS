@@ -331,9 +331,25 @@ export default function AutomationHub() {
             }
             return next;
           });
-          setMessage(
-            `${createdRows.length} new OCR product(s) were bulk-created and linked. Review quantity/price and confirm each line before Receive Stock.`,
-          );
+          setMatches((current) => {
+            const next = { ...current };
+            for (const item of createdRows) {
+              next[item.lineIndex] = [{
+                product_id: item.productId,
+                product_name: item.productName || "Newly created product",
+                score: 1,
+                match_source: "CREATED_PRODUCT",
+              }];
+            }
+            return next;
+          });
+          void refreshAll().then((refreshResult) => {
+            setMessage(
+              refreshResult?.ok
+                ? `${createdRows.length} new OCR product(s) were bulk-created, verified and loaded into Product Master. Review quantity/price and confirm each line before Receive Stock.`
+                : `${createdRows.length} product(s) were created and linked, but Product Master refresh failed. Do not bulk-create again; refresh this page before Receive Stock.`,
+            );
+          });
         }
         sessionStorage.removeItem(BULK_CREATED_KEY);
       }
@@ -615,6 +631,24 @@ export default function AutomationHub() {
     }));
   }
 
+  function updateCasePrice(index, value) {
+    setResolution((current) => {
+      const row = { ...(current[index] || {}) };
+      const caseRate = Math.max(0, Number(value || 0));
+      const unitsPerCase = Math.max(1, Number(row.unitsPerCase || 1));
+      return {
+        ...current,
+        [index]: {
+          ...row,
+          purchasePrice: Number((caseRate / unitsPerCase).toFixed(6)),
+          status: row.productId
+            ? "SELECTED_NEEDS_CONFIRMATION"
+            : "NEEDS_PRODUCT",
+        },
+      };
+    });
+  }
+
   async function saveAlias(index, productId) {
     const aliasText = String(
       result?.items?.[index]?.description || "",
@@ -867,10 +901,36 @@ export default function AutomationHub() {
         const row = resolution[index];
         const quantity = Number(row?.quantity || 0);
         const price = Number(row?.purchasePrice || 0);
-        if (quantity > 0 && price > 0) return sum + quantity * price;
+        if (quantity > 0) return sum + quantity * Math.max(0, price);
         return sum + Math.max(0, Number(item?.amount || 0));
       }, 0),
     [result, resolution],
+  );
+
+  const invoiceLineSubtotal = useMemo(
+    () =>
+      (result?.items || []).reduce(
+        (sum, item) => sum + Math.max(0, Number(item?.amount || 0)),
+        0,
+      ),
+    [result],
+  );
+
+  const reviewedResolvedLineValue = useMemo(
+    () =>
+      (result?.items || []).reduce((sum, _item, index) => {
+        const row = resolution[index];
+        return (
+          sum +
+          Math.max(0, Number(row?.quantity || 0)) *
+            Math.max(0, Number(row?.purchasePrice || 0))
+        );
+      }, 0),
+    [result, resolution],
+  );
+
+  const productLineGap = Number(
+    (invoiceLineSubtotal - reviewedResolvedLineValue).toFixed(2),
   );
 
   const reviewedAdjustment = useMemo(
@@ -929,14 +989,25 @@ export default function AutomationHub() {
 
     setBusy(true);
     try {
+      const { data: liveProducts, error: liveProductsError } =
+        await supabase.rpc("get_products");
+      if (liveProductsError) throw liveProductsError;
+
+      const liveProductById = new Map(
+        (liveProducts || []).map((product) => [product.id, product]),
+      );
       const lines = [];
 
       for (let index = 0; index < result.items.length; index += 1) {
         const item = result.items[index];
         const row = resolution[index];
-        const product = activeProducts.find((entry) => entry.id === row.productId);
+        const product = liveProductById.get(row.productId);
 
-        if (!product) throw new Error(`Product unavailable on OCR line ${index + 1}.`);
+        if (!product) {
+          throw new Error(
+            `Product Master verification failed on OCR line ${index + 1}. Do not create duplicates; refresh Product Master and review this invoice again.`,
+          );
+        }
 
         await saveAlias(index, product.id);
 
@@ -944,7 +1015,7 @@ export default function AutomationHub() {
           description: item.description,
           productId: product.id,
           caseCount: Number(row.caseCount || 0),
-          unitsPerCase: Number(row.unitsPerCase || product.unitsPerCase || 1),
+          unitsPerCase: Number(row.unitsPerCase || product.units_per_case || 1),
           looseBottles: Number(row.looseBottles || 0),
           quantity: Number(row.quantity || 0),
           purchasePrice: Number(row.purchasePrice || 0),
@@ -1193,6 +1264,12 @@ export default function AutomationHub() {
             <div className="metric-card"><span>Printed Invoice</span><strong>{printedInvoiceTotal > 0 ? `₹${printedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</strong></div>
             <div className="metric-card"><span>Reconciliation</span><strong>{reconciliationDifference == null ? "No printed total" : reconciliationMatches ? `MATCH · ₹${Math.abs(reconciliationDifference).toFixed(2)}` : `REVIEW · ₹${Math.abs(reconciliationDifference).toFixed(2)}`}</strong></div>
           </div>
+          <div className={Math.abs(productLineGap) <= 1 ? "purchase-message success" : "purchase-message"} style={{ marginTop: 12 }}>
+            Product-line check · Invoice lines: <strong>₹{invoiceLineSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
+            {" · "}Reviewed lines: <strong>₹{reviewedResolvedLineValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
+            {" · "}Gap (Invoice − Reviewed): <strong>₹{productLineGap.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>.
+            {" "}Use the per-row Rate/Case and Line Gap columns below to locate the difference.
+          </div>
           <div className="form-grid" style={{ marginTop: 12 }}>
             {[
               ["freightAmount", "Freight / Carting"],
@@ -1262,7 +1339,12 @@ export default function AutomationHub() {
                   <th>Bottles / Case</th>
                   <th>Loose Bottles</th>
                   <th>Final Bottles</th>
+                  <th>Invoice Rate / Case</th>
+                  <th>Reviewed Rate / Case</th>
                   <th>Price / Bottle</th>
+                  <th>Invoice Line Amount</th>
+                  <th>Reviewed Line Amount</th>
+                  <th>Gap (Inv − Rev)</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -1271,6 +1353,33 @@ export default function AutomationHub() {
                   const row = resolution[index] || {};
                   const candidates = matches[index] || [];
                   const best = candidates[0];
+                  const invoiceLineAmount = Math.max(
+                    0,
+                    Number(item?.amount || 0),
+                  );
+                  const reviewedLineAmount =
+                    Math.max(0, Number(row?.quantity || 0)) *
+                    Math.max(0, Number(row?.purchasePrice || 0));
+                  const lineGap = Number(
+                    (invoiceLineAmount - reviewedLineAmount).toFixed(2),
+                  );
+                  const reviewedRatePerCase =
+                    Math.max(0, Number(row?.purchasePrice || 0)) *
+                    Math.max(1, Number(row?.unitsPerCase || 1));
+                  const invoiceRatePerCase = Math.max(
+                    0,
+                    Number(
+                      item?.ratePerCase ||
+                        ((row?.priceBasis === "CASE" ||
+                          row?.priceBasis === "TABLE_CASE")
+                          ? row?.ocrUnitPrice
+                          : 0) ||
+                        (Number(row?.caseCount || 0) > 0
+                          ? invoiceLineAmount /
+                            Math.max(1, Number(row?.caseCount || 1))
+                          : 0),
+                    ),
+                  );
 
                   return (
                     <tr key={index}>
@@ -1289,14 +1398,19 @@ export default function AutomationHub() {
                       <td>{Number(item.mrp || 0) > 0 ? `₹${Number(item.mrp).toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
 
                       <td>
-                        {best ? (
+                        {row.source === "CREATED_PRODUCT" && row.productId ? (
+                          <div className="muted-text">
+                            <strong>Created product linked:</strong>{" "}
+                            {best?.product_name || "Product Master item"}
+                          </div>
+                        ) : best ? (
                           <div className="muted-text">
                             Best match: {best.product_name} ·{" "}
                             {Number(best.score || 0).toFixed(3)}
                           </div>
                         ) : (
                           <div className="muted-text">
-                            No product match found.
+                            No existing product match found.
                           </div>
                         )}
 
@@ -1378,6 +1492,27 @@ export default function AutomationHub() {
                       </td>
 
                       <td>
+                        {invoiceRatePerCase > 0
+                          ? `₹${invoiceRatePerCase.toLocaleString("en-IN", {
+                              maximumFractionDigits: 2,
+                            })}`
+                          : "—"}
+                      </td>
+
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={Number(reviewedRatePerCase.toFixed(6))}
+                          onChange={(event) =>
+                            updateCasePrice(index, event.target.value)
+                          }
+                          title="Reviewed case rate. Price/Bottle is recalculated as Rate/Case ÷ Bottles/Case."
+                        />
+                      </td>
+
+                      <td>
                         <input
                           type="number"
                           min="0"
@@ -1387,6 +1522,33 @@ export default function AutomationHub() {
                             updateBottlePrice(index, event.target.value)
                           }
                         />
+                      </td>
+
+                      <td>
+                        <strong>
+                          ₹{invoiceLineAmount.toLocaleString("en-IN", {
+                            maximumFractionDigits: 2,
+                          })}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <strong>
+                          ₹{reviewedLineAmount.toLocaleString("en-IN", {
+                            maximumFractionDigits: 2,
+                          })}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <strong title="Invoice line amount minus reviewed line amount">
+                          {Math.abs(lineGap) <= 1
+                            ? `MATCH · ₹${Math.abs(lineGap).toFixed(2)}`
+                            : `${lineGap > 0 ? "+" : ""}₹${lineGap.toLocaleString(
+                                "en-IN",
+                                { maximumFractionDigits: 2 },
+                              )}`}
+                        </strong>
                       </td>
 
                       <td>

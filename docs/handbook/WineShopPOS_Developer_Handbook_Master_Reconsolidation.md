@@ -1031,3 +1031,11 @@ Before comparing two evaluation runs, record the dataset version, production mod
 The Edit Product page no longer renders the former Apply action or duplicate top-right Back/Close controls.
 
 For the 2026-09-01 release, AI-10/AI-11 evaluator work was explicitly skipped by the owner. It is not represented as PASS. Standard application lint/build checks remain required before deployment.
+
+<!-- OCR_BULK_PRODUCT_SYNC_FIX_20260902 -->
+## OCR bulk-created products — persistence and UI synchronization
+Bulk Product Import verifies returned `bulk_create_products` IDs against shop-scoped `get_products()` before linking the OCR review. On return, created rows are identified as created Product Master links and the Product Master is refreshed.
+
+`ShopContext.refreshAll()` publishes catalogue/categories/suppliers/inventory immediately after their own successful queries. Later Sales/Purchases failures are partial refresh failures and must not hide a valid catalogue.
+
+Before transition to Receive Stock, OCR Send Draft performs a fresh `get_products()` verification. The review grid also shows Invoice Rate/Case, editable Reviewed Rate/Case, Price/Bottle, Invoice Line Amount, Reviewed Line Amount and Gap (Invoice - Reviewed). Reviewed Rate/Case is converted back to bottle cost using Bottles/Case so FIFO stays bottle-based. Catalogue creation remains zero-stock; Receive Stock remains the authoritative physical inventory posting step.
