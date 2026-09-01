@@ -96,3 +96,6 @@ V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated A
 <!-- OCR_BULK_PRODUCT_SYNC_FIX_20260902 -->
 ### 2026-09-02 OCR Product Master synchronization
 Updated AutomationHub, BulkProductImport, ShopContext, Developer Handbook and User Manual for verified bulk-created product synchronization. No migration or Logic App change.
+
+<!-- OCR_BULK_PRODUCT_SYNC_DEPLOYED_20260902 -->
+Production deployment recorded for OCR bulk-created Product Master synchronization fix. Code SHA `81fec0f2a683e22b2b033d3393567c25603d3886`; public frontend verification PASS.

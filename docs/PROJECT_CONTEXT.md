@@ -396,3 +396,7 @@ Next execution milestone: AI-10 live/batch evaluation using the pinned dataset a
 - Editing Reviewed Rate/Case recalculates Price/Bottle using Bottles/Case, preserving bottle-level FIFO costing while making supplier-invoice case rates easy to compare.
 - Inventory invariant is unchanged: product creation does not increase stock; Receive Stock remains authoritative.
 - No database migration is required.
+
+<!-- OCR_BULK_PRODUCT_SYNC_DEPLOYED_20260902 -->
+### Production evidence
+OCR Product Master synchronization fix deployed to production from code SHA `81fec0f2a683e22b2b033d3393567c25603d3886`. Public static root/assets and Vite runtime configuration verification passed. Production URL: `https://wineshoppos.z29.web.core.windows.net/`
