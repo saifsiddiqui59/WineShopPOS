@@ -1,10 +1,46 @@
+export function parseOcrMoneyText(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const matches = text.match(/\(?-?\d[\d,.:']*\d\)?|\(?-?\d\)?/g);
+  if (!matches?.length) return null;
+  const globalNegative = /\(-\)/.test(text);
+
+  const parseToken = (token) => {
+    const raw = String(token || "").trim();
+    const negative = /^-/.test(raw) || /^\(.*\)$/.test(raw);
+    const body = raw.replace(/[()\-]/g, "");
+    const digits = body.replace(/\D/g, "");
+    if (!digits) return null;
+
+    const separators = [...body.matchAll(/[,.:'']/g)];
+    let number;
+    if (!separators.length) {
+      number = Number(digits);
+    } else {
+      const last = separators[separators.length - 1];
+      const tailDigits = body.slice((last.index ?? -1) + 1).replace(/\D/g, "");
+      if (tailDigits.length === 2) {
+        const integerDigits = body.slice(0, last.index).replace(/\D/g, "") || "0";
+        number = Number(`${integerDigits}.${tailDigits}`);
+      } else {
+        number = Number(digits);
+      }
+    }
+    return Number.isFinite(number) ? (negative ? -Math.abs(number) : number) : null;
+  };
+
+  for (let i = matches.length - 1; i >= 0; i -= 1) {
+    const parsed = parseToken(matches[i]);
+    if (Number.isFinite(parsed)) return globalNegative ? -Math.abs(parsed) : parsed;
+  }
+  return null;
+}
+
 function fieldNumber(field) {
-  const value = field?.valueNumber ?? field?.valueCurrency?.amount ?? field?.content;
-  const cleaned = String(value ?? "").replace(/,/g, "").replace(/[^0-9().-]/g, "");
-  if (!cleaned) return null;
-  const negative = /^\s*-/.test(cleaned) || /^\(.*\)$/.test(cleaned) || /\(-\)/.test(String(value ?? ""));
-  const n = Number(cleaned.replace(/[()-]/g, ""));
-  return Number.isFinite(n) ? (negative ? -Math.abs(n) : n) : null;
+  const typed = field?.valueNumber ?? field?.valueCurrency?.amount;
+  if (typeof typed === "number" && Number.isFinite(typed)) return typed;
+  return parseOcrMoneyText(field?.content ?? field?.valueString ?? typed);
 }
 
 function normalizeText(value) {
@@ -16,38 +52,51 @@ function normalizeText(value) {
     .replace(/\s+/g, " ");
 }
 
+function normalizeLabelText(value) {
+  return normalizeText(value).replace(/\d+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function labelMatches(value, aliases) {
+  const label = normalizeLabelText(value);
+  return aliases.some((alias) => {
+    const a = normalizeLabelText(alias);
+    return label === a || label.startsWith(`${a} `) || label.endsWith(` ${a}`) || label.includes(` ${a} `);
+  });
+}
+
 function parseMoneyText(value) {
-  const text = String(value || "");
-  const tokens = text.match(/\d[\d,]*(?:\.\d{1,2})?/g);
-  if (!tokens?.length) return null;
-  const raw = tokens[tokens.length - 1];
-  const n = Number(raw.replace(/,/g, ""));
-  if (!Number.isFinite(n)) return null;
-  const negative = /\(-\)/.test(text) || /(^|[\s(])-+\s*\d/.test(text) || /\(\s*\d[\d,]*(?:\.\d+)?\s*\)/.test(text);
-  return negative ? -Math.abs(n) : n;
+  return parseOcrMoneyText(value);
 }
 
 function looksLikeStandaloneMoney(value) {
   const text = String(value || "").trim();
   if (!text || /[a-z]/i.test(text)) return false;
-  if (/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/.test(text)) return false;
+  if (/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/.test(text)) return false;
   if (/\b\d{1,2}:\d{2}\b/.test(text)) return false;
   if (/^(19|20)\d{2}$/.test(text)) return false;
   return parseMoneyText(text) != null;
 }
 
-function bounds(line) {
-  const polygon = line?.polygon || [];
-  let points = [];
+function bounds(polygon = []) {
+  const points = [];
   if (polygon.length && typeof polygon[0] === "number") {
-    for (let i = 0; i + 1 < polygon.length; i += 2) points.push([Number(polygon[i]), Number(polygon[i + 1])]);
+    for (let i = 0; i + 1 < polygon.length; i += 2) {
+      points.push([Number(polygon[i]), Number(polygon[i + 1])]);
+    }
   } else {
-    points = polygon.map((p) => [Number(p?.x), Number(p?.y)]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+    for (const p of polygon) {
+      const x = Number(p?.x);
+      const y = Number(p?.y);
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push([x, y]);
+    }
   }
   if (!points.length) return null;
   const xs = points.map(([x]) => x);
   const ys = points.map(([, y]) => y);
-  const left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys), bottom = Math.max(...ys);
+  const left = Math.min(...xs);
+  const right = Math.max(...xs);
+  const top = Math.min(...ys);
+  const bottom = Math.max(...ys);
   return {
     left, right, top, bottom,
     x: (left + right) / 2,
@@ -57,15 +106,18 @@ function bounds(line) {
   };
 }
 
-function flattenLines(analyzeResult) {
-  const rows = [];
-  for (const [pageIndex, page] of (analyzeResult?.analyzeResult?.pages || []).entries()) {
+function flattenEvidence(analyzeResult) {
+  const pages = analyzeResult?.analyzeResult?.pages || [];
+  const out = [];
+
+  pages.forEach((page, pageIndex) => {
     const pageWidth = Number(page?.width || 1);
     const pageHeight = Number(page?.height || 1);
     for (const line of page?.lines || []) {
-      const b = bounds(line);
+      const b = bounds(line?.polygon || []);
       if (!b) continue;
-      rows.push({
+      out.push({
+        source: "line",
         pageIndex,
         pageWidth,
         pageHeight,
@@ -74,32 +126,54 @@ function flattenLines(analyzeResult) {
         ...b,
       });
     }
+  });
+
+  for (const table of analyzeResult?.analyzeResult?.tables || []) {
+    for (const cell of table?.cells || []) {
+      const region = cell?.boundingRegions?.[0];
+      const pageIndex = Math.max(0, Number(region?.pageNumber || 1) - 1);
+      const page = pages[pageIndex] || {};
+      const b = bounds(region?.polygon || []);
+      if (!b) continue;
+      out.push({
+        source: "cell",
+        pageIndex,
+        pageWidth: Number(page?.width || 1),
+        pageHeight: Number(page?.height || 1),
+        text: String(cell?.content || ""),
+        norm: normalizeText(cell?.content || ""),
+        ...b,
+      });
+    }
   }
-  return rows;
+
+  const seen = new Set();
+  return out.filter((row) => {
+    const key = `${row.pageIndex}|${row.norm}|${Math.round(row.x * 100)}|${Math.round(row.y * 100)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
-function findLabeledAmount(lines, aliases) {
-  const normalizedAliases = aliases.map(normalizeText);
-  for (const label of lines) {
-    if (!normalizedAliases.includes(label.norm)) continue;
+function findSpatialLabeledAmount(evidence, aliases) {
+  for (const label of evidence) {
+    if (!labelMatches(label.text, aliases)) continue;
 
-    const inline = parseMoneyText(label.text);
-    if (inline != null && /\d/.test(label.text.replace(new RegExp(aliases[0], "i"), ""))) {
-      return { value: inline, label: label.text, evidence: label.text, pageIndex: label.pageIndex, y: label.y };
-    }
-
-    const tolerance = Math.max(label.pageHeight * 0.008, label.height * 1.05);
-    const candidates = lines
-      .filter((row) =>
-        row !== label &&
-        row.pageIndex === label.pageIndex &&
-        row.left > label.right + label.pageWidth * 0.03 &&
-        Math.abs(row.y - label.y) <= tolerance &&
-        looksLikeStandaloneMoney(row.text)
+    const tolerance = Math.max(label.pageHeight * 0.012, label.height * 1.6);
+    const candidates = evidence
+      .filter(
+        (row) =>
+          row !== label &&
+          row.pageIndex === label.pageIndex &&
+          row.left > label.right + label.pageWidth * 0.01 &&
+          Math.abs(row.y - label.y) <= tolerance &&
+          looksLikeStandaloneMoney(row.text),
       )
-      .sort((a, b) =>
-        Math.abs(a.y - label.y) - Math.abs(b.y - label.y) ||
-        b.right - a.right
+      .sort(
+        (a, b) =>
+          Math.abs(a.y - label.y) - Math.abs(b.y - label.y) ||
+          b.right - a.right,
       );
 
     if (candidates[0]) {
@@ -115,25 +189,81 @@ function findLabeledAmount(lines, aliases) {
   return null;
 }
 
-function findPrintedTotal(lines, summaryEvidence, baseValue, expectedValue = 0) {
-  const evidence = summaryEvidence.filter(Boolean);
-  if (!evidence.length) return null;
-  const pageIndex = Math.max(...evidence.map((x) => x.pageIndex));
-  const startY = Math.min(...evidence.filter((x) => x.pageIndex === pageIndex).map((x) => x.y));
-  const threshold = Math.max(100, Number(baseValue || 0) * 0.5);
 
-  const candidates = lines
+function findTableLabeledAmount(analyzeResult, aliases) {
+  const pages = analyzeResult?.analyzeResult?.pages || [];
+  for (const table of analyzeResult?.analyzeResult?.tables || []) {
+    const cells = table?.cells || [];
+    for (const labelCell of cells) {
+      if (!labelMatches(labelCell?.content || "", aliases)) continue;
+      const rowIndex = Number(labelCell?.rowIndex);
+      const labelColumn = Number(labelCell?.columnIndex ?? -1);
+      if (!Number.isFinite(rowIndex)) continue;
+
+      const candidates = cells
+        .filter((cell) =>
+          cell !== labelCell &&
+          Number(cell?.rowIndex) === rowIndex &&
+          Number(cell?.columnIndex ?? -1) > labelColumn &&
+          looksLikeStandaloneMoney(cell?.content || ""),
+        )
+        .map((cell) => ({
+          cell,
+          value: parseMoneyText(cell?.content || ""),
+          columnIndex: Number(cell?.columnIndex ?? -1),
+        }))
+        .filter((entry) => Number.isFinite(entry.value))
+        .sort((a, b) => b.columnIndex - a.columnIndex);
+
+      const best = candidates[0];
+      if (!best) continue;
+
+      const region = labelCell?.boundingRegions?.[0] || best.cell?.boundingRegions?.[0];
+      const pageIndex = Math.max(0, Number(region?.pageNumber || 1) - 1);
+      const b = bounds(region?.polygon || []) || {};
+      return {
+        value: best.value,
+        label: String(labelCell?.content || ""),
+        evidence: `${labelCell?.content || ""} -> ${best.cell?.content || ""}`,
+        pageIndex,
+        y: Number.isFinite(b.y) ? b.y : rowIndex,
+        source: "table-row",
+      };
+    }
+  }
+  return null;
+}
+
+function findLabeledAmount(analyzeResult, evidence, aliases) {
+  return findTableLabeledAmount(analyzeResult, aliases) || findSpatialLabeledAmount(evidence, aliases);
+}
+
+function findPrintedTotal(evidence, summaryEvidence, baseValue, expectedValue) {
+  const ev = summaryEvidence.filter(Boolean);
+  const pageIndex = ev.length
+    ? Math.max(...ev.map((x) => x.pageIndex))
+    : Math.max(0, ...evidence.map((x) => x.pageIndex));
+  const pageRows = evidence.filter((x) => x.pageIndex === pageIndex);
+  if (!pageRows.length) return null;
+
+  const startY = ev.length
+    ? Math.min(...ev.filter((x) => x.pageIndex === pageIndex).map((x) => x.y))
+    : Math.max(...pageRows.map((x) => x.bottom)) * 0.55;
+
+  const threshold = Math.max(100, Number(baseValue || 0) * 0.5);
+  const expected = Number(expectedValue || 0);
+
+  const candidates = pageRows
     .map((row) => ({ ...row, money: parseMoneyText(row.text) }))
-    .filter((row) =>
-      row.pageIndex === pageIndex &&
-      row.y >= startY &&
-      row.x >= row.pageWidth * 0.60 &&
-      looksLikeStandaloneMoney(row.text) &&
-      Number.isFinite(row.money) &&
-      Math.abs(row.money) > threshold
+    .filter(
+      (row) =>
+        row.y >= startY &&
+        row.x >= row.pageWidth * 0.55 &&
+        looksLikeStandaloneMoney(row.text) &&
+        Number.isFinite(row.money) &&
+        Math.abs(row.money) > threshold,
     );
 
-  const expected = Number(expectedValue || 0);
   candidates.sort((a, b) => {
     if (expected > 0) {
       const da = Math.abs(Math.abs(a.money) - expected);
@@ -148,90 +278,69 @@ function findPrintedTotal(lines, summaryEvidence, baseValue, expectedValue = 0) 
 
 const absOrZero = (entry) => Math.abs(Number(entry?.value || 0));
 
-
-function tokenScore(a, b) {
-  const aa = new Set(normalizeText(a).split(" ").filter((x) => x.length > 1));
-  const bb = new Set(normalizeText(b).split(" ").filter((x) => x.length > 1));
-  if (!aa.size || !bb.size) return 0;
-  return [...aa].filter((x) => bb.has(x)).length / Math.max(aa.size, bb.size);
-}
-
-export function enrichItemsWithTableHints(analyzeResult, items = []) {
-  const hints = [];
-  for (const table of analyzeResult?.analyzeResult?.tables || []) {
-    const cells = table?.cells || [];
-    const rows = [...new Set(cells.map((c) => Number(c.rowIndex || 0)))].sort((a,b)=>a-b);
-    let header = null, descCol = null, mrpCol = null;
-    for (const ri of rows.slice(0,4)) {
-      for (const c of cells.filter((x)=>Number(x.rowIndex||0)===ri)) {
-        const n=normalizeText(c.content);
-        if (n === "name of item" || n === "item name" || n === "description" || n.includes("name of item")) {
-          header=ri; descCol=Number(c.columnIndex);
-        }
-        if (n === "mrp" || n.startsWith("mrp ")) {
-          header=header ?? ri; mrpCol=Number(c.columnIndex);
-        }
-      }
-      if (descCol != null && mrpCol != null) break;
-    }
-    if (header == null || descCol == null || mrpCol == null) continue;
-    for (const ri of rows.filter((x)=>x>header)) {
-      const d=cells.find((c)=>Number(c.rowIndex||0)===ri && Number(c.columnIndex||0)===descCol)?.content;
-      const m=cells.find((c)=>Number(c.rowIndex||0)===ri && Number(c.columnIndex||0)===mrpCol)?.content;
-      const mrp=parseMoneyText(m);
-      if (String(d||"").trim() && Number(mrp)>0) hints.push({description:String(d).trim(),mrp:Number(mrp)});
-    }
-  }
-  if (!hints.length) return items;
-  const used=new Set();
-  return (items||[]).map((item,index)=>{
-    if (Number(item?.mrp||0)>0) return item;
-    let bi=-1, bs=0;
-    hints.forEach((h,i)=>{
-      if(used.has(i)) return;
-      const sc=tokenScore(item?.description,h.description);
-      if(sc>bs){bs=sc;bi=i;}
-    });
-    if (bi<0 && hints.length===items.length && !used.has(index)) { bi=index; bs=.5; }
-    if (bi<0 || bs<.35) return item;
-    used.add(bi);
-    return {...item,mrp:hints[bi].mrp,mrpSource:"INVOICE_TABLE_MRP"};
-  });
-}
-
 export function extractInvoiceFinancials(analyzeResult, fields = {}, items = []) {
-  const lines = flattenLines(analyzeResult);
+  const evidence = flattenEvidence(analyzeResult);
   const lineProductValue = Number(
     (items || []).reduce((sum, item) => sum + Math.max(0, Number(item?.amount || 0)), 0).toFixed(2),
   );
 
-  const cashDiscount = findLabeledAmount(lines, ["cash discount", "cash disc"]);
-  const otherDeduction = findLabeledAmount(lines, ["other deduction", "other ded"]);
-  const freightCarting = findLabeledAmount(lines, ["freight carting", "freight/carting"]);
-  const transport = findLabeledAmount(lines, ["transport"]);
-  const handling = findLabeledAmount(lines, ["handling"]);
-  const loadingUnloading = findLabeledAmount(lines, ["loading unloading", "loading/unloading"]);
-  const stampDuty = findLabeledAmount(lines, ["stamp duty"]);
-  const tcs = findLabeledAmount(lines, ["tcs"]);
-  const otherAdditions = findLabeledAmount(lines, ["other additions"]);
-  const roundOff = findLabeledAmount(lines, ["round off", "rounding adjustment"]);
+  const cashDiscount = findLabeledAmount(analyzeResult, evidence, [
+    "cash discount", "cash discounts", "cash disc",
+  ]);
+  const otherDeduction = findLabeledAmount(analyzeResult, evidence, [
+    "other deduction", "other deductions", "other discount", "other discounts", "other ded",
+  ]);
+  const freightCarting = findLabeledAmount(analyzeResult, evidence, [
+    "freight carting", "freight and carting",
+    "carrying and forwarding", "carrying forwarding",
+    "carriage and forwarding", "carriage forwarding",
+  ]);
+  const transport = findLabeledAmount(analyzeResult, evidence, ["transport"]);
+  const handling = findLabeledAmount(analyzeResult, evidence, ["handling"]);
+  const loadingUnloading = findLabeledAmount(analyzeResult, evidence, [
+    "loading unloading", "loading and unloading",
+  ]);
+  const stampDuty = findLabeledAmount(analyzeResult, evidence, [
+    "stamp duty", "stamp fee", "stamp fees",
+  ]);
+  const tcs = findLabeledAmount(analyzeResult, evidence, ["tcs"]);
+  const otherAdditions = findLabeledAmount(analyzeResult, evidence, [
+    "other additions", "other addition",
+  ]);
+  const roundOff = findLabeledAmount(analyzeResult, evidence, [
+    "round off", "rounding adjustment",
+  ]);
 
-  const evidence = [
+  const summaryEvidence = [
     cashDiscount, otherDeduction, freightCarting, transport, handling,
     loadingUnloading, stampDuty, tcs, otherAdditions, roundOff,
   ];
 
-  const standardDiscount = Math.max(0, Math.abs(Number(fieldNumber(fields.Discount) ?? fieldNumber(fields.TotalDiscount) ?? 0)));
-  const standardFreight = Math.max(0, Math.abs(Number(fieldNumber(fields.Freight) ?? fieldNumber(fields.ShippingCost) ?? fieldNumber(fields.Shipping) ?? 0)));
-  const standardOther = Math.max(0, Math.abs(Number(fieldNumber(fields.OtherCharges) ?? 0)));
+  const standardDiscount = Math.max(
+    0,
+    Math.abs(Number(fieldNumber(fields.Discount) ?? fieldNumber(fields.TotalDiscount) ?? 0)),
+  );
+  const standardFreight = Math.max(
+    0,
+    Math.abs(Number(
+      fieldNumber(fields.Freight) ??
+      fieldNumber(fields.ShippingCost) ??
+      fieldNumber(fields.Shipping) ??
+      0
+    )),
+  );
+  const standardOther = Math.max(
+    0,
+    Math.abs(Number(fieldNumber(fields.OtherCharges) ?? 0)),
+  );
 
+  const hasLabeledDiscount = Boolean(cashDiscount || otherDeduction);
   const supplierDiscountAmount = absOrZero(cashDiscount);
-  let invoiceDiscountAmount = absOrZero(otherDeduction);
-  if (!supplierDiscountAmount && !invoiceDiscountAmount) {
-    invoiceDiscountAmount = standardDiscount;
-  } else if (standardDiscount > supplierDiscountAmount + invoiceDiscountAmount) {
-    invoiceDiscountAmount += Number((standardDiscount - supplierDiscountAmount - invoiceDiscountAmount).toFixed(2));
-  }
+  const invoiceDiscountAmount = otherDeduction
+    ? absOrZero(otherDeduction)
+    : hasLabeledDiscount
+      ? 0
+      : standardDiscount;
 
   const freightAmount = absOrZero(freightCarting) || standardFreight;
   const transportAmount = absOrZero(transport);
@@ -240,12 +349,20 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   const stampDutyAmount = absOrZero(stampDuty);
   const tcsAmount = absOrZero(tcs);
   const otherAdditionsAmount = absOrZero(otherAdditions);
-
   const recognizedMisc = stampDutyAmount + tcsAmount + otherAdditionsAmount;
   const miscellaneousAmount = Number((recognizedMisc || standardOther).toFixed(2));
 
   const explicitSubtotal = Number(fieldNumber(fields.SubTotal) || 0);
-  const subtotal = explicitSubtotal > 0 ? explicitSubtotal : (lineProductValue > 0 ? lineProductValue : null);
+  const subtotal =
+    lineProductValue > 0 &&
+    (
+      explicitSubtotal <= 0 ||
+      Math.abs(explicitSubtotal - lineProductValue) > 1
+    )
+      ? lineProductValue
+      : explicitSubtotal > 0
+        ? explicitSubtotal
+        : lineProductValue || null;
 
   const knownAdjustment =
     freightAmount + transportAmount + handlingAmount + loadingUnloadingAmount +
@@ -253,19 +370,25 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
 
   const expectedBeforeRounding = Number((lineProductValue + knownAdjustment).toFixed(2));
   const explicitTotal = Number(fieldNumber(fields.InvoiceTotal) || 0);
-  const spatialTotal = findPrintedTotal(lines, evidence, lineProductValue, expectedBeforeRounding);
+  const spatialTotal = findPrintedTotal(
+    evidence, summaryEvidence, lineProductValue, expectedBeforeRounding,
+  );
+
   let printedInvoiceTotal = explicitTotal > 0 ? explicitTotal : spatialTotal;
 
   if (spatialTotal > 0) {
+    const explicitLooksImplausible =
+      explicitTotal <= 0 ||
+      explicitTotal < Math.max(100, lineProductValue * 0.5) ||
+      Math.abs(explicitTotal - expectedBeforeRounding) >
+        Math.abs(spatialTotal - expectedBeforeRounding) + 0.01;
     const explicitLooksLikeSubtotal =
       explicitTotal > 0 &&
       Math.abs(explicitTotal - lineProductValue) <= 1 &&
       Math.abs(knownAdjustment) > 1;
-    const spatialIsCloser =
-      explicitTotal <= 0 ||
-      Math.abs(spatialTotal - expectedBeforeRounding) + 0.01 <
-        Math.abs(explicitTotal - expectedBeforeRounding);
-    if (explicitLooksLikeSubtotal || spatialIsCloser) printedInvoiceTotal = spatialTotal;
+    if (explicitLooksImplausible || explicitLooksLikeSubtotal) {
+      printedInvoiceTotal = spatialTotal;
+    }
   }
 
   let roundingAdjustment = Number(roundOff?.value || 0);
@@ -277,27 +400,26 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   const calculatedInvoiceTotal = Number(
     (lineProductValue + knownAdjustment + roundingAdjustment).toFixed(2),
   );
-
-  if (!printedInvoiceTotal && calculatedInvoiceTotal > 0) {
-    printedInvoiceTotal = null;
-  }
-
-  const difference = printedInvoiceTotal == null
-    ? null
-    : Number((printedInvoiceTotal - calculatedInvoiceTotal).toFixed(2));
-
-  const reconciliationStatus = printedInvoiceTotal == null
-    ? "NO_PRINTED_TOTAL"
-    : Math.abs(difference) <= 1
-      ? "MATCH"
-      : "REVIEW";
+  const difference =
+    printedInvoiceTotal == null
+      ? null
+      : Number((printedInvoiceTotal - calculatedInvoiceTotal).toFixed(2));
+  const reconciliationStatus =
+    printedInvoiceTotal == null
+      ? "NO_PRINTED_TOTAL"
+      : Math.abs(difference) <= 1
+        ? "MATCH"
+        : "REVIEW";
 
   const standardTax = Number(fieldNumber(fields.TotalTax) || 0);
-  const standardAmountDue = Number(fieldNumber(fields.AmountDue) || 0);
+  const totalTax =
+    standardTax > 0 && Math.abs(standardTax - tcsAmount) > 1
+      ? standardTax
+      : null;
 
   return {
     subtotal,
-    totalTax: standardTax || null,
+    totalTax,
     discountAmount: Number((supplierDiscountAmount + invoiceDiscountAmount).toFixed(2)),
     freightAmount,
     shippingAmount: 0,
@@ -309,7 +431,7 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
     loadingUnloadingAmount,
     miscellaneousAmount,
     roundingAdjustment,
-    amountDue: standardAmountDue > 0 ? standardAmountDue : (printedInvoiceTotal || null),
+    amountDue: printedInvoiceTotal || null,
     total: printedInvoiceTotal || null,
     financialAdjustments: {
       lineProductValue,
@@ -328,7 +450,59 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
       calculatedInvoiceTotal,
       difference,
       reconciliationStatus,
-      evidence: evidence.filter(Boolean).map((x) => x.evidence),
+      evidence: summaryEvidence.filter(Boolean).map((x) => x.evidence),
     },
   };
+}
+
+function legacyTokenScore(a, b) {
+  const aa = new Set(normalizeText(a).split(" ").filter((x) => x.length > 1));
+  const bb = new Set(normalizeText(b).split(" ").filter((x) => x.length > 1));
+  if (!aa.size || !bb.size) return 0;
+  return [...aa].filter((x) => bb.has(x)).length / Math.max(aa.size, bb.size);
+}
+
+// Backward-compatible helper retained for the established V3-03 regression.
+// V3-04 production normalization is performed by invoiceDocument.js.
+export function enrichItemsWithTableHints(analyzeResult, items = []) {
+  const hints = [];
+  for (const table of analyzeResult?.analyzeResult?.tables || []) {
+    const cells = table?.cells || [];
+    const rows = [...new Set(cells.map((c) => Number(c.rowIndex || 0)))].sort((a,b)=>a-b);
+    let header = null, descCol = null, mrpCol = null;
+    for (const ri of rows.slice(0,5)) {
+      for (const c of cells.filter((x)=>Number(x.rowIndex||0)===ri)) {
+        const n = normalizeText(c.content);
+        if (n === "name of item" || n === "item name" || n === "description" || n === "brand" || n.includes("name of item")) {
+          header = ri; descCol = Number(c.columnIndex);
+        }
+        if (n === "mrp" || n.startsWith("mrp ")) {
+          header = header ?? ri; mrpCol = Number(c.columnIndex);
+        }
+      }
+      if (descCol != null && mrpCol != null) break;
+    }
+    if (header == null || descCol == null || mrpCol == null) continue;
+    for (const ri of rows.filter((x)=>x>header)) {
+      const d = cells.find((c)=>Number(c.rowIndex||0)===ri && Number(c.columnIndex||0)===descCol)?.content;
+      const m = cells.find((c)=>Number(c.rowIndex||0)===ri && Number(c.columnIndex||0)===mrpCol)?.content;
+      const mrp = parseMoneyText(m);
+      if (String(d||"").trim() && Number(mrp)>0) hints.push({description:String(d).trim(),mrp:Number(mrp)});
+    }
+  }
+  if (!hints.length) return items;
+  const used = new Set();
+  return (items||[]).map((item,index)=>{
+    if (Number(item?.mrp||0)>0) return item;
+    let bi=-1, bs=0;
+    hints.forEach((h,i)=>{
+      if (used.has(i)) return;
+      const sc=legacyTokenScore(item?.description,h.description);
+      if (sc>bs) { bs=sc; bi=i; }
+    });
+    if (bi<0 && hints.length===items.length && !used.has(index)) { bi=index; bs=.5; }
+    if (bi<0 || bs<.35) return item;
+    used.add(bi);
+    return {...item,mrp:hints[bi].mrp,mrpSource:"INVOICE_TABLE_MRP"};
+  });
 }

@@ -1,43 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractInvoiceFinancials, enrichItemsWithTableHints } from "../_shared/invoiceFinance.js";
+import { normalizeDocumentIntelligenceResult } from "../_shared/invoiceDocument.js";
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"content-type,x-wsp-automation-secret"};
 const out=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...headers,"Content-Type":"application/json"}});
 function normalize(v:unknown){return String(v||"").toLowerCase().replace(/&/g," and ").replace(/\b(private|pvt|limited|ltd|llp|company|co)\b/g," ").replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");}
 function field(f:any){return f?.content??f?.valueString??f?.valueNumber??f?.valueDate??null;}
 function number(f:any){const v=f?.valueNumber??f?.valueCurrency?.amount??f?.content;const n=Number(String(v??"").replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:null;}
 async function hashBase64(s:string){const raw=atob(s);const b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);const d=await crypto.subtle.digest("SHA-256",b);return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,"0")).join("");}
-function normalizeDI(r:any){
-  const doc=r?.analyzeResult?.documents?.[0];
-  const f=doc?.fields||{};
-  const rawItems=(f.Items?.valueArray||[]).map((row:any)=>{
-    const x=row.valueObject||{};
-    return{
-      description:String(field(x.Description)||field(x.ProductCode)||""),
-      productCode:String(field(x.ProductCode)||""),
-      quantity:number(x.Quantity),
-      unitText:String(field(x.Unit)||field(x.Units)||""),
-      unitPrice:number(x.UnitPrice),
-      amount:number(x.Amount),
-      mrp:number(x.MRP)??number(x.ListPrice),
-      batchNumber:String(field(x.BatchNumber)||field(x.LotNumber)||""),
-      expiryDate:String(field(x.ExpiryDate)||""),
-      taxAmount:number(x.Tax),
-      confidence:row.confidence??x.Description?.confidence??null
-    };
-  });
-  const items=enrichItemsWithTableHints(r,rawItems);
-  const financial=extractInvoiceFinancials(r,f,items);
-  return{
-    supplierName:String(field(f.VendorName)||""),
-    vendorAddress:String(field(f.VendorAddress)||""),
-    vendorTaxId:String(field(f.VendorTaxId)||""),
-    paymentTerm:String(field(f.PaymentTerm)||""),
-    invoiceNumber:String(field(f.InvoiceId)||""),
-    invoiceDate:String(field(f.InvoiceDate)||""),
-    ...financial,
-    items
-  };
-}
+function normalizeDI(r:any){return normalizeDocumentIntelligenceResult(r);}
 Deno.serve(async req=>{if(req.method==="OPTIONS")return new Response("ok",{headers});try{const expected=Deno.env.get("WSP_INVOICE_AUTOMATION_SECRET")||"";if(!expected||req.headers.get("x-wsp-automation-secret")!==expected)return out({ok:false,error:"Unauthorized automation caller"},401);const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!url||!key)throw new Error("Supabase service configuration incomplete");const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});const b=await req.json();const action=String(b?.action||"");if(action==="register_channel"){const source=String(b?.source||"").toUpperCase(),identity=String(b?.identity||"").trim().toLowerCase(),shop=String(b?.shop_id||"").trim();if(!["EMAIL","WHATSAPP"].includes(source)||!identity||!shop)return out({ok:false,error:"Missing/invalid channel fields"},400);const{data:existing,error:ee}=await db.from("invoice_ingestion_channels").select("id,shop_id,active").eq("channel",source).ilike("identity",identity).limit(1).maybeSingle();if(ee)throw ee;if(existing?.id&&existing.shop_id!==shop)return out({ok:false,error:"Channel identity is already assigned to another shop"},409);if(existing?.id){const{error:ue}=await db.from("invoice_ingestion_channels").update({active:true,notes:"V3 Email automation sender mapping"}).eq("id",existing.id);if(ue)throw ue;return out({ok:true,created:false,shop_id:shop,channel:source,identity});}const{error:ie}=await db.from("invoice_ingestion_channels").insert({shop_id:shop,channel:source,identity,active:true,notes:"V3 Email automation sender mapping"});if(ie)throw ie;return out({ok:true,created:true,shop_id:shop,channel:source,identity});}
 if(action==="authorize_sender"){
   const source=String(b?.source||"").toUpperCase();

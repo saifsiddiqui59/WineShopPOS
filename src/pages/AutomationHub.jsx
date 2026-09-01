@@ -126,7 +126,31 @@ function interpretQuantity(item, product) {
   const casesFromQuantityAsRate =
     rawQuantity > 0 && amount > 0 ? nearWhole(amount / rawQuantity) : null;
 
+  const explicitCases = Number(item?.caseCount);
+  const explicitLoose = Math.max(0, Number(item?.looseBottles || 0));
+  const ratePerCase = Math.max(0, Number(item?.ratePerCase || explicitUnitPrice || 0));
+
   if (
+    Number.isInteger(explicitCases) &&
+    explicitCases > 0 &&
+    explicitCases <= 1000
+  ) {
+    caseCount = explicitCases;
+    looseBottles = Number.isInteger(explicitLoose) ? explicitLoose : 0;
+    quantity = caseCount * unitsPerCase + looseBottles;
+    priceBasis = "TABLE_CASE";
+    ocrUnitPrice = ratePerCase;
+    purchasePrice =
+      amount > 0 && quantity > 0
+        ? amount / quantity
+        : ratePerCase > 0
+          ? ratePerCase / unitsPerCase
+          : 0;
+    interpretation =
+      `Invoice table resolved ${caseCount} case(s)` +
+      `${item?.batchNumber ? ` · Batch ${item.batchNumber}` : ""}. ` +
+      "Price/Bottle is allocated from the printed line amount at full precision; review Bottles/Case before confirmation.";
+  } else if (
     rawQuantity > 0 &&
     !Number.isInteger(rawQuantity) &&
     casesFromQuantityAsRate &&
@@ -218,7 +242,7 @@ function interpretQuantity(item, product) {
     quantity,
     priceBasis,
     ocrUnitPrice,
-    purchasePrice: Number.isFinite(purchasePrice) ? Number(purchasePrice.toFixed(4)) : 0,
+    purchasePrice: Number.isFinite(purchasePrice) ? Number(purchasePrice.toFixed(6)) : 0,
     interpretation,
   };
 }
@@ -1164,6 +1188,8 @@ export default function AutomationHub() {
               <thead>
                 <tr>
                   <th>OCR Description</th>
+                  <th>Batch / Lot</th>
+                  <th>MRP</th>
                   <th>Product Resolution</th>
                   <th>Status</th>
                   <th>Cases</th>
@@ -1192,6 +1218,9 @@ export default function AutomationHub() {
                           {row.interpretation || ""}
                         </div>
                       </td>
+
+                      <td><strong>{item.batchNumber || "—"}</strong></td>
+                      <td>{Number(item.mrp || 0) > 0 ? `₹${Number(item.mrp).toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
 
                       <td>
                         {best ? (
@@ -1282,7 +1311,7 @@ export default function AutomationHub() {
                         <input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="0.000001"
                           value={row.purchasePrice ?? 0}
                           onChange={(event) =>
                             updateBottlePrice(index, event.target.value)

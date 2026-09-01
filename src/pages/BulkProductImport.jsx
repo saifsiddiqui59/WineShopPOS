@@ -360,7 +360,7 @@ export default function BulkProductImport() {
                     <input
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="0.000001"
                       value={row.purchasePrice}
                       onChange={(event) =>
                         updateRow(index, "purchasePrice", event.target.value)
