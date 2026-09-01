@@ -1073,3 +1073,7 @@ Royal 21 shimmer uses a six-second CSS keyframe cycle with visible travel only d
 Theme authority remains `profile.theme` through `lib/theme.js`: SYSTEM resolves to OS preference; LIGHT and DARK are explicit. Brand/theme refinement is CSS-only and must preserve Account Settings as the sole user-facing theme control.
 
 Never claim visual-animation PASS from grep/lint/build. Authenticated production UAT is required.
+
+<!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
+## Reference brand-zone rule
+Premium shop identity belongs in a dedicated center topbar zone, not inside `topbar-actions`. Dark theme must use true near-black/charcoal core surfaces; burgundy and gold remain accents.

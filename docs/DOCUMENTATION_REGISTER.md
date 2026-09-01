@@ -122,3 +122,7 @@ Added dynamic-base release rule, executor failure register, static product image
 <!-- BRAND_THEME_REFINEMENT_20260902_V3 -->
 ### Approved WineShop POS brand + Royal 21 + dual-theme refinement
 Custom SVG cheers/splash wordmark, Royal 21 six-second gold shimmer, Light/Dark theme-aware premium surface overrides, reduced-motion behavior and visual-UAT verification rule documented.
+
+<!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
+### Reference branding + true-black Dark mode
+Dedicated center shop-brand zone, large Royal 21 crown/gold/ornament lockup, true-black Dark theme, Light theme preserved.

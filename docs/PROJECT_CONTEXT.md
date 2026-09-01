@@ -449,3 +449,13 @@ Sales history now loads authorized sale headers first, then sale items and payme
 - Dark theme receives charcoal/black + wine/burgundy + restrained gold accents. Light theme receives warm white/light-neutral surfaces + wine/burgundy + restrained gold accents.
 - All brand/shimmer motion respects `prefers-reduced-motion`.
 - Visual UAT remains manual; automated checks must not label animation appearance PASS before authenticated browser confirmation.
+
+<!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
+## 2026-09-01 — Reference-scale branding and true-black Dark theme
+Visual UAT showed Royal 21 remained too small and Dark mode retained a navy cast. The approved supplied reference is now the target: large centered Royal 21 with crown, gold serif treatment, ornamental underline and restrained rays/shimmer; larger sidebar WineShop POS lockup; true black/charcoal Dark mode.
+
+Implementation:
+- topbar becomes page context | centered shop identity | online/user controls;
+- Royal 21 gets a dedicated hero lockup with six-second shimmer cycle;
+- Dark theme surfaces move to near-black/charcoal instead of dark blue;
+- Light mode remains available through Account Settings.

@@ -61,7 +61,8 @@ export default function Layout() {
           <button className="mobile-sidebar-toggle" onClick={() => setCollapsed((v) => !v)} aria-label="Toggle navigation"><PanelLeftOpen size={19}/></button>
           <div><h1>{meta.title}</h1><div className="breadcrumbs">{meta.crumbs.map((crumb, index) => <span key={`${crumb}-${index}`}>{index ? <ChevronRight size={13}/> : null}{crumb}</span>)}</div></div>
         </div>
-        <div className="topbar-actions"><ShopSelector/><OfflineStatus/><UserMenu/></div>
+        <div className="topbar-shop-hero"><ShopSelector/></div>
+        <div className="topbar-actions"><OfflineStatus/><UserMenu/></div>
       </header>
       <div className="page-area"><Outlet/></div>
     </main>

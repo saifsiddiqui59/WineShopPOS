@@ -913,3 +913,7 @@ WineShop POS shows a short two-glass cheers animation when the app layout loads.
 Royal 21 uses a subtle gold highlight approximately every six seconds.
 
 Choose **System**, **Light** or **Dark** under **My Account → Account Settings**. System follows the device preference. Both Light and Dark use the same WineShop POS wine-and-gold brand language. Reduced-motion device settings disable decorative motion.
+
+<!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
+## Premium branding and Dark theme
+Royal 21 appears as a large centered gold shop identity with crown and subtle periodic shine. Dark theme uses black/charcoal rather than dark blue. Light theme remains available from **My Account → Account Settings**.
