@@ -1,4 +1,4 @@
-const CACHE = "wineshoppos-shell-v19-v3-06-friendly-status";
+const CACHE = "wineshoppos-shell-v20-v3-07-auth-race";
 const SHELL = ["./", "./index.html"];
 
 self.addEventListener("install", (event) => {

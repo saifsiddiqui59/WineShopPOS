@@ -11,6 +11,8 @@ async function login(page){
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button",{name:"Login"}).click();
+  await expect(page.getByRole("heading",{name:"Account Disabled"})).toHaveCount(0);
+  await expect(page.getByRole("heading",{name:"Shop Access Suspended"})).toHaveCount(0);
   await expect(page.getByRole("navigation",{name:"Main navigation"})).toBeVisible();
 }
 
@@ -19,6 +21,23 @@ test("public login page renders",async({page})=>{
   await expect(page.getByRole("heading",{name:"WineShop POS"})).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
+});
+
+test("valid active account enters app without browser refresh",async({page})=>{
+  test.skip(!email||!password,"Set E2E_EMAIL and E2E_PASSWORD.");
+  await page.goto("/#/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button",{name:"Login"}).click();
+  await expect(page.getByRole("heading",{name:"Account Disabled"})).toHaveCount(0);
+  await expect(page.getByRole("heading",{name:"Shop Access Suspended"})).toHaveCount(0);
+  try{
+    await expect(page.getByRole("navigation",{name:"Main navigation"})).toBeVisible({timeout:12000});
+  }catch(error){
+    console.log("LOGIN_DIAGNOSTIC_URL",page.url());
+    console.log("LOGIN_DIAGNOSTIC_BODY",await page.locator("body").innerText());
+    throw error;
+  }
 });
 
 test.describe("authenticated read-only smoke",()=>{
@@ -30,7 +49,7 @@ test.describe("authenticated read-only smoke",()=>{
     await page.goto("/#/products");
     await expect(page.locator("body")).toContainText(/Product/);
     await page.goto("/#/inventory");
-    await expect(page.getByRole("heading",{name:"Inventory"})).toBeVisible();
+    await expect(page.locator("h2").filter({hasText:/^Inventory$/})).toBeVisible();
   });
 
   test("Invoice Inbox exposes friendly labels",async({page})=>{
@@ -48,7 +67,15 @@ test.describe("authenticated read-only smoke",()=>{
     test.skip(!productSearch,"Set E2E_PRODUCT_SEARCH to a stocked positive-price product.");
     await page.goto("/#/pos");
     await page.getByLabel("Manual Search").fill(productSearch);
+    await page.waitForTimeout(1200);
     const first=page.locator(".search-result").first();
+    if(await first.count()===0){
+      test.skip(true,"No matching POS product is available for the configured E2E_PRODUCT_SEARCH.");
+    }
+    const resultText=await first.textContent();
+    if(/₹0(?:\.00)?\b/.test(resultText||"")){
+      test.skip(true,"Matching stocked product has zero Selling Price; cart mutation is intentionally not tested against live shop data.");
+    }
     await expect(first).toBeVisible();
     const productName=(await first.locator("span").first().textContent())?.trim();
     await first.click();
@@ -62,7 +89,7 @@ test.describe("authenticated read-only smoke",()=>{
   test("Admin Product Cleanup opens without deletion",async({page})=>{
     test.skip(!expectAdmin,"Set E2E_EXPECT_ADMIN=1 for an ADMIN test account.");
     await page.goto("/#/admin/product-cleanup");
-    await expect(page.getByRole("heading",{name:"Product Cleanup"})).toBeVisible();
+    await expect(page.locator("h2").filter({hasText:/^Product Cleanup$/})).toBeVisible();
     await expect(page.getByText(/Transaction history is protected/i)).toBeVisible();
   });
 });
