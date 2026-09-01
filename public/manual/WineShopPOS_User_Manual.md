@@ -932,3 +932,7 @@ WineShop POS now plays the same five visual stages shown in the approved referen
 <!-- ROYAL21_CROWN_COST_V8 -->
 ## Royal 21 header
 Royal 21 remains stationary in the center header while its crown rotates continuously. The header is contained above the application content and does not cover POS or purchasing screens.
+
+<!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
+## Royal 21 header
+Royal 21 is displayed prominently in the center header. The crown revolves in a 3D side-to-side/Y-axis motion while the shop name remains stationary. In Dark mode the spiritual image tile uses a true black background.

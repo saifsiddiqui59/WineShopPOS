@@ -6,18 +6,23 @@ import { useAuth } from "../context/AuthContext";
 function RoyalHero({ shopName, interactive = false, children }) {
   return (
     <div
-      className={`royal-stable-lockup${interactive ? " royal-stable-lockup-interactive" : ""}`}
+      className={`royal-v9-lockup${interactive ? " royal-v9-lockup-interactive" : ""}`}
       title={shopName}
       aria-label={shopName}
     >
-      <Crown className="royal-rotating-crown" size={23} strokeWidth={1.7} aria-hidden="true" />
-      <span className="royal-stable-name">{shopName}</span>
-      <span className="royal-stable-ornament" aria-hidden="true">
+      <span className="royal-v9-crown-stage" aria-hidden="true">
+        <Crown className="royal-v9-crown" size={25} strokeWidth={1.65} />
+      </span>
+
+      <span className="royal-v9-name">{shopName}</span>
+
+      <span className="royal-v9-ornament" aria-hidden="true">
         <i />
         <b>◇</b>
         <em>◇</em>
         <i />
       </span>
+
       {children}
     </div>
   );
@@ -30,9 +35,11 @@ export default function ShopSelector() {
 
   useEffect(() => {
     let alive = true;
+
     supabase.rpc("my_shop_memberships").then(({ data }) => {
       if (alive) setShops(data || []);
     });
+
     return () => {
       alive = false;
     };
@@ -40,6 +47,7 @@ export default function ShopSelector() {
 
   async function change(shopId) {
     if (!shopId || shopId === profile?.shop_id) return;
+
     setBusy(true);
 
     const { error } = await supabase.rpc("switch_shop", {
@@ -65,7 +73,7 @@ export default function ShopSelector() {
 
     return (
       <RoyalHero shopName={shopName} interactive>
-        <label className="royal-stable-select-layer">
+        <label className="royal-v9-select-layer">
           <span className="sr-only">Current shop</span>
           <select
             value={profile?.shop_id || ""}

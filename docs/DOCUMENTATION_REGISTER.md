@@ -138,3 +138,7 @@ Replaced hand-redrawn brand artwork with SHA-verified raster sprite frames cropp
 <!-- ROYAL21_CROWN_COST_V8 -->
 ### Royal 21 crown-only motion / Azure cost check
 Removed Royal 21 sprite stretching, constrained the lockup to the topbar, added continuous crown rotation, and added a read-only Azure cost diagnostic. WineShop POS brand unchanged.
+
+<!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
+### Royal 21 Y-axis crown / wider center / true-black spiritual tile
+Crown now revolves in 3D on the Y axis, Royal 21 has wider center presence, topbar containment is enforced, and the dark spiritual tile is true black.

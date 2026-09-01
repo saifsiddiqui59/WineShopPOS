@@ -482,3 +482,11 @@ React/CSS only sequences these pixels. WineShop POS uses the five stages across 
 - Only the crown moves: continuous 360-degree rotation over 8 seconds.
 - Royal 21 is constrained to a 72px lockup inside an 82px topbar hero area; consolidated topbar is fixed at 88px so the shop identity cannot overlap the page/POS Billing content below.
 - Added `scripts/diagnostics/check-azure-cost-readonly-v3.sh`, a read-only Azure billing diagnostic covering Logic App state, Function plans, Storage capacity/transactions, AI/Cognitive accounts, monitoring resources and robust month-to-date cost by service/resource/meter.
+
+<!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
+## 2026-09-01 — Royal 21 Y-axis crown + wider center lockup + dark spiritual tile
+- WineShop POS left branding remains untouched.
+- Royal 21 crown now revolves on its Y axis (`rotateY`) rather than rotating like a clock.
+- Royal 21 name uses a wider text lockup (`scaleX`) with larger metallic-gold typography for stronger center visibility.
+- Topbar center brand remains vertically constrained to prevent overlap with POS/Billing or other page content.
+- Dark-mode spiritual/devotional tile surfaces are forced to solid `#050505`.

@@ -1091,3 +1091,7 @@ When pixel fidelity to the approved storyboard is required, do not replace the r
 Do not stretch raster Royal 21 artwork in the topbar. Royal 21 uses text/ornament plus a separate crown. The shop lockup must remain fully inside the topbar and must never overlap page content. WineShop POS brand is not part of this release surface.
 
 Azure cost diagnostics are read-only. They must never stop/delete/resize resources automatically.
+
+<!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
+## Royal 21 motion rule
+The crown uses `rotateY` 3D revolution; do not use 2D clock-style rotation. Royal shop name remains text, not a stretched raster image. It may use restrained horizontal `scaleX` to improve center prominence while remaining fully contained inside the topbar.
