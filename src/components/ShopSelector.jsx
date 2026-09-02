@@ -1,27 +1,36 @@
 import { useEffect, useState } from "react";
-import { Crown, Store } from "lucide-react";
+import { Store } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
 function RoyalHero({ shopName, interactive = false, children }) {
   return (
     <div
-      className={`royal-v10-lockup${interactive ? " royal-v10-lockup-interactive" : ""}`}
+      className={`royal-v11-lockup${interactive ? " royal-v11-lockup-interactive" : ""}`}
       title={shopName}
       aria-label={shopName}
     >
-      <span className="royal-v10-crown-stage" aria-hidden="true">
-        <Crown className="royal-v10-crown royal-v10-crown-back" size={26} strokeWidth={1.65} />
-        <Crown className="royal-v10-crown royal-v10-crown-front" size={26} strokeWidth={1.65} />
+      <span className="royal-v11-crown-stage" aria-hidden="true">
+        <span className="royal-v11-crown-rotor">
+          <img
+            className="royal-v11-crown-face royal-v11-crown-front"
+            src="/brand/royal21-crown-user-v11.png"
+            alt=""
+            draggable="false"
+          />
+          <img
+            className="royal-v11-crown-face royal-v11-crown-back"
+            src="/brand/royal21-crown-user-v11.png"
+            alt=""
+            draggable="false"
+          />
+        </span>
       </span>
 
-      <span className="royal-v10-name">{shopName}</span>
+      <span className="royal-v11-name">{shopName}</span>
 
-      <span className="royal-v10-ornament" aria-hidden="true">
-        <i />
-        <b>◇</b>
-        <em>◇</em>
-        <i />
+      <span className="royal-v11-ornament" aria-hidden="true">
+        <i /><b>◇</b><em>◇</em><i />
       </span>
 
       {children}
@@ -36,11 +45,9 @@ export default function ShopSelector() {
 
   useEffect(() => {
     let alive = true;
-
     supabase.rpc("my_shop_memberships").then(({ data }) => {
       if (alive) setShops(data || []);
     });
-
     return () => {
       alive = false;
     };
@@ -48,7 +55,6 @@ export default function ShopSelector() {
 
   async function change(shopId) {
     if (!shopId || shopId === profile?.shop_id) return;
-
     setBusy(true);
 
     const { error } = await supabase.rpc("switch_shop", {
@@ -74,7 +80,7 @@ export default function ShopSelector() {
 
     return (
       <RoyalHero shopName={shopName} interactive>
-        <label className="royal-v10-select-layer">
+        <label className="royal-v11-select-layer">
           <span className="sr-only">Current shop</span>
           <select
             value={profile?.shop_id || ""}

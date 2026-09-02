@@ -940,3 +940,7 @@ Royal 21 is displayed prominently in the center header. The crown revolves in a 
 <!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
 ## Royal 21 header appearance
 Royal 21 appears on a pitch-black premium tile with a subtle shimmer. The crown has a stronger 3D revolving effect, and the spiritual image tile also appears pitch black in Dark mode.
+
+<!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
+## Royal 21 premium header
+Royal 21 uses the jeweled crown supplied for the shop, rotating in a side-to-side 3D/Y-axis motion. The complete center header area carries a subtle gold shimmer. Dark mode uses pitch-black application and module backgrounds.

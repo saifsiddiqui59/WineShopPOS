@@ -498,3 +498,13 @@ React/CSS only sequences these pixels. WineShop POS uses the five stages across 
 - The premium Royal 21 tile is explicitly pitch black (`#000000`) and has a full-width shimmering light pass that fades toward the left and right edges.
 - The devotional/spiritual tile in Dark mode is also forced to pitch black (`#000000`).
 - Topbar containment remains enforced so center branding never overlaps page content below.
+
+<!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
+## 2026-09-02 — User-supplied Royal crown + full center hero + pitch-black Dark mode
+- WineShop POS left branding remains untouched.
+- The user-supplied jeweled crown is converted from the uploaded checkerboard JPG into an optimized transparent PNG and stored at `/public/brand/royal21-crown-user-v11.png`.
+- Royal 21 uses the crown as a double-sided 3D Y-axis rotor.
+- The premium effect now belongs to the entire `topbar-shop-hero` center lane rather than a small black badge around the shop name.
+- The full center lane has a restrained gold bloom and six-second shimmer fading at both ends.
+- Dark mode forces body/app/main/page/module shell/module content/sidebar/topbar to pitch black and neutral panels to near-black, removing the visible navy/blue cast.
+- Spiritual image tile remains pitch black in Dark mode.

@@ -1099,3 +1099,7 @@ The crown uses `rotateY` 3D revolution; do not use 2D clock-style rotation. Roya
 <!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
 ## Royal 21 premium tile rule
 Royal 21 remains text-based, not a stretched image. Crown motion uses a layered 3D Y-axis revolve. The center shop tile background is pitch black (`#000000`) with a subtle shimmer pass across the full tile. The left WineShop POS brand remains outside this change surface.
+
+<!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
+## Royal 21 user crown rule
+The user-supplied crown asset is the Royal 21 crown source. Do not substitute a Lucide crown while this asset is active. The crown rotates on the Y axis with front/back faces. Premium shimmer belongs to the entire center topbar lane, not a small shop-name badge. Dark mode base/module backgrounds are pitch black.

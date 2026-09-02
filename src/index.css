@@ -4151,3 +4151,281 @@ html[data-theme="dark"] .spiritual-tile.is-drop-active {
     animation: none !important;
   }
 }
+
+/* USER_CROWN_FULL_HERO_PITCH_BLACK_V11 */
+
+/* Entire Dark theme foundation: remove navy/blue surfaces. */
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root,
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .main-area,
+html[data-theme="dark"] .page-area,
+html[data-theme="dark"] .module-shell,
+html[data-theme="dark"] .module-content,
+html[data-theme="dark"] .pos-page {
+  background: #000000 !important;
+}
+
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .consolidated-topbar,
+html[data-theme="dark"] .module-heading,
+html[data-theme="dark"] .module-tabs {
+  background: #000000 !important;
+}
+
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .data-table-wrapper,
+html[data-theme="dark"] .data-table {
+  background: #050505 !important;
+}
+
+/* The center hero itself is the premium effect area — no small black badge. */
+.consolidated-topbar {
+  height: 90px !important;
+  min-height: 90px !important;
+  overflow: hidden !important;
+}
+
+.topbar-shop-hero {
+  position: relative !important;
+  width: 100% !important;
+  height: 86px !important;
+  min-height: 86px !important;
+  max-height: 86px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  isolation: isolate;
+  perspective: 1000px;
+  background: #000000 !important;
+}
+
+.topbar-shop-hero::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 54%, rgba(218, 173, 55, .20) 0%, rgba(218, 173, 55, .065) 34%, transparent 68%),
+    linear-gradient(90deg, transparent 0%, rgba(168, 114, 16, .035) 22%, rgba(220, 173, 52, .10) 50%, rgba(168, 114, 16, .035) 78%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+}
+
+.topbar-shop-hero::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: -34%;
+  width: 34%;
+  pointer-events: none;
+  transform: skewX(-15deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 232, 152, .02) 16%,
+    rgba(255, 232, 152, .18) 43%,
+    rgba(255, 245, 202, .42) 50%,
+    rgba(255, 232, 152, .18) 57%,
+    rgba(255, 232, 152, .02) 84%,
+    transparent 100%
+  );
+  filter: blur(.35px);
+  animation: royal-v11-full-hero-shimmer 6s ease-in-out infinite;
+}
+
+@keyframes royal-v11-full-hero-shimmer {
+  0%, 20% { left: -38%; opacity: 0; }
+  28% { opacity: .35; }
+  50% { left: 50%; opacity: .72; }
+  72% { left: 104%; opacity: .25; }
+  80%, 100% { left: 104%; opacity: 0; }
+}
+
+.royal-v11-lockup {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 520px);
+  height: 82px;
+  display: grid;
+  grid-template-rows: 29px 39px 10px;
+  place-items: center;
+  align-content: center;
+  overflow: visible;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.royal-v11-crown-stage {
+  grid-row: 1;
+  width: 76px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  perspective: 650px;
+  transform-style: preserve-3d;
+}
+
+.royal-v11-crown-rotor {
+  position: relative;
+  width: 66px;
+  height: 38px;
+  display: block;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  animation: royal-v11-crown-y-rotate 6s linear infinite;
+}
+
+.royal-v11-crown-face {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 38px;
+  width: auto;
+  max-width: 74px;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  filter:
+    drop-shadow(0 0 5px rgba(237, 192, 70, .26))
+    drop-shadow(0 3px 5px rgba(0, 0, 0, .58));
+}
+
+.royal-v11-crown-front {
+  transform: translate(-50%, -50%) translateZ(2px);
+}
+
+.royal-v11-crown-back {
+  transform: translate(-50%, -50%) rotateY(180deg) translateZ(2px);
+  filter:
+    brightness(.72)
+    saturate(.85)
+    drop-shadow(0 0 4px rgba(196, 145, 38, .18));
+}
+
+@keyframes royal-v11-crown-y-rotate {
+  0%   { transform: rotateX(3deg) rotateY(0deg); }
+  25%  { transform: rotateX(3deg) rotateY(90deg); }
+  50%  { transform: rotateX(3deg) rotateY(180deg); }
+  75%  { transform: rotateX(3deg) rotateY(270deg); }
+  100% { transform: rotateX(3deg) rotateY(360deg); }
+}
+
+.royal-v11-name {
+  grid-row: 2;
+  display: inline-block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(31px, 2.9vw, 42px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: .35px;
+  white-space: nowrap;
+  transform: scaleX(1.18);
+  transform-origin: center;
+  background: linear-gradient(
+    105deg,
+    #7b4a09 0%,
+    #bd831c 17%,
+    #f9df89 36%,
+    #d4af37 52%,
+    #f9e9ab 69%,
+    #bb811c 84%,
+    #764707 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 1px 0 rgba(255, 240, 180, .04),
+    0 8px 20px rgba(173, 116, 21, .13);
+}
+
+.royal-v11-ornament {
+  grid-row: 3;
+  width: 214px;
+  height: 9px;
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr;
+  align-items: center;
+  gap: 4px;
+  color: #c89b2f;
+}
+
+.royal-v11-ornament i {
+  height: 1px;
+  display: block;
+  background: linear-gradient(90deg, transparent, rgba(220, 178, 72, .96));
+}
+
+.royal-v11-ornament i:last-child {
+  background: linear-gradient(90deg, rgba(220, 178, 72, .96), transparent);
+}
+
+.royal-v11-ornament b,
+.royal-v11-ornament em {
+  font-style: normal;
+  font-size: 7px;
+  line-height: 1;
+}
+
+.royal-v11-lockup-interactive {
+  cursor: pointer;
+}
+
+.royal-v11-select-layer,
+.royal-v11-select-layer select {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  width: 100%;
+  height: 100%;
+}
+
+.royal-v11-select-layer select {
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Spiritual/devotional tile is also pitch black in Dark mode. */
+html[data-theme="dark"] .spiritual-tile,
+html[data-theme="dark"] .spiritual-tile.is-drop-active,
+html[data-theme="dark"] .spiritual-empty,
+html[data-theme="dark"] .spiritual-controls button,
+html[data-theme="dark"] .spiritual-collapsed-button,
+html[data-theme="dark"] .spiritual-tile-collapsed,
+html[data-theme="dark"] .spiritual-message {
+  background: #000000 !important;
+}
+
+html[data-theme="dark"] .spiritual-tile {
+  border-color: rgba(216, 178, 79, .28) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .32) !important;
+}
+
+.page-area {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+@media (max-width: 1180px) {
+  .royal-v11-lockup {
+    width: min(100%, 410px);
+  }
+
+  .royal-v11-name {
+    font-size: clamp(26px, 2.45vw, 34px);
+    transform: scaleX(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-shop-hero::after,
+  .royal-v11-crown-rotor {
+    animation: none !important;
+  }
+}
