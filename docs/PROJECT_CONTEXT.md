@@ -559,3 +559,7 @@ The `/v3-preview/` build no longer registers its own service worker. It may unre
 
 Manual authenticated UAT is still required at 1920×1080, 1536×864, 1366×768, 1024×768, 768×1024 and 390×844 before production promotion.
 
+
+<!-- MANDATORY_EXECUTOR_FAILURE_REGISTER_PRE_READ_20260902 -->
+## Mandatory executor failure-register pre-read
+Before creating or running any WineShopPOS patch/executor/continuation, read `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md` from the current target branch in full. Reuse its verified resolutions for Git safety, Windows/Git Bash path conversion, authentication mode, CLI behavior, dependency/library issues, Vite environment injection, preview/production isolation and verification labeling. A new failure must be recorded in that register before the next continuation is created.

@@ -152,3 +152,99 @@ Permanent prevention:
 - prefer Python standard-library validators for release-time asset checks;
 - PNG signature/IHDR dimensions must be validated with `struct`;
 - do not install optional Python packages during production release solely for validation.
+
+## Mandatory pre-patch failure-knowledge contract
+
+Status: REQUIRED for every future WineShopPOS patch, executor, continuation and deployment script.
+
+Before creating a patch/executor:
+1. Read this file in full from the current target branch.
+2. Classify the proposed work against these risk dimensions:
+   - Git/repository state and dirty-tree ownership
+   - operating system / Git Bash / Windows path behavior
+   - authentication mode and required RBAC/data-plane permissions
+   - CLI/tool behavior and version assumptions
+   - language/runtime/library dependencies
+   - Vite/build-time environment injection
+   - deployment target isolation (V3 preview vs production root)
+   - verification class (source/build/transport/runtime/manual UAT)
+3. Reuse a previously verified resolution pattern when the failure class already exists.
+4. Never repeat a known failed mechanism unless the executor explicitly proves why the previous root cause no longer applies.
+5. If a new failure occurs, record it here before creating the next continuation.
+
+Required incident fields:
+- Date / release / stage
+- Symptom or exact failure class
+- Authentication/tool/library/platform involved
+- Root cause
+- Resolution used
+- Permanent prevention rule
+- Safe continuation point
+- Verified outcome
+
+### 2026-09-02 — V5-A Windows Python POSIX-path interpretation
+
+Release/stage:
+V5-A responsive/resizable/preview patch — source application stage.
+
+Symptom:
+Python `pathlib.Path("/e/WineShopPOS_V3")` executed by native Windows Python resolved to `C:\e\WineShopPOS_V3`, then failed to find `src/pages/Products.jsx`.
+
+Platform/runtime:
+Git Bash on Windows invoking native Windows Python 3.13.
+
+Root cause:
+A Git-Bash POSIX path was passed directly into native Windows Python. Git Bash path syntax is not automatically translated inside Python string literals.
+
+Resolution:
+Resolve the worktree path in Bash with `cygpath -w "$V3"`, export it, and read that native path from Python through an environment variable. Add a Python assertion that the expected repository file exists before any writes.
+
+Permanent prevention:
+- Never hardcode `/e/...` inside native Windows Python blocks.
+- Convert Git-Bash paths with `cygpath -w` before crossing into native Windows Python.
+- Prefer shell-native file operations when Python is not required.
+- Before Python modifies files, assert a known target such as `src/pages/Products.jsx` exists at the resolved path.
+
+Safe continuation point:
+The failed run did not modify the real V3 worktree. Rerun with the Windows-path-fixed executor from the original V3 base.
+
+Verified outcome:
+The corrected executor reached commit/push and advanced V3 to `4de3e0faaecac0c2e9d682d551e7e593216ca8d6`.
+
+### 2026-09-02 — V5-A Azure Storage data-plane RBAC/auth-mode mismatch
+
+Release/stage:
+V5-A — deploy only to Azure Storage `$web/v3-preview`.
+
+Symptom:
+`az storage blob upload-batch ... --auth-mode login` failed with:
+`You do not have the required permissions needed to perform this operation`
+and suggested Storage Blob Data Owner/Contributor/Reader roles.
+
+Authentication involved:
+Microsoft Entra/Azure CLI login authentication was valid for management-plane access, but the signed-in identity lacked the required Azure Storage Blob data-plane role for upload.
+
+Root cause:
+The executor assumed `--auth-mode login` was the working upload mechanism. Existing WineShopPOS release knowledge already identified that RBAC upload can fail while account-key upload remains available.
+
+Resolution:
+For this existing storage account, obtain the account key through Azure management-plane authorization without printing it, pass it only in memory to the upload command, and immediately unset it after the upload. Upload remains restricted to `$web/v3-preview`.
+
+Permanent prevention:
+- Before generating an Azure Storage deployment executor, read this failure register and choose the previously verified auth path.
+- Do not default blindly to `--auth-mode login`.
+- Preferred current WineShopPOS fallback when Blob Data Contributor is not assigned:
+  1. verify Azure CLI login and subscription;
+  2. retrieve a storage account key with `az storage account keys list`;
+  3. never echo/log the key;
+  4. use the key only for the intended storage operation;
+  5. `unset` the key immediately afterward.
+- If key retrieval is denied, stop and report the missing management-plane permission; do not expose credentials or weaken storage security.
+- Never upload V3 preview files to production root.
+
+Safe continuation point:
+V5-A source/build/commit/push already succeeded. Do not rerun the source patch. Continue from exact committed V3 SHA `4de3e0faaecac0c2e9d682d551e7e593216ca8d6`, rebuild it with the required Vite environment and `/v3-preview/` base, then perform preview-only upload.
+
+Verified outcome:
+Pending this continuation.
+
