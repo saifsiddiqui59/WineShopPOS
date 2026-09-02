@@ -960,3 +960,7 @@ The center header displays the supplied Royal 21 Rajasthan artwork directly.
 <!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
 ## Product Master preview improvements
 Product Master shows Purchase, MRP and Selling separately. OCR-created products carry detected bottle size and MRP when available. Selling defaults to MRP + ₹15 for new OCR products but remains editable. Background refresh no longer clears values while editing a product.
+
+<!-- PREVIEW_CURATED_7_PRODUCT_IMAGES_V4 -->
+## Product images in V3 preview
+The seven current demo products show recognizable product imagery in Product Master when no image has been uploaded yet. Uploading an image through Edit Product continues to override the preview fallback automatically.

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Wine } from "lucide-react";
+import { curatedPreviewProductImage } from "../../lib/curatedPreviewProductImages";
 
 export default function ProductThumb({ product, size = "md" }) {
   const [broken, setBroken] = useState(false);
-  const src = product?.imageUrl || "";
+  const src = product?.imageUrl || curatedPreviewProductImage(product) || "";
 
   useEffect(() => setBroken(false), [src]);
 
@@ -15,6 +16,7 @@ export default function ProductThumb({ product, size = "md" }) {
           alt=""
           loading="lazy"
           decoding="async"
+          referrerPolicy="no-referrer"
           onError={() => setBroken(true)}
         />
       ) : (

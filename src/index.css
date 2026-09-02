@@ -5015,3 +5015,114 @@ html[data-theme="dark"] .spiritual-message {
 }
 html[data-theme="dark"] .products-master-table .products-product-name { color: #ffffff; }
 html[data-theme="light"] .products-master-table .products-product-name { color: #111827; }
+
+/* PREVIEW_RAJASTHAN_MOTION_AND_PRODUCT_IMAGES_V4
+   Preview-only:
+   - keep WineShop POS animation unchanged;
+   - animate only the exact supplied Rajasthan/Royal 21 background subtly;
+   - keep ShopSelector logic mounted and hidden;
+   - emphasize real product thumbnails. */
+
+.topbar-shop-hero {
+  animation: v4-rajasthan-background-pan 12s ease-in-out infinite alternate !important;
+  will-change: background-position;
+}
+
+.topbar-shop-hero::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  background:
+    radial-gradient(
+      ellipse at 50% 50%,
+      rgba(255, 213, 112, 0.14) 0%,
+      rgba(206, 145, 25, 0.05) 32%,
+      transparent 66%
+    ) !important;
+  animation: v4-rajasthan-glow 5.8s ease-in-out infinite alternate !important;
+}
+
+.topbar-shop-hero::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  top: -12% !important;
+  bottom: -12% !important;
+  left: -32% !important;
+  width: 28% !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+  transform: skewX(-14deg) !important;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 231, 157, 0.02) 24%,
+    rgba(255, 241, 196, 0.20) 50%,
+    rgba(255, 231, 157, 0.02) 76%,
+    transparent 100%
+  ) !important;
+  filter: blur(1px) !important;
+  opacity: 0 !important;
+  animation: v4-rajasthan-light-sweep 7.4s ease-in-out infinite !important;
+}
+
+@keyframes v4-rajasthan-background-pan {
+  0%   { background-position: 49% center; }
+  100% { background-position: 51% center; }
+}
+
+@keyframes v4-rajasthan-glow {
+  0%   { opacity: .48; }
+  100% { opacity: .88; }
+}
+
+@keyframes v4-rajasthan-light-sweep {
+  0%, 16% { left: -32%; opacity: 0; }
+  28%     { opacity: .30; }
+  54%     { left: 54%; opacity: .55; }
+  76%     { opacity: .12; }
+  88%,100%{ left: 110%; opacity: 0; }
+}
+
+/* Preserve supplied-banner ownership: don't show the old separate crown/name. */
+.royal-v11-crown-stage,
+.royal-v11-name,
+.royal-v11-ornament,
+.royal-v11-crown-rotor,
+.royal-v11-crown-face {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+/* Product Master thumbnail becomes visually useful, not a tiny icon. */
+.products-master-table .product-thumb {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+.products-master-table .product-thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #ffffff !important;
+}
+
+.products-master-table .product-cell-with-image {
+  gap: 12px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-shop-hero,
+  .topbar-shop-hero::before,
+  .topbar-shop-hero::after {
+    animation: none !important;
+  }
+}

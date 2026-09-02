@@ -531,3 +531,20 @@ Preview-only V3 change set; not promoted to production main.
 - Selling remains editable; a customized Selling value is not overwritten by later MRP edits.
 - Product edit drafts survive background Product Master refresh.
 - Preview deployment is isolated at `/v3-preview/`; production main/root remains unchanged.
+
+<!-- PREVIEW_CURATED_7_PRODUCT_IMAGES_V4 -->
+## 2026-09-02 — V3 preview curated images for current seven products
+The seven currently active Royal 21 demo products have preview-only product-image fallbacks keyed primarily by barcode. Existing Supabase-uploaded product images retain first priority; a curated fallback is used only when `imageUrl` is empty. This avoids changing the existing product-image upload/storage workflow.
+
+Current preview mappings cover:
+- Carlsberg Elephant Strong 650 ml bottle
+- Carlsberg/Cartsberg Elephant Strong 500 ml can
+- Tuborg Classic with Scotch Malts 650 ml bottle
+- Tuborg Classic with Scotch Malts 500 ml can
+- Tuborg Strong 650 ml bottle
+- Tuborg Strong 500 ml can
+- Tuborg Strong 330 ml bottle
+
+The exact supplied Rajasthan/Royal 21 center banner remains the header source and receives only subtle background pan/glow/light-sweep motion. Existing WineShop POS animation remains unchanged.
+
+These are preview/reference images. Before commercial production promotion, replace any third-party demo image with a supplier/manufacturer-approved asset using the existing Product Image upload provision.

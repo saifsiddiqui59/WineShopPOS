@@ -166,3 +166,7 @@ Uses the user's actual artwork as the center-header banner instead of a recreate
 <!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
 ### V3 Product Master/OCR preview
 MRP column, readable Product Name, OCR size/MRP propagation, editable MRP+₹15 default selling price, and edit-draft refresh protection. Preview only.
+
+<!-- PREVIEW_CURATED_7_PRODUCT_IMAGES_V4 -->
+### V3 curated seven-product imagery
+Preview-only fallback imagery for the seven current catalogue products. Existing uploaded image overrides the curated fallback. Includes subtle motion on the exact Rajasthan header artwork.
