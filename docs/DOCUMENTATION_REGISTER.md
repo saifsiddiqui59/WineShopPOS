@@ -174,3 +174,5 @@ Preview-only fallback imagery for the seven current catalogue products. Existing
 <!-- V5A_RESPONSIVE_RESIZABLE_PREVIEW_20260902 -->
 - V5-A preview: responsive app shell/mobile drawer, persisted draggable Product Master column widths + reset, and isolated `/v3-preview/` service-worker behavior. V3 only; manual viewport UAT required before promotion.
 
+<!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
+- V5-A.1 preview refinement: right-edge-only persisted column resizing and global responsive ownership cleanup. Manual visual UAT required.

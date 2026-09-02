@@ -563,3 +563,7 @@ Manual authenticated UAT is still required at 1920×1080, 1536×864, 1366×768, 
 <!-- MANDATORY_EXECUTOR_FAILURE_REGISTER_PRE_READ_20260902 -->
 ## Mandatory executor failure-register pre-read
 Before creating or running any WineShopPOS patch/executor/continuation, read `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md` from the current target branch in full. Reuse its verified resolutions for Git safety, Windows/Git Bash path conversion, authentication mode, CLI behavior, dependency/library issues, Vite environment injection, preview/production isolation and verification labeling. A new failure must be recorded in that register before the next continuation is created.
+
+<!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
+## 2026-09-02 — V5-A.1 table and viewport refinement
+V3 preview locks all measured table widths at resize start. Dragging the right edge of a column changes only that column width; the selected column's left edge and every earlier boundary remain fixed. Responsive ownership was refined so the existing fixed desktop sidebar and main-area offset do not compete with a second width calculation. Manual visual UAT remains required.

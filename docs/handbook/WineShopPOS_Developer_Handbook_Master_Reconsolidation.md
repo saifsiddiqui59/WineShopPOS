@@ -1126,3 +1126,6 @@ OCR defaults:
 - `sw.js` deletes only WineShopPOS-prefixed caches.
 - V3 preview deployment must build the exact committed V3 SHA with `/e/WineShopPOS/.env.local`, base `/v3-preview/`, and upload only to `$web/v3-preview`.
 
+<!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
+## V5-A.1 responsive/table rule
+At pointer-down, `SortableTable` snapshots every rendered header width and persists that frozen width map. Pointer movement changes only the active column. This guarantees boundaries to the left do not move. Desktop main content is owned by the fixed sidebar offset (`250px`, or `72px` collapsed); mobile removes the offset and uses the drawer. Do not combine `width:calc(...)` with an independent flex-growth width owner.

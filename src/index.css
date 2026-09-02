@@ -5547,3 +5547,125 @@ body.table-column-resizing * {
     transition: none !important;
   }
 }
+
+/* V5A1_RESPONSIVE_OWNERSHIP_REFINEMENT_20260902
+   Refine global viewport ownership without touching WineShop POS animation
+   or supplied Royal 21/Rajasthan artwork. */
+
+.main-area {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin-left: 250px !important;
+}
+
+.app-shell.sidebar-collapsed .main-area {
+  width: auto !important;
+  margin-left: 72px !important;
+}
+
+.page-area,
+.page-area > *,
+.panel,
+.module-shell,
+.module-content {
+  min-width: 0 !important;
+  max-width: 100%;
+}
+
+.page-area {
+  width: 100%;
+  padding: clamp(12px, 1.6vw, 26px) !important;
+}
+
+.data-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto !important;
+}
+
+.resizable-table {
+  table-layout: fixed !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+.resizable-table th,
+.resizable-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.products-master-table .products-product-column {
+  overflow: visible;
+}
+
+.table-column-resizer {
+  right: -5px !important;
+  width: 11px !important;
+  z-index: 9 !important;
+}
+
+@media (max-width: 1366px) {
+  .page-area {
+    padding: clamp(12px, 1.35vw, 20px) !important;
+  }
+
+  .consolidated-topbar {
+    grid-template-columns:
+      minmax(170px, .82fr)
+      minmax(280px, 1.28fr)
+      minmax(180px, .8fr) !important;
+    column-gap: 10px !important;
+    padding-inline: clamp(12px, 1.35vw, 20px) !important;
+  }
+
+  .pos-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 320px) !important;
+  }
+}
+
+@media (max-width: 1080px) {
+  .pos-layout,
+  .purchase-layout,
+  .dashboard-grid,
+  .settings-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .metric-grid.four,
+  .stats-grid,
+  .form-grid,
+  .purchase-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .checkout-panel {
+    position: static !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell .main-area,
+  .app-shell.sidebar-collapsed .main-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .page-area {
+    padding: clamp(10px, 2.8vw, 16px) !important;
+  }
+
+  .metric-grid.four,
+  .stats-grid,
+  .form-grid,
+  .purchase-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .products-master-table {
+    min-width: 0 !important;
+  }
+}

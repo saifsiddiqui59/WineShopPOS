@@ -971,3 +971,6 @@ WineShopPOS V3 preview adapts the navigation, header, cards, forms and page spac
 
 In Product Master, drag the small divider at the right edge of a column heading to make that column wider or narrower. Your widths are remembered in the current browser. Use **Reset column widths** above the table to return to the standard layout. Wide data tables may still scroll horizontally on smaller screens so values are not squeezed into unreadable columns.
 
+<!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
+## Adjusting Product Master columns
+Drag the **right edge** of a column. Its left edge stays in the same place; only its right edge moves. Columns to the left stay fixed. Widths are remembered in the browser and **Reset column widths** restores defaults. Smaller screens keep wide tables horizontally scrollable instead of squeezing values.

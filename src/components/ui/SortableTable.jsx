@@ -98,7 +98,9 @@ export default function SortableTable({
         minColumnWidth,
         Math.min(maxColumnWidth, Math.round(drag.startWidth + delta)),
       );
-      setWidths((current) => ({ ...current, [drag.displayColumn]: next }));
+      // V5A1_ONE_SIDED_RESIZE:
+      // all measured widths were frozen at pointer-down; only this column changes.
+      setWidths({ ...drag.lockedWidths, [drag.displayColumn]: next });
     }
 
     function up() {
@@ -160,13 +162,30 @@ export default function SortableTable({
     event.preventDefault();
     event.stopPropagation();
     const th = event.currentTarget.closest("th");
-    const currentWidth =
-      th?.getBoundingClientRect().width || widthFor(displayColumn) || 120;
+    const row = th?.parentElement;
+    const measured = Array.from(row?.querySelectorAll("th") || []).map(
+      (cell) => Math.round(cell.getBoundingClientRect().width),
+    );
+    if (measured.length !== displayColumnCount) return;
+
+    const lockedWidths = {};
+    measured.forEach((value, index) => {
+      lockedWidths[index] = Math.max(
+        index === 0 && showSerial ? 60 : minColumnWidth,
+        Math.min(maxColumnWidth, value),
+      );
+    });
+
     dragRef.current = {
       displayColumn,
       startX: event.clientX,
-      startWidth: currentWidth,
+      startWidth: lockedWidths[displayColumn],
+      lockedWidths,
     };
+
+    // Freeze every current column before movement. This prevents the browser
+    // from redistributing width into columns on the LEFT of the dragged edge.
+    setWidths(lockedWidths);
     document.body.classList.add("table-column-resizing");
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
@@ -321,7 +340,7 @@ export default function SortableTable({
     <>
       {resizeKey ? (
         <div className="table-column-controls">
-          <span>Drag column dividers to resize.</span>
+          <span>Drag a column's right edge; its left edge stays fixed.</span>
           <button
             type="button"
             className="secondary-button table-reset-widths"
@@ -338,7 +357,20 @@ export default function SortableTable({
           </button>
         </div>
       ) : null}
-      <table {...props} className={tableClass}>
+      <table
+        {...props}
+        className={tableClass}
+        style={{
+          ...props.style,
+          width: `${Array.from({ length: displayColumnCount }, (_, column) =>
+            widthFor(column) || 0
+          ).reduce((sum, value) => sum + value, 0)}px`,
+          minWidth: `${Array.from({ length: displayColumnCount }, (_, column) =>
+            widthFor(column) || 0
+          ).reduce((sum, value) => sum + value, 0)}px`,
+          maxWidth: "none",
+        }}
+      >
         {colgroup}
         {next}
       </table>
