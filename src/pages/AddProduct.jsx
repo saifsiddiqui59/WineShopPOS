@@ -7,10 +7,20 @@ export default function AddProduct(){
   const navigate=useNavigate();
   const[params]=useSearchParams();
   const barcode=params.get("barcode")||"",fromOcr=params.get("ocr")==="1",line=params.get("ocrLineIndex");
+  const ocrMrp=Number(params.get("mrp")||0);
+  const requestedSelling=Number(params.get("sellingPrice")||0);
   const initial=(barcode||fromOcr)?{
     barcode,
     name:params.get("name")||"",
     purchasePrice:Number(params.get("purchasePrice")||0),
+    sizeMl:Math.max(1,Number(params.get("sizeMl")||750)),
+    mrp:Number.isFinite(ocrMrp)?ocrMrp:0,
+    price:
+      Number.isFinite(requestedSelling)&&requestedSelling>0
+        ? requestedSelling
+        : Number.isFinite(ocrMrp)&&ocrMrp>0
+          ? ocrMrp+15
+          : 0,
     unitsPerCase:Math.max(1,Number(params.get("unitsPerCase")||12))
   }:undefined;
 

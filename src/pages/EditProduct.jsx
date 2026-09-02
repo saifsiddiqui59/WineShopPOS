@@ -14,7 +14,7 @@ export default function EditProduct() {
   const navigate = useNavigate();
   const product = products.find((item) => item.id === id);
 
-  if (loadingData) return <div className="panel">Loading...</div>;
+  if (loadingData && !product) return <div className="panel">Loading...</div>;
   if (!product) return <Navigate to="/products" replace />;
 
   async function saveAndClose(form) {

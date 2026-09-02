@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const CATEGORY_OPTIONS = [
   "Beer", "Whisky", "Wine", "Vodka", "Rum", "Gin", "Brandy",
@@ -34,6 +34,17 @@ function moneyText(value) {
   return Number.isFinite(n) ? n.toFixed(2) : "";
 }
 
+function defaultSellingFromMrp(value) {
+  const mrp = Number(value);
+  return Number.isFinite(mrp) && mrp > 0 ? Number((mrp + 15).toFixed(2)) : 0;
+}
+
+function initialFormIdentity(value) {
+  if (!value) return "__EMPTY__";
+  if (value.id) return `ID:${value.id}`;
+  return ["NEW", value.barcode || "", value.name || "", value.sizeMl || "", value.purchasePrice || "", value.mrp || ""].join("|");
+}
+
 function normalizedProduct(form) {
   return {
     ...form,
@@ -52,20 +63,35 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
+  const initializedIdentityRef = useRef(null);
+  const [sellingPriceTouched, setSellingPriceTouched] = useState(false);
 
   useEffect(() => {
+    const identity = initialFormIdentity(initialValue);
+    if (initializedIdentityRef.current === identity) return;
+    initializedIdentityRef.current = identity;
+
     if (initialValue) {
+      const incomingMrp = Number(initialValue.mrp ?? 0);
+      const incomingPrice = Number(initialValue.price ?? 0);
+      const effectivePrice =
+        Number.isFinite(incomingPrice) && incomingPrice > 0
+          ? incomingPrice
+          : defaultSellingFromMrp(incomingMrp);
+
       setForm({
         ...emptyProduct, ...initialValue,
         purchasePrice: moneyText(initialValue.purchasePrice ?? 0),
-        mrp: moneyText(initialValue.mrp ?? 0),
-        price: moneyText(initialValue.price ?? 0),
+        mrp: moneyText(incomingMrp),
+        price: moneyText(effectivePrice),
         imageFile: null,
         removeImage: false,
       });
+      setSellingPriceTouched(Number.isFinite(incomingPrice) && incomingPrice > 0);
       setImagePreview(initialValue.imageUrl || "");
     } else {
       setForm(emptyProduct);
+      setSellingPriceTouched(false);
       setImagePreview("");
     }
   }, [initialValue]);
@@ -206,8 +232,47 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
         <label>Size (ml)<input type="number" min="1" value={form.sizeMl} onChange={(e) => set("sizeMl", e.target.value)} required /></label>
         <label>Alcohol %<input type="number" min="0" step="0.1" value={form.alcoholPercentage ?? ""} onChange={(e) => set("alcoholPercentage", e.target.value)} /></label>
         <label>Purchase Price<input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={(e) => set("purchasePrice", e.target.value)} onBlur={() => normalizeMoneyField("purchasePrice")} required /></label>
-        <label>MRP<input type="number" min="0" step="0.01" value={form.mrp} onChange={(e) => set("mrp", e.target.value)} onBlur={() => normalizeMoneyField("mrp")} required /></label>
-        <label>Selling Price<input type="number" min="0" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)} onBlur={() => normalizeMoneyField("price")} required /></label>
+        <label>MRP<input
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.mrp}
+          onChange={(e) => {
+            const nextMrpText = e.target.value;
+            setForm((current) => {
+              const currentMrp = Number(current.mrp || 0);
+              const currentPrice = Number(current.price || 0);
+              const previousDefault = defaultSellingFromMrp(currentMrp);
+              const canApplyDefault =
+                !sellingPriceTouched ||
+                currentPrice === 0 ||
+                Math.abs(currentPrice - previousDefault) < 0.001;
+              const nextMrp = Number(nextMrpText || 0);
+              return {
+                ...current,
+                mrp: nextMrpText,
+                price:
+                  canApplyDefault && Number.isFinite(nextMrp) && nextMrp > 0
+                    ? moneyText(defaultSellingFromMrp(nextMrp))
+                    : current.price,
+              };
+            });
+          }}
+          onBlur={() => normalizeMoneyField("mrp")}
+          required
+        /></label>
+        <label>Selling Price<input
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.price}
+          onChange={(e) => {
+            setSellingPriceTouched(true);
+            set("price", e.target.value);
+          }}
+          onBlur={() => normalizeMoneyField("price")}
+          required
+        /><small>Defaults to MRP + ₹15 for a new product; you can edit it.</small></label>
         <label>Minimum Stock<input type="number" min="0" step="1" value={form.minimumStock} onChange={(e) => set("minimumStock", e.target.value)} required /></label>
         <label>Bottles / Case<input type="number" min="1" step="1" value={form.unitsPerCase} onChange={(e) => set("unitsPerCase", e.target.value)} required /></label>
       </div>

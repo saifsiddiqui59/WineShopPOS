@@ -22,6 +22,25 @@ function normalize(value) {
     .replace(/\s+/g, " ");
 }
 
+function inferOcrSizeMl(item) {
+  const direct = Number(item?.sizeMl ?? item?.size_ml ?? item?.bottleSizeMl ?? item?.bottle_size_ml ?? 0);
+  if (Number.isInteger(direct) && direct > 0) return direct;
+
+  const text = [item?.description, item?.productName, item?.packSize, item?.packageSize, item?.size, item?.unitText]
+    .filter(Boolean)
+    .join(" ");
+  const matches = [...String(text).matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
+  if (!matches.length) return 750;
+
+  const [, rawValue, rawUnit] = matches[matches.length - 1];
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value <= 0) return 750;
+  const unit = rawUnit.toLowerCase();
+  if (unit === "cl") return Math.round(value * 10);
+  if (unit === "l") return Math.round(value * 1000);
+  return Math.round(value);
+}
+
 function supplierScore(ocrName, supplierName) {
   const a = normalize(ocrName);
   const b = normalize(supplierName);
@@ -762,6 +781,9 @@ export default function AutomationHub() {
       ocrLineIndex: String(index),
       name: String(item?.description || ""),
       purchasePrice: String(row.purchasePrice || item?.unitPrice || 0),
+      sizeMl: String(inferOcrSizeMl(item)),
+      mrp: String(Math.max(0, Number(item?.mrp || 0))),
+      sellingPrice: String(Number(item?.mrp || 0) > 0 ? Number(item.mrp) + 15 : 0),
       unitsPerCase: String(row.unitsPerCase || 12),
     });
 

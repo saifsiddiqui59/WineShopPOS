@@ -1107,3 +1107,12 @@ The user-supplied crown asset is the Royal 21 crown source. Do not substitute a 
 <!-- DEMO_SAFE_ROYAL_HERO_V12 -->
 ## Demo-safe header ownership
 The consolidated topbar has three independent zones. Center-shop visual effects may never extend over `.topbar-actions`. UserMenu must retain a higher stacking context. Demo-time visual corrections should not rewrite POS, Layout, UserMenu, ShopSelector, AnimatedBrand or SpiritualImageTile logic when CSS overrides can achieve the requirement.
+
+<!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
+## Product edit draft stability
+Background `refreshAll()` must not clear an active product edit. Keep an existing form mounted while Product Master refreshes and initialize ProductForm by logical product identity rather than refreshed object identity.
+
+OCR defaults:
+- structured size evidence first, then ml/cl/l parsing;
+- positive OCR MRP defaults Selling to MRP + ₹15;
+- Selling remains editable and later MRP changes preserve a custom Selling value.

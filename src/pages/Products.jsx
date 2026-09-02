@@ -86,21 +86,22 @@ export default function Products() {
 
       <div className="panel data-table-wrapper" style={{ marginTop: 14 }}>
         {loadingData ? <p>Loading...</p> : (
-          <SortableTable className="data-table">
+          <SortableTable className="data-table products-master-table">
             <thead>
               <tr>
                 <th>Product</th><th>Barcode</th><th>Category</th><th>Stock</th>
-                <th>Purchase</th><th>Selling</th><th>Status</th><th>Action</th>
+                <th>Purchase</th><th>MRP</th><th>Selling</th><th>Status</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((p) => (
                 <tr key={p.id}>
-                  <td><div className="product-cell-with-image"><ProductThumb product={p}/><span><strong>{p.name}</strong><br/><small>{p.brand} · {p.size}</small></span></div></td>
+                  <td className="products-product-column"><div className="product-cell-with-image"><ProductThumb product={p}/><span className="products-product-copy"><strong className="products-product-name">{p.name}</strong><br/><small className="products-product-meta">{p.brand} · {p.size}</small></span></div></td>
                   <td>{p.barcode || <strong>Missing barcode</strong>}</td>
                   <td>{p.category}</td>
                   <td>{getStock(p.id)}</td>
                   <td>{money.format(p.purchasePrice)}</td>
+                  <td>{money.format(p.mrp)}</td>
                   <td>{money.format(p.price)}</td>
                   <td>{p.active ? "ACTIVE" : "INACTIVE"}</td>
                   <td>

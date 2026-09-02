@@ -162,3 +162,7 @@ Approved Rajasthan SVG replaces visible crown/shop-name decoration in the center
 <!-- EXACT_USER_REFERENCE_BANNER_V15 -->
 ### Exact supplied Royal 21 artwork
 Uses the user's actual artwork as the center-header banner instead of a recreated SVG or CSS composition.
+
+<!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
+### V3 Product Master/OCR preview
+MRP column, readable Product Name, OCR size/MRP propagation, editable MRP+₹15 default selling price, and edit-draft refresh protection. Preview only.

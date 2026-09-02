@@ -956,3 +956,7 @@ The center header displays a Rajasthan-inspired fort visual while existing shop 
 <!-- EXACT_USER_REFERENCE_BANNER_V15 -->
 ## Royal 21 header artwork
 The center header displays the supplied Royal 21 Rajasthan artwork directly.
+
+<!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
+## Product Master preview improvements
+Product Master shows Purchase, MRP and Selling separately. OCR-created products carry detected bottle size and MRP when available. Selling defaults to MRP + ₹15 for new OCR products but remains editable. Background refresh no longer clears values while editing a product.

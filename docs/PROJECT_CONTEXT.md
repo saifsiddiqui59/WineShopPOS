@@ -520,3 +520,14 @@ For the immediate demo, the approved Rajasthan-inspired fort SVG occupies the ce
 <!-- EXACT_USER_REFERENCE_BANNER_V15 -->
 ## 2026-09-02 — Exact supplied Royal 21 banner
 The center header now uses the user's supplied Rajasthan fort/crown/Royal 21 artwork itself, cropped only to remove unused vertical black space for header fit. The previous rotating crown/name/ornament UI remains mounted but visually hidden. No React/business logic was changed.
+
+<!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
+## 2026-09-02 — V3 preview: Product Master/OCR usability fixes
+Preview-only V3 change set; not promoted to production main.
+- Product Master list shows MRP between Purchase and Selling.
+- Product Name column is wider with stronger readable typography and balanced widths.
+- Single-product OCR onboarding forwards inferred Size (ml), OCR MRP and default Selling = MRP + ₹15.
+- Bulk OCR resolves size from structured size evidence first, then ml/cl/l product/package text, and defaults Selling = MRP + ₹15.
+- Selling remains editable; a customized Selling value is not overwritten by later MRP edits.
+- Product edit drafts survive background Product Master refresh.
+- Preview deployment is isolated at `/v3-preview/`; production main/root remains unchanged.

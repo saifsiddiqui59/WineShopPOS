@@ -28,15 +28,19 @@ function blankRow(overrides = {}) {
   };
 }
 
-function inferSizeMl(description) {
-  const text = String(description || "");
+function inferSizeMl(item) {
+  const direct = Number(item?.sizeMl ?? item?.size_ml ?? item?.bottleSizeMl ?? item?.bottle_size_ml ?? 0);
+  if (Number.isInteger(direct) && direct > 0) return direct;
+
+  const text = [item?.description, item?.productName, item?.packSize, item?.packageSize, item?.size, item?.unitText]
+    .filter(Boolean)
+    .join(" ");
   const matches = [...text.matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
   if (!matches.length) return 750;
 
   const [, rawValue, rawUnit] = matches[matches.length - 1];
   const value = Number(rawValue);
   if (!Number.isFinite(value) || value <= 0) return 750;
-
   const unit = rawUnit.toLowerCase();
   if (unit === "cl") return Math.round(value * 10);
   if (unit === "l") return Math.round(value * 1000);
@@ -57,14 +61,16 @@ function rowsFromOcrReview(categories = []) {
       if (row.productId) return null;
 
       const productName = String(item?.description || "").trim();
+      const mrp = Math.max(0, Number(item?.mrp || 0));
       return blankRow({
         productName,
         brand: String(item?.brand || "").trim() || inferBrandFromProductName(productName),
         categoryId: inferCategoryId(productName, categories),
-        sizeMl: inferSizeMl(productName),
+        sizeMl: inferSizeMl(item),
         alcoholPercentage: item?.alcoholPercentage ?? "",
         purchasePrice: Number(row.purchasePrice || 0),
-        mrp: Number(item?.mrp || 0),
+        mrp,
+        sellingPrice: mrp > 0 ? Number((mrp + 15).toFixed(2)) : 0,
         unitsPerCase: Math.max(1, Number(row.unitsPerCase || 12)),
         ocrLineIndex: index,
         source: "OCR",
@@ -128,9 +134,27 @@ export default function BulkProductImport() {
 
   function updateRow(index, field, value) {
     setRows((current) =>
-      current.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [field]: value } : row,
-      ),
+      current.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        if (field === "mrp") {
+          const previousMrp = Number(row.mrp || 0);
+          const previousDefault = previousMrp > 0 ? Number((previousMrp + 15).toFixed(2)) : 0;
+          const currentSelling = Number(row.sellingPrice || 0);
+          const nextMrp = Number(value || 0);
+          const canApplyDefault =
+            currentSelling === 0 ||
+            Math.abs(currentSelling - previousDefault) < 0.001;
+          return {
+            ...row,
+            mrp: value,
+            sellingPrice:
+              canApplyDefault && Number.isFinite(nextMrp) && nextMrp > 0
+                ? Number((nextMrp + 15).toFixed(2))
+                : row.sellingPrice,
+          };
+        }
+        return { ...row, [field]: value };
+      }),
     );
   }
 
