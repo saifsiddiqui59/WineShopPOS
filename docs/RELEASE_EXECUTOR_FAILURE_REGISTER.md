@@ -293,3 +293,44 @@ Do not rerun V5-A source edits. Build the exact current V3 SHA with the correcte
 Verified outcome:
 Pending this continuation.
 
+
+### 2026-09-02 — V5-B Supabase CLI executable unavailable
+
+Release/stage:
+V5-B purchase correction / OCR pack safety — database migration stage after source commit/push.
+
+Symptom:
+The executor stopped with:
+`[FAIL] Supabase CLI not installed`
+after V3 source had already committed and pushed successfully.
+
+Tool/platform involved:
+Windows Git Bash. The executor used `command -v supabase` and assumed a globally installed Supabase CLI binary must exist on PATH.
+
+Root cause:
+The release mechanism was coupled to one local CLI installation method even though the WineShopPOS Supabase project was already reachable through the connected Supabase integration. The application/source was not broken and the database had not been modified by the failed local step.
+
+Resolution used:
+- Did NOT rerun or reapply V5-B source.
+- Verified GitHub V3 contained exactly the new migration `20260902214000_v5_purchase_correction_ocr_pack_safety.sql`.
+- Verified live Supabase migration history ended at `20260901213751_product_images_v1`.
+- Applied the V5-B SQL through the connected Supabase migration action.
+- The connector initially generated its own migration-history timestamp; migration history was then aligned to the repository filename/version `20260902214000`.
+- Verified live table `purchase_item_corrections`, RPC `correct_received_purchase_item(...)`, RPC `get_purchase_item_corrections(uuid)`, and migration version `20260902214000`.
+
+Permanent prevention:
+- Do not hard-fail solely because a global `supabase` executable is absent.
+- Before generating a DB continuation, determine which verified execution path is actually available:
+  1. connected Supabase migration action, or
+  2. existing local Supabase CLI / `npx supabase`.
+- Do not install or upgrade CLI tooling automatically during a release.
+- When a connected migration action generates its own timestamp, explicitly align/verify migration history against the canonical repository migration filename before declaring DB migration PASS.
+- Keep source/build, DB migration, deployment transport, and manual UAT as separate verification classes.
+
+Safe continuation point:
+V3 source commit `a66ffcb9894bf52034351ffbcfcf5122a1cdebb3` is already pushed. Supabase migration `20260902214000_v5_purchase_correction_ocr_pack_safety` is live and verified. Continue only with failure-register commit + V3 preview build/deployment; do not re-run the migration and do not auto-correct invoice 15983.
+
+Verified outcome:
+- V5-B DB migration: PASS.
+- Invoice 15983 auto-correction: NOT EXECUTED.
+- V3 preview deployment of V5-B UI: still pending at the time of this incident record.
