@@ -5126,3 +5126,424 @@ html[data-theme="light"] .products-master-table .products-product-name { color: 
     animation: none !important;
   }
 }
+
+
+/* V5A_RESPONSIVE_RESIZABLE_PREVIEW_20260902
+   Global responsive shell + opt-in persisted column resizing.
+   WineShop POS animation and the supplied Royal 21/Rajasthan pixels are not changed. */
+
+html,
+body,
+#root,
+.app-shell,
+.main-area,
+.page-area {
+  min-width: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.main-area {
+  flex: 1 1 auto;
+  min-width: 0 !important;
+}
+
+.page-area {
+  width: 100%;
+  max-width: 100%;
+  padding: clamp(12px, 2vw, 28px) !important;
+}
+
+.panel,
+.page-heading,
+.section-row,
+.form-grid,
+.metric-grid,
+.dashboard-grid,
+.settings-grid,
+.purchase-layout,
+.pos-layout {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.button-row {
+  flex-wrap: wrap;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.data-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-column-controls {
+  min-width: max-content;
+  margin: 0 0 9px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  color: #7c7e84;
+  font-size: 11px;
+}
+
+.table-reset-widths {
+  min-height: 32px;
+  padding: 5px 9px !important;
+  font-size: 11px !important;
+}
+
+.resizable-table {
+  width: max-content !important;
+  min-width: 100% !important;
+  table-layout: fixed;
+}
+
+.resizable-table th {
+  position: relative;
+}
+
+.resizable-table th,
+.resizable-table td {
+  max-width: 640px;
+}
+
+.resizable-table td:not(.products-product-column) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table-column-resizer {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: -4px;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.table-column-resizer::after {
+  content: "";
+  position: absolute;
+  top: 17%;
+  bottom: 17%;
+  left: 4px;
+  width: 1px;
+  background: rgba(120, 122, 130, .25);
+}
+
+.table-column-resizer:hover::after,
+body.table-column-resizing .table-column-resizer::after {
+  width: 2px;
+  background: rgba(142, 36, 77, .72);
+}
+
+body.table-column-resizing,
+body.table-column-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.table-serial-column {
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+.mobile-sidebar-close,
+.mobile-sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 1280px) {
+  .consolidated-topbar {
+    grid-template-columns:
+      minmax(170px, .9fr)
+      minmax(300px, 1.35fr)
+      minmax(190px, .9fr) !important;
+    column-gap: 12px !important;
+    padding-inline: clamp(14px, 1.8vw, 24px) !important;
+  }
+
+  .page-heading h2 {
+    font-size: clamp(21px, 2vw, 25px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .consolidated-topbar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-rows: 72px auto !important;
+    height: auto !important;
+    min-height: 118px !important;
+    padding-block: 6px !important;
+    row-gap: 4px !important;
+  }
+
+  .topbar-shop-hero {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+  }
+
+  .topbar-page-context {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .topbar-actions {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+
+  .metric-grid.four,
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .form-grid,
+  .purchase-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .pos-layout,
+  .purchase-layout,
+  .dashboard-grid,
+  .settings-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .checkout-panel {
+    position: static !important;
+  }
+}
+
+@media (max-width: 780px) {
+  .app-shell,
+  .app-shell.sidebar-collapsed {
+    display: block !important;
+  }
+
+  .app-shell .main-area,
+  .app-shell.sidebar-collapsed .main-area {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .app-shell .sidebar,
+  .app-shell.sidebar-collapsed .sidebar {
+    z-index: 320 !important;
+    width: min(86vw, 286px) !important;
+    max-width: 286px !important;
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+    box-shadow: 18px 0 40px rgba(0, 0, 0, .28);
+  }
+
+  .app-shell.mobile-sidebar-open .sidebar,
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .mobile-sidebar-backdrop {
+    position: fixed;
+    z-index: 310;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgba(0, 0, 0, .55);
+  }
+
+  .mobile-sidebar-close {
+    position: absolute;
+    z-index: 330;
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 9px;
+    color: #fff;
+    background: rgba(0, 0, 0, .45);
+  }
+
+  .mobile-sidebar-toggle {
+    display: inline-grid !important;
+    place-items: center;
+    flex: 0 0 auto;
+  }
+
+  .sidebar-collapse {
+    display: none !important;
+  }
+
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .exact-reference-brand {
+    min-height: 136px !important;
+    padding: 5px 10px 7px !important;
+  }
+
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .exact-reference-brand-sequence {
+    width: min(222px, 100%) !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .exact-reference-brand-sprite {
+    display: block !important;
+  }
+
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .exact-reference-brand-final {
+    width: 96% !important;
+    max-width: 96% !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .consolidated-topbar {
+    z-index: 120 !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-rows: 64px auto !important;
+    min-height: 112px !important;
+    padding: 5px 12px 8px !important;
+  }
+
+  .topbar-shop-hero {
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+    border-radius: 8px;
+  }
+
+  .topbar-page-context {
+    min-width: 0 !important;
+    gap: 8px !important;
+  }
+
+  .topbar-page-context h1 {
+    font-size: 15px !important;
+  }
+
+  .breadcrumbs {
+    max-width: 55vw;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-actions {
+    min-width: 0 !important;
+    gap: 7px !important;
+  }
+
+  .page-area {
+    padding: clamp(10px, 3vw, 18px) !important;
+  }
+
+  .page-heading,
+  .section-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .page-actions,
+  .button-row {
+    width: 100%;
+  }
+
+  .button-row > button,
+  .button-row > a {
+    max-width: 100%;
+  }
+
+  .panel {
+    padding: clamp(13px, 3vw, 18px) !important;
+  }
+
+  .metric-grid.four,
+  .stats-grid,
+  .form-grid,
+  .purchase-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .products-master-table {
+    min-width: 980px !important;
+  }
+
+  .table-column-controls {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .consolidated-topbar {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 58px auto auto !important;
+    min-height: 148px !important;
+  }
+
+  .topbar-shop-hero {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+  }
+
+  .topbar-page-context {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100%;
+  }
+
+  .topbar-actions {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    width: 100%;
+    justify-self: stretch !important;
+    justify-content: flex-end !important;
+  }
+
+  .breadcrumbs {
+    max-width: calc(100vw - 90px);
+  }
+
+  .button-row {
+    gap: 7px !important;
+  }
+
+  .page-heading h2 {
+    font-size: 21px !important;
+  }
+
+  .table-column-controls > span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .sidebar {
+    transition: none !important;
+  }
+}

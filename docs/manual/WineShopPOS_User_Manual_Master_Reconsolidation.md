@@ -964,3 +964,10 @@ Product Master shows Purchase, MRP and Selling separately. OCR-created products 
 <!-- PREVIEW_CURATED_7_PRODUCT_IMAGES_V4 -->
 ## Product images in V3 preview
 The seven current demo products show recognizable product imagery in Product Master when no image has been uploaded yet. Uploading an image through Edit Product continues to override the preview fallback automatically.
+
+<!-- V5A_RESPONSIVE_RESIZABLE_PREVIEW_20260902 -->
+## Responsive screens and adjustable Product Master columns
+WineShopPOS V3 preview adapts the navigation, header, cards, forms and page spacing to desktop, laptop, tablet and phone widths. On phone-sized screens, use the menu button to open the navigation drawer.
+
+In Product Master, drag the small divider at the right edge of a column heading to make that column wider or narrower. Your widths are remembered in the current browser. Use **Reset column widths** above the table to return to the standard layout. Wide data tables may still scroll horizontally on smaller screens so values are not squeezed into unreadable columns.
+

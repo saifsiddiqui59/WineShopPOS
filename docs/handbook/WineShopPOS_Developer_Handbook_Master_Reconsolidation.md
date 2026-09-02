@@ -1116,3 +1116,13 @@ OCR defaults:
 - structured size evidence first, then ml/cl/l parsing;
 - positive OCR MRP defaults Selling to MRP + ₹15;
 - Selling remains editable and later MRP changes preserve a custom Selling value.
+
+<!-- V5A_RESPONSIVE_RESIZABLE_PREVIEW_20260902 -->
+## V5-A responsive/table/preview implementation
+- `Layout.jsx` owns a separate mobile drawer state; desktop sidebar collapse remains persisted independently.
+- Responsive CSS uses viewport-safe `min-width:0`, adaptive page padding, stacked grids, and horizontal overflow for data-dense tables.
+- `SortableTable` supports opt-in resizing through `resizeKey`; persisted widths use `wineshop_table_widths:<key>` in localStorage. Resizing is bounded and resettable and does not replace sorting.
+- `/v3-preview/` must not register a service worker. `main.jsx` removes only legacy preview-scoped registrations; the production root registration is preserved.
+- `sw.js` deletes only WineShopPOS-prefixed caches.
+- V3 preview deployment must build the exact committed V3 SHA with `/e/WineShopPOS/.env.local`, base `/v3-preview/`, and upload only to `$web/v3-preview`.
+

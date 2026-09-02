@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronRight, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import OfflineStatus from "./OfflineStatus";
 import ShopSelector from "./ShopSelector";
@@ -35,33 +35,102 @@ export default function Layout() {
   const { profile } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === "1");
+  const [mobileOpen, setMobileOpen] = useState(false);
   const meta = useMemo(() => pageMeta(location.pathname), [location.pathname]);
 
   useEffect(() => localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0"), [collapsed]);
   useEffect(() => watchThemePreference(() => profile?.theme || "SYSTEM"), [profile?.theme]);
 
-  return <div className={collapsed ? "app-shell sidebar-collapsed" : "app-shell"}>
-    <aside className="sidebar">
-      <AnimatedBrand collapsed={collapsed}/>
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    function onResize() {
+      if (window.innerWidth > 780) setMobileOpen(false);
+    }
+    function onKeyDown(event) {
+      if (event.key === "Escape") setMobileOpen(false);
+    }
+    window.addEventListener("resize", onResize);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  const compactSidebar = collapsed && !mobileOpen;
+  const shellClass = [
+    "app-shell",
+    collapsed ? "sidebar-collapsed" : "",
+    mobileOpen ? "mobile-sidebar-open" : "",
+  ].filter(Boolean).join(" ");
+
+  return <div className={shellClass}>
+    <aside className="sidebar" aria-label="Application navigation">
+      <AnimatedBrand collapsed={compactSidebar}/>
       <nav className="nav-menu" aria-label="Main navigation">
         {MAIN_MODULES.filter((item) => item.roles.includes(profile?.role)).map((item) => {
           const Icon = item.icon;
-          return <NavLink key={item.path} to={item.path} className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} title={collapsed ? item.label : undefined}>
-            <Icon size={19}/>{!collapsed ? <span>{item.label}</span> : null}
+          return <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}
+            title={compactSidebar ? item.label : undefined}
+          >
+            <Icon size={19}/>{!compactSidebar ? <span>{item.label}</span> : null}
           </NavLink>;
         })}
       </nav>
-      <SpiritualImageTile shopId={profile?.shop_id} collapsed={collapsed}/>
-      <button className="sidebar-collapse" onClick={() => setCollapsed((v) => !v)} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+      <SpiritualImageTile shopId={profile?.shop_id} collapsed={compactSidebar}/>
+      <button
+        className="sidebar-collapse"
+        onClick={() => setCollapsed((v) => !v)}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
         {collapsed ? <PanelLeftOpen size={18}/> : <><PanelLeftClose size={18}/><span>Collapse</span></>}
       </button>
+      <button
+        type="button"
+        className="mobile-sidebar-close"
+        aria-label="Close navigation"
+        onClick={() => setMobileOpen(false)}
+      >
+        <X size={20}/>
+      </button>
     </aside>
+
+    {mobileOpen ? (
+      <button
+        type="button"
+        className="mobile-sidebar-backdrop"
+        aria-label="Close navigation"
+        onClick={() => setMobileOpen(false)}
+      />
+    ) : null}
 
     <main className="main-area">
       <header className="topbar consolidated-topbar">
         <div className="topbar-page-context">
-          <button className="mobile-sidebar-toggle" onClick={() => setCollapsed((v) => !v)} aria-label="Toggle navigation"><PanelLeftOpen size={19}/></button>
-          <div><h1>{meta.title}</h1><div className="breadcrumbs">{meta.crumbs.map((crumb, index) => <span key={`${crumb}-${index}`}>{index ? <ChevronRight size={13}/> : null}{crumb}</span>)}</div></div>
+          <button
+            className="mobile-sidebar-toggle"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Toggle navigation"
+            aria-expanded={mobileOpen}
+          >
+            <PanelLeftOpen size={19}/>
+          </button>
+          <div>
+            <h1>{meta.title}</h1>
+            <div className="breadcrumbs">
+              {meta.crumbs.map((crumb, index) => (
+                <span key={`${crumb}-${index}`}>
+                  {index ? <ChevronRight size={13}/> : null}{crumb}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="topbar-shop-hero"><ShopSelector/></div>
         <div className="topbar-actions"><OfflineStatus/><UserMenu/></div>

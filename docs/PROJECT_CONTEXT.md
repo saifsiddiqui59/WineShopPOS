@@ -548,3 +548,14 @@ Current preview mappings cover:
 The exact supplied Rajasthan/Royal 21 center banner remains the header source and receives only subtle background pan/glow/light-sweep motion. Existing WineShop POS animation remains unchanged.
 
 These are preview/reference images. Before commercial production promotion, replace any third-party demo image with a supplier/manufacturer-approved asset using the existing Product Image upload provision.
+
+<!-- V5A_RESPONSIVE_RESIZABLE_PREVIEW_20260902 -->
+## 2026-09-02 — V5-A responsive shell, resizable Product Master columns, preview isolation
+V3 preview only. The application shell now adapts across desktop, laptop, tablet and phone widths. Mobile navigation becomes an off-canvas drawer instead of permanently consuming a 72px rail. Page/panel/grid sizing is constrained to the viewport, while data-heavy tables keep safe horizontal scrolling.
+
+Product Master uses the shared SortableTable resizing capability. Users can drag header dividers, widths persist in browser localStorage, and Reset column widths restores defaults. Sorting remains available.
+
+The `/v3-preview/` build no longer registers its own service worker. It may unregister an old service worker only when that registration's scope is already `/v3-preview/`; it never unregisters the production-root registration. Production service-worker cache cleanup is also restricted to WineShopPOS-owned cache keys.
+
+Manual authenticated UAT is still required at 1920×1080, 1536×864, 1366×768, 1024×768, 768×1024 and 390×844 before production promotion.
+

@@ -1,12 +1,29 @@
-const CACHE = "wineshoppos-shell-v20-v3-07-auth-race";
+const CACHE_PREFIX = "wineshoppos-shell-";
+const CACHE = `${CACHE_PREFIX}v21-safe-scope-cleanup`;
 const SHELL = ["./", "./index.html"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(SHELL))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+            .map((key) => caches.delete(key)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  );
 });
 
 self.addEventListener("fetch", (event) => {
@@ -23,6 +40,6 @@ self.addEventListener("fetch", (event) => {
         if (cached) return cached;
         if (event.request.mode === "navigate") return caches.match("./index.html");
         throw new Error("OFFLINE_NOT_CACHED");
-      })
+      }),
   );
 });

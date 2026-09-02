@@ -86,7 +86,11 @@ export default function Products() {
 
       <div className="panel data-table-wrapper" style={{ marginTop: 14 }}>
         {loadingData ? <p>Loading...</p> : (
-          <SortableTable className="data-table products-master-table">
+          <SortableTable
+            className="data-table products-master-table"
+            resizeKey="products-master-v5"
+            defaultColumnWidths={[310, 170, 150, 90, 120, 105, 120, 105, 220]}
+          >
             <thead>
               <tr>
                 <th>Product</th><th>Barcode</th><th>Category</th><th>Stock</th>

@@ -11,8 +11,39 @@ import "./chapters16to26.css";
 import "./masterConsolidation.css";
 import "./aiOwnerAssistant.css";
 
+// V5_PREVIEW_SERVICE_WORKER_ISOLATION
+// Production root keeps its service worker. The additive /v3-preview/ build
+// never registers one, and only removes an old registration whose own scope is
+// already /v3-preview/. It never unregisters the production-root registration.
+const isolatedPreview =
+  import.meta.env.VITE_PREVIEW_MODE === "1" ||
+  window.location.pathname.startsWith("/v3-preview/");
+
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));
+  if (isolatedPreview) {
+    window.addEventListener("load", async () => {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(
+          registrations
+            .filter((registration) => {
+              try {
+                return new URL(registration.scope).pathname.startsWith("/v3-preview/");
+              } catch {
+                return false;
+              }
+            })
+            .map((registration) => registration.unregister()),
+        );
+      } catch (error) {
+        console.warn("V3 preview service-worker cleanup skipped", error);
+      }
+    });
+  } else {
+    window.addEventListener("load", () =>
+      navigator.serviceWorker.register("./sw.js").catch(console.error),
+    );
+  }
 }
 
 createRoot(document.getElementById("root")).render(
