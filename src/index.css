@@ -4792,3 +4792,76 @@ html[data-theme="dark"] .spiritual-message {
     animation: none !important;
   }
 }
+
+/* FORT_ONLY_TOP_HERO_V14B
+   Demo-safe presentation only:
+   approved Rajasthan fort in center header;
+   hide Royal crown/name/ornament visuals;
+   keep ShopSelector mounted and all business logic unchanged. */
+
+.topbar-shop-hero {
+  position: relative !important;
+  overflow: hidden !important;
+  background-color: #000000 !important;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(0,0,0,.84) 0%,
+      rgba(0,0,0,.18) 12%,
+      rgba(0,0,0,.04) 50%,
+      rgba(0,0,0,.18) 88%,
+      rgba(0,0,0,.84) 100%
+    ),
+    url("/brand/royal21-rajasthan-fort-background-v14.svg") !important;
+  background-repeat: no-repeat, no-repeat !important;
+  background-position: center, center !important;
+  background-size: 100% 100%, 100% 100% !important;
+}
+
+.topbar-shop-hero::before,
+.topbar-shop-hero::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+
+.royal-v11-crown-stage,
+.royal-v11-name,
+.royal-v11-ornament {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+.royal-v11-crown-rotor,
+.royal-v11-crown-face {
+  animation: none !important;
+}
+
+.royal-v11-lockup {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.royal-v11-select-layer {
+  z-index: 8 !important;
+}
+
+.topbar-actions {
+  position: relative !important;
+  z-index: 60 !important;
+}
+
+.user-menu,
+.user-menu-trigger {
+  position: relative !important;
+  z-index: 80 !important;
+}
+
+.user-menu-popover {
+  z-index: 9999 !important;
+}

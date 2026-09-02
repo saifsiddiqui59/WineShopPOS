@@ -948,3 +948,7 @@ Royal 21 uses the jeweled crown supplied for the shop, rotating in a side-to-sid
 <!-- DEMO_SAFE_ROYAL_HERO_V12 -->
 ## Royal 21 premium header
 Royal 21 is presented in the full center header with a restrained gold-light effect and light shimmer. Its jeweled crown rotates around its own vertical axis. The Shop Admin control remains fixed above the hero effects on the right.
+
+<!-- FORT_ONLY_TOP_HERO_V14B -->
+## Demo center header
+The center header displays a Rajasthan-inspired fort visual while existing shop context behavior remains available behind the presentation layer.

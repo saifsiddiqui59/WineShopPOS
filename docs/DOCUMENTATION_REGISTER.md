@@ -154,3 +154,7 @@ Uses the supplied jeweled crown as a transparent production asset with Y-axis ro
 <!-- DEMO_SAFE_ROYAL_HERO_V12 -->
 ### Demo-safe Royal hero
 CSS-only full-width center hero rays/shimmer, globe-like crown rotation, top-right admin stacking protection and pitch-black Dark-mode correction. No application component/business logic changed.
+
+<!-- FORT_ONLY_TOP_HERO_V14B -->
+### Fort-only center hero
+Approved Rajasthan SVG replaces visible crown/shop-name decoration in the center header for the demo; business logic is unchanged.

@@ -512,3 +512,7 @@ React/CSS only sequences these pixels. WineShop POS uses the five stages across 
 <!-- DEMO_SAFE_ROYAL_HERO_V12 -->
 ## 2026-09-02 — Demo-safe Royal 21 hero refinement
 A CSS-only visual refinement matches the approved premium mockup more closely while locking application logic. The complete center header lane carries subtle gold rays and a light eight-second shimmer. The existing user-supplied jeweled crown remains the source asset and receives a globe-like Y-axis self-rotation treatment. Royal 21 is larger and centered. The header is enforced as a three-zone grid so Shop Admin/UserMenu cannot be buried by the hero. Dark application/module surfaces are explicitly pitch black while cards remain near-black for visual separation.
+
+<!-- FORT_ONLY_TOP_HERO_V14B -->
+## 2026-09-02 — Fort-only center header
+For the immediate demo, the approved Rajasthan-inspired fort SVG occupies the center topbar hero. Royal crown/name/ornament visuals are hidden, while ShopSelector stays mounted so authorization/shop-switching behavior is unchanged. WineShop POS, Layout, UserMenu, SpiritualImageTile and POS JSX remain unchanged.

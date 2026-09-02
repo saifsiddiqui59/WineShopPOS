@@ -131,3 +131,14 @@ Permanent prevention:
 - topbar-actions and UserMenu must remain a higher stacking layer than the center hero;
 - center effects must be clipped inside `.topbar-shop-hero`;
 - for demo-safe visual changes, prefer CSS-only overrides and hash-lock business/component logic.
+
+### V14 fort SVG raw-hash mismatch on Windows/Git Bash
+Observed: `RELEASE_FORT_ONLY_TOP_HERO_V14.sh` stopped at Step 1 with `Fort asset hash mismatch` after creating the intended SVG.
+
+Root cause: the executor embedded a text SVG directly in a shell heredoc and validated its raw-byte SHA. Cross-platform line-ending conversion can change LF/CRLF bytes without changing the SVG semantics, causing a false failure.
+
+Permanent prevention:
+- binary/exact assets embedded in release executors must use base64 transport;
+- decode first, then validate the exact decoded SHA;
+- XML/SVG assets must additionally be parsed as XML and checked for required/forbidden semantic markers;
+- do not use a raw text-heredoc SHA as the sole cross-platform validator.
