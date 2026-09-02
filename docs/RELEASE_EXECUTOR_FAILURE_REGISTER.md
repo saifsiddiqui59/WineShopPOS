@@ -248,3 +248,48 @@ V5-A source/build/commit/push already succeeded. Do not rerun the source patch. 
 Verified outcome:
 Pending this continuation.
 
+
+### 2026-09-02 — Git Bash/MSYS rewrote Vite preview `--base=/v3-preview/`
+
+Release/stage:
+V5-A public `/v3-preview/` exact-SHA build/runtime verification.
+
+Symptom:
+Azure returned HTTP 200 for `index.html`, the real JS bundle and the real CSS bundle, but Chrome still showed 404 errors. Browser console exposed requests such as:
+`/Program%20Files/Git/v3-preview/assets/index-....js`
+and
+`/Program%20Files/Git/v3-preview/assets/index-....css`.
+
+Platform/tool:
+Windows Git Bash/MSYS launching npm/Vite.
+
+Root cause:
+The executor passed the Vite CLI argument `--base=/v3-preview/`. Git Bash/MSYS treated `/v3-preview/` as a POSIX filesystem path and rewrote it for the native Windows process to a path rooted under the Git installation (`C:\Program Files\Git\v3-preview\`). Vite then emitted that converted path into `index.html`.
+
+Why the prior transport check falsely passed:
+The validator searched for the substring `/v3-preview/assets/...`. That substring also exists inside the wrong value `/Program Files/Git/v3-preview/assets/...`, so the test extracted the tail and successfully curled the real asset even though the HTML attribute itself was wrong.
+
+Resolution:
+Do not pass a rooted preview URL through the Git-Bash/native-Windows CLI boundary. For preview builds, create a temporary Vite config in the isolated build directory with:
+`base: "/v3-preview/"`
+and build with `--config vite.preview.config.js`.
+The temporary config is build-only and is not committed.
+
+Permanent prevention:
+- Never pass URL-root values such as `--base=/.../` to native Windows build tools from Git Bash unless MSYS argument conversion is explicitly controlled.
+- Prefer a temporary/build-specific config file for Vite base paths.
+- Preview HTML validation must verify exact attribute prefixes:
+  `src="/v3-preview/assets/..."`
+  and
+  `href="/v3-preview/assets/..."`
+  rather than substring matching.
+- Explicitly fail if generated/public HTML contains `Program%20Files/Git`, `Program Files/Git`, or a Windows drive path.
+- Verify every JS/CSS asset referenced by the final public `index.html`.
+- Publish hashed/static files first and `index.html`/`404.html` last to avoid a new HTML shell referencing assets that are not yet available.
+
+Safe continuation point:
+Do not rerun V5-A source edits. Build the exact current V3 SHA with the corrected temporary Vite config, deploy only `$web/v3-preview`, and publish HTML last.
+
+Verified outcome:
+Pending this continuation.
+
