@@ -150,3 +150,7 @@ Royal 21 crown refined to a stronger 3D Y-axis revolve, premium center tile gets
 <!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
 ### User crown / full center hero / pitch-black Dark mode
 Uses the supplied jeweled crown as a transparent production asset with Y-axis rotation, moves shimmer/effects to the complete center header lane, and removes remaining navy/blue Dark-mode surfaces.
+
+<!-- DEMO_SAFE_ROYAL_HERO_V12 -->
+### Demo-safe Royal hero
+CSS-only full-width center hero rays/shimmer, globe-like crown rotation, top-right admin stacking protection and pitch-black Dark-mode correction. No application component/business logic changed.

@@ -944,3 +944,7 @@ Royal 21 appears on a pitch-black premium tile with a subtle shimmer. The crown 
 <!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
 ## Royal 21 premium header
 Royal 21 uses the jeweled crown supplied for the shop, rotating in a side-to-side 3D/Y-axis motion. The complete center header area carries a subtle gold shimmer. Dark mode uses pitch-black application and module backgrounds.
+
+<!-- DEMO_SAFE_ROYAL_HERO_V12 -->
+## Royal 21 premium header
+Royal 21 is presented in the full center header with a restrained gold-light effect and light shimmer. Its jeweled crown rotates around its own vertical axis. The Shop Admin control remains fixed above the hero effects on the right.

@@ -4429,3 +4429,366 @@ html[data-theme="dark"] .spiritual-tile {
     animation: none !important;
   }
 }
+
+/* DEMO_SAFE_ROYAL_HERO_V12
+   CSS-only visual patch:
+   - no POS logic change
+   - no ShopSelector logic change
+   - no UserMenu logic change
+   - no WineShop POS change
+   - no DB / Logic App / Azure behavior change */
+
+/* 1) Header becomes a stable 3-zone grid so the admin/user area can never
+      be buried by the center Royal 21 hero. */
+.consolidated-topbar {
+  position: relative !important;
+  z-index: 120 !important;
+  display: grid !important;
+  grid-template-columns:
+    minmax(220px, 1fr)
+    minmax(420px, 1.65fr)
+    minmax(220px, 1fr) !important;
+  align-items: center !important;
+  column-gap: 18px !important;
+  width: 100% !important;
+  height: 104px !important;
+  min-height: 104px !important;
+  padding: 0 24px !important;
+  overflow: visible !important;
+  background: #000000 !important;
+  border-bottom-color: rgba(216, 178, 79, 0.16) !important;
+}
+
+.topbar-page-context {
+  position: relative !important;
+  z-index: 20 !important;
+  min-width: 0 !important;
+  justify-self: start !important;
+}
+
+.topbar-actions {
+  position: relative !important;
+  z-index: 60 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  justify-self: end !important;
+  gap: 12px !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+  isolation: isolate;
+}
+
+.user-menu {
+  position: relative !important;
+  z-index: 80 !important;
+}
+
+.user-menu-trigger {
+  position: relative !important;
+  z-index: 81 !important;
+}
+
+.user-menu-popover {
+  z-index: 9999 !important;
+}
+
+/* 2) Full center hero lane like the approved demo mockup.
+      No small badge: effect belongs to the complete middle lane. */
+.topbar-shop-hero {
+  position: relative !important;
+  z-index: 10 !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100px !important;
+  min-height: 100px !important;
+  max-height: 100px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  isolation: isolate;
+  perspective: 1200px;
+  background: #000000 !important;
+}
+
+/* Wide static golden light/rays, fading gently toward both ends. */
+.topbar-shop-hero::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at 50% 52%,
+      rgba(241, 190, 63, 0.20) 0%,
+      rgba(218, 164, 37, 0.085) 25%,
+      rgba(154, 97, 8, 0.025) 48%,
+      transparent 69%
+    ),
+    linear-gradient(
+      166deg,
+      transparent 0%,
+      transparent 29%,
+      rgba(226, 172, 44, 0.13) 38%,
+      rgba(255, 220, 120, 0.22) 44%,
+      rgba(194, 135, 19, 0.07) 49%,
+      transparent 56%,
+      transparent 100%
+    ),
+    linear-gradient(
+      14deg,
+      transparent 0%,
+      transparent 29%,
+      rgba(226, 172, 44, 0.13) 38%,
+      rgba(255, 220, 120, 0.22) 44%,
+      rgba(194, 135, 19, 0.07) 49%,
+      transparent 56%,
+      transparent 100%
+    );
+  opacity: 0.72;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 13%, #000 87%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 13%, #000 87%, transparent 100%);
+}
+
+/* Light shimmer only — slower and softer than previous versions. */
+.topbar-shop-hero::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  bottom: 7px;
+  left: -25%;
+  width: 22%;
+  pointer-events: none;
+  transform: skewX(-14deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 231, 157, 0.01) 22%,
+    rgba(255, 231, 157, 0.08) 43%,
+    rgba(255, 246, 209, 0.18) 50%,
+    rgba(255, 231, 157, 0.08) 57%,
+    rgba(255, 231, 157, 0.01) 78%,
+    transparent 100%
+  );
+  filter: blur(0.8px);
+  opacity: 0;
+  animation: royal-v12-light-shimmer 8s ease-in-out infinite;
+}
+
+@keyframes royal-v12-light-shimmer {
+  0%, 18% { left: -25%; opacity: 0; }
+  30% { opacity: 0.13; }
+  50% { left: 51%; opacity: 0.22; }
+  70% { opacity: 0.10; }
+  82%, 100% { left: 105%; opacity: 0; }
+}
+
+/* 3) Existing user-supplied jeweled crown gets a more globe-like self-rotation:
+      it remains substantial through quarter turns instead of flattening like
+      a card. Crown source/asset is untouched. */
+.royal-v11-lockup {
+  position: relative !important;
+  z-index: 3 !important;
+  width: min(100%, 600px) !important;
+  height: 98px !important;
+  display: grid !important;
+  grid-template-rows: 39px 46px 10px !important;
+  place-items: center !important;
+  align-content: center !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.royal-v11-crown-stage {
+  grid-row: 1 !important;
+  width: 100px !important;
+  height: 46px !important;
+  perspective: 1000px !important;
+  transform-style: preserve-3d !important;
+  overflow: visible !important;
+}
+
+.royal-v11-crown-rotor {
+  width: 88px !important;
+  height: 46px !important;
+  transform-style: preserve-3d !important;
+  transform-origin: 50% 50% !important;
+  animation: royal-v12-crown-globe-spin 7s linear infinite !important;
+}
+
+/* Soft depth halo gives the rotating crown an object/sphere presence. */
+.royal-v11-crown-stage::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 82px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    rgba(247, 199, 76, 0.19) 0%,
+    rgba(184, 120, 12, 0.07) 42%,
+    transparent 72%
+  );
+  filter: blur(5px);
+}
+
+.royal-v11-crown-face {
+  height: 45px !important;
+  max-width: 96px !important;
+  filter:
+    saturate(1.08)
+    contrast(1.04)
+    drop-shadow(0 0 5px rgba(236, 188, 63, 0.20))
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.62)) !important;
+}
+
+/* Front/back keep the crown visually present all the way through the turn. */
+.royal-v11-crown-front {
+  transform: translate(-50%, -50%) translateZ(9px) !important;
+}
+
+.royal-v11-crown-back {
+  transform: translate(-50%, -50%) rotateY(180deg) translateZ(9px) scaleX(-1) !important;
+  filter:
+    brightness(0.78)
+    saturate(0.92)
+    drop-shadow(0 0 4px rgba(196, 145, 38, 0.16)) !important;
+}
+
+@keyframes royal-v12-crown-globe-spin {
+  0% {
+    transform: rotateX(2deg) rotateY(0deg) translateZ(0) scaleX(1);
+  }
+  12.5% {
+    transform: rotateX(2deg) rotateY(45deg) translateZ(4px) scaleX(1.08);
+  }
+  25% {
+    transform: rotateX(2deg) rotateY(90deg) translateZ(8px) scaleX(1.28);
+  }
+  37.5% {
+    transform: rotateX(2deg) rotateY(135deg) translateZ(4px) scaleX(1.08);
+  }
+  50% {
+    transform: rotateX(2deg) rotateY(180deg) translateZ(0) scaleX(1);
+  }
+  62.5% {
+    transform: rotateX(2deg) rotateY(225deg) translateZ(4px) scaleX(1.08);
+  }
+  75% {
+    transform: rotateX(2deg) rotateY(270deg) translateZ(8px) scaleX(1.28);
+  }
+  87.5% {
+    transform: rotateX(2deg) rotateY(315deg) translateZ(4px) scaleX(1.08);
+  }
+  100% {
+    transform: rotateX(2deg) rotateY(360deg) translateZ(0) scaleX(1);
+  }
+}
+
+.royal-v11-name {
+  grid-row: 2 !important;
+  font-size: clamp(36px, 3.1vw, 48px) !important;
+  transform: scaleX(1.16) !important;
+  letter-spacing: 0.2px !important;
+  filter: drop-shadow(0 2px 8px rgba(209, 159, 45, 0.09));
+}
+
+.royal-v11-ornament {
+  grid-row: 3 !important;
+  width: 240px !important;
+}
+
+/* 4) Absolute pitch-black dark foundation where the previous screenshots
+      still showed navy/blue. Keep cards slightly lifted from the background. */
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root,
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .main-area,
+html[data-theme="dark"] .page-area,
+html[data-theme="dark"] .pos-page,
+html[data-theme="dark"] .module-shell,
+html[data-theme="dark"] .module-content,
+html[data-theme="dark"] .module-heading,
+html[data-theme="dark"] .module-tabs,
+html[data-theme="dark"] .consolidated-topbar,
+html[data-theme="dark"] .topbar-shop-hero,
+html[data-theme="dark"] .sidebar {
+  background-color: #000000 !important;
+}
+
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .data-table-wrapper,
+html[data-theme="dark"] .data-table,
+html[data-theme="dark"] .pos-search-card,
+html[data-theme="dark"] .pos-rewards-card,
+html[data-theme="dark"] .pos-checkout-card {
+  background-color: #050505 !important;
+}
+
+/* Spiritual image tile stays pitch black in Dark mode. */
+html[data-theme="dark"] .spiritual-tile,
+html[data-theme="dark"] .spiritual-tile.is-drop-active,
+html[data-theme="dark"] .spiritual-empty,
+html[data-theme="dark"] .spiritual-controls button,
+html[data-theme="dark"] .spiritual-collapsed-button,
+html[data-theme="dark"] .spiritual-tile-collapsed,
+html[data-theme="dark"] .spiritual-message {
+  background-color: #000000 !important;
+}
+
+/* Responsive: protect right-side admin controls first, then compress center hero. */
+@media (max-width: 1250px) {
+  .consolidated-topbar {
+    grid-template-columns:
+      minmax(180px, 0.9fr)
+      minmax(330px, 1.4fr)
+      minmax(205px, 0.9fr) !important;
+    column-gap: 10px !important;
+    padding: 0 16px !important;
+  }
+
+  .royal-v11-lockup {
+    width: min(100%, 470px) !important;
+  }
+
+  .royal-v11-name {
+    font-size: clamp(30px, 2.75vw, 39px) !important;
+    transform: scaleX(1.10) !important;
+  }
+
+  .royal-v11-ornament {
+    width: 190px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .consolidated-topbar {
+    grid-template-columns: minmax(150px, 1fr) minmax(250px, 1.25fr) auto !important;
+  }
+
+  .topbar-page-context .breadcrumbs {
+    display: none !important;
+  }
+
+  .user-menu-trigger-text {
+    display: none !important;
+  }
+
+  .royal-v11-name {
+    font-size: 29px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-shop-hero::after,
+  .royal-v11-crown-rotor {
+    animation: none !important;
+  }
+}

@@ -1103,3 +1103,7 @@ Royal 21 remains text-based, not a stretched image. Crown motion uses a layered 
 <!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
 ## Royal 21 user crown rule
 The user-supplied crown asset is the Royal 21 crown source. Do not substitute a Lucide crown while this asset is active. The crown rotates on the Y axis with front/back faces. Premium shimmer belongs to the entire center topbar lane, not a small shop-name badge. Dark mode base/module backgrounds are pitch black.
+
+<!-- DEMO_SAFE_ROYAL_HERO_V12 -->
+## Demo-safe header ownership
+The consolidated topbar has three independent zones. Center-shop visual effects may never extend over `.topbar-actions`. UserMenu must retain a higher stacking context. Demo-time visual corrections should not rewrite POS, Layout, UserMenu, ShopSelector, AnimatedBrand or SpiritualImageTile logic when CSS overrides can achieve the requirement.

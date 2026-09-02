@@ -508,3 +508,7 @@ React/CSS only sequences these pixels. WineShop POS uses the five stages across 
 - The full center lane has a restrained gold bloom and six-second shimmer fading at both ends.
 - Dark mode forces body/app/main/page/module shell/module content/sidebar/topbar to pitch black and neutral panels to near-black, removing the visible navy/blue cast.
 - Spiritual image tile remains pitch black in Dark mode.
+
+<!-- DEMO_SAFE_ROYAL_HERO_V12 -->
+## 2026-09-02 — Demo-safe Royal 21 hero refinement
+A CSS-only visual refinement matches the approved premium mockup more closely while locking application logic. The complete center header lane carries subtle gold rays and a light eight-second shimmer. The existing user-supplied jeweled crown remains the source asset and receives a globe-like Y-axis self-rotation treatment. Royal 21 is larger and centered. The header is enforced as a three-zone grid so Shop Admin/UserMenu cannot be buried by the hero. Dark application/module surfaces are explicitly pitch black while cards remain near-black for visual separation.

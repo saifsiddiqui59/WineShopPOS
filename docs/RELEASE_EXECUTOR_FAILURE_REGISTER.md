@@ -120,3 +120,14 @@ Permanent prevention:
 - store cropped production sprite assets in Git with SHA-256 verification;
 - CSS/React may control frame timing/replay only; it must not reconstruct or recolor the artwork;
 - keep visual fidelity status `MANUAL_UAT=PENDING` until the user confirms production.
+
+### 14. Center hero visually buried the top-right admin control
+Observed: repeated Royal 21 center-header styling could visually cover or crowd the top-right Shop Admin/UserMenu area.
+
+Root cause: center branding was enlarged without enforcing a strict three-column header ownership model and explicit action-layer z-index.
+
+Permanent prevention:
+- consolidated topbar must use three explicit layout zones: page context / shop hero / actions;
+- topbar-actions and UserMenu must remain a higher stacking layer than the center hero;
+- center effects must be clipped inside `.topbar-shop-hero`;
+- for demo-safe visual changes, prefer CSS-only overrides and hash-lock business/component logic.
