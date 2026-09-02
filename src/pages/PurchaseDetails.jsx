@@ -1,4 +1,5 @@
 import SortableTable from "../components/ui/SortableTable";
+import PurchaseCorrectionPanel from "../components/PurchaseCorrectionPanel";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -74,7 +75,7 @@ export default function PurchaseDetails() {
       const pack = resolveInvoiceUnitsPerCase(item, null);
       const cases = Number(item.caseCount || 0);
       const loose = Number(item.looseBottles || 0);
-      const strong = pack.source !== "DEFAULT_REVIEW" && cases > 0;
+      const strong = Boolean(pack.strong) && !pack.reviewRequired && cases > 0;
       return {
         description: item.description || "OCR line",
         cases,
@@ -192,6 +193,8 @@ export default function PurchaseDetails() {
         </tr>)}</tbody>
       </SortableTable></div>
     </section> : null}
+
+    <PurchaseCorrectionPanel purchase={purchase} products={products}/>
 
     <section className="panel" style={{ marginTop: 16 }}>
       <h3>Landed-cost Adjustments Posted</h3>

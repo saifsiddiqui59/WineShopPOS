@@ -974,3 +974,11 @@ In Product Master, drag the small divider at the right edge of a column heading 
 <!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
 ## Adjusting Product Master columns
 Drag the **right edge** of a column. Its left edge stays in the same place; only its right edge moves. Columns to the left stay fixed. Widths are remembered in the browser and **Reset column widths** restores defaults. Smaller screens keep wide tables horizontally scrollable instead of squeezing values.
+
+<!-- V5B_PURCHASE_CORRECTION_OCR_PACK_SAFETY_20260902 -->
+## Correcting a completed purchase
+Open **Purchases & Suppliers → Invoice Inbox → View Receipt**. In **Completed Purchase Correction**, choose **Correct** on the affected line. Enter the correct Cases, Bottles/Case and Loose Bottles plus a reason. WineShopPOS keeps the supplier line amount unchanged and shows the resulting final bottles, inventory difference and corrected per-bottle price before confirmation.
+
+The normal correction is allowed only while that receipt lot is completely unconsumed. If bottles from that FIFO lot were already sold/used, WineShopPOS blocks the correction and requires an advanced reversal workflow.
+
+Before Receive Stock, WineShopPOS warns about package conflicts. CAN products normally suggest 24/case and glass/bottle products below 500 ml normally suggest 24/case, but these are review suggestions; supplier evidence and verified Product Master data take priority.

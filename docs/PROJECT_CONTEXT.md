@@ -567,3 +567,11 @@ Before creating or running any WineShopPOS patch/executor/continuation, read `do
 <!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
 ## 2026-09-02 — V5-A.1 table and viewport refinement
 V3 preview locks all measured table widths at resize start. Dragging the right edge of a column changes only that column width; the selected column's left edge and every earlier boundary remain fixed. Responsive ownership was refined so the existing fixed desktop sidebar and main-area offset do not compete with a second width calculation. Manual visual UAT remains required.
+
+<!-- V5B_PURCHASE_CORRECTION_OCR_PACK_SAFETY_20260902 -->
+## 2026-09-02 — V5-B completed purchase correction and OCR pack safety
+V3 adds an audited completed-purchase-line correction workflow. The supplier line value is immutable; correcting Cases/Bottles-per-Case/Loose recalculates final bottles and the internal per-bottle/base/landed unit costs. Inventory and the unconsumed FIFO receipt lot move in the same transaction and a STOCK_CORRECTION movement plus audit/correction-history record is written. Simple correction is blocked after any unit from that receipt lot has been consumed.
+
+Packaging heuristics are suggestions, not truth: CAN of any size suggests 24/case; glass/bottle/beer under 500 ml suggests 24/case; large beer 501–750 ml suggests 12/case. Printed bottle-total evidence is stronger. Existing Product Master stays authoritative for known products, and conflicts require review/confirmation before Receive Stock.
+
+Purchase Price/Bottle user input is restricted to 2-decimal entry/display behavior; internal FIFO landed cost may retain 6-decimal precision.

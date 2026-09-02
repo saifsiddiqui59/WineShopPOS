@@ -12,19 +12,28 @@ export function inferSizeMl(value) {
 export function inferInvoiceUnitsPerCase(item = {}) {
   const structured = Number(item?.unitsPerCaseHint || 0);
   if (Number.isInteger(structured) && structured >= 1 && structured <= 100) {
-    return { value: structured, source: "PRINTED_BOTTLE_TOTAL", strong: true };
+    return {
+      value: structured,
+      source: "PRINTED_BOTTLE_TOTAL",
+      strong: true,
+    };
   }
 
   const text = `${String(item?.description || "")} ${String(item?.packing || "")}`.toLowerCase();
   const size = inferSizeMl(text);
-  const canLike = /\b(can|cans)\b/.test(text);
+  const canLike = /\b(can|cans|tin)\b/.test(text);
+  const bottleLike = /\b(bottle|glass)\b/.test(text);
   const beerLike = /\b(beer|lager|witbier|stout)\b/.test(text);
 
-  if ((canLike || beerLike) && size > 0 && size <= 500) {
-    return { value: 24, source: canLike ? "CAN_SIZE_PROFILE" : "BEER_SMALL_BOTTLE_PROFILE", strong: true };
+  // Packaging profiles are suggestions, never invoice evidence.
+  if (canLike && size > 0) {
+    return { value: 24, source: "CAN_DEFAULT_24", strong: false };
+  }
+  if ((bottleLike || beerLike) && size > 0 && size < 500) {
+    return { value: 24, source: "SMALL_GLASS_DEFAULT_24", strong: false };
   }
   if (beerLike && size > 500 && size <= 750) {
-    return { value: 12, source: "BEER_LARGE_BOTTLE_PROFILE", strong: true };
+    return { value: 12, source: "LARGE_BEER_DEFAULT_12", strong: false };
   }
   return null;
 }
@@ -34,30 +43,67 @@ export function resolveInvoiceUnitsPerCase(item = {}, product = null) {
   const productValue = Number(product?.unitsPerCase || 0);
   const productValid = Number.isInteger(productValue) && productValue > 0 && productValue <= 100;
 
+  if (invoiceHint?.strong) {
+    const conflict = productValid && productValue !== invoiceHint.value;
+    return {
+      value: invoiceHint.value,
+      source: invoiceHint.source,
+      strong: true,
+      invoiceValue: invoiceHint.value,
+      suggestedValue: null,
+      productValue: productValid ? productValue : null,
+      conflict,
+      reviewRequired: conflict,
+    };
+  }
+
+  if (invoiceHint && productValid) {
+    const conflict = productValue !== invoiceHint.value;
+    return {
+      value: productValue,
+      source: conflict ? "PRODUCT_MASTER_VS_PACK_PROFILE" : "PRODUCT_MASTER_CONFIRMED",
+      strong: !conflict,
+      invoiceValue: null,
+      suggestedValue: invoiceHint.value,
+      suggestionSource: invoiceHint.source,
+      productValue,
+      conflict,
+      reviewRequired: conflict,
+    };
+  }
+
   if (invoiceHint) {
     return {
       value: invoiceHint.value,
       source: invoiceHint.source,
-      invoiceValue: invoiceHint.value,
-      productValue: productValid ? productValue : null,
-      conflict: productValid && productValue !== invoiceHint.value,
-      reviewRequired: productValid && productValue !== invoiceHint.value,
+      strong: false,
+      invoiceValue: null,
+      suggestedValue: invoiceHint.value,
+      productValue: null,
+      conflict: false,
+      reviewRequired: true,
     };
   }
+
   if (productValid) {
     return {
       value: productValue,
       source: "PRODUCT_MASTER",
+      strong: true,
       invoiceValue: null,
+      suggestedValue: null,
       productValue,
       conflict: false,
       reviewRequired: false,
     };
   }
+
   return {
     value: 12,
     source: "DEFAULT_REVIEW",
+    strong: false,
     invoiceValue: null,
+    suggestedValue: null,
     productValue: null,
     conflict: false,
     reviewRequired: true,

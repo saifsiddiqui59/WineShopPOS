@@ -176,3 +176,6 @@ Preview-only fallback imagery for the seven current catalogue products. Existing
 
 <!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
 - V5-A.1 preview refinement: right-edge-only persisted column resizing and global responsive ownership cleanup. Manual visual UAT required.
+
+<!-- V5B_PURCHASE_CORRECTION_OCR_PACK_SAFETY_20260902 -->
+- V5-B: audited completed-purchase correction RPC/UI, unconsumed-FIFO safety guard, pack-profile review prompts, and 2-decimal purchase-price UI.

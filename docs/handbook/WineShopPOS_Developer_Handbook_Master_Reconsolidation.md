@@ -1129,3 +1129,9 @@ OCR defaults:
 <!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
 ## V5-A.1 responsive/table rule
 At pointer-down, `SortableTable` snapshots every rendered header width and persists that frozen width map. Pointer movement changes only the active column. This guarantees boundaries to the left do not move. Desktop main content is owned by the fixed sidebar offset (`250px`, or `72px` collapsed); mobile removes the offset and uses the drawer. Do not combine `width:calc(...)` with an independent flex-growth width owner.
+
+<!-- V5B_PURCHASE_CORRECTION_OCR_PACK_SAFETY_20260902 -->
+## V5-B purchase correction invariants
+`correct_received_purchase_item` is the only V5-B path for changing a completed receipt line. It keeps `purchase_items.line_total` fixed, derives corrected quantity from cases × units/case + loose, derives base unit cost from line_total / quantity, updates inventory and the matching unconsumed receipt lot transactionally, writes STOCK_CORRECTION only for quantity deltas, and persists old/new JSON plus audit. If `remaining_quantity != received_quantity`, the simple correction is rejected because FIFO history has already been consumed.
+
+OCR/package profiles never directly post inventory. Product Master is authoritative for existing products; printed pack evidence and heuristics are surfaced as review evidence. CAN → 24 and small glass/bottle → 24 are suggestions unless supported by stronger evidence.
