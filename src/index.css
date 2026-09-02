@@ -4865,3 +4865,105 @@ html[data-theme="dark"] .spiritual-message {
 .user-menu-popover {
   z-index: 9999 !important;
 }
+
+/* EXACT_USER_REFERENCE_BANNER_V15
+   Uses the user's actual supplied artwork.
+   No SVG redraw, no CSS crown, no generated shop name. */
+
+.consolidated-topbar {
+  height: 154px !important;
+  min-height: 154px !important;
+}
+
+.topbar-shop-hero {
+  position: relative !important;
+  height: 150px !important;
+  min-height: 150px !important;
+  max-height: 150px !important;
+  overflow: hidden !important;
+  background-color: #000000 !important;
+  background-image: url("/brand/royal21-exact-reference-banner-v15.png") !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+  background-size: cover !important;
+}
+
+/* No extra shimmer/glow/redraw on top of the supplied artwork. */
+.topbar-shop-hero::before,
+.topbar-shop-hero::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+
+/* Existing Royal UI stays mounted for shop context but is visually hidden
+   because the supplied image already contains crown + Royal 21. */
+.royal-v11-crown-stage,
+.royal-v11-name,
+.royal-v11-ornament {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+.royal-v11-crown-rotor,
+.royal-v11-crown-face {
+  animation: none !important;
+}
+
+.royal-v11-lockup {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.royal-v11-select-layer {
+  z-index: 8 !important;
+}
+
+/* Keep the already-fixed admin/user layering. */
+.topbar-actions {
+  position: relative !important;
+  z-index: 60 !important;
+  min-width: max-content !important;
+}
+
+.user-menu,
+.user-menu-trigger {
+  position: relative !important;
+  z-index: 80 !important;
+}
+
+.user-menu-popover {
+  z-index: 9999 !important;
+}
+
+@media (max-width: 1250px) {
+  .consolidated-topbar {
+    height: 138px !important;
+    min-height: 138px !important;
+  }
+
+  .topbar-shop-hero {
+    height: 134px !important;
+    min-height: 134px !important;
+    max-height: 134px !important;
+    background-position: center center !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .consolidated-topbar {
+    height: 118px !important;
+    min-height: 118px !important;
+  }
+
+  .topbar-shop-hero {
+    height: 114px !important;
+    min-height: 114px !important;
+    max-height: 114px !important;
+  }
+}

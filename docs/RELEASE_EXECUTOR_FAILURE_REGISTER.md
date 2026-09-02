@@ -142,3 +142,13 @@ Permanent prevention:
 - decode first, then validate the exact decoded SHA;
 - XML/SVG assets must additionally be parsed as XML and checked for required/forbidden semantic markers;
 - do not use a raw text-heredoc SHA as the sole cross-platform validator.
+
+### V15 exact artwork validator required Pillow
+Observed: `RELEASE_EXACT_USER_ROYAL21_ARTWORK_V15.sh` failed at Step 1 with `ModuleNotFoundError: No module named 'PIL'`.
+
+Root cause: the release executor used Pillow only to validate PNG dimensions, introducing an unnecessary dependency that is not guaranteed in the user's Git Bash Python environment.
+
+Permanent prevention:
+- prefer Python standard-library validators for release-time asset checks;
+- PNG signature/IHDR dimensions must be validated with `struct`;
+- do not install optional Python packages during production release solely for validation.

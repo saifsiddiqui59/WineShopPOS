@@ -516,3 +516,7 @@ A CSS-only visual refinement matches the approved premium mockup more closely wh
 <!-- FORT_ONLY_TOP_HERO_V14B -->
 ## 2026-09-02 — Fort-only center header
 For the immediate demo, the approved Rajasthan-inspired fort SVG occupies the center topbar hero. Royal crown/name/ornament visuals are hidden, while ShopSelector stays mounted so authorization/shop-switching behavior is unchanged. WineShop POS, Layout, UserMenu, SpiritualImageTile and POS JSX remain unchanged.
+
+<!-- EXACT_USER_REFERENCE_BANNER_V15 -->
+## 2026-09-02 — Exact supplied Royal 21 banner
+The center header now uses the user's supplied Rajasthan fort/crown/Royal 21 artwork itself, cropped only to remove unused vertical black space for header fit. The previous rotating crown/name/ornament UI remains mounted but visually hidden. No React/business logic was changed.

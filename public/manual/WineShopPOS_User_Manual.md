@@ -952,3 +952,7 @@ Royal 21 is presented in the full center header with a restrained gold-light eff
 <!-- FORT_ONLY_TOP_HERO_V14B -->
 ## Demo center header
 The center header displays a Rajasthan-inspired fort visual while existing shop context behavior remains available behind the presentation layer.
+
+<!-- EXACT_USER_REFERENCE_BANNER_V15 -->
+## Royal 21 header artwork
+The center header displays the supplied Royal 21 Rajasthan artwork directly.

@@ -158,3 +158,7 @@ CSS-only full-width center hero rays/shimmer, globe-like crown rotation, top-rig
 <!-- FORT_ONLY_TOP_HERO_V14B -->
 ### Fort-only center hero
 Approved Rajasthan SVG replaces visible crown/shop-name decoration in the center header for the demo; business logic is unchanged.
+
+<!-- EXACT_USER_REFERENCE_BANNER_V15 -->
+### Exact supplied Royal 21 artwork
+Uses the user's actual artwork as the center-header banner instead of a recreated SVG or CSS composition.
