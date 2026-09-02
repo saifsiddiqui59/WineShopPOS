@@ -490,3 +490,11 @@ React/CSS only sequences these pixels. WineShop POS uses the five stages across 
 - Royal 21 name uses a wider text lockup (`scaleX`) with larger metallic-gold typography for stronger center visibility.
 - Topbar center brand remains vertically constrained to prevent overlap with POS/Billing or other page content.
 - Dark-mode spiritual/devotional tile surfaces are forced to solid `#050505`.
+
+<!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
+## 2026-09-01 — Royal 21 true 3D crown + full-tile shimmer + pitch black
+- WineShop POS left branding remains untouched.
+- Royal 21 crown now uses a stronger 3D effect with layered depth and a Y-axis revolve rather than a flat 2D spin.
+- The premium Royal 21 tile is explicitly pitch black (`#000000`) and has a full-width shimmering light pass that fades toward the left and right edges.
+- The devotional/spiritual tile in Dark mode is also forced to pitch black (`#000000`).
+- Topbar containment remains enforced so center branding never overlaps page content below.

@@ -3900,3 +3900,254 @@ html[data-theme="dark"] .spiritual-tile.is-drop-active {
     animation: none !important;
   }
 }
+
+/* ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 */
+
+.consolidated-topbar {
+  height: 88px !important;
+  min-height: 88px !important;
+}
+
+.topbar-shop-hero {
+  height: 82px !important;
+  min-height: 82px !important;
+  max-height: 82px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  perspective: 1100px;
+}
+
+.royal-v10-lockup {
+  position: relative;
+  width: clamp(250px, 32vw, 395px);
+  height: 78px;
+  max-height: 78px;
+  display: grid;
+  grid-template-rows: 22px 39px 12px;
+  place-items: center;
+  align-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 14px;
+  background: #000000 !important;
+  border: 1px solid rgba(215, 171, 57, 0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 241, 196, 0.025),
+    inset 0 14px 40px rgba(117, 77, 10, 0.035),
+    0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.royal-v10-lockup::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(206, 163, 44, 0.18) 0%, rgba(206, 163, 44, 0.06) 34%, rgba(206, 163, 44, 0) 72%),
+    linear-gradient(90deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.72) 16%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.72) 84%, rgba(0,0,0,0.95) 100%);
+  opacity: .92;
+  pointer-events: none;
+}
+
+.royal-v10-lockup::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 225, 133, 0) 0%,
+    rgba(255, 225, 133, 0.02) 18%,
+    rgba(255, 225, 133, 0.18) 35%,
+    rgba(255, 239, 176, 0.38) 50%,
+    rgba(255, 225, 133, 0.18) 65%,
+    rgba(255, 225, 133, 0.02) 82%,
+    rgba(255, 225, 133, 0) 100%
+  );
+  mix-blend-mode: screen;
+  opacity: .52;
+  transform: translateX(-64%);
+  animation: royal-v10-tile-shimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes royal-v10-tile-shimmer {
+  0%, 100% { transform: translateX(-64%); opacity: .18; }
+  50% { transform: translateX(64%); opacity: .58; }
+}
+
+.royal-v10-crown-stage,
+.royal-v10-name,
+.royal-v10-ornament {
+  position: relative;
+  z-index: 2;
+}
+
+.royal-v10-crown-stage {
+  grid-row: 1;
+  width: 34px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  transform-style: preserve-3d;
+  perspective: 700px;
+}
+
+.royal-v10-crown {
+  position: absolute;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+}
+
+.royal-v10-crown-back {
+  color: rgba(150, 107, 21, 0.55);
+  filter: blur(0.3px);
+  transform: translateZ(-10px) scale(0.9);
+  opacity: 0.55;
+}
+
+.royal-v10-crown-front {
+  color: #e8c35c;
+  backface-visibility: visible;
+  filter:
+    drop-shadow(0 0 6px rgba(232, 195, 92, 0.26))
+    drop-shadow(0 2px 2px rgba(73, 46, 4, 0.52));
+  animation: royal-v10-crown-3d-revolve 5.8s linear infinite;
+}
+
+@keyframes royal-v10-crown-3d-revolve {
+  0%   { transform: rotateX(7deg) rotateY(0deg) translateZ(9px) scale(1); }
+  12%  { transform: rotateX(7deg) rotateY(45deg) translateZ(8px) scale(0.985); }
+  25%  { transform: rotateX(7deg) rotateY(90deg) translateZ(6px) scale(0.93, 1); }
+  37%  { transform: rotateX(7deg) rotateY(135deg) translateZ(8px) scale(0.985); }
+  50%  { transform: rotateX(7deg) rotateY(180deg) translateZ(9px) scale(1); }
+  62%  { transform: rotateX(7deg) rotateY(225deg) translateZ(8px) scale(0.985); }
+  75%  { transform: rotateX(7deg) rotateY(270deg) translateZ(6px) scale(0.93, 1); }
+  87%  { transform: rotateX(7deg) rotateY(315deg) translateZ(8px) scale(0.985); }
+  100% { transform: rotateX(7deg) rotateY(360deg) translateZ(9px) scale(1); }
+}
+
+.royal-v10-name {
+  grid-row: 2;
+  display: inline-block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 2.72vw, 40px);
+  line-height: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  transform: scaleX(1.16);
+  transform-origin: center;
+  background: linear-gradient(
+    105deg,
+    #7e4c0c 0%,
+    #ba7f1a 16%,
+    #f6db83 34%,
+    #d8b348 52%,
+    #f8e8a9 69%,
+    #b97f1a 85%,
+    #7c4b0b 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 1px 0 rgba(255, 240, 182, 0.05),
+    0 8px 20px rgba(174, 119, 24, 0.12);
+}
+
+.royal-v10-ornament {
+  grid-row: 3;
+  width: 200px;
+  height: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr;
+  align-items: center;
+  gap: 4px;
+  color: #cb9f34;
+}
+
+.royal-v10-ornament i {
+  height: 1px;
+  display: block;
+  background: linear-gradient(90deg, transparent, rgba(217, 178, 78, 0.95));
+}
+
+.royal-v10-ornament i:last-child {
+  background: linear-gradient(90deg, rgba(217, 178, 78, 0.95), transparent);
+}
+
+.royal-v10-ornament b,
+.royal-v10-ornament em {
+  font-size: 7px;
+  line-height: 1;
+  font-style: normal;
+}
+
+.royal-v10-lockup-interactive {
+  cursor: pointer;
+}
+
+.royal-v10-select-layer,
+.royal-v10-select-layer select {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+}
+
+.royal-v10-select-layer select {
+  opacity: 0;
+  cursor: pointer;
+}
+
+.page-area {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Force devotional/spiritual tile to pitch black in Dark mode. */
+html[data-theme="dark"] .spiritual-tile,
+html[data-theme="dark"] .spiritual-tile.is-drop-active,
+html[data-theme="dark"] .spiritual-empty,
+html[data-theme="dark"] .spiritual-controls button,
+html[data-theme="dark"] .spiritual-collapsed-button,
+html[data-theme="dark"] .spiritual-tile-collapsed,
+html[data-theme="dark"] .spiritual-message {
+  background: #000000 !important;
+}
+
+html[data-theme="dark"] .spiritual-tile {
+  border-color: rgba(216, 178, 79, 0.26) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 236, 176, 0.025),
+    0 6px 18px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-theme="dark"] .spiritual-tile.is-drop-active {
+  border-color: rgba(244, 210, 111, 0.76) !important;
+}
+
+@media (max-width: 1180px) {
+  .royal-v10-lockup {
+    width: clamp(222px, 27vw, 310px);
+  }
+
+  .royal-v10-name {
+    font-size: clamp(25px, 2.35vw, 33px);
+    transform: scaleX(1.1);
+  }
+
+  .royal-v10-ornament {
+    width: 170px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .royal-v10-lockup::after,
+  .royal-v10-crown-front {
+    animation: none !important;
+  }
+}

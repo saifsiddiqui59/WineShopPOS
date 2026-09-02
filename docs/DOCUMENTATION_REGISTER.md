@@ -142,3 +142,7 @@ Removed Royal 21 sprite stretching, constrained the lockup to the topbar, added 
 <!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
 ### Royal 21 Y-axis crown / wider center / true-black spiritual tile
 Crown now revolves in 3D on the Y axis, Royal 21 has wider center presence, topbar containment is enforced, and the dark spiritual tile is true black.
+
+<!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
+### Royal 21 true 3D crown / shimmer / pitch-black dark surfaces
+Royal 21 crown refined to a stronger 3D Y-axis revolve, premium center tile gets full-width shimmer on pitch black, and the spiritual tile is forced to pitch black in Dark mode.

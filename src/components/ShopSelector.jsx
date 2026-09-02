@@ -6,17 +6,18 @@ import { useAuth } from "../context/AuthContext";
 function RoyalHero({ shopName, interactive = false, children }) {
   return (
     <div
-      className={`royal-v9-lockup${interactive ? " royal-v9-lockup-interactive" : ""}`}
+      className={`royal-v10-lockup${interactive ? " royal-v10-lockup-interactive" : ""}`}
       title={shopName}
       aria-label={shopName}
     >
-      <span className="royal-v9-crown-stage" aria-hidden="true">
-        <Crown className="royal-v9-crown" size={25} strokeWidth={1.65} />
+      <span className="royal-v10-crown-stage" aria-hidden="true">
+        <Crown className="royal-v10-crown royal-v10-crown-back" size={26} strokeWidth={1.65} />
+        <Crown className="royal-v10-crown royal-v10-crown-front" size={26} strokeWidth={1.65} />
       </span>
 
-      <span className="royal-v9-name">{shopName}</span>
+      <span className="royal-v10-name">{shopName}</span>
 
-      <span className="royal-v9-ornament" aria-hidden="true">
+      <span className="royal-v10-ornament" aria-hidden="true">
         <i />
         <b>◇</b>
         <em>◇</em>
@@ -73,7 +74,7 @@ export default function ShopSelector() {
 
     return (
       <RoyalHero shopName={shopName} interactive>
-        <label className="royal-v9-select-layer">
+        <label className="royal-v10-select-layer">
           <span className="sr-only">Current shop</span>
           <select
             value={profile?.shop_id || ""}

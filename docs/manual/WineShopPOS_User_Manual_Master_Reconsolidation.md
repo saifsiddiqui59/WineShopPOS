@@ -936,3 +936,7 @@ Royal 21 remains stationary in the center header while its crown rotates continu
 <!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
 ## Royal 21 header
 Royal 21 is displayed prominently in the center header. The crown revolves in a 3D side-to-side/Y-axis motion while the shop name remains stationary. In Dark mode the spiritual image tile uses a true black background.
+
+<!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
+## Royal 21 header appearance
+Royal 21 appears on a pitch-black premium tile with a subtle shimmer. The crown has a stronger 3D revolving effect, and the spiritual image tile also appears pitch black in Dark mode.

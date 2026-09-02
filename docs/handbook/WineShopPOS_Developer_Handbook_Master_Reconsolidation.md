@@ -1095,3 +1095,7 @@ Azure cost diagnostics are read-only. They must never stop/delete/resize resourc
 <!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
 ## Royal 21 motion rule
 The crown uses `rotateY` 3D revolution; do not use 2D clock-style rotation. Royal shop name remains text, not a stretched raster image. It may use restrained horizontal `scaleX` to improve center prominence while remaining fully contained inside the topbar.
+
+<!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
+## Royal 21 premium tile rule
+Royal 21 remains text-based, not a stretched image. Crown motion uses a layered 3D Y-axis revolve. The center shop tile background is pitch black (`#000000`) with a subtle shimmer pass across the full tile. The left WineShop POS brand remains outside this change surface.
