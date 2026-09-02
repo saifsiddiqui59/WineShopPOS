@@ -3698,3 +3698,205 @@ html[data-theme="dark"] .spiritual-tile.is-drop-active {
     animation: none !important;
   }
 }
+
+/* ROYAL21_Y_AXIS_DARK_TILE_V9 */
+
+/* Keep Royal 21 inside the center header zone and away from page content. */
+.consolidated-topbar {
+  height: 88px !important;
+  min-height: 88px !important;
+  overflow: visible !important;
+}
+
+.topbar-shop-hero {
+  height: 82px !important;
+  min-height: 82px !important;
+  max-height: 82px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  perspective: 700px;
+}
+
+.royal-v9-lockup {
+  position: relative;
+  width: clamp(245px, 31vw, 370px);
+  height: 76px;
+  max-height: 76px;
+  display: grid;
+  grid-template-rows: 22px 38px 12px;
+  place-items: center;
+  align-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: transparent;
+}
+
+.royal-v9-crown-stage {
+  grid-row: 1;
+  width: 34px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  perspective: 260px;
+  overflow: visible;
+}
+
+.royal-v9-crown {
+  color: #e2b841;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  backface-visibility: visible;
+  filter:
+    drop-shadow(0 0 5px rgba(228, 187, 69, 0.28))
+    drop-shadow(0 2px 1px rgba(78, 47, 4, 0.5));
+  animation: royal-v9-crown-y-revolve 5.5s linear infinite;
+}
+
+@keyframes royal-v9-crown-y-revolve {
+  0% {
+    transform: rotateY(0deg) scale(1);
+  }
+  25% {
+    transform: rotateY(90deg) scale(0.94);
+  }
+  50% {
+    transform: rotateY(180deg) scale(1);
+  }
+  75% {
+    transform: rotateY(270deg) scale(0.94);
+  }
+  100% {
+    transform: rotateY(360deg) scale(1);
+  }
+}
+
+.royal-v9-name {
+  grid-row: 2;
+  display: inline-block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(29px, 2.65vw, 38px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+
+  /* Wider visual presence without using an image stretch. */
+  transform: scaleX(1.12);
+  transform-origin: center;
+
+  background: linear-gradient(
+    105deg,
+    #87550f 0%,
+    #c58d23 17%,
+    #f8df8e 36%,
+    #d4af37 53%,
+    #f9e8a5 70%,
+    #bf8721 84%,
+    #81500d 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  text-shadow:
+    0 1px 0 rgba(255, 240, 182, 0.05),
+    0 7px 18px rgba(174, 119, 24, 0.12);
+
+  filter: drop-shadow(0 2px 8px rgba(205, 158, 47, 0.08));
+}
+
+.royal-v9-ornament {
+  grid-row: 3;
+  width: 190px;
+  height: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr;
+  align-items: center;
+  gap: 4px;
+  color: #c69a2f;
+}
+
+.royal-v9-ornament i {
+  height: 1px;
+  display: block;
+  background: linear-gradient(90deg, transparent, rgba(216, 172, 60, 0.9));
+}
+
+.royal-v9-ornament i:last-child {
+  background: linear-gradient(90deg, rgba(216, 172, 60, 0.9), transparent);
+}
+
+.royal-v9-ornament b,
+.royal-v9-ornament em {
+  font-size: 7px;
+  line-height: 1;
+  font-style: normal;
+}
+
+.royal-v9-lockup-interactive {
+  cursor: pointer;
+}
+
+.royal-v9-select-layer,
+.royal-v9-select-layer select {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+}
+
+.royal-v9-select-layer select {
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Page is explicitly below topbar stacking context. */
+.page-area {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* True-black devotional/spiritual tile in Dark mode. */
+html[data-theme="dark"] .spiritual-tile,
+html[data-theme="dark"] .spiritual-tile.is-drop-active,
+html[data-theme="dark"] .spiritual-empty,
+html[data-theme="dark"] .spiritual-controls button,
+html[data-theme="dark"] .spiritual-collapsed-button,
+html[data-theme="dark"] .spiritual-tile-collapsed,
+html[data-theme="dark"] .spiritual-message {
+  background: #050505 !important;
+}
+
+html[data-theme="dark"] .spiritual-tile {
+  border-color: rgba(212, 175, 55, 0.25) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 230, 145, 0.025),
+    0 6px 18px rgba(0, 0, 0, 0.24) !important;
+}
+
+html[data-theme="dark"] .spiritual-tile.is-drop-active {
+  border-color: rgba(244, 210, 111, 0.72) !important;
+}
+
+@media (max-width: 1180px) {
+  .royal-v9-lockup {
+    width: clamp(220px, 27vw, 300px);
+  }
+
+  .royal-v9-name {
+    font-size: clamp(25px, 2.3vw, 31px);
+    transform: scaleX(1.08);
+  }
+
+  .royal-v9-ornament {
+    width: 160px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .royal-v9-crown {
+    animation: none !important;
+  }
+}
