@@ -982,3 +982,7 @@ Open **Purchases & Suppliers → Invoice Inbox → View Receipt**. In **Complete
 The normal correction is allowed only while that receipt lot is completely unconsumed. If bottles from that FIFO lot were already sold/used, WineShopPOS blocks the correction and requires an advanced reversal workflow.
 
 Before Receive Stock, WineShopPOS warns about package conflicts. CAN products normally suggest 24/case and glass/bottle products below 500 ml normally suggest 24/case, but these are review suggestions; supplier evidence and verified Product Master data take priority.
+
+<!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
+## Purchase verification and FIFO display
+If OCR cannot prove Bottles/Case, Quantity Check shows REVIEW · OCR pack unconfirmed. Financial Variance shows the exact OCR-vs-landed difference. Purchase/correction tables show Size (ml). Purchase, Ageing and FIFO tables allow right-edge resizing with remembered widths. True Receipt Ageing uses Box Mark; hover it for the technical lot.

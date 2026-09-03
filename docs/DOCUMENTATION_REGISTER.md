@@ -179,3 +179,6 @@ Preview-only fallback imagery for the seven current catalogue products. Existing
 
 <!-- V5B_PURCHASE_CORRECTION_OCR_PACK_SAFETY_20260902 -->
 - V5-B: audited completed-purchase correction RPC/UI, unconsumed-FIFO safety guard, pack-profile review prompts, and 2-decimal purchase-price UI.
+
+<!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
+- V5-C: corrected OCR review semantics, financial variance, Size (ml), friendly Box Mark, and persisted table resizing across purchase/Ageing/FIFO views.

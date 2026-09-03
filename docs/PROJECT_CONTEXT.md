@@ -575,3 +575,7 @@ V3 adds an audited completed-purchase-line correction workflow. The supplier lin
 Packaging heuristics are suggestions, not truth: CAN of any size suggests 24/case; glass/bottle/beer under 500 ml suggests 24/case; large beer 501–750 ml suggests 12/case. Printed bottle-total evidence is stronger. Existing Product Master stays authoritative for known products, and conflicts require review/confirmation before Receive Stock.
 
 Purchase Price/Bottle user input is restricted to 2-decimal entry/display behavior; internal FIFO landed cost may retain 6-decimal precision.
+
+<!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
+## 2026-09-03 — V5-C verification/FIFO table usability
+Unknown retained OCR pack evidence is now REVIEW, not a quantity MATCH. Financial variance is shown explicitly. Purchase/correction views show Size (ml). Purchase verification/correction, Ageing and FIFO tables opt into persisted right-edge-only resizing. True Receipt Ageing shows friendly Box Mark and keeps the technical lot in a tooltip; FIFO labels the raw value Technical Lot.

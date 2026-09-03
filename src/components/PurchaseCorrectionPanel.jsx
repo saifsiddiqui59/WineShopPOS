@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
+import SortableTable from "./ui/SortableTable";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -112,17 +113,18 @@ export default function PurchaseCorrectionPanel({ purchase, products = [] }) {
     {message ? <div className="purchase-message">{message}</div> : null}
 
     <div className="data-table-wrapper">
-      <table className="data-table">
+      <SortableTable className="data-table" showSerial={false} resizeKey="completed-purchase-correction" defaultColumnWidths={[300,95,145,120,125,125,100]}>
         <thead>
           <tr>
-            <th>Product</th><th>Posted Pack</th><th>Posted Bottles</th>
-            <th>Line Value</th><th>Price/Bottle</th><th>Action</th>
+            <th>Product</th><th>Size (ml)</th><th>Posted Pack</th><th>Posted Bottles</th>
+            <th>Line Value</th><th>Price/Bottle</th><th data-sort="false">Action</th>
           </tr>
         </thead>
         <tbody>
           {(purchase.purchase_items || []).map((item) => (
             <tr key={item.id}>
               <td>{productById[item.product_id]?.name || item.product_id}</td>
+              <td>{productById[item.product_id]?.sizeMl || "—"}</td>
               <td>{item.case_count || 0} × {item.units_per_case || 1} + {item.loose_bottles || 0}</td>
               <td>{item.quantity}</td>
               <td>{money.format(Number(item.line_total || 0))}</td>
@@ -135,7 +137,7 @@ export default function PurchaseCorrectionPanel({ purchase, products = [] }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </SortableTable>
     </div>
 
     {editing ? <div className="purchase-correction-editor" style={{ marginTop: 16 }}>
@@ -188,7 +190,7 @@ export default function PurchaseCorrectionPanel({ purchase, products = [] }) {
     {history.length ? <div style={{ marginTop: 18 }}>
       <h4>Correction History</h4>
       <div className="data-table-wrapper">
-        <table className="data-table">
+        <SortableTable className="data-table" showSerial={false} resizeKey="purchase-correction-history" defaultColumnWidths={[180,280,110,420]}>
           <thead><tr><th>Time</th><th>Product</th><th>Qty Delta</th><th>Reason</th></tr></thead>
           <tbody>{history.map((row) => <tr key={row.id}>
             <td>{new Date(row.created_at).toLocaleString()}</td>
@@ -196,7 +198,7 @@ export default function PurchaseCorrectionPanel({ purchase, products = [] }) {
             <td>{row.quantity_delta >= 0 ? "+" : ""}{row.quantity_delta}</td>
             <td>{row.reason}</td>
           </tr>)}</tbody>
-        </table>
+        </SortableTable>
       </div>
     </div> : null}
   </section>;

@@ -113,8 +113,11 @@ export default function PurchaseDetails() {
   const productValue = Number(purchase.total || 0);
   const landedTotal = purchase.total_landed_cost == null ? productValue : Number(purchase.total_landed_cost || 0);
   const extractedTotal = ingestion?.extracted_total == null ? null : Number(ingestion.extracted_total);
-  const financialMatch = extractedTotal == null || Math.abs(extractedTotal - landedTotal) <= 1;
-  const unitMatch = ocrPackAudit.units == null || ocrPackAudit.units === postedUnits;
+  const financialVariance = extractedTotal == null ? null : extractedTotal - landedTotal;
+  const financialMatch = financialVariance == null || Math.abs(financialVariance) <= 1;
+  const unitEvidenceAvailable = ocrPackAudit.units != null;
+  const unitMatch = unitEvidenceAvailable && ocrPackAudit.units === postedUnits;
+  const quantityCheck = !unitEvidenceAvailable ? "REVIEW · OCR pack unconfirmed" : unitMatch ? "MATCH" : "REVIEW";
 
   return <div>
     <div className="page-heading">
@@ -147,23 +150,32 @@ export default function PurchaseDetails() {
       <div className="metric-grid four" style={{ marginTop: 12 }}>
         <div className="metric-card"><span>OCR Printed Total</span><strong>{extractedTotal == null ? "—" : money.format(extractedTotal)}</strong></div>
         <div className="metric-card"><span>Financial Check</span><strong>{financialMatch ? "MATCH" : "REVIEW"}</strong></div>
-        <div className="metric-card"><span>Quantity Check</span><strong>{unitMatch ? "MATCH" : "REVIEW"}</strong></div>
+        <div className="metric-card"><span>Financial Variance</span><strong>{financialVariance == null ? "—" : money.format(Math.abs(financialVariance))}</strong></div>
+        <div className="metric-card"><span>Quantity Check</span><strong>{quantityCheck}</strong></div>
+      </div>
+      <div className="metric-grid four" style={{ marginTop: 12 }}>
         <div className="metric-card"><span>Evidence</span><strong>{ingestion ? "Original retained" : "No linked image"}</strong></div>
+        <div className="metric-card"><span>OCR Pack Evidence</span><strong>{unitEvidenceAvailable ? "CONFIRMED" : "UNCONFIRMED"}</strong></div>
+        <div className="metric-card"><span>Correction Audit</span><strong>AVAILABLE BELOW</strong></div>
+        <div className="metric-card"><span>Receipt Status</span><strong>{purchase.status || "POSTED"}</strong></div>
       </div>
       {!financialMatch || !unitMatch ? (
         <div className="purchase-message" style={{ marginTop: 14 }}>
-          REVIEW REQUIRED: posted receipt does not match the retained OCR evidence. Do not silently edit historical inventory; use an audited correction/reversal workflow.
+          REVIEW REQUIRED: {financialMatch ? "" : `financial variance is ${money.format(Math.abs(financialVariance || 0))}. `}
+          {!unitEvidenceAvailable ? "Retained OCR does not contain strong pack evidence, so quantity cannot be automatically verified. " : !unitMatch ? "Posted bottle quantity differs from retained OCR evidence. " : ""}
+          Original OCR remains historical evidence; use the audited correction workflow for posted stock changes.
         </div>
       ) : null}
     </section>
 
     <section className="panel" style={{ marginTop: 16 }}>
       <h3>Posted Purchase Lines</h3>
-      <div className="data-table-wrapper"><SortableTable className="data-table">
-        <thead><tr><th>Product</th><th>Cases</th><th>Bottles/Case</th><th>Loose</th><th>Final Bottles</th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Line Value</th></tr></thead>
+      <div className="data-table-wrapper"><SortableTable className="data-table" resizeKey="purchase-verification-posted-lines" defaultColumnWidths={[220,90,90,120,85,105,105,120,120,125]}>
+        <thead><tr><th>Product</th><th>Size (ml)</th><th>Cases</th><th>Bottles/Case</th><th>Loose</th><th>Final Bottles</th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Line Value</th></tr></thead>
         <tbody>
           {(purchase.purchase_items || []).map((item) => <tr key={item.id}>
             <td>{productById[item.product_id]?.name || item.product_id}</td>
+            <td>{productById[item.product_id]?.sizeMl || "—"}</td>
             <td>{item.case_count ?? 0}</td>
             <td>{item.units_per_case ?? 1}</td>
             <td>{item.loose_bottles ?? 0}</td>
@@ -180,7 +192,7 @@ export default function PurchaseDetails() {
     {ocrPackAudit.rows.length ? <section className="panel" style={{ marginTop: 16 }}>
       <h3>OCR Evidence Used for Physical Cross-check</h3>
       <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Uncertain pack inference remains visibly marked for review.</p>
-      <div className="data-table-wrapper"><SortableTable className="data-table">
+      <div className="data-table-wrapper"><SortableTable className="data-table" resizeKey="purchase-verification-ocr-evidence" defaultColumnWidths={[260,90,150,135,125,125,130]}>
         <thead><tr><th>OCR Description</th><th>Cases</th><th>Pack Hint</th><th>Expected Bottles</th><th>Rate/Case</th><th>Amount</th><th>Batch OCR</th></tr></thead>
         <tbody>{ocrPackAudit.rows.map((row, index) => <tr key={index}>
           <td>{row.description}</td>

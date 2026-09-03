@@ -1135,3 +1135,7 @@ At pointer-down, `SortableTable` snapshots every rendered header width and persi
 `correct_received_purchase_item` is the only V5-B path for changing a completed receipt line. It keeps `purchase_items.line_total` fixed, derives corrected quantity from cases × units/case + loose, derives base unit cost from line_total / quantity, updates inventory and the matching unconsumed receipt lot transactionally, writes STOCK_CORRECTION only for quantity deltas, and persists old/new JSON plus audit. If `remaining_quantity != received_quantity`, the simple correction is rejected because FIFO history has already been consumed.
 
 OCR/package profiles never directly post inventory. Product Master is authoritative for existing products; printed pack evidence and heuristics are surfaced as review evidence. CAN → 24 and small glass/bottle → 24 are suggestions unless supported by stronger evidence.
+
+<!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
+## V5-C verification/table rule
+Unknown OCR pack evidence must not be reported as MATCH. Resizable tables must opt in with a stable resizeKey; shared SortableTable preserves the one-sided resize invariant. Ageing uses Box Mark as the human-facing lot identifier while retaining the technical lot for audit/debug.
