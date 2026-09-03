@@ -21,7 +21,7 @@ export default function OwnerCenter() {
     const[s,r,e]=await Promise.all([
       supabase.rpc("owner_center_summary",{}),
       supabase.rpc("owner_recommendations",{p_history_days:30}),
-      supabase.rpc("loss_control_exceptions",{p_days:30}),
+      supabase.rpc("loss_control_exceptions_v3",{p_days:30}),
     ]);
     if(s.error||r.error||e.error)setMessage("Unable to load all Owner Center insights.");
     setSummary(s.data||{});setRecommendations(r.data||[]);setExceptions(e.data||[]);

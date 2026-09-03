@@ -1155,3 +1155,11 @@ V5-E architecture: purchase_verification_resolutions is verification state, not 
 Never call external catalogues before Product Master matching. Flow: resolve_product_master_text -> human confirmation/remember_product_alias -> external enrichment only if unresolved. External candidates never post inventory and never mutate products automatically.
 
 The Edge Function validates logged-in user/shop membership and keeps third-party calls server-side. UPCitemdb is text discovery; Open Food Facts is barcode enrichment. Cache TTL is 30 days. External images are previews only and are not copied to product storage automatically.
+
+<!-- V5G_OWNER_CENTER_QUALITY_20260903 -->
+## V5-G Owner Center exception classification
+Use `loss_control_exceptions_v3` for active Owner Center loss signals. Do not suppress STOCK_CORRECTION merely by movement type or by presence of a reason. Suppression requires a matching purchase_item_corrections row with the same shop, purchase reference, product, quantity delta, transaction timestamp and reason.
+
+Resolved audited corrections are read through `loss_control_resolved_activity_v1`; this is display/audit state only and does not mutate stock.
+
+Owner Profit SortableTable uses resizeKey `owner-profit-sku-profitability-v1`.

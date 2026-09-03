@@ -599,3 +599,13 @@ Invoice OCR resolution order is Product Master -> learned OCR alias -> external 
 product-enrichment is a JWT-protected Supabase Edge Function. UPCitemdb performs text discovery to obtain barcode candidates; top barcode candidates are enriched from Open Food Facts. Results are suggestions only, cached per shop/query for 30 days, and never mutate Product Master or stock automatically.
 
 Find Product Info appears only on unresolved/uncertain OCR lines. If an external candidate barcode already exists locally, WineShopPOS links the existing Product Master product instead of creating a duplicate. External images are reference previews only.
+
+<!-- V5G_OWNER_CENTER_QUALITY_20260903 -->
+## 2026-09-03 — V5-G Owner Center quality pass
+Owner Center now consumes `loss_control_exceptions_v3`, which excludes a stock movement from active Loss & Exceptions only when it is strictly proven to be the same audited purchase correction (purchase/product/quantity/timestamp/reason all match). Generic STOCK_CORRECTION activity remains reviewable.
+
+`loss_control_resolved_activity_v1` exposes those legitimate purchase corrections in a separate green Resolved / Audited Activity section with a direct purchase link. The Owner Overview also uses the corrected active feed.
+
+Profit Intelligence SKU Profitability enables persisted one-sided column resizing. Recommendations gains explicit lookback/refresh. WhatsApp Summary gains refresh/copy while sending remains manual.
+
+The top header shop control is restored to the compact shop-name selector treatment. The WineShopPOS sidebar animation is untouched and Royal21 assets are retained.

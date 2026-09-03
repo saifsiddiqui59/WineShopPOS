@@ -5804,3 +5804,20 @@ body.table-column-resizing * {
   .product-enrichment-card>button {grid-column:1/-1;}
   .product-enrichment-image {width:58px;height:58px;}
 }
+
+/* V5G_OWNER_CENTER_QUALITY_20260903 */
+.owner-resolved-section { border-color: rgba(52,168,105,.38) !important; }
+.owner-resolved-badge {
+  display:inline-flex;align-items:center;min-height:22px;padding:2px 8px;
+  border:1px solid rgba(52,168,105,.48);border-radius:999px;color:#47b978;
+  background:rgba(52,168,105,.055);font-size:10px;font-weight:800;letter-spacing:.04em;
+}
+.owner-exception-count {
+  display:inline-flex;min-width:28px;min-height:28px;align-items:center;justify-content:center;
+  padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;
+}
+.owner-exception-count.open { border:1px solid rgba(217,149,22,.58);color:#d99516;background:rgba(217,149,22,.055); }
+.owner-exception-count.clear { border:1px solid rgba(52,168,105,.45);color:#47b978;background:rgba(52,168,105,.045); }
+.topbar-shop-hero .topbar-classic-shop { max-width:min(360px,100%); }
+.topbar-shop-hero .shop-selector.topbar-classic-shop,
+.topbar-shop-hero .shop-context-pill.topbar-classic-shop { min-height:40px;border-radius:10px; }

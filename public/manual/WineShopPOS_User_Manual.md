@@ -1006,3 +1006,11 @@ WineShopPOS checks Product Master first. A spelling error such as TABORG can sti
 For a genuinely unresolved line, click Find Product Info. Review suggested barcode, corrected name, brand, size and reference image, then choose Use Candidate to prefill Add Product. If the suggested barcode already exists in Product Master, WineShopPOS links the existing product instead of creating a duplicate.
 
 External catalogue information is a suggestion. Product Master becomes authoritative only after your approval.
+
+<!-- V5G_OWNER_CENTER_QUALITY_20260903 -->
+## Owner Center — active loss vs audited corrections
+Loss & Exceptions separates **Requires Action** from **Resolved / Audited Activity**. A legitimate completed-purchase correction appears in green audited history and no longer counts as an active loss exception. Damage, missing stock, unexplained/manual corrections and other unresolved rules can still require review.
+
+Profit Intelligence SKU columns can be resized from the column's right edge and retain their widths. Recommendations has a lookback/refresh control. WhatsApp Summary can be refreshed or copied; WineShopPOS still never sends WhatsApp messages automatically.
+
+The top header uses the compact shop-name selector again.
