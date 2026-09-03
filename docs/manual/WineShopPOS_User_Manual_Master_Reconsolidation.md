@@ -1014,3 +1014,7 @@ Loss & Exceptions separates **Requires Action** from **Resolved / Audited Activi
 Profit Intelligence SKU columns can be resized from the column's right edge and retain their widths. Recommendations has a lookback/refresh control. WhatsApp Summary can be refreshed or copied; WineShopPOS still never sends WhatsApp messages automatically.
 
 The top header uses the compact shop-name selector again.
+
+<!-- V5G1_INVENTORY_RESIZE_20260903 -->
+## Inventory Current Stock column widths
+On Inventory > Current Stock, drag a column's right edge to resize it. The left edge stays fixed and the selected column width is remembered in the browser.

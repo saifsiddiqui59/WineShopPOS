@@ -195,3 +195,6 @@ V5-E: hybrid active-exception verification engine, audited non-destructive finan
 
 <!-- V5G_OWNER_CENTER_QUALITY_20260903 -->
 - V5-G: Owner Center false-loss classification fix, resolved/audited correction history, Profit Intelligence resizable columns, recommendations/WhatsApp refresh UX, compact top-header shop selector.
+
+<!-- V5G1_INVENTORY_RESIZE_20260903 -->
+- V5-G.1: Inventory Current Stock table now supports persisted one-sided column resizing.

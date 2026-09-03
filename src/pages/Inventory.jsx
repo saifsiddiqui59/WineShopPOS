@@ -49,7 +49,7 @@ export default function Inventory() {
           <h3>Current Stock</h3>
           <div className="data-table-wrapper">
             {loadingData ? <p>Loading...</p> : (
-              <SortableTable className="data-table">
+              <SortableTable className="data-table" resizeKey="inventory-current-stock-v1">
                 <thead><tr><th>Product</th><th>Stock</th><th>Minimum</th><th>Status</th></tr></thead>
                 <tbody>
                   {active.map((p) => {

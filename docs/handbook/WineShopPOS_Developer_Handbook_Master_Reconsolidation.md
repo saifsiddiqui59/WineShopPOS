@@ -1163,3 +1163,7 @@ Use `loss_control_exceptions_v3` for active Owner Center loss signals. Do not su
 Resolved audited corrections are read through `loss_control_resolved_activity_v1`; this is display/audit state only and does not mutate stock.
 
 Owner Profit SortableTable uses resizeKey `owner-profit-sku-profitability-v1`.
+
+<!-- V5G1_INVENTORY_RESIZE_20260903 -->
+## V5-G.1 Inventory table resize
+Inventory Current Stock uses the shared SortableTable resize engine with `resizeKey="inventory-current-stock-v1"`. This is presentation-only; stock quantities and adjustment behavior are unchanged.

@@ -609,3 +609,7 @@ Owner Center now consumes `loss_control_exceptions_v3`, which excludes a stock m
 Profit Intelligence SKU Profitability enables persisted one-sided column resizing. Recommendations gains explicit lookback/refresh. WhatsApp Summary gains refresh/copy while sending remains manual.
 
 The top header shop control is restored to the compact shop-name selector treatment. The WineShopPOS sidebar animation is untouched and Royal21 assets are retained.
+
+<!-- V5G1_INVENTORY_RESIZE_20260903 -->
+## 2026-09-03 — V5-G.1 Inventory Current Stock column resizing
+Inventory > Current Stock now opts into the existing one-sided persisted SortableTable resize engine using `resizeKey="inventory-current-stock-v1"`. No inventory logic, stock adjustment workflow, database schema, FIFO or Owner Center logic changed.
