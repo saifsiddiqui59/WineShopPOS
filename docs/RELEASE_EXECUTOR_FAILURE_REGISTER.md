@@ -371,3 +371,61 @@ Verified outcome:
 - Failure-register incident: RECORDED by this documentation-only continuation.
 - V3 preview transport for this exact state: PENDING.
 - Manual authenticated visual/functional UAT: PENDING.
+
+### 2026-09-03 — V5-F.1 empty-string idempotence guard skipped required deletion
+
+Release/stage:
+V5-F.1 OCR/Product Enrichment + Inventory UAT correction — source patch stage.
+
+Symptom:
+`V5F1_OCR_ENRICHMENT_AND_INVENTORY_UAT_FIX.sh` stopped inside the generated Python patcher with:
+`AssertionError`
+for the condition that the global text
+`Drag a column's right edge; its left edge stays fixed.`
+must no longer exist in `src/components/ui/SortableTable.jsx`.
+
+Tool/platform involved:
+Git Bash on Windows invoking native Windows Python. The path conversion itself worked; this failure was in the generated patch helper logic.
+
+Root cause:
+The generated literal replacement helper tried to be idempotent using:
+`if new_text in current_text: return`
+before checking the old anchor.
+For a deletion operation, `new_text` was the empty string (`""`). In Python, the empty string is contained in every string, so the helper incorrectly treated the deletion as already applied and returned without removing the old text. The later semantic assertion then correctly detected that the text still existed.
+
+Repository state after failure:
+The executor stopped before manual sync, lint/build, staging, commit, Git push, and Azure preview deployment. Several allowlisted V5-F.1 source/documentation targets may already contain partial local edits from earlier patch operations. They are legitimate failed-run work and must be preserved. No destructive cleanup is allowed.
+
+Resolution used:
+- Do not rerun the failed executor.
+- Do not reset, restore, stash, clean, or overwrite the partial target edits.
+- Record this incident first in the canonical failure register.
+- Generate the recovery only after treating the current partially modified V3 worktree as the source of truth for the failed run.
+- In the recovery patch helper, handle deletion explicitly: only use an idempotence `new in text` shortcut when `new` is non-empty; for `new == ""`, check whether the old anchor is present and remove it exactly once.
+
+Permanent prevention:
+- Generic replacement helpers must distinguish replace/update from deletion.
+- Never use `if replacement in text` as an idempotence guard when `replacement == ""`.
+- For deletion:
+  1. if old anchor is absent, verify the desired semantic state and treat as already applied;
+  2. if old anchor appears exactly once, delete it;
+  3. if it appears multiple times, stop for inspection.
+- Run patch-helper unit/syntax checks for empty replacement cases before packaging an executor.
+- Keep post-patch semantic assertions; the assertion in this run correctly prevented a bad commit.
+- Recovery executors after a partial patch must operate from the current dirty target state and must not assume the original clean base.
+
+Safe continuation point:
+After this documentation-only incident commit, keep all partial V5-F.1 target edits unstaged. Next create a V5-F.1 recovery executor that:
+- reads the failure register in full;
+- accepts only the known partial V5-F.1 target dirt;
+- fixes/completes the desired semantic state idempotently;
+- validates the live `product-enrichment` Edge Function as version 2 without redeploying it;
+- runs manual sync, lint/build, exact allowlist staging, V3 commit/push, and `/v3-preview/` deployment only.
+
+Verified outcome:
+- Application/source build: NOT EXECUTED after the failed patcher.
+- Git commit/push for V5-F.1 application files: NOT EXECUTED.
+- Azure preview deployment for V5-F.1: NOT EXECUTED.
+- Production main: unchanged by this failed run.
+- Database schema/purchases/inventory/FIFO/sales: unchanged by this failed run.
+- Live `product-enrichment` Edge Function: version 2 was already deployed separately before this executor and is not part of this failure.
