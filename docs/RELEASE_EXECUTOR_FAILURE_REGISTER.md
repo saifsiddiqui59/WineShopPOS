@@ -334,3 +334,40 @@ Verified outcome:
 - V5-B DB migration: PASS.
 - Invoice 15983 auto-correction: NOT EXECUTED.
 - V3 preview deployment of V5-B UI: still pending at the time of this incident record.
+
+### 2026-09-03 — V5-H dynamic branch but stale per-file hash guard
+
+Release/stage:
+V5-H Fast POS + premium header continuation — source preflight.
+
+Symptom:
+`V5H_FAST_POS_AND_TOP_HEADER_FIX.sh` fetched current `origin/V3` dynamically but then stopped with:
+`[FAIL] ShopSelector source changed; regenerate from current V3`.
+
+Git/source state involved:
+The V3 branch had already advanced to the intended V5-H release state (`feat: streamline Fast POS register and restore premium header`). That state already contains the V5-H Fast POS render, restored RoyalHero header, V5-H CSS/docs, and the previously committed Inventory resize. The executor still compared `ShopSelector.jsx` to an older hardcoded blob hash.
+
+Root cause:
+The executor fixed stale branch-SHA handling but retained stale hardcoded per-file source hashes as mandatory gates. It also lacked an idempotent desired-state path, so an already-completed release state was treated as an error.
+
+Resolution used:
+- Do not rerun V5-H source mutation.
+- Verify current V3 semantic release markers.
+- Record this incident before the next continuation.
+- Continue later with an exact-current-V3 preview build/deploy only.
+
+Permanent prevention:
+- Dynamic branch resolution and per-file guards must use the same fetched snapshot.
+- If semantic release markers prove the desired state is already present, report `ALREADY_APPLIED` and skip mutation.
+- Do not fail solely because a historical blob hash differs when no mutation is required.
+- Mutation executors must derive target blob SHAs from the exact fetched release base used for that run, or be regenerated before writing.
+- Deploy-only continuations must validate semantic markers and commit ancestry rather than historical file hashes.
+
+Safe continuation point:
+Current V3 already contains V5-H source. Next step is safe local V3 fast-forward if needed, clean exact-SHA lint/build with `.env.local`, then preview-only Azure deployment. Do not modify POS/header/Inventory source again.
+
+Verified outcome:
+- V5-H source on GitHub V3: PASS.
+- Failure-register incident: RECORDED by this documentation-only continuation.
+- V3 preview transport for this exact state: PENDING.
+- Manual authenticated visual/functional UAT: PENDING.
