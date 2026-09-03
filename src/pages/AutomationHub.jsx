@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
+import { useGlobalError } from "../context/GlobalErrorContext";
 import SupplierEditor from "../components/SupplierEditor";
 import { storeManualInvoice } from "../lib/invoiceClient";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
@@ -265,6 +266,7 @@ export default function AutomationHub() {
   const { products, suppliers, refreshAll } = useShop();
   const { profile, session } = useAuth();
   const navigate = useNavigate();
+  const { showError } = useGlobalError();
 
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
@@ -281,6 +283,11 @@ export default function AutomationHub() {
   const [supplierId, setSupplierId] = useState("");
   const [confirmedSupplier, setConfirmedSupplier] = useState(null);
   const [supplierEditorOpen, setSupplierEditorOpen] = useState(false);
+
+  function raiseSystemError(error, title = "Something went wrong") {
+    setMessage("");
+    showError(error, { title });
+  }
 
   const activeProducts = useMemo(
     () => products.filter((product) => product.active),
@@ -611,7 +618,7 @@ export default function AutomationHub() {
         );
       }
     } catch (error) {
-      setMessage(error.message || String(error));
+      raiseSystemError(error, "Invoice analysis failed");
     } finally {
       timing.totalMs = Math.round(performance.now() - analyzeStarted);
       setAnalysisTiming(timing);
@@ -635,7 +642,7 @@ export default function AutomationHub() {
       );
     } catch (error) {
       setConfirmedSupplier(null);
-      setMessage(error.message || "Unable to resolve invoice products.");
+      raiseSystemError(error, "Unable to resolve invoice products");
     } finally {
       setBusy(false);
     }
@@ -652,7 +659,7 @@ export default function AutomationHub() {
         `Supplier created and confirmed: ${supplier.supplier_name}. Resolve every product line before continuing.`,
       );
     } catch (error) {
-      setMessage(error.message || "Unable to resolve invoice products.");
+      raiseSystemError(error, "Unable to resolve invoice products");
     }
   }
 
@@ -807,7 +814,7 @@ export default function AutomationHub() {
         "Line confirmed ✓ Alias learned for future invoices from this supplier.",
       );
     } catch (error) {
-      setMessage(error.message || "Unable to save the product mapping.");
+      raiseSystemError(error, "Unable to confirm invoice line");
     }
   }
 
@@ -956,7 +963,7 @@ export default function AutomationHub() {
       p_ready: Boolean(ready),
     });
     if (error) {
-      if (!silent) setMessage(error.message || "Unable to save invoice review draft.");
+      if (!silent) raiseSystemError(error, "Unable to save invoice review draft");
       return { ok: false, error };
     }
     if (!silent) {
@@ -999,7 +1006,7 @@ export default function AutomationHub() {
     });
     setBusy(false);
     if (error) {
-      setMessage(error.message || "Unable to cancel invoice review.");
+      raiseSystemError(error, "Unable to cancel invoice review");
       return;
     }
     sessionStorage.removeItem(REVIEW_KEY);
@@ -1190,7 +1197,7 @@ export default function AutomationHub() {
       sessionStorage.removeItem(REVIEW_KEY);
       navigate("/purchasing/receive");
     } catch (error) {
-      setMessage(error.message || String(error));
+      raiseSystemError(error, "Unable to prepare Receive Stock");
     } finally {
       setBusy(false);
     }

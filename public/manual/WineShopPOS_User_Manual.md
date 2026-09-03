@@ -1040,3 +1040,13 @@ WineShopPOS checks Product Master and learned aliases first. Weak similarity can
 Catalogue results are suggestions only. If no result exists, use **Create OCR-Prefilled Product** or **Create New Product**. OCR prefills name, inferred brand/category, size, purchase price and bottles/case. Scan or type the barcode before saving if the catalogue did not provide one.
 
 After returning to the invoice, review quantity and price and click **Confirm Line**. WineShopPOS learns that supplier description for future invoices. OCR and catalogue lookup never receive stock automatically.
+
+## Error Messages During Invoice Review
+
+WineShopPOS separates normal review guidance from system failures.
+
+- Normal review guidance (for example, select a product or correct bottle quantity) can appear inside the page.
+- A database, API or unexpected application failure appears in a larger **Something went wrong** dialog so the message is readable.
+- Use **Close**, the **X** button, or the **Esc** key to dismiss the dialog.
+- If **Confirm Line** fails, the line is not treated as confirmed. Review the displayed error before trying again.
+- Alias learning during **Confirm Line** does not receive inventory by itself. Inventory is posted only through the authorized Receive Stock workflow.

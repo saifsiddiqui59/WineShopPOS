@@ -1,0 +1,120 @@
+.global-error-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.74);
+  backdrop-filter: blur(4px);
+}
+
+.global-error-dialog {
+  position: relative;
+  width: min(680px, 96vw);
+  max-height: min(80vh, 760px);
+  overflow: auto;
+  padding: 28px;
+  border: 1px solid rgba(239, 68, 68, 0.72);
+  border-radius: 16px;
+  background: #17181c;
+  color: #f8fafc;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.6);
+}
+
+.global-error-x {
+  position: absolute;
+  top: 13px;
+  right: 15px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  background: transparent;
+  color: #fff;
+  font-size: 25px;
+  line-height: 1;
+}
+
+.global-error-x:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.global-error-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  font-size: 31px;
+  font-weight: 900;
+}
+
+.global-error-copy h2 {
+  margin: 0 48px 8px 0;
+  color: #fff;
+  font-size: 24px;
+}
+
+.global-error-copy p {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.global-error-details {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.global-error-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.global-error-details pre {
+  margin: 12px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.global-error-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .global-error-backdrop {
+    padding: 14px;
+  }
+
+  .global-error-dialog {
+    width: 100%;
+    padding: 22px;
+  }
+
+  .global-error-copy h2 {
+    font-size: 21px;
+  }
+
+  .global-error-copy p {
+    font-size: 15px;
+  }
+
+  .global-error-actions .primary-button {
+    width: 100%;
+  }
+}

@@ -641,3 +641,18 @@ Inventory Current Stock resizing was already committed on V3 before V5-H (`resiz
 - Inventory search restored.
 - Global resize instruction removed and `Sr. No.` made resizable.
 - No Receive Stock, inventory, FIFO, sales, Logic App or Azure AI mutation is part of this patch.
+
+## V3 V5-F.2 — Generated Alias Fix + Global Error Dialog (2026-09-03)
+
+- UAT exposed `cannot insert a non-DEFAULT value into column "normalized_alias"` during Invoice OCR **Confirm Line**.
+- Root cause: `public.product_aliases.normalized_alias` is a PostgreSQL `GENERATED ALWAYS` column, while `remember_product_alias()` attempted to insert a manual value.
+- V5-F.2 is forward-only: the prior migration is not rewritten. A new migration replaces `remember_product_alias()` and omits `normalized_alias` from INSERT/UPDATE operations.
+- Product Master resolution itself was not the failure and must not be weakened or rewritten for this bug.
+- Application-wide error UX rule introduced:
+  - normal success/info/user validation may remain inline;
+  - database/API/runtime/system failures must use the reusable Global Error Dialog;
+  - dialog provides readable error text, Close button, X control, Esc close and responsive overlay;
+  - global listeners also surface unhandled browser errors and unhandled promise rejections.
+- Invoice OCR technical catches now route through the Global Error Dialog.
+- Inventory is not changed by Confirm Line alias learning.
+- UAT must re-test V5F-001/V5F-002 Confirm Line after the migration is applied to the intended V3 environment.

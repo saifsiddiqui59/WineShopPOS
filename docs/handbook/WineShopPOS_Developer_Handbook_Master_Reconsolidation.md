@@ -1192,3 +1192,29 @@ Live `product-enrichment` version 6:
 - no product creation, purchase receipt, inventory, FIFO, sale or image-library mutation.
 
 Failed pre-commit executors restore only their own modified targets from backup.
+
+## V3 V5-F.2 Engineering Rule — Generated Columns and Global Errors
+
+### Generated-column rule
+
+Never provide a non-DEFAULT value for a PostgreSQL `GENERATED ALWAYS` column. `product_aliases.normalized_alias` is derived by PostgreSQL from `alias_text`; application/RPC code must write `alias_text` and let the database derive `normalized_alias`.
+
+Any correction to an already-applied migration must be a new forward migration. Do not rewrite historical applied migrations.
+
+### Global application error rule
+
+Use the root `GlobalErrorProvider` for actual database, API, runtime and unexpected application failures. These failures must not be rendered as small normal page messages.
+
+Inline banners remain appropriate for:
+- successful operations,
+- informational workflow messages,
+- expected user validation such as missing required selections.
+
+Global Error Dialog is required for:
+- Supabase/Postgres errors,
+- failed RPCs/functions that prevent the requested operation,
+- unexpected API/runtime exceptions,
+- uncaught browser errors,
+- unhandled promise rejections.
+
+The dialog must remain readable, dismissible by Close/X/Esc, and must not imply that inventory changed when the failed operation did not post inventory.

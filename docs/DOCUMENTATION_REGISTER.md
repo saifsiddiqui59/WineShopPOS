@@ -213,3 +213,16 @@ Implementation surfaces:
 - `docs/testing/V5F1_REBUILT_OCR_PRODUCT_ENRICHMENT_UAT.md`
 
 Live backend: `product-enrichment` version 6 with JWT verification enabled.
+
+## V3 V5-F.2 Documentation Update — 2026-09-03
+
+This push updates the canonical V3 documentation together with the implementation change.
+
+Updated in this push:
+- `docs/PROJECT_CONTEXT.md`
+- `docs/DOCUMENTATION_REGISTER.md`
+- `docs/handbook/WineShopPOS_Developer_Handbook_Master_Reconsolidation.md`
+- `docs/manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
+- generated public user manual copies
+
+Documentation rule: every WineShopPOS implementation push must update the relevant canonical documentation in the same commit. A code-only feature/fix push is not considered complete.

@@ -5,11 +5,13 @@ import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { ShopProvider } from "./context/ShopContext";
 import { ScannerProvider } from "./context/ScannerContext";
+import { GlobalErrorProvider } from "./context/GlobalErrorContext";
 import "./index.css";
 import "./chapters9to12.css";
 import "./chapters16to26.css";
 import "./masterConsolidation.css";
 import "./aiOwnerAssistant.css";
+import "./globalError.css";
 
 // V5_PREVIEW_SERVICE_WORKER_ISOLATION
 // Production root keeps its service worker. The additive /v3-preview/ build
@@ -49,11 +51,13 @@ if ("serviceWorker" in navigator) {
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <HashRouter>
-      <AuthProvider>
-        <ScannerProvider>
-          <ShopProvider><App/></ShopProvider>
-        </ScannerProvider>
-      </AuthProvider>
+      <GlobalErrorProvider>
+        <AuthProvider>
+          <ScannerProvider>
+            <ShopProvider><App/></ShopProvider>
+          </ScannerProvider>
+        </AuthProvider>
+      </GlobalErrorProvider>
     </HashRouter>
   </StrictMode>
 );
