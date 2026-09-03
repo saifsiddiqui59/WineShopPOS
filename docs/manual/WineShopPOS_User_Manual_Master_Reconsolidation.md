@@ -986,3 +986,11 @@ Before Receive Stock, WineShopPOS warns about package conflicts. CAN products no
 <!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
 ## Purchase verification and FIFO display
 If OCR cannot prove Bottles/Case, Quantity Check shows REVIEW · OCR pack unconfirmed. Financial Variance shows the exact OCR-vs-landed difference. Purchase/correction tables show Size (ml). Purchase, Ageing and FIFO tables allow right-edge resizing with remembered widths. True Receipt Ageing uses Box Mark; hover it for the technical lot.
+
+<!-- V5D_ACTIONABLE_VERIFICATION_FRIENDLY_FIFO_20260903 -->
+## Actionable Purchase Verification
+Purchase Verification cards are clickable. Amber means review; green means the business issue is resolved; neutral is informational. OCR Pack Evidence can remain amber because it represents original extraction. If Pack Resolution is green, no further OCR action is required.
+
+Click Financial Check or Financial Variance to open Financial Reconciliation and see exactly how WineShopPOS reached the landed total, plus the remaining OCR invoice difference and a View Original Invoice action.
+
+Ageing/FIFO uses a readable Receipt Ref such as METRI-02/09. Hover it to see the technical database lot for audit/debug.

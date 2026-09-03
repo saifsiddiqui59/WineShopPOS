@@ -5669,3 +5669,101 @@ body.table-column-resizing * {
     min-width: 0 !important;
   }
 }
+
+/* V5D_ACTIONABLE_VERIFICATION_20260903 */
+.verification-target { scroll-margin-top: 118px; }
+
+.verification-tile {
+  width: 100%;
+  min-width: 0;
+  appearance: none;
+  text-align: left;
+  color: inherit;
+  background: inherit;
+  border-style: solid;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.verification-tile:hover,
+.verification-tile:focus-visible { transform: translateY(-1px); }
+
+.verification-tile small {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: .68;
+}
+
+.verification-tile--review {
+  border-color: rgba(217,149,22,.78) !important;
+  box-shadow: inset 3px 0 0 rgba(217,149,22,.58);
+}
+
+.verification-tile--ok {
+  border-color: rgba(52,168,105,.62) !important;
+  box-shadow: inset 3px 0 0 rgba(52,168,105,.48);
+}
+
+.verification-tile--neutral { border-color: rgba(148,163,184,.30) !important; }
+
+.financial-reconciliation-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 10px;
+}
+
+.financial-reconciliation-grid > div {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(148,163,184,.24);
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+}
+
+.financial-reconciliation-grid span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  opacity: .68;
+}
+
+.financial-reconciliation-grid strong { font-size: 17px; }
+
+.financial-reconciliation-total { border-color: rgba(52,168,105,.48) !important; }
+.financial-reconciliation-review {
+  border-color: rgba(217,149,22,.78) !important;
+  box-shadow: inset 3px 0 0 rgba(217,149,22,.58);
+}
+.financial-reconciliation-ok {
+  border-color: rgba(52,168,105,.62) !important;
+  box-shadow: inset 3px 0 0 rgba(52,168,105,.48);
+}
+
+.verification-guidance {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(148,163,184,.25);
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.verification-guidance--review {
+  border-color: rgba(217,149,22,.68);
+  background: rgba(217,149,22,.055);
+}
+
+.verification-guidance--ok {
+  border-color: rgba(52,168,105,.56);
+  background: rgba(52,168,105,.045);
+}
+
+@media (max-width:1080px) {
+  .financial-reconciliation-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:620px) {
+  .financial-reconciliation-grid { grid-template-columns: 1fr; }
+}

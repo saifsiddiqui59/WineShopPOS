@@ -579,3 +579,11 @@ Purchase Price/Bottle user input is restricted to 2-decimal entry/display behavi
 <!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
 ## 2026-09-03 — V5-C verification/FIFO table usability
 Unknown retained OCR pack evidence is now REVIEW, not a quantity MATCH. Financial variance is shown explicitly. Purchase/correction views show Size (ml). Purchase verification/correction, Ageing and FIFO tables opt into persisted right-edge-only resizing. True Receipt Ageing shows friendly Box Mark and keeps the technical lot in a tooltip; FIFO labels the raw value Technical Lot.
+
+<!-- V5D_ACTIONABLE_VERIFICATION_FRIENDLY_FIFO_20260903 -->
+## 2026-09-03 — V5-D actionable verification + friendly FIFO receipt references
+Purchase Verification separates historical OCR evidence from resolved business state. OCR evidence may remain amber/unconfirmed; Pack Resolution becomes green when strong OCR agrees or an audited pack correction exists. Status tiles are clickable and navigate to posted lines, OCR evidence, financial reconciliation or correction history.
+
+Financial Reconciliation displays Product Value + Freight + Transport/Handling - Discounts + Misc/Round = WineShopPOS Landed Total, then compares OCR Printed Total and shows the unreconciled difference. V5-D never silently changes a received financial total.
+
+Ageing/FIFO primary human lot label is Receipt Ref derived from supplier first token + receipt date in DD/MM form, e.g. METRI-02/09. Technical database lot remains unchanged and is available in the tooltip.

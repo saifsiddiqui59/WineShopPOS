@@ -99,7 +99,7 @@ export default function PurchaseCorrectionPanel({ purchase, products = [] }) {
 
   if (!purchase || purchase.status !== "RECEIVED") return null;
 
-  return <section className="panel" style={{ marginTop: 16 }}>
+  return <section id="purchase-correction" className="panel verification-target" style={{ marginTop: 16 }}>
     <div className="panel-header">
       <div>
         <h3>Completed Purchase Correction</h3>
@@ -187,7 +187,7 @@ export default function PurchaseCorrectionPanel({ purchase, products = [] }) {
       </p>
     </div> : null}
 
-    {history.length ? <div style={{ marginTop: 18 }}>
+    {history.length ? <div id="correction-history" className="verification-target" style={{ marginTop: 18 }}>
       <h4>Correction History</h4>
       <div className="data-table-wrapper">
         <SortableTable className="data-table" showSerial={false} resizeKey="purchase-correction-history" defaultColumnWidths={[180,280,110,420]}>

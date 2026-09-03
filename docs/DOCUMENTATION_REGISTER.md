@@ -182,3 +182,6 @@ Preview-only fallback imagery for the seven current catalogue products. Existing
 
 <!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
 - V5-C: corrected OCR review semantics, financial variance, Size (ml), friendly Box Mark, and persisted table resizing across purchase/Ageing/FIFO views.
+
+<!-- V5D_ACTIONABLE_VERIFICATION_FRIENDLY_FIFO_20260903 -->
+- V5-D: clickable amber/green verification tiles, Pack Resolution separated from historical OCR evidence, financial reconciliation breakdown, and supplier/date Receipt Ref for Ageing/FIFO.

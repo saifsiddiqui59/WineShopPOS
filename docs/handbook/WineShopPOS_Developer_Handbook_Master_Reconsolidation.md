@@ -1139,3 +1139,9 @@ OCR/package profiles never directly post inventory. Product Master is authoritat
 <!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
 ## V5-C verification/table rule
 Unknown OCR pack evidence must not be reported as MATCH. Resizable tables must opt in with a stable resizeKey; shared SortableTable preserves the one-sided resize invariant. Ageing uses Box Mark as the human-facing lot identifier while retaining the technical lot for audit/debug.
+
+<!-- V5D_ACTIONABLE_VERIFICATION_FRIENDLY_FIFO_20260903 -->
+## V5-D verification UX and receipt-reference rule
+Do not mutate retained OCR to manufacture a match. Evidence Quality and Business Resolution are separate states. Purchase Verification reads get_purchase_item_corrections so an audited pack correction can resolve business state while OCR remains unconfirmed.
+
+Amber = review/action, green = resolved/verified, neutral = information. Status tiles navigate to stable section IDs. FIFO database lot_number remains identity; Receipt Ref is presentation-only and must never be used as a database key.
