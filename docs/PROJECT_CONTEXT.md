@@ -679,3 +679,11 @@ Inventory Current Stock resizing was already committed on V3 before V5-H (`resiz
 - The frontend calls `invoice_reopen_review` before OCR so cancellation reason/time/user are cleared.
 - Invoice Inbox → Reopen Review remains the preferred continuation path.
 - READY_TO_RECEIVE / RECEIVED / COMPLETED remain protected from duplicate processing.
+
+## V5-F.3 CANCELLED REVIEW PREVIEW VERIFIED — 2026-09-03
+
+- Source commit: `b9ba27434da25c751a0b0ed9b9ec1bd5236688c1`
+- Preview URL: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+- Deployed index SHA-256: `89adf94e26c994b66109a3a0357e6636d314bfbe7deaeeb082f922fdf08aa545`
+- Cancelled same-file re-analysis reuses the existing ingestion and calls `invoice_reopen_review`.
+- Production frontend storage was not deployed.
