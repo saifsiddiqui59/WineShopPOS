@@ -604,3 +604,26 @@ Independent live verification established:
 - normalized supplier unique index exists;
 - UAT-V5F-001 date = 2026-09-03;
 - UAT-V5F-002 date = 2026-09-03.
+
+## V5-H RESPONSIVE / SHIFT-GATE / UAT CLEANUP — 2026-09-03
+
+### Permanent POS shift rule
+Every completed POS sale must belong to a valid cashier shift, regardless of whether the user role is CASHIER, MANAGER or ADMIN. The UI blocks billing with a Start Shift dialog, and the database independently rejects a completed sale with no valid shift. Offline synchronization must attach the sale to the shift that covered the offline sale timestamp.
+
+### Scanner placement rule
+USB/Bluetooth barcode scanning remains supported as keyboard input. The dedicated Scanner option is removed from POS & Billing. Scanner diagnostics/settings belong under Settings & Admin → Hardware.
+
+### Product vs Inventory rule
+Products and Inventory must not be merged into one database table:
+- Products = SKU/barcode/name/category/pack/pricing master data.
+- Inventory = live quantity/reservations/movements/counts/FIFO state.
+Operational screens may combine them by product_id.
+
+### Responsive UI rule
+All routed modules must remain usable at desktop, tablet and mobile widths. Main content must allow min-width:0, tables may scroll horizontally, module tabs may scroll horizontally, and page/form grids must collapse at mobile breakpoints instead of forcing desktop widths.
+
+### Test-fixture cleanup rule
+Destructive UAT fixture cleanup requires exact identity and dependency preconditions. Abort if a test product has sales, returns, transfers, purchase orders or non-test purchases. Never treat a broad product-name match as permission to delete operational history.
+
+### V5-G verifier failure carried forward
+The prior V5-G migration and OCR deployment succeeded, but its first verifier used multiple independent SELECT statements and the CLI surfaced only the final result set. Future post-mutation verification must return one result set.

@@ -267,3 +267,18 @@ Updated: supplier data/validation, invoice date parsing/display, Stock Count, In
 ## V5-G VERIFIER RECOVERY + PREVIEW VERIFIED — 2026-09-03
 
 Recovered the post-migration verifier without replaying successful remote mutations. Live supplier/date state, source quality gates and V3 preview deployment verified. Preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`; index SHA-256 `c0de056959a1ab7d09499b28f1dbcc9dc710f5210693ba8f22115395e42536d0`.
+
+## V5-H POS SHIFT + MOBILE + TEST CLEANUP — 2026-09-03
+
+Updated:
+- POS
+- navigation/App routes
+- shift-required dialog
+- global responsive CSS
+- ShopContext cache version
+- guarded shift/test-cleanup DB migration
+- V5-H regression
+- Failure Register
+- Project Context
+- Developer Handbook
+- User Manual/public manual

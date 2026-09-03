@@ -26,7 +26,6 @@ export const MODULE_TABS = {
     { path: "/pos/sales", label: "Sales", roles: ["ADMIN", "MANAGER", "CASHIER"] },
     { path: "/pos/returns", label: "Returns & Voids", roles: ["ADMIN", "MANAGER", "CASHIER"] },
     { path: "/pos/shifts", label: "Shift", roles: ["ADMIN", "MANAGER", "CASHIER"] },
-    { path: "/pos/scanner", label: "Scanner", roles: ["ADMIN", "MANAGER", "CASHIER"] },
   ],
   products: [
     { path: "/products", label: "Product Master", roles: ["ADMIN", "MANAGER"] },

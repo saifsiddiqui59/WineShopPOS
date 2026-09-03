@@ -708,3 +708,15 @@ Supplier duplicates are merged/prevented; invoice dates use/display DD/MM/YYYY; 
 - Preview index SHA-256: `c0de056959a1ab7d09499b28f1dbcc9dc710f5210693ba8f22115395e42536d0`
 - Production frontend storage `wineshoppos` was not deployed.
 - Authenticated visual page-by-page UAT remains a separate manual verification step.
+
+## V5-H POS SHIFT + MOBILE + TEST CLEANUP — 2026-09-03
+
+Planned/implemented together:
+- app-wide responsive/mobile hardening;
+- POS Scanner tab/button removed while scanner support remains under Admin Hardware;
+- POS blocks all billing until the current user has an open shift;
+- Start Shift dialog accepts Opening Cash and calls the existing `open_shift` RPC;
+- database trigger independently requires a valid shift for every completed sale and historical offline sync;
+- Product and Inventory remain separate backend concepts but are integrated operationally in Inventory;
+- authorized V5-F test product/purchase/invoice/stock/alias/count evidence is purged with strict safety preconditions;
+- the two original V5-F Azure invoice blobs are deleted by the executor after the DB transaction.

@@ -1253,3 +1253,25 @@ Every navigation/layout release must source-audit all routed pages and run full 
 ## Supabase multi-result verification rule — 2026-09-03
 
 After a remote mutation, SQL verification must return a single result set for all required assertions. Prefer `UNION ALL` or a one-row multi-column result. Do not treat missing output from earlier independent SELECT statements as evidence that a successful migration failed. First inspect migration history and live state; never blindly reapply an already successful migration.
+
+## V5-H POS shift and responsive rules — 2026-09-03
+
+### Billing
+A sale cannot be completed without a valid shift. This applies to ADMIN, MANAGER and CASHIER. UI checks are convenience only; the database trigger is the enforcement boundary.
+
+### Physical stock count
+Stock Count is a physical verification process:
+1. Start Stock Count to snapshot system quantities.
+2. Physically scan/count bottles or enter counted quantities.
+3. Review Match / Short / Excess.
+4. Submit.
+5. Manager/Admin approves discrepancies before inventory is adjusted.
+
+### Products vs Inventory
+Keep separate tables/domains. Product Master defines the SKU; Inventory owns mutable stock state. Integrate in UI, not by collapsing the data model.
+
+### Scanner
+Scanner diagnostics are an Admin Hardware responsibility. POS keeps automatic keyboard-style barcode scanning but no longer exposes a Scanner settings/test tab.
+
+### Responsive contract
+Use responsive grids, min-width:0, horizontally scrollable tables/tabs and mobile-safe modal sizing. Do not solve overflow by shrinking text to unreadable sizes.

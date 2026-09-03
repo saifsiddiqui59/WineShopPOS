@@ -1081,3 +1081,29 @@ Before a count starts, Stock Count shows current system stock. Start Stock Count
 ## Invoice dates
 
 Supplier invoice dates use **DD/MM/YYYY**.
+
+## Start a shift before billing
+
+WineShopPOS will not allow a bill until you have an open shift. If no shift is open, POS shows **Start your shift before making any bill**.
+
+1. Enter Opening Cash.
+2. Select **Start Shift**.
+3. Billing becomes available.
+
+This rule applies to cashiers, managers and administrators.
+
+## Barcode scanner settings
+
+Barcode scanners still work automatically as keyboard input in POS. Scanner setup/testing is no longer a POS tab; administrators manage scanner hardware under **Settings & Admin → Hardware**.
+
+## Physical Stock Count
+
+Stock Count is a physical count. Start a session, physically scan/count stock, compare it with the system quantity, submit the count, and have a manager/admin approve discrepancies.
+
+## Products vs Inventory
+
+Products defines the SKU/barcode/category/pack/prices. Inventory owns current stock, movements, counts and FIFO. They remain separate for data safety, while Inventory shows key Product Master information beside live stock.
+
+## Mobile and smaller screens
+
+WineShopPOS navigation, panels, tabs, forms and tables adapt to smaller screens. Wide tables remain horizontally scrollable rather than cutting off columns.

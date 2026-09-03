@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 import { useScanner } from "../context/ScannerContext";
@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 import { findProductByBarcode, normalizeBarcode } from "../lib/barcode";
 import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPreference";
 import ProductThumb from "../components/ui/ProductThumb";
+import ShiftRequiredDialog from "../components/ui/ShiftRequiredDialog";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -30,6 +31,11 @@ export default function POS(){
   const[unknown,setUnknown]=useState("");
   const[busy,setBusy]=useState(false);
   const[autoPrint,setAutoPrint]=useState(false);
+  const[shiftOpen,setShiftOpen]=useState(false);
+  const[shiftLoading,setShiftLoading]=useState(true);
+  const[shiftBusy,setShiftBusy]=useState(false);
+  const[openingCash,setOpeningCash]=useState(0);
+  const[shiftMessage,setShiftMessage]=useState("");
 
   const[customers,setCustomers]=useState([]);
   const[customerId,setCustomerId]=useState("");
@@ -48,6 +54,108 @@ export default function POS(){
   const[quote,setQuote]=useState(null);
 
   const active=products.filter((p)=>p.active);
+  const shiftStorageKey=useMemo(
+    ()=>`wineshop_open_shift_v1_${profile?.shop_id||"shop"}_${profile?.user_id||"user"}`,
+    [profile?.shop_id,profile?.user_id],
+  );
+
+  const refreshShiftState=useCallback(async()=>{
+    if(!profile?.shop_id||!profile?.user_id){
+      setShiftOpen(false);
+      setShiftLoading(false);
+      return false;
+    }
+
+    if(!navigator.onLine){
+      const cached=sessionStorage.getItem(shiftStorageKey);
+      setShiftOpen(Boolean(cached));
+      setShiftLoading(false);
+      setShiftMessage(
+        cached
+          ?"Using the shift verified earlier in this browser session."
+          :"Connect to the internet to verify or start your shift.",
+      );
+      return Boolean(cached);
+    }
+
+    setShiftLoading(true);
+    const{data,error}=await supabase
+      .from("cashier_shifts")
+      .select("id,status,opened_at")
+      .eq("shop_id",profile.shop_id)
+      .eq("cashier_id",profile.user_id)
+      .eq("status","OPEN")
+      .order("opened_at",{ascending:false})
+      .limit(1);
+
+    if(error){
+      setShiftOpen(false);
+      setShiftMessage(error.message||"Unable to verify your shift.");
+      setShiftLoading(false);
+      return false;
+    }
+
+    const current=data?.[0]||null;
+    setShiftOpen(Boolean(current));
+    setShiftMessage("");
+    if(current?.id)sessionStorage.setItem(shiftStorageKey,current.id);
+    else sessionStorage.removeItem(shiftStorageKey);
+    setShiftLoading(false);
+    return Boolean(current);
+  },[profile?.shop_id,profile?.user_id,shiftStorageKey]);
+
+  useEffect(()=>{
+    void refreshShiftState();
+    const online=()=>void refreshShiftState();
+    const visible=()=>{if(document.visibilityState==="visible")void refreshShiftState();};
+    window.addEventListener("online",online);
+    document.addEventListener("visibilitychange",visible);
+    return()=>{
+      window.removeEventListener("online",online);
+      document.removeEventListener("visibilitychange",visible);
+    };
+  },[refreshShiftState]);
+
+  async function startShiftFromPOS(){
+    if(!navigator.onLine){
+      setShiftMessage("Connect to the internet to start your shift.");
+      return;
+    }
+    const amount=Number(openingCash||0);
+    if(!Number.isFinite(amount)||amount<0){
+      setShiftMessage("Opening Cash must be zero or a positive amount.");
+      return;
+    }
+
+    setShiftBusy(true);
+    setShiftMessage("");
+    const{data,error}=await supabase.rpc("open_shift",{
+      p_opening_cash:amount,
+      p_notes:"Shift opened from POS billing gate.",
+    });
+    setShiftBusy(false);
+
+    if(error){
+      setShiftMessage(error.message||"Unable to start shift.");
+      await refreshShiftState();
+      return;
+    }
+
+    if(data)sessionStorage.setItem(shiftStorageKey,data);
+    setShiftOpen(true);
+    setShiftMessage("");
+    setMessage("Shift opened. POS billing is ready.");
+    searchInputRef.current?.focus();
+  }
+
+  function requireOpenShift(){
+    if(shiftLoading||!shiftOpen){
+      setMessage("Start your shift before making any bill.");
+      errorBeep();
+      return false;
+    }
+    return true;
+  }
 
   useEffect(()=>{
     setAutoPrint(getReceiptAutoPrint(profile?.shop_id));
@@ -119,6 +227,7 @@ export default function POS(){
   }
 
   function add(p){
+    if(!requireOpenShift())return false;
     if(Number(p.price)<=0){errorBeep();setMessage(`${p.name} has no selling price. Edit the product before billing.`);return false;}
     const stock=getStock(p.id);
     if(qty(p.id)>=stock){
@@ -252,6 +361,7 @@ export default function POS(){
   }
 
   async function checkout(){
+    if(!requireOpenShift())return;
     if(cart.some((i)=>Number(i.unitPrice??i.product.price)<=0)){setMessage("Cart contains a product with no selling price. Remove it or edit the product first.");return;}
     if(needsReason&&!reasonCodeId){setMessage("Select a standardized reason for this manual override.");return}
     const selected=reasons.find((r)=>r.id===reasonCodeId);
@@ -319,6 +429,15 @@ export default function POS(){
   const cartUnits=cart.reduce((sum,item)=>sum+Number(item.quantity||0),0);
 
   return <div className="pos-page pos-v5h">
+    {!shiftOpen ? <ShiftRequiredDialog
+      loading={shiftLoading}
+      online={navigator.onLine}
+      openingCash={openingCash}
+      onOpeningCash={setOpeningCash}
+      onStart={startShiftFromPOS}
+      busy={shiftBusy}
+      message={shiftMessage}
+    /> : null}
     <div className="page-heading pos-v5h-heading">
       <div>
         <h2>Fast POS Billing</h2>
@@ -326,7 +445,6 @@ export default function POS(){
       </div>
       <div className="button-row pos-v5h-top-actions">
         <button type="button" className="secondary-button" onClick={toggleAutoPrint}>Auto Print: {autoPrint?"ON":"OFF"}</button>
-        <button type="button" className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button>
         <button
           type="button"
           className="secondary-button pos-v5h-clear"
