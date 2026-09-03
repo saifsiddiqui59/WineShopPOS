@@ -691,3 +691,20 @@ Inventory Current Stock resizing was already committed on V3 before V5-H (`resiz
 ## V5-G CONSOLIDATED PAGE/DATA CLEANUP — 2026-09-03
 
 Supplier duplicates are merged/prevented; invoice dates use/display DD/MM/YYYY; Stock Count shows live baseline before a session; Product Master and Inventory stay separate in the database but are combined in Inventory operational UI; SortableTable layout fills panels; Purchase Intelligence no longer embeds OCR; all routed page modules are source-audited plus full src lint/build.
+
+## V5-G VERIFIER RECOVERY + PREVIEW VERIFIED — 2026-09-03
+
+- Source containing V5-G implementation: `91f815a99f7454eabf47eee2bdab46f5ff5c1d0e`
+- Migration `20260903193000` was already applied by the prior run and was NOT reapplied.
+- `ocr-invoice` was already deployed by the prior run and was NOT unnecessarily redeployed.
+- Live DB verification uses one SQL result set and confirms:
+  - duplicate normalized supplier groups = 0;
+  - METRI normalized supplier rows = 1;
+  - normalized supplier unique index = present;
+  - UAT-V5F-001 invoice date = 2026-09-03;
+  - UAT-V5F-002 invoice date = 2026-09-03.
+- V5-G route/regression/full-src lint gates passed.
+- V3 preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+- Preview index SHA-256: `c0de056959a1ab7d09499b28f1dbcc9dc710f5210693ba8f22115395e42536d0`
+- Production frontend storage `wineshoppos` was not deployed.
+- Authenticated visual page-by-page UAT remains a separate manual verification step.

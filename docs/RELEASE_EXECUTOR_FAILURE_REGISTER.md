@@ -566,3 +566,41 @@ Observed: normalized duplicate suppliers; Stock Count blank before session; Sort
 Resolution: supplier merge + normalized unique index + UI normalized check; live Stock Count baseline; global SortableTable full-width fallback; remove embedded OCR; raw DMY invoice date preference and correction of retained existing DMY records; Product/Inventory integrated operational view; audit every routed page module and full src lint/build.
 
 Verification boundary: automated route/source/build/transport checks do not replace authenticated manual visual UAT of every screen.
+
+## SUPABASE CLI MULTI-RESULT VERIFICATION VISIBILITY FAILURE — 2026-09-03
+
+### Failure
+V5-G executor successfully:
+- pushed source;
+- applied `20260903193000_v5g_page_data_consistency.sql`;
+- deployed `ocr-invoice`.
+
+It then failed at post-migration verification with `supplier verify missing`.
+
+### Root cause
+The verification SQL file contained multiple independent `SELECT` statements. In this execution path, `supabase db query --file ... --output table` surfaced only the final result set. Therefore the terminal displayed `UAT_B_DATE`, while earlier supplier verification rows were not visible to subsequent `grep` checks.
+
+This was a verification-harness failure, NOT a database migration failure.
+
+### Permanent rule
+Post-mutation Supabase verification that contains several assertions MUST produce one result set:
+- one SELECT with several columns, or
+- `UNION ALL` rows in a single SELECT.
+
+Do not depend on the CLI printing every independent SELECT result set.
+
+### Partial-state rule
+If DB migration / function deployment succeeds and only the verifier fails:
+1. record the actual remote partial state;
+2. verify migration history/current DB state first;
+3. DO NOT reapply the migration merely because verification output was incomplete;
+4. DO NOT claim rollback;
+5. continue with a dedicated recovery executor.
+
+### Verified recovery state
+Independent live verification established:
+- duplicate normalized supplier groups = 0;
+- METRI normalized supplier rows = 1;
+- normalized supplier unique index exists;
+- UAT-V5F-001 date = 2026-09-03;
+- UAT-V5F-002 date = 2026-09-03.

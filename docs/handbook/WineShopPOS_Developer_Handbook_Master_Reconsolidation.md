@@ -1249,3 +1249,7 @@ Products = SKU/barcode/name/category/pack/prices master. Inventory = live quanti
 Supplier names are unique per shop after normalized alphanumeric comparison. Indian numeric supplier invoice dates use retained raw DD/MM/YYYY evidence, store ISO internally, and display DD/MM/YYYY.
 
 Every navigation/layout release must source-audit all routed pages and run full src lint/build; authenticated visual UAT remains separately pending.
+
+## Supabase multi-result verification rule — 2026-09-03
+
+After a remote mutation, SQL verification must return a single result set for all required assertions. Prefer `UNION ALL` or a one-row multi-column result. Do not treat missing output from earlier independent SELECT statements as evidence that a successful migration failed. First inspect migration history and live state; never blindly reapply an already successful migration.
