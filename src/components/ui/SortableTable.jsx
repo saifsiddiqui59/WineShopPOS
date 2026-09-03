@@ -158,7 +158,7 @@ export default function SortableTable({
   }
 
   function beginResize(event, displayColumn) {
-    if (!resizeKey || (displayColumn === 0 && showSerial)) return;
+    if (!resizeKey) return;
     event.preventDefault();
     event.stopPropagation();
     const th = event.currentTarget.closest("th");
@@ -250,7 +250,17 @@ export default function SortableTable({
         className="table-serial-column"
         style={{ width: widthFor(0), minWidth: widthFor(0) }}
       >
+        {/* V5F1_REBUILT_SERIAL_RESIZE_GLOBAL */}
         Sr. No.
+        {resizeKey ? (
+          <span
+            className="table-column-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize Sr. No. column"
+            onPointerDown={(event) => beginResize(event, 0)}
+          />
+        ) : null}
       </th>
     ) : null;
     return cloneElement(row, row.props, showSerial ? [serial, ...headers] : headers);
@@ -340,7 +350,6 @@ export default function SortableTable({
     <>
       {resizeKey ? (
         <div className="table-column-controls">
-          <span>Drag a column's right edge; its left edge stays fixed.</span>
           <button
             type="button"
             className="secondary-button table-reset-widths"

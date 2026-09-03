@@ -16,8 +16,19 @@ export default function Inventory() {
   const [adjustmentType, setAdjustmentType] = useState("STOCK_CORRECTION");
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
 
   const active = products.filter((p) => p.active);
+  const filteredActive = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return products.filter((product) => product.active);
+    return products.filter((product) =>
+      product.active &&
+      [product.name, product.brand, product.barcode, product.sku]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [products, search]);
   const inventoryValue = useMemo(
     () => active.reduce((sum, p) => sum + getStock(p.id) * p.purchasePrice, 0),
     [active, getStock]
@@ -47,12 +58,19 @@ export default function Inventory() {
       <div className="settings-grid">
         <section className="panel">
           <h3>Current Stock</h3>
+          <input
+            className="inventory-search-input"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search product, brand, barcode or SKU"
+            style={{ width: "100%", maxWidth: 460, marginBottom: 12 }}
+          />
           <div className="data-table-wrapper">
             {loadingData ? <p>Loading...</p> : (
               <SortableTable className="data-table" resizeKey="inventory-current-stock-v1">
                 <thead><tr><th>Product</th><th>Stock</th><th>Minimum</th><th>Status</th></tr></thead>
                 <tbody>
-                  {active.map((p) => {
+                  {filteredActive.map((p) => {
                     const stock = getStock(p.id);
                     return (
                       <tr key={p.id}>

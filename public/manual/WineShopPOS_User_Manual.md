@@ -1030,3 +1030,13 @@ Fast POS is optimized for counter speed:
 6. Complete Sale. Existing approval rules still apply to manual discount or changed sale price.
 
 Inventory Current Stock columns use the right-edge resize control and remember widths in the browser.
+
+## OCR product matching and catalogue lookup
+
+A single exact existing supplier match is confirmed automatically. Ambiguous supplier matches remain manual.
+
+WineShopPOS checks Product Master and learned aliases first. Weak similarity candidates are not auto-selected. If no reliable product exists, use **Search Product Catalogue** beside Product Resolution.
+
+Catalogue results are suggestions only. If no result exists, use **Create OCR-Prefilled Product** or **Create New Product**. OCR prefills name, inferred brand/category, size, purchase price and bottles/case. Scan or type the barcode before saving if the catalogue did not provide one.
+
+After returning to the invoice, review quantity and price and click **Confirm Line**. WineShopPOS learns that supplier description for future invoices. OCR and catalogue lookup never receive stock automatically.

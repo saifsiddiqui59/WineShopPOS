@@ -453,3 +453,16 @@ and must fail before printing cleanup success if either check reports dirt.
 
 Policy update from user:
 Going forward, failed executors must remove dirty files they created rather than preserving them. Pre-existing unrelated project dirt must not be deleted unless explicitly requested.
+
+### 2026-09-03 — ProductForm metadata-only dirty state after failed-run cleanup
+
+Observed:
+`git status --porcelain` reported `M src/components/ProductForm.jsx` while `git diff --raw`, `git diff --summary`, and normal `git diff` were empty. EOL was `i/lf w/lf`; `core.filemode=false` and `core.autocrlf=false`. Filtered worktree content matched HEAD.
+
+Permanent prevention:
+- Do not treat porcelain `M` alone as proof of a content change.
+- Compare normal diff, HEAD/index blob, and `git hash-object --path=<path> <path>`.
+- If filtered content equals HEAD and cached diff is empty, explicit-path `git add -- <path>` may refresh index metadata.
+- Never use `git add .` or `git add -A`.
+- V5-F.1 rebuilt deliberately does not modify `ProductForm.jsx`; OCR category handling is corrected in the OCR-specific route.
+- If a new executor fails before commit, restore only its own target files from a pre-run backup.

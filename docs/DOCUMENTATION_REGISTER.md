@@ -201,3 +201,15 @@ V5-E: hybrid active-exception verification engine, audited non-destructive finan
 
 <!-- V5H_FAST_POS_AND_HEADER_FIX_20260903 -->
 - V5-H: restores full Royal 21 center hero instead of duplicate small shop-name pill; Square-inspired Fast POS Billing register UX; redeploys already-committed Inventory column resizing. No database or transaction-backend changes.
+
+### V5-F.1 rebuilt OCR/enrichment correction
+Implementation surfaces:
+- `src/pages/AutomationHub.jsx`
+- `src/components/ProductEnrichmentPanel.jsx`
+- `src/pages/AddProduct.jsx`
+- `src/pages/Inventory.jsx`
+- `src/components/ui/SortableTable.jsx`
+- `supabase/functions/product-enrichment/index.ts`
+- `docs/testing/V5F1_REBUILT_OCR_PRODUCT_ENRICHMENT_UAT.md`
+
+Live backend: `product-enrichment` version 6 with JWT verification enabled.

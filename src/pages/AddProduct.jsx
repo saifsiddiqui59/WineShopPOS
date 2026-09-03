@@ -13,7 +13,7 @@ export default function AddProduct(){
     barcode,
     name:params.get("name")||"",
     brand:params.get("brand")||"",
-    category:params.get("category")||"Whisky",
+    category:params.get("category")||"Other",
     purchasePrice:Number(params.get("purchasePrice")||0),
     sizeMl:Math.max(1,Number(params.get("sizeMl")||750)),
     mrp:Number.isFinite(ocrMrp)?ocrMrp:0,
@@ -30,7 +30,11 @@ export default function AddProduct(){
     const r=await addProduct(form);
     if(r.ok){
       if(fromOcr&&line!==null){
-        sessionStorage.setItem("wineshop_ocr_created_product",JSON.stringify({lineIndex:Number(line),productId:r.productId}));
+        sessionStorage.setItem("wineshop_ocr_created_product",JSON.stringify({
+          lineIndex:Number(line),
+          productId:r.productId,
+          productName:form.name||params.get("name")||"Newly created product"
+        }));
         navigate("/purchasing/ocr");
       }else navigate("/products");
     }
@@ -55,8 +59,12 @@ export default function AddProduct(){
     </div>
     {enriched ? (
       <div className="purchase-message" style={{marginBottom:12}}>
-        External catalogue suggestion applied from <strong>{enrichmentSources || "external lookup"}</strong>.
-        Review barcode, corrected name, brand and size before saving. Product Master becomes authoritative only after you create the product.
+        Catalogue suggestion applied from <strong>{enrichmentSources || "product catalogue"}</strong>.
+        Review barcode, corrected name, brand, category and size before saving.
+      </div>
+    ) : fromOcr && !barcode ? (
+      <div className="verification-guidance verification-guidance--neutral" style={{marginBottom:12}}>
+        OCR product details are prefilled. Scan or type the bottle/can barcode before creating the Product Master record.
       </div>
     ) : null}
     <ProductForm

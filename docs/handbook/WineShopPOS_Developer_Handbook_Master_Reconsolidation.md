@@ -1175,3 +1175,20 @@ POS.jsx keeps the existing transaction functions and Supabase/database flow. V5-
 The register is scan/search-first with product tiles and a sticky current-sale/payment panel. Customer and commercial-benefit inputs remain available under Customer & Offers.
 
 Premium Royal 21 must use the established RoyalHero markup. Do not introduce a second compact shop-name pill. Do not alter Royal animation CSS or AnimatedBrand as part of POS work.
+
+## V5-F.1 rebuilt OCR resolver/enrichment rules
+
+Resolver order:
+`Product Master / learned alias -> user-requested catalogue -> human approval -> Product Master`.
+
+Auto-confirm supplier only when exactly one active supplier has a 100% normalized name match. Product matching is read-only and may run concurrently.
+
+Live `product-enrichment` version 6:
+- JWT verification enabled;
+- cache version 2;
+- UPCitemdb 404 treated as no-match;
+- independent Open Food Facts text search;
+- suggestion-only candidates;
+- no product creation, purchase receipt, inventory, FIFO, sale or image-library mutation.
+
+Failed pre-commit executors restore only their own modified targets from backup.

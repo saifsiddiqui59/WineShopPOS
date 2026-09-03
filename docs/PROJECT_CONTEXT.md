@@ -623,3 +623,21 @@ Fast POS Billing adopts a Square-inspired retail-register interaction model whil
 The existing barcode handler, stock guard, session cart persistence, customer/loyalty/store credit/gift voucher quote, price/discount approval, offline-sale support, auto print and completeSale backend flow remain in place.
 
 Inventory Current Stock resizing was already committed on V3 before V5-H (`resizeKey=inventory-current-stock-v1`); V5-H rebuilds and redeploys current V3 so that change reaches preview.
+
+## V5-F.1 rebuilt OCR/enrichment UAT correction — 2026-09-03
+
+- Single exact normalized supplier match auto-confirms.
+- Product Master line resolution runs in parallel after supplier confirmation.
+- OCR stage timing is visible for diagnosis.
+- Zero product-line difference uses a concise success message.
+- Weak Product Master candidates are not presented as reliable matches.
+- `Search Product Catalogue` moved into Product Resolution.
+- Live `product-enrichment` version 6 keeps JWT verification, cache version 2, UPCitemdb 404-as-no-match, and independent Open Food Facts search.
+- Raw provider HTTP errors are not user-facing catalogue results.
+- No-result catalogue flow offers OCR-prefilled product creation.
+- OCR creation passes inferred brand/category and uses `Other` rather than incorrectly defaulting OCR products to Whisky.
+- Single create/return records the actual new Product Master item as the linked row.
+- Confirm Line visibly reports alias learning.
+- Inventory search restored.
+- Global resize instruction removed and `Sr. No.` made resizable.
+- No Receive Stock, inventory, FIFO, sales, Logic App or Azure AI mutation is part of this patch.
