@@ -670,3 +670,12 @@ Inventory Current Stock resizing was already committed on V3 before V5-H (`resiz
 - Global Error Dialog + Confirm Line alias fix are now present in the V3 preview build.
 - Inventory/Receive Stock was not intentionally changed by this continuation.
 - Manual authenticated UAT remains required for Confirm Line behavior.
+
+## V5-F.3 CANCELLED REVIEW RECOVERY — 2026-09-03
+
+- Cancel Review preserves the original invoice and does not receive stock.
+- CANCELLED is a recoverable review state.
+- Re-analyzing the identical cancelled PDF reuses the existing ingestion.
+- The frontend calls `invoice_reopen_review` before OCR so cancellation reason/time/user are cleared.
+- Invoice Inbox → Reopen Review remains the preferred continuation path.
+- READY_TO_RECEIVE / RECEIVED / COMPLETED remain protected from duplicate processing.

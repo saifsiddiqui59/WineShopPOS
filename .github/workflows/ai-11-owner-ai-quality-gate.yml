@@ -1,0 +1,67 @@
+name: AI-11 Owner AI CI Quality Gate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ai-11-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  deterministic-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "22", cache: npm}
+      - run: npm ci
+      - run: node scripts/ai-evaluation/validate-golden-dataset.mjs
+      - run: node --test tests/ai-evaluation/quality-gate-contract.test.mjs
+      - run: npm run lint
+      - run: npm run build
+  live-foundry-gate:
+    needs: deterministic-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SUPABASE_URL: ${{ secrets.WSP_SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.WSP_SUPABASE_PUBLISHABLE_KEY }}
+      E2E_EMAIL: ${{ secrets.WSP_E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.WSP_E2E_PASSWORD }}
+      E2E_SHOP_ID: ${{ secrets.WSP_E2E_SHOP_ID }}
+      AI_API_URL: ${{ secrets.WSP_AI_API_URL }}
+      FOUNDRY_EVALUATOR_ENDPOINT: ${{ secrets.WSP_FOUNDRY_EVALUATOR_ENDPOINT }}
+      FOUNDRY_EVALUATOR_KEY: ${{ secrets.WSP_FOUNDRY_EVALUATOR_KEY }}
+      FOUNDRY_EVALUATOR_DEPLOYMENT: ${{ secrets.WSP_FOUNDRY_EVALUATOR_DEPLOYMENT }}
+      AI_EVAL_OUTPUT: artifacts/ai-11/evaluation-results.json
+      AI_EVAL_JUDGE_DELAY_SECONDS: "20"
+      AI_EVAL_JUDGE_RETRY_ATTEMPTS: "10"
+      AI_EVAL_JUDGE_RETRY_BASE_SECONDS: "15"
+      AI_EVAL_HTTP_RETRY_ATTEMPTS: "8"
+      AI_EVAL_HTTP_RETRY_BASE_SECONDS: "5"
+      AI_EVAL_CASE_DELAY_SECONDS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require AI-11 configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(SUPABASE_URL SUPABASE_PUBLISHABLE_KEY E2E_EMAIL E2E_PASSWORD AI_API_URL FOUNDRY_EVALUATOR_ENDPOINT FOUNDRY_EVALUATOR_KEY FOUNDRY_EVALUATOR_DEPLOYMENT)
+          for name in "${required[@]}"; do
+            [[ -n "${!name:-}" ]] || { echo "::error::$name is not configured"; exit 1; }
+          done
+      - uses: actions/setup-node@v4
+        with: {node-version: "22"}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install --disable-pip-version-check --quiet "azure-ai-evaluation==1.18.3"
+      - run: node scripts/ai-evaluation/validate-golden-dataset.mjs
+      - run: python scripts/ai-evaluation/run-live-golden-evaluation.py
+      - run: node scripts/ai-evaluation/apply-quality-gates.mjs "$AI_EVAL_OUTPUT"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-11-evaluation-summary-${{ github.sha }}
+          path: artifacts/ai-11/evaluation-results.json
+          if-no-files-found: ignore
+          retention-days: 14

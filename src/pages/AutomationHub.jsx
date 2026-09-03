@@ -527,13 +527,34 @@ export default function AutomationHub() {
 
       if (stored?.duplicate) {
         const existingStatus = String(stored.existing_status || "UNKNOWN");
-        const recoverable = ["NEEDS_REVIEW", "OCR_FAILED", "FAILED"].includes(existingStatus);
+        const recoverable = ["NEEDS_REVIEW", "OCR_FAILED", "FAILED", "CANCELLED"].includes(existingStatus);
         if (!recoverable) {
           setMessage(`Duplicate invoice file detected. Existing status: ${existingStatus}. Open Invoice Inbox instead of receiving it again.`);
           return;
         }
         nextIngestionId = stored?.ingestion_id || null;
         duplicateStatus = existingStatus;
+
+        if (existingStatus === "CANCELLED") {
+          if (!nextIngestionId) {
+            throw new Error(
+              "Cancelled invoice evidence exists, but its ingestion id is missing. Re-analysis is blocked to avoid duplicate evidence.",
+            );
+          }
+
+          const { error: reopenError } = await supabase.rpc(
+            "invoice_reopen_review",
+            { p_ingestion_id: nextIngestionId },
+          );
+
+          if (reopenError) {
+            throw new Error(
+              `Unable to reopen cancelled invoice review (${reopenError.message}).`,
+            );
+          }
+
+          duplicateStatus = "NEEDS_REVIEW";
+        }
       } else {
         nextIngestionId = stored?.ingestion_id || null;
       }

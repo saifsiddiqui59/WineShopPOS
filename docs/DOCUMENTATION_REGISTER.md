@@ -243,3 +243,15 @@ Runtime verification:
 - preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
 - deployed index SHA-256: `66c84836237b568267d70d769b785989f4e198421e45bea572cfe9b898834b6c`
 - production frontend not deployed
+
+## V5-F.3 CANCELLED REVIEW RECOVERY — 2026-09-03
+
+Updated together:
+- Invoice OCR duplicate recovery logic
+- dedicated V5-F.3 regression
+- Failure Register
+- Project Context
+- Documentation Register
+- Developer Handbook
+- User Manual/public manual
+- previously untracked V3 development/evaluation assets after validation

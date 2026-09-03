@@ -1063,3 +1063,9 @@ For this regression:
 5. Expected: the prior `normalized_alias` generated-column error does not occur.
 6. If a real system/database/runtime error occurs, WineShopPOS shows the larger error dialog with **Close**, **X**, and **Esc**.
 7. Stop after Confirm Line verification for this focused test; do **not** use Receive Stock.
+
+## Cancelled Invoice OCR review
+
+Cancel Review keeps the original invoice saved and does not change stock.
+
+To continue, use **Invoice Inbox → Reopen Review**, or select the same cancelled PDF again. If you select the same PDF again, WineShopPOS reopens and reuses the original invoice record before running OCR again.

@@ -1232,3 +1232,12 @@ For V3 Azure Storage preview deployment:
 - never deploy V3 preview to production storage `wineshoppos`.
 
 Corruption hygiene is mandatory: Git-object integrity, zero-byte critical-file checks, partial-artifact checks, conflict-marker validation, exact staging allowlists and post-push HEAD verification are release gates.
+
+## V5-F.3 CANCELLED REVIEW RECOVERY — 2026-09-03
+
+Invoice duplicate-state rule:
+- NEEDS_REVIEW / OCR_FAILED / FAILED / CANCELLED → recoverable.
+- CANCELLED must call `invoice_reopen_review` before OCR to clear cancellation metadata.
+- The existing ingestion id is reused.
+- READY_TO_RECEIVE / RECEIVED / COMPLETED stay protected.
+- Never create a second ingestion simply to restart the same cancelled file.

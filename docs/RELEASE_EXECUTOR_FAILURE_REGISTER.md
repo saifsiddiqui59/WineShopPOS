@@ -519,3 +519,42 @@ Rules:
 10. After push, require local HEAD to equal `origin/<target-branch>`.
 11. A failed executor may not be described as “rolled back” if any remote DB/cloud mutation already succeeded; the actual partial state must be recorded.
 12. Every new failure class must be written into this canonical register before the next continuation is considered complete.
+
+### 2026-09-03 — V5-F.3 executor construction failures
+
+Observed sequence:
+1. an executor correctly stopped on the untracked AI-11 workflow because committing it unchanged could activate an automatic quality gate;
+2. a follow-up executor failed in embedded Python quoting before changing application source;
+3. another follow-up failed in embedded Node quoting before changing application source;
+4. a later unified patch file was malformed (`corrupt patch`) and failed at `git apply --check`.
+
+Application/cloud impact of those failed attempts:
+- no V5-F.3 application commit/push;
+- no V5-F.3 Azure preview deployment;
+- no V5-F.3 Supabase/database mutation;
+- no inventory mutation;
+- AI-11 was intentionally converted locally to manual-only `workflow_dispatch`.
+
+Root cause:
+The executor generation mechanism became more complex than the behavior change and repeatedly introduced quoting/patch-format defects.
+
+Permanent prevention:
+For small React source changes, use a minimal exact-text file transform with explicit pre/post assertions. Do not generate another source language inside quoted source strings, and do not use hand-counted unified-patch hunk lengths.
+
+### 2026-09-03 — CANCELLED invoice duplicate dead-end
+
+Symptom:
+After Cancel Review, selecting the identical invoice PDF again was blocked with `Existing status: CANCELLED`.
+
+Root cause:
+The frontend duplicate recoverable-state list omitted `CANCELLED`.
+
+Correct behavior:
+Cancel Review preserves evidence and posts no inventory. Re-analysis of the identical cancelled PDF must reuse the existing ingestion, call `invoice_reopen_review` first to clear cancellation reason/time/user, and then rerun OCR on that same ingestion.
+
+Protected states:
+READY_TO_RECEIVE, RECEIVED, COMPLETED and terminal duplicate-resolution states remain protected against accidental duplicate processing.
+
+## ZERO-TOLERANCE CLEAN WORKTREE POLICY — 2026-09-03
+
+Normal WineShopPOS feature/fix/deploy work must start and finish with `git status --porcelain` empty. Unknown dirty files are never silently deleted. Destructive shortcuts remain prohibited: `git reset --hard`, `git clean`, `git stash`, `git checkout .`, `git restore .`, `git add .`, and `git add -A`.
