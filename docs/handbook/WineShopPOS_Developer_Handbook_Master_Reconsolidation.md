@@ -1145,3 +1145,7 @@ Unknown OCR pack evidence must not be reported as MATCH. Resizable tables must o
 Do not mutate retained OCR to manufacture a match. Evidence Quality and Business Resolution are separate states. Purchase Verification reads get_purchase_item_corrections so an audited pack correction can resolve business state while OCR remains unconfirmed.
 
 Amber = review/action, green = resolved/verified, neutral = information. Status tiles navigate to stable section IDs. FIFO database lot_number remains identity; Receipt Ref is presentation-only and must never be used as a database key.
+
+<!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
+## 2026-09-03 — V5-E
+V5-E architecture: purchase_verification_resolutions is verification state, not accounting state. Verification RPCs must never mutate purchase/items/inventory/FIFO/OCR. Amber=OPEN, green=resolved/corrected/accepted, neutral=historical/informational.

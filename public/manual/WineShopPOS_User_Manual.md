@@ -994,3 +994,7 @@ Purchase Verification cards are clickable. Amber means review; green means the b
 Click Financial Check or Financial Variance to open Financial Reconciliation and see exactly how WineShopPOS reached the landed total, plus the remaining OCR invoice difference and a View Original Invoice action.
 
 Ageing/FIFO uses a readable Receipt Ref such as METRI-02/09. Hover it to see the technical database lot for audit/debug.
+
+<!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
+## 2026-09-03 — V5-E
+V5-E Purchase Verification: amber means action required, green means resolved, historical OCR is neutral. Financial exceptions can be accepted as reviewed variance or marked OCR total incorrect with an audited reason; this does not change purchase amount, stock or FIFO. Receipt Ref remains user-facing; technical lot is internal.

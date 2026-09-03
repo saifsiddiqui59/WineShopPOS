@@ -185,3 +185,7 @@ Preview-only fallback imagery for the seven current catalogue products. Existing
 
 <!-- V5D_ACTIONABLE_VERIFICATION_FRIENDLY_FIFO_20260903 -->
 - V5-D: clickable amber/green verification tiles, Pack Resolution separated from historical OCR evidence, financial reconciliation breakdown, and supplier/date Receipt Ref for Ageing/FIFO.
+
+<!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
+## 2026-09-03 — V5-E
+V5-E: hybrid active-exception verification engine, audited non-destructive financial resolution, centralized tolerance defaults, technical FIFO lot hidden from normal UI.

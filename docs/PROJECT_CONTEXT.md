@@ -587,3 +587,7 @@ Purchase Verification separates historical OCR evidence from resolved business s
 Financial Reconciliation displays Product Value + Freight + Transport/Handling - Discounts + Misc/Round = WineShopPOS Landed Total, then compares OCR Printed Total and shows the unreconciled difference. V5-D never silently changes a received financial total.
 
 Ageing/FIFO primary human lot label is Receipt Ref derived from supplier first token + receipt date in DD/MM form, e.g. METRI-02/09. Technical database lot remains unchanged and is available in the tooltip.
+
+<!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
+## 2026-09-03 — V5-E
+V5-E hybrid purchase verification: Active Exceptions + Resolution State + Historical Evidence. Amber only for open actions; green for resolved; historical OCR neutral. Financial verification decisions are audited separately and never mutate purchase totals, inventory, FIFO or OCR. Defaults: ₹1 auto tolerance, ₹10 manager-review threshold. Technical FIFO lot removed from normal UI.

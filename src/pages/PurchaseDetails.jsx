@@ -1,5 +1,6 @@
 import SortableTable from "../components/ui/SortableTable";
 import PurchaseCorrectionPanel from "../components/PurchaseCorrectionPanel";
+import PurchaseVerificationEngine from "../components/PurchaseVerificationEngine";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -131,39 +132,14 @@ export default function PurchaseDetails() {
   const productValue = Number(purchase.total || 0);
   const landedTotal = purchase.total_landed_cost == null ? productValue : Number(purchase.total_landed_cost || 0);
   const extractedTotal = ingestion?.extracted_total == null ? null : Number(ingestion.extracted_total);
-  const financialVariance = extractedTotal == null ? null : extractedTotal - landedTotal;
-  const financialMatch = financialVariance == null || Math.abs(financialVariance) <= 1;
   const unitEvidenceAvailable = ocrPackAudit.units != null;
   const unitMatch = unitEvidenceAvailable && ocrPackAudit.units === postedUnits;
-  const quantityCheck = !unitEvidenceAvailable ? "REVIEW · OCR pack unconfirmed" : unitMatch ? "MATCH" : "REVIEW";
   const packCorrections = corrections.filter((row) => {
     const oldPack = Number(row?.old_values?.units_per_case || 0);
     const newPack = Number(row?.new_values?.units_per_case || 0);
     return Number(row?.quantity_delta || 0) !== 0 || (oldPack && newPack && oldPack !== newPack);
   });
   const packResolved = unitMatch || packCorrections.length > 0;
-  const transportHandling =
-    Number(purchase.transport_amount || 0)
-    + Number(purchase.handling_amount || 0)
-    + Number(purchase.loading_unloading_amount || 0);
-  const discounts =
-    Number(purchase.supplier_discount_amount || 0)
-    + Number(purchase.invoice_discount_amount || 0);
-  const miscRound =
-    Number(purchase.miscellaneous_amount || 0)
-    + Number(purchase.rounding_adjustment || 0);
-  const calculatedLanded =
-    productValue
-    + Number(purchase.freight_amount || 0)
-    + transportHandling
-    - discounts
-    + miscRound;
-
-  function goTo(sectionId) {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  const tileClass = (state) => `metric-card verification-tile verification-tile--${state}`;
 
   return <div>
     <div className="page-heading">
@@ -180,102 +156,14 @@ export default function PurchaseDetails() {
     {message ? <div className="purchase-message">{message}</div> : null}
     {!ingestion ? <div className="purchase-message">No retained original invoice is linked to this purchase. Older/manual receipts may require the physical invoice for verification.</div> : null}
 
-    <section className="panel">
-      <div className="metric-grid four">
-        <div className="metric-card"><span>Purchase</span><strong>{purchase.purchase_number}</strong></div>
-        <div className="metric-card"><span>Supplier Invoice</span><strong>{purchase.invoice_number || "—"}</strong></div>
-        <div className="metric-card"><span>Invoice Date</span><strong>{purchase.invoice_date || "—"}</strong></div>
-        <div className="metric-card"><span>Status</span><strong>{purchase.status || "POSTED"}</strong></div>
-      </div>
-      <div className="metric-grid four" style={{ marginTop: 12 }}>
-        <button type="button" className={tileClass("neutral")} onClick={() => goTo("posted-purchase-lines")}>
-          <span>Posted Bottles</span><strong>{postedUnits}</strong><small>Open posted lines ↓</small>
-        </button>
-        <button type="button" className={tileClass(unitEvidenceAvailable ? "ok" : "review")} onClick={() => goTo("ocr-evidence")}>
-          <span>OCR Expected Bottles</span><strong>{ocrPackAudit.units == null ? "Needs review" : ocrPackAudit.units}</strong><small>Open OCR evidence ↓</small>
-        </button>
-        <button type="button" className={tileClass("neutral")} onClick={() => goTo("financial-reconciliation")}>
-          <span>Product Value</span><strong>{money.format(productValue)}</strong><small>See calculation ↓</small>
-        </button>
-        <button type="button" className={tileClass("neutral")} onClick={() => goTo("financial-reconciliation")}>
-          <span>Landed / Invoice Total</span><strong>{money.format(landedTotal)}</strong><small>See calculation ↓</small>
-        </button>
-      </div>
-      <div className="metric-grid four" style={{ marginTop: 12 }}>
-        <button type="button" className={tileClass("neutral")} onClick={() => goTo("financial-reconciliation")}>
-          <span>OCR Printed Total</span><strong>{extractedTotal == null ? "—" : money.format(extractedTotal)}</strong><small>See source comparison ↓</small>
-        </button>
-        <button type="button" className={tileClass(financialMatch ? "ok" : "review")} onClick={() => goTo("financial-reconciliation")}>
-          <span>Financial Check</span><strong>{financialMatch ? "MATCH" : "REVIEW"}</strong><small>{financialMatch ? "Verified" : "Click to reconcile"} ↓</small>
-        </button>
-        <button type="button" className={tileClass(financialMatch ? "ok" : "review")} onClick={() => goTo("financial-reconciliation")}>
-          <span>Financial Variance</span><strong>{financialVariance == null ? "—" : money.format(Math.abs(financialVariance))}</strong><small>{financialMatch ? "Within tolerance" : "Click to find difference"} ↓</small>
-        </button>
-        <button type="button" className={tileClass(unitEvidenceAvailable && unitMatch ? "ok" : "review")} onClick={() => goTo("ocr-evidence")}>
-          <span>OCR Quantity Evidence</span><strong>{quantityCheck}</strong><small>Open retained OCR ↓</small>
-        </button>
-      </div>
-      <div className="metric-grid four" style={{ marginTop: 12 }}>
-        <button type="button" className={tileClass("neutral")} onClick={() => goTo("ocr-evidence")}>
-          <span>Original Evidence</span><strong>{ingestion ? "RETAINED" : "NOT LINKED"}</strong><small>Open OCR evidence ↓</small>
-        </button>
-        <button type="button" className={tileClass(unitEvidenceAvailable ? "ok" : "review")} onClick={() => goTo("ocr-evidence")}>
-          <span>OCR Pack Evidence</span><strong>{unitEvidenceAvailable ? "CONFIRMED" : "UNCONFIRMED"}</strong><small>{packResolved ? "Historical only · no stock action" : "Review evidence"} ↓</small>
-        </button>
-        <button type="button" className={tileClass(packResolved ? "ok" : "review")} onClick={() => goTo("purchase-correction")}>
-          <span>Pack Resolution</span><strong>{packResolved ? "RESOLVED" : "REVIEW"}</strong><small>{packCorrections.length ? `${packCorrections.length} audited correction applied` : unitMatch ? "OCR and receipt agree" : "Click to resolve"} ↓</small>
-        </button>
-        <button type="button" className={tileClass(corrections.length ? "ok" : "neutral")} onClick={() => goTo(corrections.length ? "correction-history" : "purchase-correction")}>
-          <span>Correction Audit</span><strong>{corrections.length ? `${corrections.length} APPLIED` : "NONE"}</strong><small>{corrections.length ? "Open history" : "Open correction"} ↓</small>
-        </button>
-      </div>
-      {!financialMatch || !unitMatch ? (
-        <div className="purchase-message" style={{ marginTop: 14 }}>
-          REVIEW REQUIRED: {financialMatch ? "" : `financial variance is ${money.format(Math.abs(financialVariance || 0))}. `}
-          {!unitEvidenceAvailable
-            ? packResolved
-              ? "Retained OCR does not contain strong pack evidence, but the posted pack has been resolved by an audited correction. No further OCR action is required. "
-              : "Retained OCR does not contain strong pack evidence; open Pack Resolution below. "
-            : !unitMatch
-              ? "Posted bottle quantity differs from retained OCR evidence; open Pack Resolution below. "
-              : ""}
-          Original OCR remains historical evidence and is never rewritten to manufacture a match.
-        </div>
-      ) : null}
-    </section>
-
-    <section id="financial-reconciliation" className="panel verification-target" style={{ marginTop: 16 }}>
-      <div className="section-row">
-        <div>
-          <h3>Financial Reconciliation</h3>
-          <p className="muted-text">This explains the variance; it does not silently change a received purchase.</p>
-        </div>
-        {ingestion ? <button type="button" className="secondary-button" onClick={viewOriginal}>View Original Invoice</button> : null}
-      </div>
-
-      <div className="financial-reconciliation-grid">
-        <div><span>Product Value</span><strong>{money.format(productValue)}</strong></div>
-        <div><span>+ Freight</span><strong>{money.format(Number(purchase.freight_amount || 0))}</strong></div>
-        <div><span>+ Transport / Handling</span><strong>{money.format(transportHandling)}</strong></div>
-        <div><span>− Discounts</span><strong>{money.format(discounts)}</strong></div>
-        <div><span>+ Misc / Round</span><strong>{money.format(miscRound)}</strong></div>
-        <div className="financial-reconciliation-total"><span>= WineShopPOS Landed Total</span><strong>{money.format(calculatedLanded)}</strong></div>
-        <div><span>OCR Printed Invoice Total</span><strong>{extractedTotal == null ? "—" : money.format(extractedTotal)}</strong></div>
-        <div className={financialMatch ? "financial-reconciliation-ok" : "financial-reconciliation-review"}>
-          <span>Unreconciled Difference</span>
-          <strong>{financialVariance == null ? "—" : money.format(Math.abs(financialVariance))}</strong>
-        </div>
-      </div>
-
-      {!financialMatch ? <div className="verification-guidance verification-guidance--review">
-        <strong>What to do:</strong> click <strong>View Original Invoice</strong> and check the invoice footer for rounding,
-        freight/transport, discount, misc/other charges or a printed total difference. Current difference:
-        <strong> {money.format(Math.abs(financialVariance || 0))}</strong>. Do not change stock or product line values
-        just to force a match; a received financial total needs an audited financial correction workflow.
-      </div> : <div className="verification-guidance verification-guidance--ok">
-        <strong>Financial verification resolved.</strong> The OCR printed total and WineShopPOS landed total are within the configured tolerance.
-      </div>}
-    </section>
+    <PurchaseVerificationEngine
+      purchase={purchase}
+      ingestion={ingestion}
+      postedUnits={postedUnits}
+      ocrPackAudit={ocrPackAudit}
+      corrections={corrections}
+      viewOriginal={viewOriginal}
+    />
 
     <section id="posted-purchase-lines" className="panel verification-target" style={{ marginTop: 16 }}>
       <h3>Posted Purchase Lines</h3>
@@ -301,10 +189,10 @@ export default function PurchaseDetails() {
     {ocrPackAudit.rows.length ? <section id="ocr-evidence" className="panel verification-target" style={{ marginTop: 16 }}>
       <h3>OCR Evidence Used for Physical Cross-check</h3>
       <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Old OCR is not rewritten after a stock correction.</p>
-      {!unitEvidenceAvailable && packResolved ? <div className="verification-guidance verification-guidance--ok">
-        <strong>No further pack action required.</strong> Original OCR could not prove Bottles/Case, but the posted receipt was resolved through the audited correction below.
+      {!unitEvidenceAvailable && packResolved ? <div className="verification-guidance verification-guidance--neutral">
+        <strong>Historical information only.</strong> Original OCR could not prove Bottles/Case. The business pack state is already resolved through the audited correction.
       </div> : !unitEvidenceAvailable ? <div className="verification-guidance verification-guidance--review">
-        <strong>Action required:</strong> OCR could not prove Bottles/Case. Review the original invoice and use Pack Resolution / Completed Purchase Correction.
+        <strong>Action required:</strong> OCR could not prove Bottles/Case and no audited pack resolution exists yet.
       </div> : null}
       <div className="data-table-wrapper"><SortableTable className="data-table" resizeKey="purchase-verification-ocr-evidence" defaultColumnWidths={[260,90,150,135,125,125,130]}>
         <thead><tr><th>OCR Description</th><th>Cases</th><th>Pack Hint</th><th>Expected Bottles</th><th>Rate/Case</th><th>Amount</th><th>Batch OCR</th></tr></thead>
