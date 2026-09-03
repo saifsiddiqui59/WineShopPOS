@@ -466,3 +466,56 @@ Permanent prevention:
 - Never use `git add .` or `git add -A`.
 - V5-F.1 rebuilt deliberately does not modify `ProductForm.jsx`; OCR category handling is corrected in the OCR-specific route.
 - If a new executor fails before commit, restore only its own target files from a pre-run backup.
+
+### 2026-09-03 — V5-F.2 Azure preview RBAC failure and account-key recovery
+
+Date / release / stage:
+2026-09-03 — V5-F.2 Confirm Line alias/global-error runtime continuation — Azure V3 preview upload.
+
+Symptom / failure class:
+The first runtime continuation successfully applied Supabase migration `20260903114500`, then Azure Storage upload using `--auth-mode login` failed with the Blob Data Contributor/Owner permission message.
+
+Authentication/tool/platform involved:
+Azure CLI on Windows Git Bash; management-plane access was available, but Entra login lacked Azure Storage Blob data-plane write RBAC for preview account `wspv35c9453b6e9a1`.
+
+Root cause:
+The continuation repeated the already-known failure class documented in this register: RBAC upload can fail while account-key upload is available. The executor should have reused the existing verified account-key resolution pattern instead of retrying `--auth-mode login`.
+
+Resolution used:
+- did not reapply Supabase migration `20260903114500`;
+- verified Local and Remote migration history already contain the target;
+- rebuilt current V3 for exact base `/v3-preview/` using a temporary Vite config rather than a rooted CLI `--base` argument;
+- retrieved the dedicated preview storage account key through Azure management-plane authorization without printing it;
+- used the key only in memory for the `v3-preview` upload and unset it afterward;
+- uploaded static/non-HTML content first and HTML last;
+- verified remote `index.html` SHA-256 equals the local build and public JS/CSS asset paths resolve.
+
+Permanent prevention rule:
+Every future WineShopPOS Azure Storage executor must read this failure register before deployment and reuse the documented auth pattern. It must never blindly default to `--auth-mode login` when this account is known to require the key fallback. Secrets must never be printed.
+
+Safe continuation point:
+Source was already on V3 and migration `20260903114500` was already live. Continuation began from preview build/deploy only.
+
+Verified outcome:
+RESOLVED by this single-file continuation. V3 preview deployment verified at `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`.
+
+Classification:
+Known deployment-auth failure repeated by an executor; application source and V5-F.2 database migration were not the cause.
+
+## Mandatory corruption / partial-artifact hygiene policy
+
+Status: REQUIRED for every future WineShopPOS patch, executor, continuation and deployment.
+
+Rules:
+1. Run `git fsck --full` before a release-owned mutation; stop on repository-object corruption.
+2. Critical tracked source/script/migration/document files (`.sh`, `.js`, `.jsx`, `.mjs`, `.sql`, `.md`, `.json`, `.html`, `.css`, `.py`) must not be zero-byte.
+3. Detect common partial artifacts (`*.partial`, `*.corrupt`, `*.rej`, `*.orig`, `*.tmp`) outside `.git` and `node_modules`. Do not delete unknown files automatically; stop and resolve ownership.
+4. Never use destructive Git cleanup to make a tree look clean.
+5. Before editing, all release-owned target files must be clean. Unrelated dirt is preserved.
+6. Temporary executor/build files must be removed by a trap on success or failure.
+7. Validate changed/staged text files for merge-conflict markers before commit.
+8. Stage only an explicit allowlist and reject any unexpected staged file.
+9. Re-run zero-byte/partial-artifact/conflict checks immediately before commit.
+10. After push, require local HEAD to equal `origin/<target-branch>`.
+11. A failed executor may not be described as “rolled back” if any remote DB/cloud mutation already succeeded; the actual partial state must be recorded.
+12. Every new failure class must be written into this canonical register before the next continuation is considered complete.

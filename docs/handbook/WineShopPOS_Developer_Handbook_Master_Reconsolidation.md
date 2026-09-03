@@ -1218,3 +1218,17 @@ Global Error Dialog is required for:
 - unhandled promise rejections.
 
 The dialog must remain readable, dismissible by Close/X/Esc, and must not imply that inventory changed when the failed operation did not post inventory.
+
+## V5-F.2 preview recovery and executor hygiene — 2026-09-03
+
+For V3 Azure Storage preview deployment:
+- read `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md` before creating/running the executor;
+- use the dedicated `/v3-preview/` build and `wspv35c9453b6e9a1` storage account;
+- if Blob RBAC login is unavailable, use the documented account-key fallback in memory only;
+- never print or persist the storage key;
+- never pass rooted `--base=/v3-preview/` through Git Bash to native Vite; use a temporary Vite config;
+- upload static assets before `index.html`;
+- verify exact remote index hash and referenced public assets;
+- never deploy V3 preview to production storage `wineshoppos`.
+
+Corruption hygiene is mandatory: Git-object integrity, zero-byte critical-file checks, partial-artifact checks, conflict-marker validation, exact staging allowlists and post-push HEAD verification are release gates.

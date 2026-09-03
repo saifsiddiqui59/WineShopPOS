@@ -1050,3 +1050,16 @@ WineShopPOS separates normal review guidance from system failures.
 - Use **Close**, the **X** button, or the **Esc** key to dismiss the dialog.
 - If **Confirm Line** fails, the line is not treated as confirmed. Review the displayed error before trying again.
 - Alias learning during **Confirm Line** does not receive inventory by itself. Inventory is posted only through the authorized Receive Stock workflow.
+
+## V5-F.2 Confirm Line preview retest
+
+V3 preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+
+For this regression:
+1. Open Invoice OCR in the V3 preview.
+2. Re-run the V5-F.2 test invoice.
+3. Review the Product Master match and quantity/rate.
+4. Click **Confirm Line**.
+5. Expected: the prior `normalized_alias` generated-column error does not occur.
+6. If a real system/database/runtime error occurs, WineShopPOS shows the larger error dialog with **Close**, **X**, and **Esc**.
+7. Stop after Confirm Line verification for this focused test; do **not** use Receive Stock.

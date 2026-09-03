@@ -226,3 +226,20 @@ Updated in this push:
 - generated public user manual copies
 
 Documentation rule: every WineShopPOS implementation push must update the relevant canonical documentation in the same commit. A code-only feature/fix push is not considered complete.
+
+## V5-F.2 preview recovery + failure/hygiene update — 2026-09-03
+
+Updated together in this release:
+- `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md`
+- `docs/PROJECT_CONTEXT.md`
+- `docs/DOCUMENTATION_REGISTER.md`
+- `docs/handbook/WineShopPOS_Developer_Handbook_Master_Reconsolidation.md`
+- `docs/manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
+- generated public manual markdown/HTML
+
+Runtime verification:
+- V3 source: `b256cbd12ef1fa2b3e213f2db063b5d9f9623585`
+- database migration: `20260903114500` already remote
+- preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+- deployed index SHA-256: `66c84836237b568267d70d769b785989f4e198421e45bea572cfe9b898834b6c`
+- production frontend not deployed

@@ -656,3 +656,17 @@ Inventory Current Stock resizing was already committed on V3 before V5-H (`resiz
 - Invoice OCR technical catches now route through the Global Error Dialog.
 - Inventory is not changed by Confirm Line alias learning.
 - UAT must re-test V5F-001/V5F-002 Confirm Line after the migration is applied to the intended V3 environment.
+
+<!-- V5F2_PREVIEW_RECOVERY_VERIFIED_20260903 -->
+## V5-F.2 PREVIEW RECOVERY VERIFIED 2026-09-03
+
+- V3 source SHA deployed: `b256cbd12ef1fa2b3e213f2db063b5d9f9623585`.
+- Supabase migration `20260903114500` was already applied and was not re-applied.
+- Prior Azure `--auth-mode login` preview upload failure was resolved with the failure-register-approved account-key path; the key was never printed and was unset after use.
+- V3 preview is isolated at `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/` under `/v3-preview/`.
+- Local and remote preview `index.html` SHA-256 matched: `66c84836237b568267d70d769b785989f4e198421e45bea572cfe9b898834b6c`.
+- Exact JS/CSS paths were verified under `/v3-preview/assets/`; no Git-Bash/MSYS Windows path contamination was present.
+- Production storage account `wineshoppos` was not deployed.
+- Global Error Dialog + Confirm Line alias fix are now present in the V3 preview build.
+- Inventory/Receive Stock was not intentionally changed by this continuation.
+- Manual authenticated UAT remains required for Confirm Line behavior.
