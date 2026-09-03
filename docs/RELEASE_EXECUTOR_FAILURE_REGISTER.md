@@ -429,3 +429,27 @@ Verified outcome:
 - Production main: unchanged by this failed run.
 - Database schema/purchases/inventory/FIFO/sales: unchanged by this failed run.
 - Live `product-enrichment` Edge Function: version 2 was already deployed separately before this executor and is not part of this failure.
+
+### 2026-09-03 — V5-F.1 cleanup left ProductForm worktree dirty
+
+Release/stage:
+Cleanup after failed V5-F.1 OCR/Product Enrichment executor.
+
+Symptom:
+The failed-run cleanup reported successful restoration of the V5-F.1 tracked targets, but its final `git status --porcelain` still showed:
+`M src/components/ProductForm.jsx`.
+
+Classification:
+Git/worktree cleanup verification failure.
+
+Resolution:
+Treat the remaining `ProductForm.jsx` modification as failed-run dirt because that file was an explicit V5-F.1 mutation target and was clean before the failed run. Restore only that exact file from current `origin/V3`, then verify it is clean.
+
+Permanent prevention:
+Every failed-run cleanup must verify each owned target with both:
+- `git diff --quiet -- <path>`
+- a final path-specific `git status --porcelain -- <path>`
+and must fail before printing cleanup success if either check reports dirt.
+
+Policy update from user:
+Going forward, failed executors must remove dirty files they created rather than preserving them. Pre-existing unrelated project dirt must not be deleted unless explicitly requested.
