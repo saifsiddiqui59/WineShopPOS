@@ -12,6 +12,8 @@ export default function AddProduct(){
   const initial=(barcode||fromOcr)?{
     barcode,
     name:params.get("name")||"",
+    brand:params.get("brand")||"",
+    category:params.get("category")||"Whisky",
     purchasePrice:Number(params.get("purchasePrice")||0),
     sizeMl:Math.max(1,Number(params.get("sizeMl")||750)),
     mrp:Number.isFinite(ocrMrp)?ocrMrp:0,
@@ -40,6 +42,9 @@ export default function AddProduct(){
     else navigate("/products");
   }
 
+  const enriched=params.get("enriched")==="1";
+  const enrichmentSources=params.get("enrichmentSources")||"";
+
   return <div>
     <div className="page-heading">
       <div><h2>Add Product</h2><p>{fromOcr?"Create the unmatched OCR product. Saving returns to the invoice review and links this line.":barcode?"Unknown scanned barcode has been prefilled.":"Create product directly in Supabase"}</p></div>
@@ -48,6 +53,12 @@ export default function AddProduct(){
         <button type="button" className="secondary-button" onClick={cancel}>× Close</button>
       </div>
     </div>
+    {enriched ? (
+      <div className="purchase-message" style={{marginBottom:12}}>
+        External catalogue suggestion applied from <strong>{enrichmentSources || "external lookup"}</strong>.
+        Review barcode, corrected name, brand and size before saving. Product Master becomes authoritative only after you create the product.
+      </div>
+    ) : null}
     <ProductForm
       key={`${barcode}-${params.get("name")||""}-${fromOcr}`}
       initialValue={initial}

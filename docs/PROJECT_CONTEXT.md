@@ -591,3 +591,11 @@ Ageing/FIFO primary human lot label is Receipt Ref derived from supplier first t
 <!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
 ## 2026-09-03 — V5-E
 V5-E hybrid purchase verification: Active Exceptions + Resolution State + Historical Evidence. Amber only for open actions; green for resolved; historical OCR neutral. Financial verification decisions are audited separately and never mutate purchase totals, inventory, FIFO or OCR. Defaults: ₹1 auto tolerance, ₹10 manager-review threshold. Technical FIFO lot removed from normal UI.
+
+<!-- V5F_PRODUCT_MASTER_FIRST_EXTERNAL_ENRICHMENT_20260903 -->
+## 2026-09-03 — V5-F Product Master-first external enrichment
+Invoice OCR resolution order is Product Master -> learned OCR alias -> external enrichment only when unresolved/uncertain. resolve_product_master_text adds size-aware scoring. Human-confirmed OCR mappings use audited remember_product_alias.
+
+product-enrichment is a JWT-protected Supabase Edge Function. UPCitemdb performs text discovery to obtain barcode candidates; top barcode candidates are enriched from Open Food Facts. Results are suggestions only, cached per shop/query for 30 days, and never mutate Product Master or stock automatically.
+
+Find Product Info appears only on unresolved/uncertain OCR lines. If an external candidate barcode already exists locally, WineShopPOS links the existing Product Master product instead of creating a duplicate. External images are reference previews only.

@@ -998,3 +998,11 @@ Ageing/FIFO uses a readable Receipt Ref such as METRI-02/09. Hover it to see the
 <!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
 ## 2026-09-03 — V5-E
 V5-E Purchase Verification: amber means action required, green means resolved, historical OCR is neutral. Financial exceptions can be accepted as reviewed variance or marked OCR total incorrect with an audited reason; this does not change purchase amount, stock or FIFO. Receipt Ref remains user-facing; technical lot is internal.
+
+<!-- V5F_PRODUCT_MASTER_FIRST_EXTERNAL_ENRICHMENT_20260903 -->
+## OCR product matching and Find Product Info
+WineShopPOS checks Product Master first. A spelling error such as TABORG can still suggest the existing Tuborg product; when you confirm it, WineShopPOS remembers that OCR wording for later invoices.
+
+For a genuinely unresolved line, click Find Product Info. Review suggested barcode, corrected name, brand, size and reference image, then choose Use Candidate to prefill Add Product. If the suggested barcode already exists in Product Master, WineShopPOS links the existing product instead of creating a duplicate.
+
+External catalogue information is a suggestion. Product Master becomes authoritative only after your approval.

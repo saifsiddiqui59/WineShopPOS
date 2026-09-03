@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import SupplierEditor from "../components/SupplierEditor";
 import { storeManualInvoice } from "../lib/invoiceClient";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import ProductEnrichmentPanel from "../components/ProductEnrichmentPanel";
 
 const STRONG_MATCH = 0.90;
 const REVIEW_KEY = "wineshop_ocr_review_state";
@@ -411,9 +412,10 @@ export default function AutomationHub() {
     for (let i = 0; i < (invoice.items || []).length; i += 1) {
       const item = invoice.items[i];
       const { data: candidates, error } = await supabase.rpc(
-        "match_product_text",
+        "resolve_product_master_text",
         {
           p_text: item.description,
+          p_size_ml: inferOcrSizeMl(item),
           p_supplier_id: nextSupplierId || null,
           p_limit: 8,
         },
@@ -669,47 +671,15 @@ export default function AutomationHub() {
   }
 
   async function saveAlias(index, productId) {
-    const aliasText = String(
-      result?.items?.[index]?.description || "",
-    ).trim();
+    const aliasText = String(result?.items?.[index]?.description || "").trim();
+    if (!aliasText || !productId) return;
 
-    if (!aliasText || !productId || !profile?.shop_id) return;
-
-    const normalizedAlias = normalize(aliasText);
-
-    let query = supabase
-      .from("product_aliases")
-      .select("id,product_id")
-      .eq("shop_id", profile.shop_id)
-      .eq("normalized_alias", normalizedAlias);
-
-    query = confirmedSupplier?.id
-      ? query.eq("supplier_id", confirmedSupplier.id)
-      : query.is("supplier_id", null);
-
-    const { data: existing, error: findError } = await query.limit(1);
-    if (findError) throw findError;
-
-    if (existing?.[0]?.id) {
-      if (existing[0].product_id !== productId) {
-        const { error } = await supabase
-          .from("product_aliases")
-          .update({ product_id: productId })
-          .eq("id", existing[0].id);
-        if (error) throw error;
-      }
-      return;
-    }
-
-    const { error } = await supabase.from("product_aliases").insert({
-      shop_id: profile.shop_id,
-      product_id: productId,
-      supplier_id: confirmedSupplier?.id || null,
-      alias_text: aliasText,
-      created_by: profile.user_id || null,
+    const { error } = await supabase.rpc("remember_product_alias", {
+      p_product_id: productId,
+      p_alias_text: aliasText,
+      p_supplier_id: confirmedSupplier?.id || null,
     });
-
-    if (error && error.code !== "23505") throw error;
+    if (error) throw error;
   }
 
   async function confirmLine(index) {
@@ -787,6 +757,51 @@ export default function AutomationHub() {
       unitsPerCase: String(row.unitsPerCase || 12),
     });
 
+    navigate(`/products/new?${params.toString()}`);
+  }
+
+  function inferCandidateCategory(candidate, item) {
+    const text = normalize(`${candidate?.title || ""} ${candidate?.category || ""} ${item?.description || ""}`);
+    const rules = [
+      ["beer","Beer"],["whisky","Whisky"],["whiskey","Whisky"],["wine","Wine"],
+      ["vodka","Vodka"],["rum","Rum"],["gin","Gin"],["brandy","Brandy"],
+      ["tequila","Tequila"],["liqueur","Liqueur"],["cider","Cider"],["champagne","Champagne"],
+    ];
+    return rules.find(([token]) => text.includes(token))?.[1] || "Other";
+  }
+
+  function createProductFromCandidate(index, candidate) {
+    const item = result?.items?.[index];
+    const row = resolution[index] || {};
+    const candidateBarcode = String(candidate?.barcode || "").trim();
+
+    const existing = candidateBarcode
+      ? activeProducts.find((product) => String(product.barcode || "").trim() === candidateBarcode)
+      : null;
+
+    if (existing) {
+      chooseProduct(index, existing.id);
+      setMessage(`External candidate barcode ${candidateBarcode} already exists in Product Master as ${existing.name}. Existing Product Master was linked instead of creating a duplicate.`);
+      return;
+    }
+
+    sessionStorage.setItem(REVIEW_KEY, JSON.stringify({
+      result,matches,resolution,supplierId,confirmedSupplier,ingestionId,sourceFileName,charges,
+    }));
+
+    const params = new URLSearchParams({
+      ocr:"1",ocrLineIndex:String(index),enriched:"1",
+      barcode:candidateBarcode,
+      name:String(candidate?.title || item?.description || ""),
+      brand:String(candidate?.brand || ""),
+      category:inferCandidateCategory(candidate,item),
+      purchasePrice:String(row.purchasePrice || item?.unitPrice || 0),
+      sizeMl:String(Number(candidate?.sizeMl || 0)>0?Number(candidate.sizeMl):inferOcrSizeMl(item)),
+      mrp:String(Math.max(0,Number(item?.mrp || 0))),
+      sellingPrice:String(Number(item?.mrp || 0)>0?Number(item.mrp)+15:0),
+      unitsPerCase:String(row.unitsPerCase || 12),
+      enrichmentSources:String((candidate?.providers || []).join(",")),
+    });
     navigate(`/products/new?${params.toString()}`);
   }
 
@@ -1590,13 +1605,26 @@ export default function AutomationHub() {
                         )}{" "}
 
                         {!row.productId ? (
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => createProduct(index)}
-                          >
-                            Create New Product
-                          </button>
+                          <>
+                            <button type="button" className="secondary-button" onClick={() => createProduct(index)}>
+                              Create New Product
+                            </button>{" "}
+                            <ProductEnrichmentPanel
+                              shopId={profile?.shop_id}
+                              item={item}
+                              sizeMl={inferOcrSizeMl(item)}
+                              disabled={busy}
+                              onUseCandidate={(candidate) => createProductFromCandidate(index, candidate)}
+                            />
+                          </>
+                        ) : Number(best?.score || 0) < STRONG_MATCH && row.status !== "CONFIRMED" ? (
+                          <ProductEnrichmentPanel
+                            shopId={profile?.shop_id}
+                            item={item}
+                            sizeMl={inferOcrSizeMl(item)}
+                            disabled={busy}
+                            onUseCandidate={(candidate) => createProductFromCandidate(index, candidate)}
+                          />
                         ) : null}
                       </td>
                     </tr>

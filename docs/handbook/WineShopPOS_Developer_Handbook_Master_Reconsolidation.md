@@ -1149,3 +1149,9 @@ Amber = review/action, green = resolved/verified, neutral = information. Status 
 <!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
 ## 2026-09-03 — V5-E
 V5-E architecture: purchase_verification_resolutions is verification state, not accounting state. Verification RPCs must never mutate purchase/items/inventory/FIFO/OCR. Amber=OPEN, green=resolved/corrected/accepted, neutral=historical/informational.
+
+<!-- V5F_PRODUCT_MASTER_FIRST_EXTERNAL_ENRICHMENT_20260903 -->
+## V5-F OCR product-resolution architecture
+Never call external catalogues before Product Master matching. Flow: resolve_product_master_text -> human confirmation/remember_product_alias -> external enrichment only if unresolved. External candidates never post inventory and never mutate products automatically.
+
+The Edge Function validates logged-in user/shop membership and keeps third-party calls server-side. UPCitemdb is text discovery; Open Food Facts is barcode enrichment. Cache TTL is 30 days. External images are previews only and are not copied to product storage automatically.

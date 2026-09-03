@@ -189,3 +189,6 @@ Preview-only fallback imagery for the seven current catalogue products. Existing
 <!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
 ## 2026-09-03 — V5-E
 V5-E: hybrid active-exception verification engine, audited non-destructive financial resolution, centralized tolerance defaults, technical FIFO lot hidden from normal UI.
+
+<!-- V5F_PRODUCT_MASTER_FIRST_EXTERNAL_ENRICHMENT_20260903 -->
+- V5-F: size-aware Product Master resolver, audited alias learning, cached JWT-protected UPCitemdb + Open Food Facts enrichment, duplicate-by-barcode protection, and external candidate prefill.
