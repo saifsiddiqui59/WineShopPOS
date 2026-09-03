@@ -1069,3 +1069,15 @@ For this regression:
 Cancel Review keeps the original invoice saved and does not change stock.
 
 To continue, use **Invoice Inbox → Reopen Review**, or select the same cancelled PDF again. If you select the same PDF again, WineShopPOS reopens and reuses the original invoice record before running OCR again.
+
+## Products and Inventory
+
+Products defines the item (name, barcode, category, pack and prices). Inventory holds the live quantity and audited stock movements. Inventory now shows key Product Master fields beside live stock.
+
+## Physical Stock Count
+
+Before a count starts, Stock Count shows current system stock. Start Stock Count only when ready to physically scan/count.
+
+## Invoice dates
+
+Supplier invoice dates use **DD/MM/YYYY**.

@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { getInvoiceReadUrl } from "../lib/invoiceClient";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import { formatDateIN } from "../lib/dateFormat";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 
@@ -179,7 +180,7 @@ export default function PurchaseDetails() {
             <td><strong>{item.quantity}</strong></td>
             <td>{money.format(Number(item.purchase_price || 0))}</td>
             <td>{item.batch_number || "—"}</td>
-            <td>{item.expiry_date || "—"}</td>
+            <td>{formatDateIN(item.expiry_date)}</td>
             <td>{money.format(Number(item.line_total || 0))}</td>
           </tr>)}
         </tbody>

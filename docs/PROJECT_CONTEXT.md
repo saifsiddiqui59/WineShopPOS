@@ -687,3 +687,7 @@ Inventory Current Stock resizing was already committed on V3 before V5-H (`resiz
 - Deployed index SHA-256: `89adf94e26c994b66109a3a0357e6636d314bfbe7deaeeb082f922fdf08aa545`
 - Cancelled same-file re-analysis reuses the existing ingestion and calls `invoice_reopen_review`.
 - Production frontend storage was not deployed.
+
+## V5-G CONSOLIDATED PAGE/DATA CLEANUP — 2026-09-03
+
+Supplier duplicates are merged/prevented; invoice dates use/display DD/MM/YYYY; Stock Count shows live baseline before a session; Product Master and Inventory stay separate in the database but are combined in Inventory operational UI; SortableTable layout fills panels; Purchase Intelligence no longer embeds OCR; all routed page modules are source-audited plus full src lint/build.

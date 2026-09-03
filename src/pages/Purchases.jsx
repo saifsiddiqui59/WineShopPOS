@@ -3,6 +3,7 @@ import { useShop } from "../context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import { formatDateIN } from "../lib/dateFormat";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 const empty=()=>({description:"",productId:"",caseCount:0,unitsPerCase:12,looseBottles:0,quantity:0,purchasePrice:0,batchNumber:"",expiryDate:""});
@@ -178,6 +179,6 @@ export default function Purchases(){
         <button className="primary-button" disabled={busy||landedTotal<0}>{busy?"Receiving...":"Confirm & Receive Stock"}</button>
       </div>
     </form>
-    <section className="panel" style={{marginTop:16}}><h3>Recent Purchases</h3><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Purchase</th><th>Invoice</th><th>Supplier</th><th>Date</th><th>Units</th><th>Product Value</th><th>Landed / Invoice Total</th><th>Action</th></tr></thead><tbody>{purchases.slice(0,20).map((p)=><tr key={p.id}><td>{p.purchaseNumber}</td><td>{p.invoiceNumber}</td><td>{p.supplierName}</td><td>{p.invoiceDate}</td><td>{p.totalUnits}</td><td>{money.format(p.total)}</td><td>{money.format(p.landedTotal ?? p.total)}</td><td><button type="button" className="secondary-button" onClick={()=>navigate(`/purchasing/receipts/${p.id}`)}>Verify Receipt</button></td></tr>)}</tbody></table></div></section>
+    <section className="panel" style={{marginTop:16}}><h3>Recent Purchases</h3><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Purchase</th><th>Invoice</th><th>Supplier</th><th>Date</th><th>Units</th><th>Product Value</th><th>Landed / Invoice Total</th><th>Action</th></tr></thead><tbody>{purchases.slice(0,20).map((p)=><tr key={p.id}><td>{p.purchaseNumber}</td><td>{p.invoiceNumber}</td><td>{p.supplierName}</td><td>{formatDateIN(p.invoiceDate)}</td><td>{p.totalUnits}</td><td>{money.format(p.total)}</td><td>{money.format(p.landedTotal ?? p.total)}</td><td><button type="button" className="secondary-button" onClick={()=>navigate(`/purchasing/receipts/${p.id}`)}>Verify Receipt</button></td></tr>)}</tbody></table></div></section>
   </div>;
 }

@@ -42,7 +42,7 @@ export const MODULE_TABS = {
     { path: "/purchasing/intelligence", label: "Purchase Intelligence", roles: ["ADMIN", "MANAGER"], tier: "PRO" },
   ],
   inventory: [
-    { path: "/inventory", label: "Overview", roles: ["ADMIN", "MANAGER"] },
+    { path: "/inventory", label: "Stock & Products", roles: ["ADMIN", "MANAGER"] },
     { path: "/inventory/count", label: "Stock Count", roles: ["ADMIN", "MANAGER"] },
     { path: "/inventory/transfers", label: "Transfers", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
     { path: "/inventory/intelligence", label: "Intelligence", roles: ["ADMIN", "MANAGER"], tier: "PRO" },

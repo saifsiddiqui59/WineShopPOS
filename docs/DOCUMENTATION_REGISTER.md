@@ -259,3 +259,7 @@ Updated together:
 ## V5-F.3 CANCELLED REVIEW PREVIEW VERIFIED — 2026-09-03
 
 Source `b9ba27434da25c751a0b0ed9b9ec1bd5236688c1` verified at `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`; index SHA-256 `89adf94e26c994b66109a3a0357e6636d314bfbe7deaeeb082f922fdf08aa545`.
+
+## V5-G CONSOLIDATED PAGE/DATA CLEANUP — 2026-09-03
+
+Updated: supplier data/validation, invoice date parsing/display, Stock Count, Inventory/Product operational view, SortableTable, Purchase Intelligence, routed-page audit/regression and canonical documentation.

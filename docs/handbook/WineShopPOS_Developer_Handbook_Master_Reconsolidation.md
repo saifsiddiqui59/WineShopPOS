@@ -1241,3 +1241,11 @@ Invoice duplicate-state rule:
 - The existing ingestion id is reused.
 - READY_TO_RECEIVE / RECEIVED / COMPLETED stay protected.
 - Never create a second ingestion simply to restart the same cancelled file.
+
+## V5-G Product vs Inventory and page consistency — 2026-09-03
+
+Products = SKU/barcode/name/category/pack/prices master. Inventory = live quantity/movements/counts/FIFO keyed by product_id. Do not merge the DB tables; combine them in operator UI.
+
+Supplier names are unique per shop after normalized alphanumeric comparison. Indian numeric supplier invoice dates use retained raw DD/MM/YYYY evidence, store ISO internally, and display DD/MM/YYYY.
+
+Every navigation/layout release must source-audit all routed pages and run full src lint/build; authenticated visual UAT remains separately pending.

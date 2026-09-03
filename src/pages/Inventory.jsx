@@ -1,5 +1,6 @@
 import SortableTable from "../components/ui/SortableTable";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 import ProductThumb from "../components/ui/ProductThumb";
 
@@ -52,7 +53,7 @@ export default function Inventory() {
   return (
     <div>
       <div className="page-heading">
-        <div><h2>Inventory</h2><p>Live Supabase stock · value {money.format(inventoryValue)}</p></div>
+        <div><h2>Inventory & Product Stock</h2><p>Product Master defines the SKU; Inventory holds live quantity · value {money.format(inventoryValue)}</p></div><Link className="secondary-button" to="/products">Open Product Master</Link>
       </div>
 
       <div className="settings-grid">
@@ -68,16 +69,20 @@ export default function Inventory() {
           <div className="data-table-wrapper">
             {loadingData ? <p>Loading...</p> : (
               <SortableTable className="data-table" resizeKey="inventory-current-stock-v1">
-                <thead><tr><th>Product</th><th>Stock</th><th>Minimum</th><th>Status</th></tr></thead>
+                <thead><tr><th>Product</th><th>Barcode</th><th>Category</th><th>Stock</th><th>Minimum</th><th>Purchase Cost</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>
                   {filteredActive.map((p) => {
                     const stock = getStock(p.id);
                     return (
                       <tr key={p.id}>
                         <td><div className="product-cell-with-image"><ProductThumb product={p} size="sm"/><span>{p.name}</span></div></td>
-                        <td>{stock}</td>
+                        <td>{p.barcode || "Missing barcode"}</td>
+                        <td>{p.category || "—"}</td>
+                        <td><strong>{stock}</strong></td>
                         <td>{p.minimumStock}</td>
+                        <td>{money.format(Number(p.purchasePrice || 0))}</td>
                         <td>{stock <= p.minimumStock ? "LOW STOCK" : "IN STOCK"}</td>
+                        <td><Link className="secondary-button" to={`/products/${p.id}/edit`}>Edit Product</Link></td>
                       </tr>
                     );
                   })}

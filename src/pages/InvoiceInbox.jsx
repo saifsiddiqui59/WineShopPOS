@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { getInvoiceReadUrl } from "../lib/invoiceClient";
+import { formatDateIN, formatDateTimeIN } from "../lib/dateFormat";
 
 const REVIEW_KEY="wineshop_ocr_review_state";
 const PURCHASE_DRAFT_KEY="wineshop_ocr_purchase_draft";
@@ -206,13 +207,14 @@ export default function InvoiceInbox(){
       </div>
       <div className="data-table-wrapper"><SortableTable className="data-table">
         <thead><tr>
-          <th>Received</th><th>Invoice</th><th>Supplier</th><th>Source</th><th>Status</th>
+          <th>Received</th><th>Invoice</th><th>Invoice Date</th><th>Supplier</th><th>Source</th><th>Status</th>
           <th>Total</th><th>Draft</th><th>Purchase</th><th>Actions</th>
         </tr></thead>
         <tbody>
           {rows.map(row=><tr key={row.id}>
-            <td>{row.received_at?new Date(row.received_at).toLocaleString("en-IN"):"—"}</td>
+            <td>{formatDateTimeIN(row.received_at)}</td>
             <td>{row.extracted_invoice_number||row.original_file_name}</td>
+            <td>{formatDateIN(row.extracted_invoice_date)}</td>
             <td>{row.extracted_supplier_name||"Pending OCR"}</td>
             <td>{row.source}</td>
             <td><span className={`invoice-status-badge ${statusMeta(row.review_status).tone}`}>{statusMeta(row.review_status).label}</span></td>
@@ -238,7 +240,7 @@ export default function InvoiceInbox(){
               </>:null}
             </div></td>
           </tr>)}
-          {!rows.length&&!busy?<tr><td colSpan="9">No invoices for selected month/status.</td></tr>:null}
+          {!rows.length&&!busy?<tr><td colSpan="10">No invoices for selected month/status.</td></tr>:null}
         </tbody>
       </SortableTable></div>
     </section>

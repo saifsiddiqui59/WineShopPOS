@@ -346,6 +346,19 @@ export default function SortableTable({
     .filter(Boolean)
     .join(" ");
 
+  const explicitWidthTotal = Array.from(
+    { length: displayColumnCount },
+    (_, column) => widthFor(column) || 0,
+  ).reduce((sum, value) => sum + value, 0);
+  const hasConfiguredWidths =
+    Boolean(resizeKey) ||
+    defaultColumnWidths.some((value) => Number(value) > 0) ||
+    Object.values(widths).some((value) => Number(value) > 0);
+  const tableWidth =
+    hasConfiguredWidths && explicitWidthTotal > 0
+      ? `max(100%, ${explicitWidthTotal}px)`
+      : "100%";
+
   return (
     <>
       {resizeKey ? (
@@ -371,12 +384,8 @@ export default function SortableTable({
         className={tableClass}
         style={{
           ...props.style,
-          width: `${Array.from({ length: displayColumnCount }, (_, column) =>
-            widthFor(column) || 0
-          ).reduce((sum, value) => sum + value, 0)}px`,
-          minWidth: `${Array.from({ length: displayColumnCount }, (_, column) =>
-            widthFor(column) || 0
-          ).reduce((sum, value) => sum + value, 0)}px`,
+          width: tableWidth,
+          minWidth: tableWidth,
           maxWidth: "none",
         }}
       >

@@ -558,3 +558,11 @@ READY_TO_RECEIVE, RECEIVED, COMPLETED and terminal duplicate-resolution states r
 ## ZERO-TOLERANCE CLEAN WORKTREE POLICY — 2026-09-03
 
 Normal WineShopPOS feature/fix/deploy work must start and finish with `git status --porcelain` empty. Unknown dirty files are never silently deleted. Destructive shortcuts remain prohibited: `git reset --hard`, `git clean`, `git stash`, `git checkout .`, `git restore .`, `git add .`, and `git add -A`.
+
+### 2026-09-03 — V5-G page/data consistency audit
+
+Observed: normalized duplicate suppliers; Stock Count blank before session; SortableTable content-width collapse on pages without configured widths; Purchase Intelligence embedded the complete Invoice OCR page; Azure interpreted ambiguous `03/09/2026` as March 9 despite retained Indian DD/MM/YYYY evidence.
+
+Resolution: supplier merge + normalized unique index + UI normalized check; live Stock Count baseline; global SortableTable full-width fallback; remove embedded OCR; raw DMY invoice date preference and correction of retained existing DMY records; Product/Inventory integrated operational view; audit every routed page module and full src lint/build.
+
+Verification boundary: automated route/source/build/transport checks do not replace authenticated manual visual UAT of every screen.
