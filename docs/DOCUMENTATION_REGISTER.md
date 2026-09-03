@@ -198,3 +198,6 @@ V5-E: hybrid active-exception verification engine, audited non-destructive finan
 
 <!-- V5G1_INVENTORY_RESIZE_20260903 -->
 - V5-G.1: Inventory Current Stock table now supports persisted one-sided column resizing.
+
+<!-- V5H_FAST_POS_AND_HEADER_FIX_20260903 -->
+- V5-H: restores full Royal 21 center hero instead of duplicate small shop-name pill; Square-inspired Fast POS Billing register UX; redeploys already-committed Inventory column resizing. No database or transaction-backend changes.

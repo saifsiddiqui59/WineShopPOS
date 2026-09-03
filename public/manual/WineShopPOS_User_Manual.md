@@ -1018,3 +1018,15 @@ The top header uses the compact shop-name selector again.
 <!-- V5G1_INVENTORY_RESIZE_20260903 -->
 ## Inventory Current Stock column widths
 On Inventory > Current Stock, drag a column's right edge to resize it. The left edge stays fixed and the selected column width is remembered in the browser.
+
+<!-- V5H_FAST_POS_AND_HEADER_FIX_20260903 -->
+## Fast POS Billing
+Fast POS is optimized for counter speed:
+1. Scan a barcode or type in the large search field.
+2. You can also tap a category and product tile.
+3. Current Sale remains visible with quantity controls and line totals.
+4. Open Customer & Offers only for loyalty, coupons, store credit or gift vouchers.
+5. Review Amount to Collect and choose CASH, UPI or CARD.
+6. Complete Sale. Existing approval rules still apply to manual discount or changed sale price.
+
+Inventory Current Stock columns use the right-edge resize control and remember widths in the browser.

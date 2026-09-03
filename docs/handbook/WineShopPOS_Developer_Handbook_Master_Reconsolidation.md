@@ -1167,3 +1167,11 @@ Owner Profit SortableTable uses resizeKey `owner-profit-sku-profitability-v1`.
 <!-- V5G1_INVENTORY_RESIZE_20260903 -->
 ## V5-G.1 Inventory table resize
 Inventory Current Stock uses the shared SortableTable resize engine with `resizeKey="inventory-current-stock-v1"`. This is presentation-only; stock quantities and adjustment behavior are unchanged.
+
+<!-- V5H_FAST_POS_AND_HEADER_FIX_20260903 -->
+## V5-H Fast POS UI contract
+POS.jsx keeps the existing transaction functions and Supabase/database flow. V5-H changes render hierarchy plus search-focus/category UI state. Do not bypass add, completeSale, request_sale_override, commercial_quote, stock checks or offline queue behavior.
+
+The register is scan/search-first with product tiles and a sticky current-sale/payment panel. Customer and commercial-benefit inputs remain available under Customer & Offers.
+
+Premium Royal 21 must use the established RoyalHero markup. Do not introduce a second compact shop-name pill. Do not alter Royal animation CSS or AnimatedBrand as part of POS work.

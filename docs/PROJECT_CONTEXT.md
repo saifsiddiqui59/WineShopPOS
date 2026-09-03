@@ -613,3 +613,13 @@ The top header shop control is restored to the compact shop-name selector treatm
 <!-- V5G1_INVENTORY_RESIZE_20260903 -->
 ## 2026-09-03 — V5-G.1 Inventory Current Stock column resizing
 Inventory > Current Stock now opts into the existing one-sided persisted SortableTable resize engine using `resizeKey="inventory-current-stock-v1"`. No inventory logic, stock adjustment workflow, database schema, FIFO or Owner Center logic changed.
+
+<!-- V5H_FAST_POS_AND_HEADER_FIX_20260903 -->
+## 2026-09-03 — V5-H Fast POS register + premium header correction
+The accidental compact Royal 21 shop-name pill from V5-G is removed. Premium Royal 21 shops again use the established full center RoyalHero lockup and invisible shop-switch layer. Existing Royal animation CSS, user crown asset, topbar background effects and WineShopPOS sidebar animation are not modified by V5-H.
+
+Fast POS Billing adopts a Square-inspired retail-register interaction model while preserving WineShopPOS transaction logic: large scan/search dock, category/quick-product tiles, one-tap item add, sticky current-sale panel, compact quantity/price controls, collapsible Customer & Offers, prominent amount-to-collect and CASH/UPI/CARD actions.
+
+The existing barcode handler, stock guard, session cart persistence, customer/loyalty/store credit/gift voucher quote, price/discount approval, offline-sale support, auto print and completeSale backend flow remain in place.
+
+Inventory Current Stock resizing was already committed on V3 before V5-H (`resizeKey=inventory-current-stock-v1`); V5-H rebuilds and redeploys current V3 so that change reaches preview.

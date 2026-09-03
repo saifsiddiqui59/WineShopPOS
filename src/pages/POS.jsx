@@ -17,10 +17,12 @@ export default function POS(){
   const navigate=useNavigate();
 
   const[search,setSearch]=useState("");
+  const[categoryFilter,setCategoryFilter]=useState("ALL");
   const[cart,setCart]=useState([]);
   const cartStorageKey=useMemo(()=>`wineshop_pos_cart_v3_${profile?.shop_id||"unknown"}`,[profile?.shop_id]);
   const loadedCartKeyRef=useRef("");
   const posMountedAtRef=useRef(Date.now());
+  const searchInputRef=useRef(null);
   const[paymentMethod,setPaymentMethod]=useState("CASH");
   const[paymentReference,setPaymentReference]=useState("");
   const[discount,setDiscount]=useState(0);
@@ -50,6 +52,10 @@ export default function POS(){
   useEffect(()=>{
     setAutoPrint(getReceiptAutoPrint(profile?.shop_id));
   },[profile?.shop_id]);
+
+  useEffect(()=>{
+    searchInputRef.current?.focus();
+  },[]);
 
   function toggleAutoPrint(){
     const next=!autoPrint;
@@ -302,74 +308,173 @@ export default function POS(){
   }
 
   const finalDue=quote?Number(quote.external_payment_due||0):manualTotal;
+  const categoryOptions=[
+    "ALL",
+    ...Array.from(new Set(active.map((p)=>String(p.category||"").trim()).filter(Boolean))),
+  ];
+  const quickProducts=active
+    .filter((p)=>categoryFilter==="ALL"||p.category===categoryFilter)
+    .slice(0,18);
+  const displayProducts=search.trim()?results:quickProducts;
+  const cartUnits=cart.reduce((sum,item)=>sum+Number(item.quantity||0),0);
 
-  return <div className="pos-page"><div className="page-heading">
-      <div><h2>Fast POS Billing</h2><p>Scan → Cart → Rewards → Pay → Print with controlled overrides.</p></div>
-      <div className="button-row"><button type="button" className="secondary-button" onClick={toggleAutoPrint} title="Device setting. OFF still opens the receipt without opening the print dialog.">Auto Print: {autoPrint?"ON":"OFF"}</button><button type="button" className="secondary-button" onClick={()=>{setCart([]);setMessage("Current bill cleared.");}}>Clear Cart</button><button className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button></div>
+  return <div className="pos-page pos-v5h">
+    <div className="page-heading pos-v5h-heading">
+      <div>
+        <h2>Fast POS Billing</h2>
+        <p>Scan or tap products, check the bill, take payment. Advanced controls stay out of the way until needed.</p>
+      </div>
+      <div className="button-row pos-v5h-top-actions">
+        <button type="button" className="secondary-button" onClick={toggleAutoPrint}>Auto Print: {autoPrint?"ON":"OFF"}</button>
+        <button type="button" className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button>
+        <button
+          type="button"
+          className="secondary-button pos-v5h-clear"
+          disabled={!cart.length}
+          onClick={()=>{setCart([]);pricingChanged();setMessage("Current bill cleared.");searchInputRef.current?.focus();}}
+        >
+          Clear Bill
+        </button>
+      </div>
     </div>
 
-    {unknown&&<div className="product-not-found">
+    {unknown?<div className="product-not-found pos-v5h-unknown">
       <strong>PRODUCT NOT FOUND</strong><span>{unknown}</span>
       <span className="muted-text">Nothing is saved unless you choose Add Product.</span>
       <button type="button" className="primary-button" onClick={()=>navigate(`/products/new?barcode=${encodeURIComponent(unknown)}`)}>Add Product with this Barcode</button>
-      <button type="button" className="secondary-button" onClick={()=>{setUnknown("");setMessage("Scanner ready");}}>× Ignore / Continue</button>
-    </div>}
+      <button type="button" className="secondary-button" onClick={()=>{setUnknown("");setMessage("Scanner ready");searchInputRef.current?.focus();}}>× Ignore / Continue</button>
+    </div>:null}
 
-    <div className="pos-layout">
-      <div className="pos-left">
-        <div className="panel pos-search-card">
-          <label>Manual Search<input style={{width:"100%"}} value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Name, barcode, SKU, brand..."/></label>
-          {results.map((p)=><button key={p.id} className="search-result" onClick={()=>add(p)}>
-            <span className="pos-product-result-main"><ProductThumb product={p} size="sm"/><span><strong>{p.name}</strong><small>{p.brand} · {p.size}</small></span></span>
-            <span>{money.format(p.price)} · Stock {getStock(p.id)}</span>
-          </button>)}
-          <div className="purchase-message" style={{marginTop:10}}>{message}</div>
+    <div className="pos-v5h-shell">
+      <section className="pos-v5h-catalog">
+        <div className="panel pos-v5h-search-dock">
+          <div className="pos-v5h-search-meta">
+            <div>
+              <span className={`pos-v5h-connection ${navigator.onLine?"online":"offline"}`}>{navigator.onLine?"ONLINE":"OFFLINE"}</span>
+              <strong>Scan barcode or search product</strong>
+            </div>
+            <small>{active.length} active products</small>
+          </div>
+          <input
+            ref={searchInputRef}
+            className="pos-v5h-search-input"
+            value={search}
+            onChange={(e)=>setSearch(e.target.value)}
+            placeholder="Scan barcode, or type product name / brand / SKU..."
+            autoComplete="off"
+            aria-label="Scan barcode or search products"
+          />
+          <div className="pos-v5h-status-line" role="status">{message}</div>
         </div>
 
-        <div className="panel pos-rewards-card" style={{marginTop:14}}>
-          <h3>Customer Rewards</h3>
-          <label>Customer
-            <select value={customerId} onChange={(e)=>loadCustomerSummary(e.target.value)} disabled={!navigator.onLine}>
-              <option value="">Walk-in customer</option>
-              {customers.map((c)=><option key={c.id} value={c.id}>{c.full_name}{c.mobile?` · ${c.mobile}`:""}</option>)}
-            </select>
+        {!search.trim()?<div className="pos-v5h-category-strip">
+          {categoryOptions.map((category)=>(
+            <button
+              type="button"
+              key={category}
+              className={categoryFilter===category?"pos-v5h-category active":"pos-v5h-category"}
+              onClick={()=>{setCategoryFilter(category);setSearch("");searchInputRef.current?.focus();}}
+            >
+              {category==="ALL"?"All Products":category}
+            </button>
+          ))}
+        </div>:null}
+
+        <div className="pos-v5h-catalog-header">
+          <div><strong>{search.trim()?"Search Results":categoryFilter==="ALL"?"Quick Products":categoryFilter}</strong><span>{displayProducts.length} shown</span></div>
+          {search?<button type="button" className="text-button" onClick={()=>{setSearch("");searchInputRef.current?.focus();}}>Clear search</button>:null}
+        </div>
+
+        {displayProducts.length?<div className="pos-v5h-product-grid">
+          {displayProducts.map((product)=>{
+            const stock=getStock(product.id);
+            const inCart=qty(product.id);
+            return <button
+              type="button"
+              key={product.id}
+              className={`pos-v5h-product-tile${stock<=0?" sold-out":""}`}
+              disabled={stock<=0}
+              onClick={()=>{if(add(product)){setSearch("");searchInputRef.current?.focus();}}}
+            >
+              <div className="pos-v5h-product-top">
+                <ProductThumb product={product} size="md"/>
+                {inCart>0?<span className="pos-v5h-cart-badge">{inCart}</span>:null}
+              </div>
+              <strong className="pos-v5h-product-name">{product.name}</strong>
+              <span className="pos-v5h-product-meta">{[product.brand,product.size].filter(Boolean).join(" · ")}</span>
+              <div className="pos-v5h-product-foot">
+                <strong>{money.format(product.price)}</strong>
+                <span className={stock<=product.minimumStock?"low":""}>{stock<=0?"Out of stock":`Stock ${stock}`}</span>
+              </div>
+            </button>
+          })}
+        </div>:<div className="panel pos-v5h-empty-products"><strong>No matching product</strong><span>Try another name, barcode, SKU or category.</span></div>}
+
+        <details className="panel pos-v5h-customer-tools">
+          <summary>
+            <span><strong>Customer & Offers</strong><small>Optional loyalty, coupon, store credit and gift voucher</small></span>
+            <span className="pos-v5h-summary-action">Open</span>
+          </summary>
+          <div className="pos-v5h-customer-body">
+            <label>Customer
+              <select value={customerId} onChange={(e)=>loadCustomerSummary(e.target.value)} disabled={!navigator.onLine}>
+                <option value="">Walk-in customer</option>
+                {customers.map((c)=><option key={c.id} value={c.id}>{c.full_name}{c.mobile?` · ${c.mobile}`:""}</option>)}
+              </select>
+            </label>
+
+            {customerSummary?<div className="metric-grid two pos-v5h-customer-metrics">
+              <div className="metric-card"><span>Loyalty Points</span><strong>{customerSummary.loyalty_points}</strong></div>
+              <div className="metric-card"><span>Store Credit</span><strong>{money.format(customerSummary.store_credit||0)}</strong></div>
+            </div>:null}
+
+            <div className="pos-v5h-offer-grid">
+              <label>Coupon / Promo<input value={couponCode} onChange={(e)=>{setCouponCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
+              <label>Loyalty Points<input type="number" min="0" value={loyaltyPoints} onChange={(e)=>{setLoyaltyPoints(e.target.value);clearQuote()}} disabled={!customerId}/></label>
+              <label>Store Credit<input type="number" min="0" step="0.01" value={storeCreditAmount} onChange={(e)=>{setStoreCreditAmount(e.target.value);clearQuote()}} disabled={!customerId}/></label>
+              <label>Gift Voucher<input value={giftVoucherCode} onChange={(e)=>{setGiftVoucherCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
+            </div>
+            <button type="button" className="secondary-button" onClick={previewBenefits} disabled={!cart.length||busy||!navigator.onLine}>Preview Benefits</button>
+          </div>
+        </details>
+      </section>
+
+      <aside className="panel pos-v5h-cart-panel">
+        <div className="pos-v5h-cart-header">
+          <div><span>CURRENT SALE</span><h3>{cart.length?`${cart.length} line${cart.length===1?"":"s"}`:"New bill"}</h3></div>
+          <strong>{cartUnits} item{cartUnits===1?"":"s"}</strong>
+        </div>
+
+        <div className="pos-v5h-cart-list">
+          {!cart.length?<div className="pos-v5h-cart-empty"><strong>Ready to bill</strong><span>Scan a barcode or tap a product tile.</span></div>:cart.map((item)=>{
+            const changed=Math.abs(Number(item.unitPrice??item.product.price)-Number(item.product.price))>0.001;
+            return <article className="pos-v5h-cart-line" key={item.product.id}>
+              <div className="pos-v5h-cart-product">
+                <ProductThumb product={item.product} size="sm"/>
+                <div><strong>{item.product.name}</strong><span>{item.product.size}{changed?` · Normal ${money.format(item.product.price)}`:""}</span></div>
+                <button type="button" className="pos-v5h-remove" aria-label={`Remove ${item.product.name}`} onClick={()=>removeItem(item.product.id)}>×</button>
+              </div>
+              <div className="pos-v5h-cart-controls">
+                <div className="pos-v5h-quantity">
+                  <button type="button" onClick={()=>change(item.product.id,-1)}>−</button><strong>{item.quantity}</strong><button type="button" onClick={()=>change(item.product.id,1)}>+</button>
+                </div>
+                <label className="pos-v5h-price"><span>Sale price</span><input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e)=>setUnitPrice(item.product.id,e.target.value)}/></label>
+                <strong className="pos-v5h-line-total">{money.format(Number(item.unitPrice??item.product.price)*item.quantity)}</strong>
+              </div>
+            </article>
+          })}
+        </div>
+
+        <div className="pos-v5h-bill-summary">
+          <div><span>Subtotal</span><strong>{money.format(subtotal)}</strong></div>
+          <label className="pos-v5h-discount">
+            <span>Manual Discount</span>
+            <span className="pos-v5h-money-input"><b>₹</b><input type="number" min="0" max={subtotal} value={discount} onChange={(e)=>{setDiscount(e.target.value);pricingChanged()}}/></span>
           </label>
-          {customerSummary?<div className="metric-grid two" style={{marginTop:10}}>
-            <div className="metric-card"><span>Loyalty Points</span><strong>{customerSummary.loyalty_points}</strong></div>
-            <div className="metric-card"><span>Store Credit</span><strong>{money.format(customerSummary.store_credit||0)}</strong></div>
-          </div>:null}
-          <label>Coupon / Promo Code<input value={couponCode} onChange={(e)=>{setCouponCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
-          <label>Loyalty Points to Redeem<input type="number" min="0" value={loyaltyPoints} onChange={(e)=>{setLoyaltyPoints(e.target.value);clearQuote()}} disabled={!customerId}/></label>
-          <label>Store Credit to Use<input type="number" min="0" step="0.01" value={storeCreditAmount} onChange={(e)=>{setStoreCreditAmount(e.target.value);clearQuote()}} disabled={!customerId}/></label>
-          <label>Gift Voucher Code<input value={giftVoucherCode} onChange={(e)=>{setGiftVoucherCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
-          <button type="button" className="secondary-button" onClick={previewBenefits} disabled={!cart.length||busy||!navigator.onLine}>Preview Benefits</button>
-        </div>
-      </div>
-
-      <div className="panel pos-checkout-card"><div className="pos-section-heading"><div><span>Checkout</span><h3>Current Bill</h3></div><strong>{cart.reduce((n,i)=>n+Number(i.quantity||0),0)} item(s)</strong></div>
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead><tr><th>Product</th><th>Qty</th><th>Normal</th><th>Sale Price</th><th>Total</th><th>Remove</th></tr></thead>
-            <tbody>{cart.map((i)=>{
-              const changed=Math.abs(Number(i.unitPrice??i.product.price)-Number(i.product.price))>0.001;
-              return <tr key={i.product.id}>
-                <td><div className="product-cell-with-image"><ProductThumb product={i.product} size="sm"/><span>{i.product.name}</span></div></td>
-                <td><button onClick={()=>change(i.product.id,-1)}>-</button> {i.quantity} <button onClick={()=>change(i.product.id,1)}>+</button></td>
-                <td>{money.format(i.product.price)}</td>
-                <td><input type="number" min="0" step="0.01" value={i.unitPrice} onChange={(e)=>setUnitPrice(i.product.id,e.target.value)} style={{maxWidth:110}}/>{changed?<small style={{display:"block"}}>Override</small>:null}</td>
-                <td>{money.format(Number(i.unitPrice??i.product.price)*i.quantity)}</td>
-                <td><button type="button" className="secondary-button" onClick={()=>removeItem(i.product.id)}>× Remove</button></td>
-              </tr>
-            })}</tbody>
-          </table>
         </div>
 
-        <hr/>
-        <p>Subtotal <strong>{money.format(subtotal)}</strong></p>
-        <label>Manual Discount (₹)<input type="number" min="0" max={subtotal} value={discount} onChange={(e)=>{setDiscount(e.target.value);pricingChanged()}}/></label>
-
-        {needsReason?<div className="panel" style={{marginTop:12}}>
-          <strong>Manual Override Reason</strong>
+        {needsReason?<div className="pos-v5h-override">
+          <strong>Manual Override</strong><p>Choose the reason for discount or changed sale price.</p>
           <label>Standardized Reason
             <select value={reasonCodeId} onChange={(e)=>{setReasonCodeId(e.target.value);clearApproval()}}>
               <option value="">Select reason</option>
@@ -379,28 +484,34 @@ export default function POS(){
           <label>Note<input value={reasonNote} onChange={(e)=>{setReasonNote(e.target.value);clearApproval()}} placeholder="Required for Other"/></label>
         </div>:null}
 
-        {approvalRequestId?<div className="purchase-message" style={{marginTop:10}}>
+        {approvalRequestId?<div className="purchase-message pos-v5h-approval">
           Approval: <strong>{approvalStatus||"PENDING"}</strong>
-          <button type="button" className="secondary-button" onClick={refreshApproval} style={{marginLeft:8}}>Refresh Status</button>
+          <button type="button" className="secondary-button" onClick={refreshApproval}>Refresh Status</button>
         </div>:null}
 
-        {quote?<div className="panel" style={{marginTop:12}}>
-          <h3>Benefit Preview</h3>
-          <p>Promotion: <strong>{quote.promotion_name||"None"}</strong> · {money.format(quote.promotion_discount||0)}</p>
-          <p>Loyalty: <strong>{quote.loyalty_points_used||0} points</strong> · {money.format(quote.loyalty_discount||0)}</p>
-          <p>Store Credit: <strong>{money.format(quote.store_credit_used||0)}</strong></p>
-          <p>Gift Voucher: <strong>{money.format(quote.gift_voucher_used||0)}</strong></p>
+        {quote?<div className="pos-v5h-benefits">
+          <strong>Applied Benefits</strong>
+          <div><span>Promotion</span><b>{quote.promotion_name||"None"} · {money.format(quote.promotion_discount||0)}</b></div>
+          <div><span>Loyalty</span><b>{quote.loyalty_points_used||0} pts · {money.format(quote.loyalty_discount||0)}</b></div>
+          <div><span>Store Credit</span><b>{money.format(quote.store_credit_used||0)}</b></div>
+          <div><span>Gift Voucher</span><b>{money.format(quote.gift_voucher_used||0)}</b></div>
         </div>:null}
 
-        <h2>External Payment Due {money.format(finalDue)}</h2>
+        <div className="pos-v5h-payment">
+          <div className="pos-v5h-due"><span>AMOUNT TO COLLECT</span><strong>{money.format(finalDue)}</strong></div>
+          <div className="pos-v5h-payment-methods">
+            {["CASH","UPI","CARD"].map((m)=><button type="button" key={m} className={paymentMethod===m?"pos-v5h-payment-button active":"pos-v5h-payment-button"} onClick={()=>setPaymentMethod(m)}>{m}</button>)}
+          </div>
 
-        <div className="payment-methods">{["CASH","UPI","CARD"].map((m)=><button type="button" key={m} className={paymentMethod===m?"payment-button active":"payment-button"} onClick={()=>setPaymentMethod(m)}>{m}</button>)}</div>
-        {paymentMethod!=="CASH"&&<label>Payment Reference<input value={paymentReference} onChange={(e)=>setPaymentReference(e.target.value)}/></label>}
-        <br/>
+          {paymentMethod!=="CASH"?<label>Payment Reference<input value={paymentReference} onChange={(e)=>setPaymentReference(e.target.value)} placeholder={`${paymentMethod} reference`}/></label>:null}
 
-        {needsReason&&!approvalRequestId?<button type="button" className="secondary-button" disabled={!cart.length||busy||!navigator.onLine} onClick={requestApproval} style={{marginRight:8}}>{busy?"Working...":"Request Approval (if required)"}</button>:null}
-        <button className="primary-button" disabled={!cart.length||busy} onClick={checkout}>{busy?"Processing...":navigator.onLine?"Complete Sale":"Save Offline Sale"}</button>
-      </div>
+          {needsReason&&!approvalRequestId?<button type="button" className="secondary-button pos-v5h-approval-button" disabled={!cart.length||busy||!navigator.onLine} onClick={requestApproval}>{busy?"Working...":"Request Approval (if required)"}</button>:null}
+
+          <button type="button" className="primary-button pos-v5h-complete" disabled={!cart.length||busy} onClick={checkout}>
+            {busy?"Processing...":navigator.onLine?`Complete Sale · ${money.format(finalDue)}`:"Save Offline Sale"}
+          </button>
+        </div>
+      </aside>
     </div>
   </div>
 }
