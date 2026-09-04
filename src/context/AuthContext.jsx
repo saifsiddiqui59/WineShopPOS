@@ -154,7 +154,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     mounted.current = true;
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "PASSWORD_RECOVERY") {
+        window.location.hash = "#/update-password";
+      }
       acceptAuthState(nextSession);
     });
 
