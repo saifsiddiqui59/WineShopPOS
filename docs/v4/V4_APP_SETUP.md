@@ -8,9 +8,9 @@ The V4 branch is created directly from the latest `origin/V3` commit. No V3 file
 
 ## Preview launcher
 
-Current DEV preview URL embedded in the setup:
+Current isolated V4 preview URL embedded in the setup:
 
-`https://wspv35c9453b6e9a1.z29.web.core.windows.net/`
+`https://wspv4d66ca1d443.z29.web.core.windows.net/`
 
 Run `V4_Windows_App_Setup.cmd` once on a Windows shop/test PC.
 
@@ -20,4 +20,4 @@ The setup does not require administrator rights and does not change browser ente
 
 Use `V4_Windows_App_Remove.cmd` to remove the shortcuts.
 
-> The preview host is the existing DEV preview endpoint. Deploy V4 to that DEV preview endpoint before treating the launcher as a V4 hosted preview. Production is not touched by this setup.
+> V4 uses its own isolated Azure Static Website preview: `https://wspv4d66ca1d443.z29.web.core.windows.net/`. V3 preview and production are not overwritten by this deployment.

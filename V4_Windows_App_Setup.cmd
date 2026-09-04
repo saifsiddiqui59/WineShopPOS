@@ -6,7 +6,7 @@ rem This creates Desktop + Start Menu shortcuts that launch Edge in app mode.
 rem It does not require administrator rights and does not modify Chrome/Edge policies.
 
 set "APP_NAME=WineShopPOS V4 Preview"
-set "APP_URL=https://wspv35c9453b6e9a1.z29.web.core.windows.net/"
+set "APP_URL=https://wspv4d66ca1d443.z29.web.core.windows.net/"
 set "EDGE_EXE="
 
 if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" set "EDGE_EXE=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
