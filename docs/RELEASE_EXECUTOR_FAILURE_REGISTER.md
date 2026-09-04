@@ -787,3 +787,53 @@ V3 must report zero commits behind main, remain DEV-bound, pass the environment
 guard/security regressions/lint/build, and finish with a clean tree before
 preview/UAT work continues.
 <!-- /V3_MAIN_RECONCILIATION_20260904 -->
+
+<!-- V3_MAIN_RECONCILIATION_PARENT_VALIDATOR_INCIDENT_20260904 -->
+### 2026-09-04 — Valid reconciliation merge rejected by fragile parent validator
+
+Symptom:
+The reconciliation merge commit was created with the expected two parents, but
+a shell pattern over the full `git rev-list --parents` output rejected it.
+
+Root cause:
+The validator compared a combined commit/parent line instead of resolving each
+parent explicitly.
+
+Permanent prevention:
+Validate merge identity with exact values from `git rev-parse HEAD^1` and
+`git rev-parse HEAD^2`, plus an explicit two-parent count. Never recreate a
+valid merge solely because a post-commit validator failed.
+<!-- /V3_MAIN_RECONCILIATION_PARENT_VALIDATOR_INCIDENT_20260904 -->
+
+<!-- V3_MAIN_RECONCILIATION_REACHABILITY_COUNT_INCIDENT_20260904 -->
+### 2026-09-04 — Generic rev-list count misclassified one local merge as three commits
+
+Symptom:
+A resume executor expected:
+`git rev-list --count origin/V3..HEAD == 1`
+but received `3`.
+
+Root cause:
+For a merge commit, `origin/V3..HEAD` includes every commit newly reachable
+through either parent. The reconciliation merge made the two main-only commits
+reachable through `HEAD^2`, so the set correctly contained:
+1. the reconciliation merge commit;
+2. main-only isolation commit;
+3. main-only merge commit.
+
+This metric does not answer “how many commits were created locally on V3's
+first-parent line?”
+
+Resolution:
+Use:
+`git rev-list --count --first-parent origin/V3..HEAD`
+and separately validate:
+`HEAD^1 == origin/V3`,
+`HEAD^2 == origin/main`,
+and exactly two parents.
+
+Permanent prevention:
+Do not use generic reachability counts to identify the number of newly-created
+local commits after a merge. Distinguish graph reachability from first-parent
+branch history.
+<!-- /V3_MAIN_RECONCILIATION_REACHABILITY_COUNT_INCIDENT_20260904 -->
