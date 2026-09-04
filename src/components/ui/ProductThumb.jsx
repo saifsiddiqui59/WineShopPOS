@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { Wine } from "lucide-react";
-import { curatedPreviewProductImage } from "../../lib/curatedPreviewProductImages";
 
 export default function ProductThumb({ product, size = "md" }) {
   const [broken, setBroken] = useState(false);
-  const src = product?.imageUrl || curatedPreviewProductImage(product) || "";
+
+  // Release-safe behavior:
+  // product.imageUrl is generated from the shop's Supabase Storage image_path.
+  // Do not fall back to arbitrary third-party demo image hosts. Those hosts are
+  // outside WineShopPOS control and can disappear, fail DNS, rate-limit, or
+  // change content. Products without a managed image use the local icon.
+  const src = product?.imageUrl || "";
 
   useEffect(() => setBroken(false), [src]);
 
