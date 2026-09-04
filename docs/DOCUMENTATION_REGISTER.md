@@ -285,3 +285,6 @@ Updated:
 
 ## V5-H5 VERIFIED-SCHEMA RECOVERY — 2026-09-04
 Updated Stock Count scan/search, replay protection, stock-count snapshot RPC guard, V5-H migration live-schema compatibility, regression strategy and canonical documentation.
+
+## V5-H5 VERIFIED — 2026-09-04
+Source `7cdc5cd616b68445978939b6638d40a31b548f2e`, migration `20260903195500`, UAT cleanup and V3 preview `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/` verified. Preview SHA-256: `90ed3aef21dfa9fe8829213aaac1debf8d7ac46f8d9ded9a180a6e5e5c119e1a`.

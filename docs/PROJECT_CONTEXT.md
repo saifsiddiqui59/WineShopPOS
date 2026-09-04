@@ -730,3 +730,18 @@ Planned/implemented together:
 - DB stock_count_scan rejects products outside that snapshot.
 - Live audit_logs.old_data/new_data are verified present and retained in the cleanup.
 - V5-H migration is corrected against current live schema before first application.
+
+## V5-H5 VERIFIED — 2026-09-04
+- Source commit: `7cdc5cd616b68445978939b6638d40a31b548f2e`
+- Migration `20260903195500`: remote and verified.
+- POS scan-first behavior preserved.
+- Physical Stock Count Scan/Search deployed with one-scan/one-count guard.
+- Search fallback: barcode, SKU, name, brand, category, subcategory, size.
+- Stock Count RPC rejects products outside the active snapshot.
+- Universal completed-sale shift trigger is active.
+- Authorized V5-F HEINEKEN test product/purchase/invoice rows are absent.
+- Exact two V5-F Azure invoice evidence blobs are absent.
+- V3 preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+- Preview index SHA-256: `90ed3aef21dfa9fe8829213aaac1debf8d7ac46f8d9ded9a180a6e5e5c119e1a`
+- Production frontend was not deployed.
+- Manual authenticated Stock Count/POS visual UAT remains pending.
