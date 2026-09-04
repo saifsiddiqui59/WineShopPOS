@@ -837,3 +837,26 @@ Do not use generic reachability counts to identify the number of newly-created
 local commits after a merge. Distinguish graph reachability from first-parent
 branch history.
 <!-- /V3_MAIN_RECONCILIATION_REACHABILITY_COUNT_INCIDENT_20260904 -->
+
+<!-- PROD_PASSWORD_RECOVERY_AZURE_RBAC_REPEAT_20260904 -->
+### Repeat occurrence — PROD password-recovery deployment ignored Failure Class 6
+
+Date: 2026-09-04
+
+Observed:
+`17_PROD_FIX_PASSWORD_RECOVERY_AND_DEPLOY.sh` successfully built, committed and pushed the production password-recovery source, then stopped during Azure Storage deployment because `--auth-mode login` lacked Storage Blob Data permissions.
+
+Why this is a repeated executor defect:
+Failure Class 6 in this register already documented the same Azure Storage RBAC mismatch and required an explicit `--auth-mode key` fallback. The executor did not read/enforce the canonical failure register before deployment.
+
+Permanent prevention:
+- every production executor must require this failure register to exist and be non-empty before mutating/deploying;
+- known failure rules relevant to the executor must be asserted before execution;
+- Azure Storage static-site configuration and blob upload must attempt RBAC first and automatically use `--auth-mode key` when the known RBAC permission failure occurs;
+- never print or persist storage account keys;
+- a failed deployment after a successful source push must resume from deployment after verifying the exact current commit; do not reapply source changes or create duplicate feature commits.
+
+Recovery result:
+Static-site config mode: login
+Blob upload mode: key
+Live transport verification: HTTP 200 + exact built JS asset present.
