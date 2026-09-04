@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# WSP_ENV_ISOLATION_GUARD_V1
+WSP_GUARD_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+WSP_GUARD_BRANCH="$(git -C "$WSP_GUARD_ROOT" branch --show-current 2>/dev/null || true)"
+if [ "$WSP_GUARD_BRANCH" != "main" ]; then
+  echo "ENVIRONMENT_ISOLATION_BLOCKED: production-targeting executor E:/WineShopPOS_V3/scripts/apply_chapters_16_26.sh cannot run from branch $WSP_GUARD_BRANCH" >&2
+  exit 97
+fi
 set -euo pipefail
 
 PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

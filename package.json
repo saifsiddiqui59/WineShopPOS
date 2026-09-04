@@ -9,10 +9,13 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "sync:user-manual": "node scripts/sync-user-manual.mjs",
-    "prebuild": "npm run sync:user-manual",
+    "prebuild": "npm run guard:env && npm run sync:user-manual",
     "test:e2e:list": "playwright test --list",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "guard:env": "node scripts/supabase-environment-policy.mjs",
+    "predev": "npm run guard:env",
+    "prepreview": "npm run guard:env"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
