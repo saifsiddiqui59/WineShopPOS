@@ -15,7 +15,9 @@
     "test:e2e:headed": "playwright test --headed",
     "guard:env": "node scripts/supabase-environment-policy.mjs",
     "predev": "npm run guard:env",
-    "prepreview": "npm run guard:env"
+    "prepreview": "npm run guard:env",
+    "docs:traceability": "node scripts/docs/generate-static-traceability.mjs",
+    "docs:check": "node scripts/docs/check-doc-system.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
