@@ -648,3 +648,103 @@ Safe continuation: executor 24 stopped before source, DB, Azure or preview mutat
 
 ## STOCK COUNT ONE-SCAN/ONE-COUNT RULE — 2026-09-03
 A physical scanner event ID must be consumed once. React re-render/effect changes must not replay a bottle scan. `NOT COUNTED`, `COUNTED`, and explicit `MARKED ZERO` are separate states.
+
+<!-- V3_SECURITY_DEFINER_RPC_PRIVILEGE_RULE_20260904 -->
+## V3 release security rule — SECURITY DEFINER EXECUTE grants
+
+Discovered during V3 production-readiness review on 2026-09-04.
+
+### Failure pattern
+
+A `SECURITY DEFINER` function can contain correct internal shop/role checks and
+still have an unnecessarily broad execution surface. More seriously, internal
+helper functions may inherit or receive `PUBLIC`, `anon` or `authenticated`
+EXECUTE privileges even though they were intended to be called only by other
+database/server-side routines.
+
+Confirmed V3 examples included sequence/counter helpers, `write_audit`, and
+the receipt-lot refresh helper.
+
+### Permanent prevention rule
+
+For WineShopPOS public-schema functions:
+
+1. `SECURITY DEFINER` never implies client access.
+2. `PUBLIC` and `anon` must not receive EXECUTE on `SECURITY DEFINER` RPCs.
+3. Internal-only helpers must not be directly executable by `authenticated`.
+4. Client-facing functions require explicit grants to their intended role.
+5. Function-body `auth.uid()`, membership, shop and role checks remain
+   mandatory even when grants are restricted.
+6. Release UAT must verify both EXECUTE privileges and negative authorization
+   behavior; checking source text alone is not sufficient.
+7. Never fix this by weakening RLS or removing internal authorization checks.
+<!-- /V3_SECURITY_DEFINER_RPC_PRIVILEGE_RULE_20260904 -->
+
+<!-- V3_SECURITY_CHECKPOINT_STALE_SHA_INCIDENT_20260904 -->
+### 2026-09-04 — Security checkpoint stale hardcoded SHA
+
+Symptom:
+A security checkpoint executor expected `ae3b427...` after V3 had legitimately
+advanced.
+
+Root cause:
+Previous-turn Git state was hardcoded.
+
+Permanent prevention:
+Fetch current refs and derive current branch state dynamically. Do not repair a
+stale SHA by replacing it with another hardcoded SHA.
+<!-- /V3_SECURITY_CHECKPOINT_STALE_SHA_INCIDENT_20260904 -->
+
+<!-- V3_SECURITY_CHECKPOINT_CLASSIFIED_DIVERGENCE_20260904 -->
+### 2026-09-04 — Classified PROD/DEV environment-isolation divergence
+
+Git reported V3 ahead of and behind main because PROD and DEV environment
+bindings were committed independently on their respective branches.
+
+Safe intermediate rule:
+A non-merge checkpoint may continue only if the complete main-only effective
+file set is explicitly allowlisted as environment-isolation state, branch
+bindings are semantically correct, and the pending patch has no overlap.
+
+Promotion remains blocked while V3 is behind main. Reconcile from a clean tree
+after the independent patch is checkpointed.
+<!-- /V3_SECURITY_CHECKPOINT_CLASSIFIED_DIVERGENCE_20260904 -->
+
+<!-- V3_SECURITY_CHECKPOINT_MSYS_REF_PATH_INCIDENT_20260904 -->
+### 2026-09-04 — Git Bash/MSYS rewrote Git `ref:path` syntax
+
+Release/stage:
+V3 security-hardening checkpoint — classified branch-divergence validation.
+
+Symptom:
+`git show origin/main:.env.example` failed as:
+`fatal: ambiguous argument 'origin\main;.env.example'`.
+
+Platform:
+Windows Git Bash / MSYS invoking native Git.
+
+Root cause:
+The `origin/main:.env.example` argument contains colon/path-like syntax that
+MSYS interpreted and rewrote before Git received it.
+
+Resolution:
+Do not use Git `ref:path` syntax in release executors on this Windows Git Bash
+workflow. For content-presence validation, use:
+`git grep -Fq -e "<pattern>" <ref> -- <path>`.
+For tree comparison, use ordinary ref arguments plus `--` path separators.
+
+Permanent prevention:
+- Avoid `git show <ref>:<path>` and `git cat-file ... <ref>:<path>` in WineShopPOS
+  Git Bash executors.
+- Prefer `git grep <ref> -- <path>` when only semantic markers are required.
+- If exact remote-file bytes are ever needed, use an isolated archive/temp-tree
+  mechanism or explicitly proven MSYS conversion controls.
+- Never globally disable MSYS argument conversion for an entire release
+  executor unless every affected command has been tested.
+- Keep Git's `--` revision/path separator explicit.
+
+Safe continuation point:
+The failure occurred before migration rename, documentation edits, staging,
+commit, push or deployment. The pre-existing four-file security patch remains
+the continuation source of truth.
+<!-- /V3_SECURITY_CHECKPOINT_MSYS_REF_PATH_INCIDENT_20260904 -->
