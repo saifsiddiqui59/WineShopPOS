@@ -1,0 +1,48 @@
+name: Environment Isolation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify-environment-isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify branch-to-Supabase binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          PROD_REF="uiurgplnsgmawvxhjzzp"
+          DEV_REF="juhcypzoacauzmtzqnwd"
+
+          if [[ "$BRANCH" == "main" ]]; then
+            EXPECTED="$PROD_REF"
+            WRONG="$DEV_REF"
+          else
+            EXPECTED="$DEV_REF"
+            WRONG="$PROD_REF"
+          fi
+
+          grep -q "VITE_SUPABASE_URL=https://${EXPECTED}.supabase.co" .env.example
+
+          if git grep -n "$WRONG" -- .env.example src vite.config.js package.json supabase ':!supabase/migrations/**'; then
+            echo "ENVIRONMENT_ISOLATION_BLOCKED: active app/config contains wrong-environment Supabase ref $WRONG"
+            exit 1
+          fi
+
+          # Legacy shell executors are allowed to retain historical refs only when protected by the branch guard marker.
+          while IFS= read -r file; do
+            if grep -q "$WRONG" "$file" && ! grep -q "WSP_ENV_ISOLATION_GUARD_V1" "$file"; then
+              echo "ENVIRONMENT_ISOLATION_BLOCKED: $file contains wrong-environment ref without branch guard"
+              exit 1
+            fi
+          done < <(git ls-files '*.sh')
+
+          BRANCH_NAME="$BRANCH" VITE_SUPABASE_URL="https://${EXPECTED}.supabase.co" SUPABASE_PROJECT_ID="$EXPECTED" \
+            node scripts/supabase-environment-policy.mjs
