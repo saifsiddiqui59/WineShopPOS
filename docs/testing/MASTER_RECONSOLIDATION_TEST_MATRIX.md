@@ -264,3 +264,44 @@ Old URLs for Shift, Returns, Sales, Scanner, Offline Queue, Stock Count, Purchas
 - [ ] `#/help` redirects to Account → Help / About and does not render category cards.
 - [ ] Production application bundle does not contain `Browse by chapter`.
 - [ ] Production application bundle does not expose Git/canonical-source documentation links.
+
+## V3 API Automation regression
+<!-- V3_API_AUTOMATION_20260831 -->
+| Test | Result |
+|---|---|
+| Existing `ocr-invoice` unchanged | PASS |
+| Frontend build/lint | PASS (existing warnings, 0 errors) |
+| Standalone V3 invoice Function + private Blob health | PASS |
+| Supabase automation Edge Function | PASS |
+| Sample sender resolved shop `5c94dbca-9bb5-451e-831a-8cfa42d06013` | PASS |
+| Additive migration applied | PASS |
+| V3 preview HTTP 200 | PASS |
+| Node 20 Linux attempt | SUPERSEDED — EOL |
+| First Node 24 RBAC attempt | SUPERSEDED — Git Bash/MSYS scope conversion |
+| Unauthorised sample Gmail connector deployment | SUPERSEDED — `GmailConnectorPolicyViolation` |
+| Local sender-normalization marker patch | SUPERSEDED — stopped before preview/commit; no deployed runtime change |
+| Invalid V3 Gmail resource removed | PASS |
+| Replacement template requires authorized Gmail connection | PASS |
+| Real Gmail/Google Workspace OAuth | PENDING USER INPUT |
+| Email invoice E2E | PENDING AUTHORIZATION |
+| WhatsApp | V3-01B |
+| Main merge | NOT YET |
+
+## V3 WhatsApp webhook tests
+
+<!-- V3_WHATSAPP_WEBHOOK_20260831 -->
+
+| Test | Result |
+|---|---|
+| Initial temporary-token phone lookup | SUPERSEDED — HTTP 400 before webhook changes; token is not required for Step 1 |
+| Access-token validation | DEFERRED TO MEDIA STEP 2 |
+| WhatsApp webhook health/configuration | PASS |
+| GET verification challenge | PASS |
+| Wrong verify token rejected | PASS / HTTP 403 |
+| Invalid Meta HMAC signature rejected | PASS / HTTP 401 |
+| Valid HMAC signature accepted | PASS / HTTP 200 |
+| Manual OCR changed | NO |
+| WhatsApp media ingestion | NOT YET — next V3-01B step |
+| Direct inventory mutation from webhook | DISABLED |
+| Meta dashboard callback registration | PENDING USER STEP |
+| Real inbound `hello` | PENDING USER STEP |

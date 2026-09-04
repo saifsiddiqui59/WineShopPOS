@@ -1,5 +1,6 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useState } from "react";
-import { useScanner } from "../context/ScannerContext";
+import { SCANNER_DEFAULTS, useScanner } from "../context/ScannerContext";
 
 export default function ScannerSettings() {
   const { settings, saveSettings, lastScan, successBeep, errorBeep } = useScanner();
@@ -11,7 +12,7 @@ export default function ScannerSettings() {
 
   return (
     <div>
-      <div className="page-heading"><div><h2>Scanner Test & Settings</h2><p>USB/Bluetooth HID barcode scanner diagnostics</p></div></div>
+      <div className="page-heading"><div><h2>Scanner Test & Settings</h2><p>USB/Bluetooth HID barcode scanner diagnostics · Enter/Tab suffix supported</p></div></div>
       <div className="settings-grid">
         <section className="panel">
           <h3>Detection</h3>
@@ -20,17 +21,18 @@ export default function ScannerSettings() {
             <label>Minimum barcode length<input type="number" min="3" max="40" value={draft.minLength} onChange={(e)=>setDraft({...draft,minLength:Number(e.target.value)})}/></label>
             <label>Maximum average key gap (ms)<input type="number" min="10" max="150" value={draft.maxAverageGapMs} onChange={(e)=>setDraft({...draft,maxAverageGapMs:Number(e.target.value)})}/></label>
             <label>Sequence reset gap (ms)<input type="number" min="80" max="1000" value={draft.resetGapMs} onChange={(e)=>setDraft({...draft,resetGapMs:Number(e.target.value)})}/></label>
+            <label>Suffixless scan idle (ms)<input type="number" min="80" max="500" value={draft.suffixlessIdleMs ?? 160} onChange={(e)=>setDraft({...draft,suffixlessIdleMs:Number(e.target.value)})}/></label>
           </div>
-          <br/><button className="primary-button" onClick={()=>saveSettings(draft)}>Save Scanner Settings</button>
+          <br/><div className="button-row"><button className="primary-button" onClick={()=>saveSettings(draft)}>Save Scanner Settings</button><button className="secondary-button" onClick={()=>{setDraft(SCANNER_DEFAULTS);saveSettings(SCANNER_DEFAULTS);}}>Reset Scanner Defaults</button></div>
         </section>
         <section className="panel scanner-test-zone">
           <h3>Live Test</h3>
-          <p>Click anywhere or type in another field, then scan a barcode. The scanner listener is global.</p>
+          <p>Click anywhere or type in another field, then scan a barcode. The scanner listener is global and accepts common Enter/Tab scanner suffixes.</p>
           {lastScan ? <div className="scanner-last"><strong>{lastScan.barcode}</strong><span>{lastScan.length} chars · avg gap {lastScan.averageGapMs} ms</span></div> : <div className="scanner-last muted">No scan detected yet</div>}
           <div className="button-row"><button className="secondary-button" onClick={successBeep}>Test success beep</button><button className="secondary-button" onClick={errorBeep}>Test error beep</button></div>
         </section>
       </div>
-      <section className="panel" style={{marginTop:16}}><h3>Last 10 scans</h3><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Barcode</th><th>Time</th><th>Avg gap</th></tr></thead><tbody>{history.map((s)=><tr key={s.id}><td>{s.barcode}</td><td>{new Date(s.at).toLocaleTimeString()}</td><td>{s.averageGapMs} ms</td></tr>)}</tbody></table></div></section>
+      <section className="panel" style={{marginTop:16}}><h3>Temporary Scan History</h3><p className="muted-text">Temporary diagnostic history only; it clears when this screen unmounts.</p><div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Barcode</th><th>Time</th><th>Avg gap</th></tr></thead><tbody>{history.map((s)=><tr key={s.id}><td>{s.barcode}</td><td>{new Date(s.at).toLocaleTimeString()}</td><td>{s.averageGapMs} ms</td></tr>)}</tbody></SortableTable></div></section>
     </div>
   );
 }

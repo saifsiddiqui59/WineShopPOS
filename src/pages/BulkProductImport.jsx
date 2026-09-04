@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
+import { useScanner } from "../context/ScannerContext";
+import { inferBrandFromProductName, inferCategoryId } from "../lib/productInference";
 
 const OCR_REVIEW_KEY = "wineshop_ocr_review_state";
 const OCR_BULK_CREATED_KEY = "wineshop_ocr_bulk_created_products";
@@ -41,7 +43,7 @@ function inferSizeMl(description) {
   return Math.round(value);
 }
 
-function rowsFromOcrReview() {
+function rowsFromOcrReview(categories = []) {
   const raw = sessionStorage.getItem(OCR_REVIEW_KEY);
   if (!raw) return [];
 
@@ -54,10 +56,15 @@ function rowsFromOcrReview() {
       const row = resolution[index] || {};
       if (row.productId) return null;
 
+      const productName = String(item?.description || "").trim();
       return blankRow({
-        productName: String(item?.description || "").trim(),
-        sizeMl: inferSizeMl(item?.description),
-        purchasePrice: Number(row.purchasePrice || item?.unitPrice || 0),
+        productName,
+        brand: String(item?.brand || "").trim() || inferBrandFromProductName(productName),
+        categoryId: inferCategoryId(productName, categories),
+        sizeMl: inferSizeMl(productName),
+        alcoholPercentage: item?.alcoholPercentage ?? "",
+        purchasePrice: Number(row.purchasePrice || 0),
+        mrp: Number(item?.mrp || 0),
         unitsPerCase: Math.max(1, Number(row.unitsPerCase || 12)),
         ocrLineIndex: index,
         source: "OCR",
@@ -68,8 +75,10 @@ function rowsFromOcrReview() {
 
 export default function BulkProductImport() {
   const { categories, refreshAll } = useShop();
+  const { lastScan, successBeep } = useScanner();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const barcodeTargetRow = useRef(null);
 
   const [rows, setRows] = useState([blankRow()]);
   const [busy, setBusy] = useState(false);
@@ -84,10 +93,22 @@ export default function BulkProductImport() {
   );
 
   useEffect(() => {
+    if (!lastScan?.barcode || barcodeTargetRow.current == null) return;
+    const rowIndex = Number(barcodeTargetRow.current);
+    setRows((current) =>
+      current.map((row, index) =>
+        index === rowIndex ? { ...row, barcode: lastScan.barcode } : row,
+      ),
+    );
+    setMessage(`Barcode ${lastScan.barcode} scanned into row ${rowIndex + 1}.`);
+    successBeep();
+  }, [lastScan?.id]);
+
+  useEffect(() => {
     if (!fromOcr) return;
 
     try {
-      const ocrRows = rowsFromOcrReview();
+      const ocrRows = rowsFromOcrReview(activeCategories);
       if (ocrRows.length) {
         setRows(ocrRows);
         setMessage(
@@ -103,7 +124,7 @@ export default function BulkProductImport() {
       setRows([]);
       setMessage(error?.message || "Unable to load the Invoice OCR review.");
     }
-  }, [fromOcr]);
+  }, [fromOcr, activeCategories]);
 
   function updateRow(index, field, value) {
     setRows((current) =>
@@ -167,10 +188,30 @@ export default function BulkProductImport() {
 
       const output = Array.isArray(data) ? data : [];
       setResults(output);
-      await refreshAll();
 
       const success = output.filter((item) => item.status === "SUCCESS");
       const failed = output.filter((item) => item.status === "ERROR");
+
+      const { data: verifiedProducts, error: verifyError } =
+        await supabase.rpc("get_products");
+      if (verifyError) {
+        throw new Error(
+          `Products may have been created, but Product Master verification failed: ${verifyError.message}. Do not bulk-create again.`,
+        );
+      }
+
+      const verifiedIds = new Set(
+        (verifiedProducts || []).map((product) => product.id),
+      );
+      const missingCreated = success.filter(
+        (item) => !item.product_id || !verifiedIds.has(item.product_id),
+      );
+
+      if (missingCreated.length) {
+        throw new Error(
+          `${missingCreated.length} created product response(s) could not be verified in Product Master. Do not bulk-create again; refresh and review.`,
+        );
+      }
 
       const ocrCreated = success
         .map((item) => {
@@ -180,6 +221,7 @@ export default function BulkProductImport() {
             lineIndex: sourceRow.ocrLineIndex,
             productId: item.product_id,
             sku: item.sku,
+            productName: sourceRow.productName,
           };
         })
         .filter(Boolean);
@@ -191,8 +233,16 @@ export default function BulkProductImport() {
         );
       }
 
+      const refreshResult = await refreshAll();
+      if (!refreshResult?.ok) {
+        setMessage(
+          `${success.length} product(s) were created and verified, but the screen refresh failed. Do not bulk-create again. Refresh the page and return to Invoice OCR.`,
+        );
+        return;
+      }
+
       setMessage(
-        `${success.length} product(s) created; ${failed.length} row(s) need review. Inventory was not increased.`,
+        `${success.length} product(s) created and verified in Product Master; ${failed.length} row(s) need review. Inventory was not increased.`,
       );
 
       if (fromOcr && failed.length === 0 && ocrCreated.length) {
@@ -236,7 +286,7 @@ export default function BulkProductImport() {
       <section className="panel">
         <p className="muted-text">
           Product creation does not receive stock. Physical quantity is posted
-          only through Receive Stock after invoice review.
+          only through Receive Stock after invoice review. OCR rows also suggest Brand from the first product-name word, MRP from the invoice MRP column when detected, and Category when a matching active category can be inferred. Review suggestions before creating.
         </p>
 
         <div className="data-table-wrapper">
@@ -267,7 +317,16 @@ export default function BulkProductImport() {
                   <td>
                     <input
                       value={row.barcode}
-                      placeholder="Add later"
+                      placeholder="Scan or type"
+                      data-scanner-capture="barcode"
+                      onFocus={() => {
+                        barcodeTargetRow.current = index;
+                      }}
+                      onBlur={() => {
+                        if (barcodeTargetRow.current === index) {
+                          barcodeTargetRow.current = null;
+                        }
+                      }}
                       onChange={(event) =>
                         updateRow(index, "barcode", event.target.value)
                       }
@@ -330,7 +389,7 @@ export default function BulkProductImport() {
                     <input
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="0.000001"
                       value={row.purchasePrice}
                       onChange={(event) =>
                         updateRow(index, "purchasePrice", event.target.value)

@@ -235,3 +235,29 @@ The earlier East US Foundry resource is **not the production AI resource**. Prod
 - Do not claim continuous Foundry evaluation is already enabled until that work is completed.
 
 <!-- WSP_AI_VERIFIED_V1_END -->
+
+V3 API AUTOMATION CURRENT STATE
+V3_API_AUTOMATION_20260831
+Branch: V3
+Feature commit: 7dd99f21e03e79b17490c837cb1bd5d470823dca
+Preview: https://wspv35c9453b6e9a1.z29.web.core.windows.net/
+Private invoice storage: wspinv5c9453b6e9a1
+Standalone invoice API: https://wsp-v3-invoice-53b6e9a1.azurewebsites.net
+Invoice API runtime: Windows Consumption / Node.js 24
+Supabase invoice-automation-ingest: DEPLOYED
+Shop UUID: 5c94dbca-9bb5-451e-831a-8cfa42d06013
+Sample central Gmail: wineshoppos.invoice.app@gmail.com
+Sample sender: wineshoppos.sample.shop@gmail.com
+Email Logic App: NOT DEPLOYED — real OAuth authorization required. Failed unauthorised Gmail API connection/workflow resource was removed. The later local sender-normalization patch also stopped before preview/commit because its expected source marker was absent; no deployed runtime changed. Active ARM template accepts only an EXISTING authorized Gmail connection resource ID. Consumer @gmail.com with HTTP/Blob requires BYOA OAuth; Google Workspace is the alternative. Main/production static frontend unchanged. Next: review preview → authorize real Email → deploy Logic App → test one invoice → explicit V3→main merge. WhatsApp remains V3-01B.
+
+V3 WHATSAPP WEBHOOK STEP 1
+V3_WHATSAPP_WEBHOOK_20260831
+
+Branch: V3
+Feature commit: 6c88136acd40c6188c85464365a685cb194540ba
+Callback: https://wsp-v3-invoice-53b6e9a1.azurewebsites.net/api/whatsapp/webhook
+Graph: v25.0
+Phone Number ID: 1363531840166137
+WABA ID: 2145563122689116
+
+Secure GET verification and POST signature validation are deployed and self-tested. Meta App Secret/verify token are Azure settings only. Initial Graph access-token lookup returned HTTP 400 before any change; access-token validation is deferred until media Step 2 because Step 1 does not use the token. Meta dashboard callback registration and a real inbound `hello` remain pending. Do not implement/download WhatsApp media until the real signed inbound webhook is observed. Existing manual OCR, Blob, invoice_ingestions, duplicate controls and Invoice Inbox remain unchanged.

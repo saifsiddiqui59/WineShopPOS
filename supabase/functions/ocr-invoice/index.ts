@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizeDocumentIntelligenceResult } from "../_shared/invoiceDocument.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
       throw new Error("Document exceeds Azure Document Intelligence F0 4 MB limit");
     }
 
-    const analyzeUrl = `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze?_overload=analyzeDocument&api-version=2024-11-30`;
+    const analyzeUrl = `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze?_overload=analyzeDocument&api-version=2024-11-30&features=keyValuePairs`;
 
     const analyze = await fetch(analyzeUrl, {
       method: "POST",
@@ -145,36 +146,15 @@ Deno.serve(async (req) => {
 
     if (result?.status !== "succeeded") throw new Error("Azure OCR timed out");
 
-    const document = result.analyzeResult?.documents?.[0];
-    const fields = document?.fields || {};
-
-    const items = (fields.Items?.valueArray || []).map((row: any) => {
-      const item = row.valueObject || {};
-      return {
-        description: String(fieldContent(item.Description) || fieldContent(item.ProductCode) || ""),
-        quantity: numberValue(item.Quantity) ?? 1,
-        unitText: String(fieldContent(item.Unit) || fieldContent(item.Units) || ""),
-        unitPrice: numberValue(item.UnitPrice),
-        amount: numberValue(item.Amount),
-        confidence: row.confidence ?? item.Description?.confidence ?? null,
-      };
-    });
+    const invoice = normalizeDocumentIntelligenceResult(result);
 
     return json({
       ok: true,
-      invoice: {
-        supplierName: String(fieldContent(fields.VendorName) || ""),
-        vendorAddress: String(fieldContent(fields.VendorAddress) || ""),
-        vendorTaxId: String(fieldContent(fields.VendorTaxId) || ""),
-        paymentTerm: String(fieldContent(fields.PaymentTerm) || ""),
-        invoiceNumber: String(fieldContent(fields.InvoiceId) || ""),
-        invoiceDate: String(fieldContent(fields.InvoiceDate) || ""),
-        total: numberValue(fields.InvoiceTotal),
-        items,
-      },
-      rawConfidence: document?.confidence ?? null,
-      model: "prebuilt-invoice",
+      invoice,
+      rawConfidence: invoice?.ocrQuality?.documentConfidence ?? null,
+      model: "prebuilt-invoice+semantic-table",
       apiVersion: "2024-11-30",
+      features: ["keyValuePairs"],
     });
   } catch (error) {
     return json(

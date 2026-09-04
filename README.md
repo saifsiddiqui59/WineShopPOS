@@ -1,6 +1,6 @@
 # WineShopPOS
 
-**Current product/documentation generation: V2**
+**Current product/documentation generation: V3**
 
 WineShopPOS is an existing production multi-shop Wine Shop POS application
 covering POS, barcode scanning, payments, inventory, purchasing, receiving,
@@ -35,6 +35,7 @@ V2 continues in the SAME chapter collection:
 - `docs/chapters/V2-08-reliability-security-hardware.md`
 - `docs/chapters/V2-09-ai-production-quality.md`
 - `docs/chapters/V2-10-full-application-qa-regression.md`
+- `docs/chapters/V3-01-api-automation-integration.md`
 
 ## Source-of-truth rule
 

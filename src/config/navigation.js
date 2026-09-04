@@ -36,6 +36,7 @@ export const MODULE_TABS = {
   purchasing: [
     { path: "/purchasing/receive", label: "Receive Stock", roles: ["ADMIN", "MANAGER"] },
     { path: "/purchasing/ocr", label: "Invoice OCR", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
+    { path: "/purchasing/invoices", label: "Invoice Inbox", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
     { path: "/purchasing/suppliers", label: "Suppliers", roles: ["ADMIN", "MANAGER"] },
     { path: "/purchasing/procurement", label: "Procurement", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
     { path: "/purchasing/intelligence", label: "Purchase Intelligence", roles: ["ADMIN", "MANAGER"], tier: "PRO" },
@@ -73,5 +74,6 @@ export const MODULE_TABS = {
     { path: "/admin/backup", label: "Backup & Recovery", roles: ["ADMIN"] },
     { path: "/admin/audit", label: "Audit Log", roles: ["ADMIN"] },
     { path: "/admin/settings", label: "Shop Settings", roles: ["ADMIN"] },
+    { path: "/admin/product-cleanup", label: "Product Cleanup", roles: ["ADMIN"] },
   ],
 };

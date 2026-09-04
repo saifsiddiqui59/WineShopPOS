@@ -15,6 +15,7 @@
 - current `agent_reference` runtime
 - all nine Supabase AI business RPCs
 - real authenticated `/api/ai/chat` end-to-end test
+- authenticated production Foundry/Application Insights trace ingestion
 - customer-facing Ask WineShopPOS route
 
 ## Verified failure root causes resolved during rollout
@@ -27,7 +28,6 @@
 
 ## Pending operational hardening
 
-- connect/verify full Foundry tracing into Application Insights
 - production evaluation dashboard
 - automated quality gates
 - alerting

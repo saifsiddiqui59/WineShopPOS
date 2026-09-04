@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import PageHeader from "../components/ui/PageHeader";
@@ -187,17 +188,17 @@ export default function CustomerCredit(){
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Customer Outstanding</h3>
-      {balances.length===0?<EmptyState title="No customer credit records" message="Customer capture remains optional during normal billing."/>:<div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Customer</th><th>Mobile</th><th>Charges</th><th>Payments</th><th>Outstanding</th></tr></thead><tbody>{balances.map((c)=><tr key={c.customer_id}><td>{c.full_name}</td><td>{c.mobile||"-"}</td><td>{money.format(c.total_charges)}</td><td>{money.format(c.total_payments)}</td><td><strong>{money.format(c.outstanding)}</strong></td></tr>)}</tbody></table></div>}
+      {balances.length===0?<EmptyState title="No customer credit records" message="Customer capture remains optional during normal billing."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Customer</th><th>Mobile</th><th>Charges</th><th>Payments</th><th>Outstanding</th></tr></thead><tbody>{balances.map((c)=><tr key={c.customer_id}><td>{c.full_name}</td><td>{c.mobile||"-"}</td><td>{money.format(c.total_charges)}</td><td>{money.format(c.total_payments)}</td><td><strong>{money.format(c.outstanding)}</strong></td></tr>)}</tbody></SortableTable></div>}
     </section>
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Active / Recent Promotions</h3>
-      <div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Name</th><th>Code</th><th>Benefit</th><th>Minimum</th><th>Auto</th><th>Status</th></tr></thead><tbody>{promotions.map((p)=><tr key={p.id}><td>{p.name}</td><td>{p.code||"-"}</td><td>{p.discount_type==="PERCENT"?`${p.discount_value}%`:money.format(p.discount_value)}</td><td>{money.format(p.min_purchase)}</td><td>{p.auto_apply?"Yes":"No"}</td><td>{p.active?"Active":"Inactive"}</td></tr>)}</tbody></table></div>
+      <div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Name</th><th>Code</th><th>Benefit</th><th>Minimum</th><th>Auto</th><th>Status</th></tr></thead><tbody>{promotions.map((p)=><tr key={p.id}><td>{p.name}</td><td>{p.code||"-"}</td><td>{p.discount_type==="PERCENT"?`${p.discount_value}%`:money.format(p.discount_value)}</td><td>{money.format(p.min_purchase)}</td><td>{p.auto_apply?"Yes":"No"}</td><td>{p.active?"Active":"Inactive"}</td></tr>)}</tbody></SortableTable></div>
     </section>
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Gift Vouchers</h3>
-      <div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Code</th><th>Initial</th><th>Balance</th><th>Expiry</th><th>Status</th></tr></thead><tbody>{vouchers.map((v)=><tr key={v.id}><td>{v.code}</td><td>{money.format(v.initial_balance)}</td><td>{money.format(v.current_balance)}</td><td>{v.expires_at||"-"}</td><td>{v.status}</td></tr>)}</tbody></table></div>
+      <div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Code</th><th>Initial</th><th>Balance</th><th>Expiry</th><th>Status</th></tr></thead><tbody>{vouchers.map((v)=><tr key={v.id}><td>{v.code}</td><td>{money.format(v.initial_balance)}</td><td>{money.format(v.current_balance)}</td><td>{v.expires_at||"-"}</td><td>{v.status}</td></tr>)}</tbody></SortableTable></div>
     </section>
   </div>
 }

@@ -770,3 +770,189 @@ Open **Products → Bulk Product Import**.
 
 Open Product Master and use **All**, **With Barcode** or **Without Barcode**.
 Choose **Without Barcode**, open **Edit**, scan/enter the physical barcode and save.
+
+## Invoice Inbox and stored supplier invoices
+<!-- V3_API_AUTOMATION_20260831 -->
+ADMIN/MANAGER users can use **Purchases & Suppliers → Invoice Inbox** in the V3 preview. Filter by Year, Month and Status. **View Original** opens the private invoice through temporary secure access. **Review OCR** reopens stored OCR. `POSSIBLE_DUPLICATE` must be resolved before Receive Stock. An Inbox invoice does not mean stock was received; only **Confirm & Receive Stock** changes inventory. Manual App OCR storage is part of V3. Email remains pending until the real Gmail/Google Workspace connection is authorized and tested.
+
+### Email invoices in V3 (20260831T123139Z)
+V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.
+
+### Demo / Test Data Reset
+ADMIN users can open **Settings → Demo / Test Data Reset** during testing. Type **DELETE DEMO DATA** exactly and accept the confirmation. This clears operational test data such as products, purchases, sales, inventory, suppliers and invoice-review records together. Shop identity, users, settings, categories and Email sender mapping remain available.
+
+This is destructive and is intended for controlled test/demo cleanup.
+
+### Email attachment larger than 4 MB
+When a registered shop Email sends a supported invoice PDF/JPG/PNG larger than 4 MB, WineShopPOS does not OCR or receive stock from that oversized attachment. The system replies from the central WineShopPOS Gmail account with the filename, size, current 4 MB limit and a request to compress and resend.
+
+### Barcode demo behavior
+USB/Bluetooth HID scanners may terminate a barcode with **Enter or Tab**. WineShopPOS normalizes scanner whitespace/control characters while preserving leading zeros. Use **POS → Scanner Test** to confirm the device before a live billing demo.
+
+### Invoice financial reconciliation
+When Invoice OCR recognizes invoice-level values such as Freight/Carting, Cash Discount, Other Deduction, TCS, Stamp Duty or other additions, WineShopPOS pre-fills **Landed Cost Adjustments**. Always review the values before receiving stock. If a printed invoice total is available, WineShopPOS compares it with the calculated landed total and shows **MATCH** or **REVIEW**.
+
+### Supplier Invoice / Reference
+The Supplier Invoice / Reference field is optional for the operator. WineShopPOS uses the OCR invoice number when available. If the invoice number cannot be read or is absent, WineShopPOS supplies an internal `AUTO-...` reference so stock receiving is not blocked.
+
+### Invoice Email acknowledgement
+For an authorized shop Email with a supported invoice attachment, WineShopPOS sends one automatic acknowledgement confirming that the Email was received and asking the sender to allow up to **1 hour** for it to appear in Invoice Inbox. Oversized attachments continue to use the separate >4 MB rejection message.
+
+### Required fields
+A red `*` identifies required fields. Fields explicitly labelled **optional** are not required.
+
+### OCR Bulk Product suggestions
+For unmatched OCR products, Bulk Product Import suggests **Brand** from the first word of the product name, **MRP** from a recognized invoice MRP column, and **Category** when the description or beverage brand matches an active category. Review all suggestions before creating products.
+
+### Invoice total mismatch popup
+If the calculated invoice does not match the printed invoice total, WineShopPOS shows a large warning with Calculated Invoice, Printed Invoice and Difference and blocks Receive Stock until reviewed.
+
+### Scan barcode in Bulk Product Import
+Click the Barcode field for the desired row and scan the bottle/can. The complete barcode should remain in that row. You can still type the barcode manually.
+
+### Automatic Email polling paused
+When the Email scheduler is paused, invoice Emails remain in the mailbox until the administrator enables automatic polling again.
+
+### Better liquor invoice OCR
+Invoice OCR now checks the supplier's printed item table rather than trusting only generic invoice fields. It recognizes common liquor-invoice columns even when suppliers use different headings, including combined headings such as MRP Brand. If Azure misses the Cases header/value but Rate/Case and Amount are reliable, WineShopPOS derives Cases only when the ratio is near an integer and validates the invoice-level case total when printed.
+
+### Batch / Lot
+When a Batch/Lot column exists, WineShopPOS preserves the raw OCR value during review and carries the reviewed value into Receive Stock and FIFO history. It does not invent corrected batch numbers when OCR is uncertain.
+
+### Price/Bottle precision
+Price/Bottle can contain more than two decimal places because it may be calculated from the printed line amount divided by final bottles. Precise unit cost is retained; invoice totals remain two-decimal currency amounts.
+
+### FIFO: what to sell
+Inventory → Ageing & FIFO marks the oldest tracked lot for each product as **SELL FIRST** and shows a **BOX-xxxxxx** code. Write that code on the physical carton/box. A full warehouse rack system is not required.
+
+## Product Cleanup (Admin)
+Settings & Admin -> Product Cleanup can permanently purge only a non-transactional test product after typing DELETE. Products with sales, purchases, returns, transfers, stock-count or transactional stock movement history are blocked and should be deactivated/corrected instead. POS Current Bill survives navigation to Scanner Test; use × Remove or Clear Cart explicitly.
+
+## Invoice Inbox — friendly workflow labels
+
+Open **Purchasing → Invoice Inbox** to see retained supplier invoice reviews.
+
+| Display label | Meaning | Typical action |
+| --- | --- | --- |
+| **Needs Review** | OCR/human verification is incomplete. | Start Review / Resume Review |
+| **Ready for Stock** | Review is complete and a saved Receive Stock draft is ready. | Continue Receive Stock |
+| **Completed** | Inventory was received and a purchase receipt is linked. | View Receipt / View Original |
+| **Possible Duplicate** | Duplicate decision is required. | Not Duplicate / Confirm Duplicate |
+| **Duplicate — Closed** | Confirmed duplicate; do not receive again. | View evidence |
+| **Cancelled** | Review was closed only; original invoice remains saved and inventory was not changed. | Reopen Review |
+| **OCR Failed / Processing Failed** | Processing needs investigation. | Investigate / Cancel Review |
+
+**Cancel Review is not delete.** It retains the original document and does not change inventory.
+
+**Completed** is the user-facing term for internal status `RECEIVED`.
+
+### Save & Close versus Apply on Product Edit
+
+- **Save & Close** saves and returns to Product Master.
+- **Apply** saves and keeps the Edit Product screen open.
+
+Selling Price remains a manual product-master value. POS blocks zero Selling Price instead of silently substituting MRP.
+
+## Login status troubleshooting — V3-07
+
+WineShopPOS distinguishes a genuine disabled/suspended account from a temporary authorization verification failure.
+
+- **Account Disabled** is shown only for a verified inactive profile.
+- **Shop Access Suspended** is shown only for verified disallowed shop access.
+- A transient backend JWT timing error is retried automatically before the user sees an error.
+- A valid active account should enter the application without a browser refresh.
+
+<!-- RELEASE_WITH_AI_EVAL_SKIPPED_20260901 -->
+## Edit Product — Selling Price
+On **Edit Product**, enter the Selling Price and choose **Save & Close**. The screen verifies the saved Selling Price before closing. If the saved value cannot be verified or differs, the form stays open and shows an error so the value can be corrected or retried.
+
+The Edit Product screen uses **Save & Close** and **Cancel**. The former **Apply** action and duplicate top-right **Back** / **Close** controls are removed.
+
+<!-- OCR_BULK_PRODUCT_SYNC_FIX_20260902 -->
+## First invoice when Product Master is empty
+Use: **Invoice OCR → Confirm Supplier → Bulk Create Unmatched Products → return to OCR → review/confirm each line → reconcile → Send Confirmed Draft to Receive Stock → Receive Stock**.
+
+Before products exist, `No existing product match found` is normal. After Bulk Create succeeds, the rows should show **Created product linked** and the products should appear in Products. Do not run Bulk Create again for products that were already created.
+
+For reconciliation, compare **Invoice Rate/Case** with **Reviewed Rate/Case** and use the **Gap (Inv - Rev)** column to identify the exact line causing a mismatch. Changing Reviewed Rate/Case automatically recalculates Price/Bottle from Bottles/Case.
+
+Creating Product Master records does not increase stock. Stock changes only through Receive Stock.
+
+<!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
+## POS receipt, Sales and Reports
+After successful payment, WineShopPOS opens the completed receipt and requests the browser print dialog. Use **Print Receipt** if automatic printing is dismissed. Sales reloads from Supabase and includes **Refresh Sales**. Reports refreshes current transactions before charts/totals. On read-only lists, click headers: `↕` sortable, `↑` ascending, `↓` descending. Click again to reverse direction.
+
+<!-- SALES_SPLIT_LOADER_20260902 -->
+## If stock reduced but Sales looks empty
+Do not repeat the bill immediately. Open POS & Billing > Sales and click Refresh Sales. Existing completed invoices should load from Supabase. If a read fails, WineShopPOS shows a visible data-refresh notice. Use View to open and print an existing receipt.
+
+<!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
+## Automatic receipt printing
+Use **Auto Print: ON/OFF** in POS Billing or Printer Settings. OFF opens the receipt without automatically opening the print dialog. ON opens both the receipt and print dialog. This preference belongs to the current browser/device.
+
+## Sr. No. and list sorting
+Read-only sortable lists show **Sr. No.**. Ageing and FIFO Rotation Queue also support sorting. FIFO starts in its operational FIFO order until you click a header.
+
+## Shift Actual Cash
+Expected Cash is calculated by WineShopPOS. Actual Cash is the physical cash counted in the drawer. Enter it explicitly before Request Close. If a CLOSE_REQUESTED amount is wrong, use **Update Actual** before **Approve Close**. WineShopPOS recalculates variance and records the correction in the audit trail.
+
+<!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
+## Product bottle/can images
+Add Product and Edit Product support an optional JPEG, PNG or WebP bottle/can image up to 5 MB. Use an image you own or are permitted to use. Images appear in Products, Inventory and POS.
+
+## Ageing and FIFO priority
+Normal read-only lists may use Sr. No. Ageing and FIFO instead show stable Product Ref plus Age Priority/FIFO Priority. FIFO Priority 1 means SELL FIRST. Sorting another column changes only the view and does not renumber the operational priority.
+
+## UI polish
+WineShop POS uses a short cheers/reveal brand animation, subtle Royal 21 gold treatment, lightweight menu/page feedback, and a user menu that stays above page content. Theme remains under My Account → Account Settings.
+
+<!-- BRAND_THEME_REFINEMENT_20260902_V3 -->
+## Brand animation and themes
+WineShop POS shows a short two-glass cheers animation when the app layout loads. The mark can replay when you hover, focus or click the logo. It does not continuously loop.
+
+Royal 21 uses a subtle gold highlight approximately every six seconds.
+
+Choose **System**, **Light** or **Dark** under **My Account → Account Settings**. System follows the device preference. Both Light and Dark use the same WineShop POS wine-and-gold brand language. Reduced-motion device settings disable decorative motion.
+
+<!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
+## Premium branding and Dark theme
+Royal 21 appears as a large centered gold shop identity with crown and subtle periodic shine. Dark theme uses black/charcoal rather than dark blue. Light theme remains available from **My Account → Account Settings**.
+
+<!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
+## Spiritual image tile
+Below Settings & Admin, click + or drag/drop a JPEG/PNG/WebP image. Drag the bottom handle up/down to change tile height. The tile collapses with the sidebar.
+
+## Sidebar collapse
+Collapse now narrows the whole sidebar and gives the freed space to the main application.
+
+<!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
+## Premium brand animation
+WineShop POS now plays the same five visual stages shown in the approved reference artwork. Hover, focus or click the logo to replay it. Royal 21 uses the same approved gold/crown stages and repeats its short sequence approximately every six seconds.
+
+<!-- ROYAL21_CROWN_COST_V8 -->
+## Royal 21 header
+Royal 21 remains stationary in the center header while its crown rotates continuously. The header is contained above the application content and does not cover POS or purchasing screens.
+
+<!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
+## Royal 21 header
+Royal 21 is displayed prominently in the center header. The crown revolves in a 3D side-to-side/Y-axis motion while the shop name remains stationary. In Dark mode the spiritual image tile uses a true black background.
+
+<!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
+## Royal 21 header appearance
+Royal 21 appears on a pitch-black premium tile with a subtle shimmer. The crown has a stronger 3D revolving effect, and the spiritual image tile also appears pitch black in Dark mode.
+
+<!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
+## Royal 21 premium header
+Royal 21 uses the jeweled crown supplied for the shop, rotating in a side-to-side 3D/Y-axis motion. The complete center header area carries a subtle gold shimmer. Dark mode uses pitch-black application and module backgrounds.
+
+<!-- DEMO_SAFE_ROYAL_HERO_V12 -->
+## Royal 21 premium header
+Royal 21 is presented in the full center header with a restrained gold-light effect and light shimmer. Its jeweled crown rotates around its own vertical axis. The Shop Admin control remains fixed above the hero effects on the right.
+
+<!-- FORT_ONLY_TOP_HERO_V14B -->
+## Demo center header
+The center header displays a Rajasthan-inspired fort visual while existing shop context behavior remains available behind the presentation layer.
+
+<!-- EXACT_USER_REFERENCE_BANNER_V15 -->
+## Royal 21 header artwork
+The center header displays the supplied Royal 21 Rajasthan artwork directly.

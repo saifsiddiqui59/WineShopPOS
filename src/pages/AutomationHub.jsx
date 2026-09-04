@@ -4,6 +4,8 @@ import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import SupplierEditor from "../components/SupplierEditor";
+import { storeManualInvoice } from "../lib/invoiceClient";
+import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
 
 const STRONG_MATCH = 0.90;
 const REVIEW_KEY = "wineshop_ocr_review_state";
@@ -33,43 +35,214 @@ function supplierScore(ocrName, supplierName) {
   return union ? Math.round((intersection / union) * 80) : 0;
 }
 
+function emptyCharges() {
+  return {
+    freightAmount: 0,
+    transportAmount: 0,
+    handlingAmount: 0,
+    loadingUnloadingAmount: 0,
+    supplierDiscountAmount: 0,
+    invoiceDiscountAmount: 0,
+    miscellaneousAmount: 0,
+    roundingAdjustment: 0,
+  };
+}
+
+function chargesFromInvoice(invoice) {
+  const finance = invoice?.financialAdjustments || {};
+  return {
+    ...emptyCharges(),
+    freightAmount: Math.max(0, Number(invoice?.freightAmount || finance?.freightCartingAmount || invoice?.shippingAmount || 0)),
+    transportAmount: Math.max(0, Number(invoice?.transportAmount || finance?.transportAmount || 0)),
+    handlingAmount: Math.max(0, Number(invoice?.handlingAmount || finance?.handlingAmount || 0)),
+    loadingUnloadingAmount: Math.max(0, Number(invoice?.loadingUnloadingAmount || finance?.loadingUnloadingAmount || 0)),
+    supplierDiscountAmount: Math.max(0, Number(invoice?.supplierDiscountAmount || finance?.cashDiscountAmount || 0)),
+    invoiceDiscountAmount: Math.max(0, Number(invoice?.invoiceDiscountAmount || finance?.otherDeductionAmount || invoice?.discountAmount || 0)),
+    miscellaneousAmount: Math.max(0, Number(invoice?.miscellaneousAmount || finance?.miscellaneousAmount || invoice?.otherCharges || 0)),
+    roundingAdjustment: Number(invoice?.roundingAdjustment ?? finance?.roundingAdjustment ?? 0),
+  };
+}
+
+function shortHash(value) {
+  let hash = 2166136261;
+  for (const ch of String(value || "invoice")) {
+    hash ^= ch.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).toUpperCase().padStart(8, "0");
+}
+
+function autoInvoiceReference({ invoiceDate, ingestionId, sourceFileName }) {
+  const parsed = Date.parse(String(invoiceDate || ""));
+  const date = Number.isFinite(parsed)
+    ? new Date(parsed).toISOString().slice(0, 10).replaceAll("-", "")
+    : new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  return `AUTO-${date}-${shortHash(ingestionId || sourceFileName || "OCR").slice(0, 8)}`;
+}
+
+function nearWhole(value, tolerance = 0.06) {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const rounded = Math.round(value);
+  return Math.abs(value - rounded) <= tolerance ? rounded : null;
+}
+
 function interpretQuantity(item, product) {
-  const ocrQty = Math.max(0, Number(item?.quantity ?? 0)) || 1;
-  const unitsPerCase = Math.max(1, Number(product?.unitsPerCase || 12));
+  const rawQuantity = Math.max(0, Number(item?.quantity ?? 0));
+  const amount = Math.max(0, Number(item?.amount || 0));
+  const explicitUnitPrice = Math.max(0, Number(item?.unitPrice || 0));
+  const packResolution = resolveInvoiceUnitsPerCase(item, product);
+  const unitsPerCase = Math.max(1, Number(packResolution.value || 1));
   const unitText = String(item?.unitText || "").toLowerCase();
   const caseUnit = /\b(case|cases|cs|ctn|carton|cartons)\b/.test(unitText);
-  const ocrUnitPrice = Math.max(0, Number(item?.unitPrice || 0));
 
-  if (caseUnit) {
-    return {
-      caseCount: ocrQty,
-      unitsPerCase,
-      looseBottles: 0,
-      quantity: ocrQty * unitsPerCase,
-      priceBasis: "CASE",
-      ocrUnitPrice,
-      purchasePrice: unitsPerCase > 0 ? ocrUnitPrice / unitsPerCase : 0,
-      interpretation: "OCR unit indicates case/carton. Review bottles per case before confirmation.",
-    };
+  let caseCount = 0;
+  let looseBottles = 0;
+  let quantity = 0;
+  let priceBasis = "BOTTLE";
+  let ocrUnitPrice = explicitUnitPrice;
+  let purchasePrice = 0;
+  let interpretation = "OCR quantity is ambiguous. Review Cases, Bottles/Case and Final Bottles.";
+
+  const casesFromExplicitRate =
+    explicitUnitPrice > 0 && amount > 0 ? nearWhole(amount / explicitUnitPrice) : null;
+  const casesFromQuantityAsRate =
+    rawQuantity > 0 && amount > 0 ? nearWhole(amount / rawQuantity) : null;
+
+  const explicitCases = Number(item?.caseCount);
+  const explicitLoose = Math.max(0, Number(item?.looseBottles || 0));
+  const ratePerCase = Math.max(0, Number(item?.ratePerCase || explicitUnitPrice || 0));
+
+  if (
+    Number.isInteger(explicitCases) &&
+    explicitCases > 0 &&
+    explicitCases <= 1000
+  ) {
+    caseCount = explicitCases;
+    looseBottles = Number.isInteger(explicitLoose) ? explicitLoose : 0;
+    quantity = caseCount * unitsPerCase + looseBottles;
+    priceBasis = "TABLE_CASE";
+    ocrUnitPrice = ratePerCase;
+    purchasePrice =
+      amount > 0 && quantity > 0
+        ? amount / quantity
+        : ratePerCase > 0
+          ? ratePerCase / unitsPerCase
+          : 0;
+    interpretation =
+      `Invoice table resolved ${caseCount} case(s)` +
+      `${item?.batchNumber ? ` · Batch ${item.batchNumber}` : ""}. ` +
+      "Price/Bottle is allocated from the printed line amount at full precision; review Bottles/Case before confirmation.";
+  } else if (
+    rawQuantity > 0 &&
+    !Number.isInteger(rawQuantity) &&
+    casesFromQuantityAsRate &&
+    casesFromQuantityAsRate <= 1000
+  ) {
+    caseCount = casesFromQuantityAsRate;
+    quantity = caseCount * unitsPerCase;
+    priceBasis = "CASE";
+    ocrUnitPrice = rawQuantity;
+    purchasePrice = rawQuantity / unitsPerCase;
+    interpretation =
+      `OCR Quantity (${rawQuantity}) behaves like Rate/Case because Amount ÷ value ≈ ${caseCount} cases. ` +
+      "WineShopPOS corrected the case count; review Bottles/Case before confirmation.";
+  } else if (casesFromExplicitRate && caseUnit && casesFromExplicitRate <= 1000) {
+    caseCount = casesFromExplicitRate;
+    quantity = caseCount * unitsPerCase;
+    priceBasis = "CASE";
+    purchasePrice = explicitUnitPrice / unitsPerCase;
+    interpretation =
+      `Line Amount ÷ OCR Rate/Case indicates ${caseCount} cases. Review Bottles/Case before confirmation.`;
+  } else if (
+    Number.isInteger(rawQuantity) &&
+    rawQuantity > 0 &&
+    rawQuantity <= 10000
+  ) {
+    const looksLikeBottleTotal =
+      rawQuantity >= unitsPerCase * 2 &&
+      rawQuantity % unitsPerCase === 0;
+
+    if (looksLikeBottleTotal) {
+      quantity = rawQuantity;
+      caseCount = Math.floor(rawQuantity / unitsPerCase);
+      looseBottles = rawQuantity % unitsPerCase;
+      priceBasis = "BOTTLE";
+      purchasePrice =
+        explicitUnitPrice > 0 && !caseUnit
+          ? explicitUnitPrice
+          : amount > 0
+            ? amount / rawQuantity
+            : 0;
+      interpretation =
+        `OCR quantity ${rawQuantity} looks like total bottles. ` +
+        `Derived ${caseCount} case(s) × ${unitsPerCase} bottles/case. Review before confirmation.`;
+    } else if (caseUnit && rawQuantity <= 1000) {
+      caseCount = rawQuantity;
+      quantity = caseCount * unitsPerCase;
+      priceBasis = "CASE";
+      purchasePrice =
+        explicitUnitPrice > 0
+          ? explicitUnitPrice / unitsPerCase
+          : amount > 0 && quantity > 0
+            ? amount / quantity
+            : 0;
+      interpretation =
+        `OCR explicitly indicates case/carton and quantity ${rawQuantity}. Review Bottles/Case before confirmation.`;
+    } else {
+      quantity = rawQuantity;
+      looseBottles = rawQuantity;
+      purchasePrice =
+        explicitUnitPrice > 0
+          ? explicitUnitPrice
+          : amount > 0
+            ? amount / rawQuantity
+            : 0;
+      interpretation =
+        "OCR quantity treated as bottle/unit quantity. Review case breakdown before confirmation.";
+    }
+  }
+
+  if (
+    !Number.isInteger(caseCount) ||
+    !Number.isInteger(looseBottles) ||
+    !Number.isInteger(quantity) ||
+    caseCount > 1000 ||
+    quantity > 10000
+  ) {
+    caseCount = 0;
+    looseBottles = 0;
+    quantity = 0;
+    purchasePrice = 0;
+    interpretation =
+      "OCR produced an unsafe/implausible quantity. WineShopPOS did not calculate stock; enter the reviewed case/bottle quantity manually.";
+  }
+
+  if (packResolution.conflict) {
+    interpretation += ` PACK CONFLICT: invoice evidence suggests ${packResolution.invoiceValue} bottles/case while Product Master has ${packResolution.productValue}. Invoice evidence is used until a manager confirms the line.`;
+  } else if (packResolution.source === "PRINTED_BOTTLE_TOTAL") {
+    interpretation += " Bottles/Case is verified from the invoice's printed bottle quantity.";
   }
 
   return {
-    caseCount: 0,
+    caseCount,
     unitsPerCase,
-    looseBottles: ocrQty,
-    quantity: ocrQty,
-    priceBasis: "BOTTLE",
+    looseBottles,
+    quantity,
+    priceBasis,
     ocrUnitPrice,
-    purchasePrice: ocrUnitPrice,
-    interpretation: unitText
-      ? `OCR unit “${item.unitText}” treated as bottle/unit. Review before confirmation.`
-      : "OCR did not provide a case unit. Quantity is treated as loose bottles until confirmed.",
+    purchasePrice: Number.isFinite(purchasePrice) ? Number(purchasePrice.toFixed(6)) : 0,
+    interpretation,
+    unitsPerCaseSource: packResolution.source,
+    invoiceUnitsPerCase: packResolution.invoiceValue,
+    productUnitsPerCase: packResolution.productValue,
+    packConflict: packResolution.conflict,
+    packReviewRequired: packResolution.reviewRequired,
   };
 }
 
 export default function AutomationHub() {
   const { products, suppliers, refreshAll } = useShop();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const navigate = useNavigate();
 
   const [file, setFile] = useState(null);
@@ -78,6 +251,10 @@ export default function AutomationHub() {
   const [resolution, setResolution] = useState({});
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ingestionId, setIngestionId] = useState(null);
+  const [sourceFileName, setSourceFileName] = useState("");
+  const [charges, setCharges] = useState(emptyCharges());
+  const [financeWarning, setFinanceWarning] = useState(null);
 
   const [supplierId, setSupplierId] = useState("");
   const [confirmedSupplier, setConfirmedSupplier] = useState(null);
@@ -115,6 +292,9 @@ export default function AutomationHub() {
         setResolution(state.resolution || {});
         setSupplierId(state.supplierId || "");
         setConfirmedSupplier(state.confirmedSupplier || null);
+        setIngestionId(state.ingestionId || null);
+        setSourceFileName(state.sourceFileName || "");
+        setCharges({ ...emptyCharges(), ...(state.charges || chargesFromInvoice(state.result)) });
       }
 
       const created = sessionStorage.getItem(CREATED_KEY);
@@ -151,9 +331,25 @@ export default function AutomationHub() {
             }
             return next;
           });
-          setMessage(
-            `${createdRows.length} new OCR product(s) were bulk-created and linked. Review quantity/price and confirm each line before Receive Stock.`,
-          );
+          setMatches((current) => {
+            const next = { ...current };
+            for (const item of createdRows) {
+              next[item.lineIndex] = [{
+                product_id: item.productId,
+                product_name: item.productName || "Newly created product",
+                score: 1,
+                match_source: "CREATED_PRODUCT",
+              }];
+            }
+            return next;
+          });
+          void refreshAll().then((refreshResult) => {
+            setMessage(
+              refreshResult?.ok
+                ? `${createdRows.length} new OCR product(s) were bulk-created, verified and loaded into Product Master. Review quantity/price and confirm each line before Receive Stock.`
+                : `${createdRows.length} product(s) were created and linked, but Product Master refresh failed. Do not bulk-create again; refresh this page before Receive Stock.`,
+            );
+          });
         }
         sessionStorage.removeItem(BULK_CREATED_KEY);
       }
@@ -173,9 +369,12 @@ export default function AutomationHub() {
         resolution,
         supplierId,
         confirmedSupplier,
+        ingestionId,
+        sourceFileName,
+        charges,
       }),
     );
-  }, [result, matches, resolution, supplierId, confirmedSupplier]);
+  }, [result, matches, resolution, supplierId, confirmedSupplier, ingestionId, sourceFileName, charges]);
 
   function toBase64(nextFile) {
     return new Promise((resolve, reject) => {
@@ -224,6 +423,12 @@ export default function AutomationHub() {
 
   async function analyze() {
     if (!file) return;
+    // V3_05_FRESH_ANALYZE_RESET
+    sessionStorage.removeItem(REVIEW_KEY);
+    setResult(null);setMatches({});setResolution({});
+    setSupplierId("");setConfirmedSupplier(null);
+    setIngestionId(null);setSourceFileName("");
+    setCharges(emptyCharges());setFinanceWarning(null);
     if (file.size > 4 * 1024 * 1024) {
       setMessage(
         "OCR accepts files up to 4 MB in the current configuration. Compress or split this invoice first.",
@@ -237,19 +442,52 @@ export default function AutomationHub() {
     setSupplierId("");
     setMatches({});
     setResolution({});
+    setCharges(emptyCharges());
+    setResult(null);
+    setIngestionId(null);
 
     try {
       const contentBase64 = await toBase64(file);
-      const { data, error } = await supabase.functions.invoke("ocr-invoice", {
-        body: {
-          contentBase64,
-          contentType: file.type || "application/octet-stream",
-        },
+      let nextIngestionId = null;
+      let duplicateStatus = "";
+      setSourceFileName(file.name || "");
+
+      const stored = await storeManualInvoice({
+        token: session?.access_token,
+        fileName: file.name,
+        contentType: file.type || "application/octet-stream",
+        contentBase64,
       });
+
+      if (stored?.duplicate) {
+        const existingStatus = String(stored.existing_status || "UNKNOWN");
+        const recoverable = ["NEEDS_REVIEW", "OCR_FAILED", "FAILED"].includes(existingStatus);
+        if (!recoverable) {
+          setMessage(`Duplicate invoice file detected. Existing status: ${existingStatus}. Open Invoice Inbox instead of receiving it again.`);
+          return;
+        }
+        nextIngestionId = stored?.ingestion_id || null;
+        duplicateStatus = existingStatus;
+      } else {
+        nextIngestionId = stored?.ingestion_id || null;
+      }
+
+      if (!nextIngestionId) {
+        throw new Error("Original invoice was not safely stored. OCR is blocked so stock cannot be received without audit evidence.");
+      }
+      setIngestionId(nextIngestionId);
+      const { data, error } = await supabase.functions.invoke("ocr-invoice", { body: { contentBase64, contentType: file.type || "application/octet-stream" } });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.message || "OCR failed");
-
       setResult(data.invoice);
+      setCharges(chargesFromInvoice(data.invoice));
+      if (nextIngestionId) {
+        const { data: metadata, error: metadataError } = await supabase.rpc("invoice_record_ocr_result", { p_ingestion_id: nextIngestionId, p_supplier_name: data.invoice?.supplierName || null, p_invoice_number: data.invoice?.invoiceNumber || null, p_invoice_date: data.invoice?.invoiceDate || null, p_total: data.invoice?.total ?? null, p_normalized_invoice: data.invoice });
+        if (metadataError) {
+          throw new Error(`Original invoice is stored, but OCR history metadata could not be updated (${metadataError.message}). Receive Stock is blocked until the audit record is complete.`);
+        }
+        duplicateStatus = metadata?.review_status || duplicateStatus || "";
+      }
 
       const ranked = suppliers
         .filter((supplier) => supplier.active !== false)
@@ -267,7 +505,9 @@ export default function AutomationHub() {
       }
 
       setMessage(
-        "OCR complete. Confirm the supplier, then resolve and confirm every invoice line before stock receipt.",
+        duplicateStatus === "POSSIBLE_DUPLICATE"
+          ? "OCR complete, but this looks like a possible duplicate. Resolve it in Invoice Inbox before Receive Stock."
+          : "Original invoice saved. OCR complete. Confirm invoice date, supplier, products and quantities before stock receipt.",
       );
     } catch (error) {
       setMessage(error.message || String(error));
@@ -325,8 +565,14 @@ export default function AutomationHub() {
       };
 
       if (productId) {
-        row.unitsPerCase = Number(product?.unitsPerCase || row.unitsPerCase || 12);
-        if (row.priceBasis === "CASE") {
+        const packResolution = resolveInvoiceUnitsPerCase(result?.items?.[index] || {}, product);
+        row.unitsPerCase = Math.max(1, Number(packResolution.value || row.unitsPerCase || 12));
+        row.unitsPerCaseSource = packResolution.source;
+        row.invoiceUnitsPerCase = packResolution.invoiceValue;
+        row.productUnitsPerCase = packResolution.productValue;
+        row.packConflict = packResolution.conflict;
+        row.packReviewRequired = packResolution.reviewRequired;
+        if (row.priceBasis === "CASE" || row.priceBasis === "TABLE_CASE") {
           row.purchasePrice =
             Number(row.ocrUnitPrice || 0) / Math.max(1, row.unitsPerCase);
         }
@@ -355,9 +601,14 @@ export default function AutomationHub() {
       row.caseCount = Math.max(0, Number(row.caseCount || 0));
       row.looseBottles = Math.max(0, Number(row.looseBottles || 0));
 
-      if (key === "unitsPerCase" && row.priceBasis === "CASE") {
-        row.purchasePrice =
-          Number(row.ocrUnitPrice || 0) / row.unitsPerCase;
+      if (key === "unitsPerCase") {
+        row.unitsPerCaseSource = "HUMAN_REVIEW";
+        row.packConflict = false;
+        row.packReviewRequired = false;
+        if (row.priceBasis === "CASE" || row.priceBasis === "TABLE_CASE") {
+          row.purchasePrice =
+            Number(row.ocrUnitPrice || 0) / row.unitsPerCase;
+        }
       }
 
       row.quantity =
@@ -378,6 +629,24 @@ export default function AutomationHub() {
           : "NEEDS_PRODUCT",
       },
     }));
+  }
+
+  function updateCasePrice(index, value) {
+    setResolution((current) => {
+      const row = { ...(current[index] || {}) };
+      const caseRate = Math.max(0, Number(value || 0));
+      const unitsPerCase = Math.max(1, Number(row.unitsPerCase || 1));
+      return {
+        ...current,
+        [index]: {
+          ...row,
+          purchasePrice: Number((caseRate / unitsPerCase).toFixed(6)),
+          status: row.productId
+            ? "SELECTED_NEEDS_CONFIRMATION"
+            : "NEEDS_PRODUCT",
+        },
+      };
+    });
   }
 
   async function saveAlias(index, productId) {
@@ -482,6 +751,9 @@ export default function AutomationHub() {
         resolution,
         supplierId,
         confirmedSupplier,
+        ingestionId,
+        sourceFileName,
+        charges,
       }),
     );
 
@@ -507,10 +779,109 @@ export default function AutomationHub() {
         resolution,
         supplierId,
         confirmedSupplier,
+        ingestionId,
+        sourceFileName,
+        charges,
       }),
     );
 
     navigate("/products/bulk-import?ocr=1");
+  }
+
+  function reviewDraftSnapshot(stage = "OCR_REVIEW", purchaseDraft = null) {
+    return {
+      version: 1,
+      stage,
+      result,
+      matches,
+      resolution,
+      supplierId,
+      confirmedSupplier: confirmedSupplier
+        ? { id: confirmedSupplier.id, supplier_name: confirmedSupplier.supplier_name }
+        : null,
+      ingestionId,
+      sourceFileName,
+      charges,
+      purchaseDraft,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  function reviewIsReady() {
+    const dateReady = /^\d{4}-\d{2}-\d{2}$/.test(String(result?.invoiceDate || ""));
+    return Boolean(
+      ingestionId &&
+      dateReady &&
+      result?.items?.length &&
+      confirmedSupplier &&
+      result.items.every((_, index) => {
+        const row = resolution[index];
+        return (
+          row?.productId &&
+          row?.status === "CONFIRMED" &&
+          Number.isInteger(Number(row?.quantity || 0)) &&
+          Number(row?.quantity || 0) > 0
+        );
+      }),
+    );
+  }
+
+  async function persistReviewDraft({ silent = true, stage = "OCR_REVIEW", purchaseDraft = null, ready = reviewIsReady() } = {}) {
+    if (!ingestionId || !result) return { ok: true, skipped: true };
+    const { data, error } = await supabase.rpc("invoice_save_review_draft", {
+      p_ingestion_id: ingestionId,
+      p_review_draft: reviewDraftSnapshot(stage, purchaseDraft),
+      p_ready: Boolean(ready),
+    });
+    if (error) {
+      if (!silent) setMessage(error.message || "Unable to save invoice review draft.");
+      return { ok: false, error };
+    }
+    if (!silent) {
+      setMessage(data === "READY_TO_RECEIVE" ? "Draft saved and ready for Receive Stock." : "Invoice review draft saved.");
+    }
+    return { ok: true, status: data };
+  }
+
+  useEffect(() => {
+    if (!ingestionId || !result) return undefined;
+    const timer = window.setTimeout(() => {
+      persistReviewDraft({ silent: true });
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [ingestionId, result, matches, resolution, supplierId, confirmedSupplier, sourceFileName, charges]);
+
+  async function saveReviewDraft() {
+    setBusy(true);
+    await persistReviewDraft({ silent: false });
+    setBusy(false);
+  }
+
+  async function cancelReview() {
+    if (!ingestionId) {
+      sessionStorage.removeItem(REVIEW_KEY);
+      setResult(null);
+      setResolution({});
+      setMatches({});
+      setConfirmedSupplier(null);
+      setSupplierId("");
+      setMessage("Local OCR review cleared. No received stock was changed.");
+      return;
+    }
+    if (!window.confirm("Cancel this invoice review? This does not delete the original invoice and does not change inventory.")) return;
+    const reason = window.prompt("Optional cancellation reason:", "") ?? "";
+    setBusy(true);
+    const { error } = await supabase.rpc("invoice_cancel_review", {
+      p_ingestion_id: ingestionId,
+      p_reason: reason || null,
+    });
+    setBusy(false);
+    if (error) {
+      setMessage(error.message || "Unable to cancel invoice review.");
+      return;
+    }
+    sessionStorage.removeItem(REVIEW_KEY);
+    navigate("/purchasing/invoices");
   }
 
   const unresolved = useMemo(
@@ -524,32 +895,118 @@ export default function AutomationHub() {
     [result, resolution],
   );
 
+  const reviewedProductValue = useMemo(
+    () =>
+      (result?.items || []).reduce((sum, item, index) => {
+        const row = resolution[index];
+        const quantity = Number(row?.quantity || 0);
+        const price = Number(row?.purchasePrice || 0);
+        if (quantity > 0) return sum + quantity * Math.max(0, price);
+        return sum + Math.max(0, Number(item?.amount || 0));
+      }, 0),
+    [result, resolution],
+  );
+
+  const invoiceLineSubtotal = useMemo(
+    () =>
+      (result?.items || []).reduce(
+        (sum, item) => sum + Math.max(0, Number(item?.amount || 0)),
+        0,
+      ),
+    [result],
+  );
+
+  const reviewedResolvedLineValue = useMemo(
+    () =>
+      (result?.items || []).reduce((sum, _item, index) => {
+        const row = resolution[index];
+        return (
+          sum +
+          Math.max(0, Number(row?.quantity || 0)) *
+            Math.max(0, Number(row?.purchasePrice || 0))
+        );
+      }, 0),
+    [result, resolution],
+  );
+
+  const productLineGap = Number(
+    (invoiceLineSubtotal - reviewedResolvedLineValue).toFixed(2),
+  );
+
+  const reviewedAdjustment = useMemo(
+    () =>
+      Number(charges.freightAmount || 0) +
+      Number(charges.transportAmount || 0) +
+      Number(charges.handlingAmount || 0) +
+      Number(charges.loadingUnloadingAmount || 0) +
+      Number(charges.miscellaneousAmount || 0) -
+      Number(charges.supplierDiscountAmount || 0) -
+      Number(charges.invoiceDiscountAmount || 0) +
+      Number(charges.roundingAdjustment || 0),
+    [charges],
+  );
+
+  const reviewedInvoiceTotal = reviewedProductValue + reviewedAdjustment;
+  const printedInvoiceTotal = Number(result?.total || 0);
+  const reconciliationDifference =
+    printedInvoiceTotal > 0
+      ? Number((printedInvoiceTotal - reviewedInvoiceTotal).toFixed(2))
+      : null;
+  const reconciliationMatches =
+    reconciliationDifference == null || Math.abs(reconciliationDifference) <= 1;
+
   async function sendDraft() {
     if (!result || !confirmedSupplier) {
       setMessage("Confirm the supplier first.");
       return;
     }
+    if (!ingestionId) {
+      setMessage("Original invoice evidence is not stored. Receive Stock is blocked.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(result.invoiceDate || ""))) {
+      setMessage("Review and enter a valid Invoice Date before Receive Stock.");
+      return;
+    }
 
     if (unresolved) {
-      setMessage(
-        `${unresolved} invoice line(s) still need product/quantity confirmation.`,
+      setMessage(`${unresolved} invoice line(s) still need product/quantity confirmation.`);
+      return;
+    }
+
+    if (!reconciliationMatches) {
+      setFinanceWarning({
+        calculated: reviewedInvoiceTotal,
+        printed: printedInvoiceTotal,
+        difference: Math.abs(reconciliationDifference),
+      });
+      setMessage("");
+      window.requestAnimationFrame(() =>
+        document.getElementById("invoice-financial-summary")?.scrollIntoView({behavior:"smooth",block:"center"})
       );
       return;
     }
 
     setBusy(true);
     try {
+      const { data: liveProducts, error: liveProductsError } =
+        await supabase.rpc("get_products");
+      if (liveProductsError) throw liveProductsError;
+
+      const liveProductById = new Map(
+        (liveProducts || []).map((product) => [product.id, product]),
+      );
       const lines = [];
 
       for (let index = 0; index < result.items.length; index += 1) {
         const item = result.items[index];
         const row = resolution[index];
-        const product = activeProducts.find(
-          (entry) => entry.id === row.productId,
-        );
+        const product = liveProductById.get(row.productId);
 
         if (!product) {
-          throw new Error(`Product unavailable on OCR line ${index + 1}.`);
+          throw new Error(
+            `Product Master verification failed on OCR line ${index + 1}. Do not create duplicates; refresh Product Master and review this invoice again.`,
+          );
         }
 
         await saveAlias(index, product.id);
@@ -558,29 +1015,56 @@ export default function AutomationHub() {
           description: item.description,
           productId: product.id,
           caseCount: Number(row.caseCount || 0),
-          unitsPerCase: Number(row.unitsPerCase || product.unitsPerCase || 1),
+          unitsPerCase: Number(row.unitsPerCase || product.units_per_case || 1),
           looseBottles: Number(row.looseBottles || 0),
           quantity: Number(row.quantity || 0),
           purchasePrice: Number(row.purchasePrice || 0),
-          batchNumber: "",
-          expiryDate: "",
+          batchNumber: String(item.batchNumber || ""),
+          expiryDate: String(item.expiryDate || ""),
         });
       }
 
-      sessionStorage.setItem(
-        "wineshop_ocr_purchase_draft",
-        JSON.stringify({
-          supplierId: confirmedSupplier.id,
-          supplierName: confirmedSupplier.supplier_name,
-          invoiceNumber: result.invoiceNumber || "",
-          invoiceDate:
-            result.invoiceDate || new Date().toISOString().slice(0, 10),
-          items: lines,
-          sourceFile: file?.name || "OCR invoice",
-          createdAt: new Date().toISOString(),
-        }),
-      );
+      const invoiceReference =
+        String(result.invoiceNumber || "").trim() ||
+        autoInvoiceReference({
+          invoiceDate: result.invoiceDate,
+          ingestionId,
+          sourceFileName,
+        });
 
+      const purchaseDraft = {
+        supplierId: confirmedSupplier.id,
+        supplierName: confirmedSupplier.supplier_name,
+        invoiceNumber: invoiceReference,
+        invoiceNumberSource: result.invoiceNumber ? "OCR" : "AUTO",
+        invoiceDate: result.invoiceDate,
+        items: lines,
+        charges,
+        financialSummary: {
+          subtotal: result.subtotal ?? null,
+          totalTax: result.totalTax ?? null,
+          total: result.total ?? null,
+          amountDue: result.amountDue ?? null,
+          reviewedProductValue,
+          reviewedInvoiceTotal,
+          difference: reconciliationDifference,
+          reconciliationStatus: reconciliationMatches ? "MATCH" : "REVIEW",
+          financialAdjustments: result.financialAdjustments || null,
+        },
+        sourceFile: sourceFileName || file?.name || "OCR invoice",
+        ingestionId: ingestionId || null,
+        createdAt: new Date().toISOString(),
+      };
+
+      const persisted = await persistReviewDraft({
+        silent: true,
+        stage: "RECEIVE_STOCK",
+        purchaseDraft,
+        ready: true,
+      });
+      if (!persisted.ok) throw persisted.error;
+
+      sessionStorage.setItem("wineshop_ocr_purchase_draft", JSON.stringify(purchaseDraft));
       sessionStorage.removeItem(REVIEW_KEY);
       navigate("/purchasing/receive");
     } catch (error) {
@@ -601,6 +1085,25 @@ export default function AutomationHub() {
 
   return (
     <div>
+      {financeWarning ? (
+        <div className="finance-warning-backdrop">
+          <div className="finance-warning-modal" role="alertdialog" aria-modal="true">
+            <div className="finance-warning-icon">!</div>
+            <h2>Invoice Total Does Not Match</h2>
+            <p>Receive Stock is blocked until the reviewed financial calculation matches the printed invoice.</p>
+            <div className="finance-warning-values">
+              <div><span>Calculated Invoice</span><strong>₹{Number(financeWarning.calculated||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</strong></div>
+              <div><span>Printed Invoice</span><strong>₹{Number(financeWarning.printed||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</strong></div>
+              <div className="danger"><span>Difference</span><strong>₹{Number(financeWarning.difference||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</strong></div>
+            </div>
+            <p className="muted-text">Review the highlighted landed-cost fields. Inventory has not changed.</p>
+            <div className="button-row">
+              <button type="button" className="primary-button" onClick={() => {setFinanceWarning(null);window.requestAnimationFrame(()=>document.getElementById("invoice-financial-summary")?.scrollIntoView({behavior:"smooth",block:"center"}));}}>Review Financials</button>
+              <button type="button" className="secondary-button" onClick={() => setFinanceWarning(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="page-heading">
         <div>
           <h2>Invoice OCR</h2>
@@ -636,7 +1139,46 @@ export default function AutomationHub() {
 
       {result ? (
         <section className="panel" style={{ marginTop: 16 }}>
-          <h3>1. Confirm Supplier</h3>
+          <div className="button-row spread">
+            <h3>1. Confirm Supplier</h3>
+            <div className="button-row">
+              <button type="button" className="secondary-button" disabled={busy} onClick={saveReviewDraft}>
+                Save Draft
+              </button>
+              <button type="button" className="secondary-button" disabled={busy} onClick={cancelReview}>
+                Cancel Review
+              </button>
+            </div>
+          </div>
+          <div className="form-grid" style={{ marginBottom: 12 }}>
+            <label>Invoice / Reference
+              <input
+                value={result.invoiceNumber || ""}
+                onChange={(event) => setResult((current) => ({ ...current, invoiceNumber: event.target.value }))}
+                placeholder="Supplier invoice number"
+              />
+            </label>
+            <label>Invoice Date
+              <input
+                type="date"
+                value={result.invoiceDate || ""}
+                onChange={(event) => setResult((current) => ({
+                  ...current,
+                  invoiceDate: event.target.value,
+                  invoiceDateReviewRequired: false,
+                  invoiceDateSource: "HUMAN_REVIEW",
+                }))}
+              />
+            </label>
+          </div>
+          {result.invoiceDateReviewRequired ? (
+            <div className="purchase-message">
+              Invoice date needs review. Azure raw value: {result.invoiceDateRaw || "not resolved"}. Confirm the physical invoice date before receiving stock.
+            </div>
+          ) : null}
+          <p className="muted-text">
+            Date source: {result.invoiceDateSource || "OCR"} · Original invoice evidence: {ingestionId ? "saved" : "NOT SAVED"}
+          </p>
           <p>
             OCR Supplier: <strong>{result.supplierName || "Not detected"}</strong>
           </p>
@@ -705,12 +1247,60 @@ export default function AutomationHub() {
       ) : null}
 
       {result && confirmedSupplier ? (
+        <section id="invoice-financial-summary" className={`panel${financeWarning ? " finance-review-flash" : ""}`} style={{ marginTop: 16 }}>
+          <h3>Invoice Financial Summary</h3>
+          <div className="metric-grid four">
+            <div className="metric-card"><span>Subtotal OCR</span><strong>{result.subtotal == null ? "—" : Number(result.subtotal).toLocaleString("en-IN")}</strong></div>
+            <div className="metric-card"><span>Tax OCR</span><strong>{result.totalTax == null ? "—" : Number(result.totalTax).toLocaleString("en-IN")}</strong></div>
+            <div className="metric-card"><span>Invoice Total OCR</span><strong>{result.total == null ? "—" : Number(result.total).toLocaleString("en-IN")}</strong></div>
+            <div className="metric-card"><span>Amount Due OCR</span><strong>{result.amountDue == null ? "—" : Number(result.amountDue).toLocaleString("en-IN")}</strong></div>
+          </div>
+          <p className="muted-text">
+            WineShopPOS now recognizes common liquor-invoice summary rows such as Cash Discount, Other Deduction, Freight/Carting, Stamp Duty and TCS. Review the auto-filled values before posting.
+          </p>
+          <div className="metric-grid four" style={{ marginTop: 12 }}>
+            <div className="metric-card"><span>Reviewed Product Value</span><strong>₹{reviewedProductValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Calculated Invoice</span><strong>₹{reviewedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Printed Invoice</span><strong>{printedInvoiceTotal > 0 ? `₹${printedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</strong></div>
+            <div className="metric-card"><span>Reconciliation</span><strong>{reconciliationDifference == null ? "No printed total" : reconciliationMatches ? `MATCH · ₹${Math.abs(reconciliationDifference).toFixed(2)}` : `REVIEW · ₹${Math.abs(reconciliationDifference).toFixed(2)}`}</strong></div>
+          </div>
+          <div className={Math.abs(productLineGap) <= 1 ? "purchase-message success" : "purchase-message"} style={{ marginTop: 12 }}>
+            Product-line check · Invoice lines: <strong>₹{invoiceLineSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
+            {" · "}Reviewed lines: <strong>₹{reviewedResolvedLineValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
+            {" · "}Gap (Invoice − Reviewed): <strong>₹{productLineGap.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>.
+            {" "}Use the per-row Rate/Case and Line Gap columns below to locate the difference.
+          </div>
+          <div className="form-grid" style={{ marginTop: 12 }}>
+            {[
+              ["freightAmount", "Freight / Carting"],
+              ["transportAmount", "Transport"],
+              ["handlingAmount", "Handling"],
+              ["loadingUnloadingAmount", "Loading / Unloading"],
+              ["supplierDiscountAmount", "Cash / Supplier Discount"],
+              ["invoiceDiscountAmount", "Other / Invoice Deduction"],
+              ["miscellaneousAmount", "TCS + Stamp Duty + Other Additions"],
+            ].map(([key, label]) => (
+              <label key={key}>{label}
+                <input type="number" min="0" step="0.01" value={charges[key]}
+                  onChange={(e) => setCharges((current) => ({ ...current, [key]: Number(e.target.value || 0) }))} />
+              </label>
+            ))}
+            <label>Rounding Adjustment
+              <input type="number" step="0.01" value={charges.roundingAdjustment}
+                onChange={(e) => setCharges((current) => ({ ...current, roundingAdjustment: Number(e.target.value || 0) }))} />
+            </label>
+          </div>
+        </section>
+      ) : null}
+
+      {result && confirmedSupplier ? (
         <section className="panel" style={{ marginTop: 16 }}>
           <div className="section-row">
             <div>
               <h3>2. Resolve Every Product & Quantity</h3>
               <p>
-                Invoice: <strong>{result.invoiceNumber || "-"}</strong> · Date:{" "}
+                Invoice / Reference: <strong>{result.invoiceNumber || autoInvoiceReference({ invoiceDate: result.invoiceDate, ingestionId, sourceFileName })}</strong>
+                {!result.invoiceNumber ? " (auto-filled)" : ""} · Date:{" "}
                 <strong>{result.invoiceDate || "-"}</strong>
               </p>
             </div>
@@ -741,13 +1331,20 @@ export default function AutomationHub() {
               <thead>
                 <tr>
                   <th>OCR Description</th>
+                  <th>Batch / Lot</th>
+                  <th>MRP</th>
                   <th>Product Resolution</th>
                   <th>Status</th>
                   <th>Cases</th>
                   <th>Bottles / Case</th>
                   <th>Loose Bottles</th>
                   <th>Final Bottles</th>
+                  <th>Invoice Rate / Case</th>
+                  <th>Reviewed Rate / Case</th>
                   <th>Price / Bottle</th>
+                  <th>Invoice Line Amount</th>
+                  <th>Reviewed Line Amount</th>
+                  <th>Gap (Inv − Rev)</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -756,6 +1353,33 @@ export default function AutomationHub() {
                   const row = resolution[index] || {};
                   const candidates = matches[index] || [];
                   const best = candidates[0];
+                  const invoiceLineAmount = Math.max(
+                    0,
+                    Number(item?.amount || 0),
+                  );
+                  const reviewedLineAmount =
+                    Math.max(0, Number(row?.quantity || 0)) *
+                    Math.max(0, Number(row?.purchasePrice || 0));
+                  const lineGap = Number(
+                    (invoiceLineAmount - reviewedLineAmount).toFixed(2),
+                  );
+                  const reviewedRatePerCase =
+                    Math.max(0, Number(row?.purchasePrice || 0)) *
+                    Math.max(1, Number(row?.unitsPerCase || 1));
+                  const invoiceRatePerCase = Math.max(
+                    0,
+                    Number(
+                      item?.ratePerCase ||
+                        ((row?.priceBasis === "CASE" ||
+                          row?.priceBasis === "TABLE_CASE")
+                          ? row?.ocrUnitPrice
+                          : 0) ||
+                        (Number(row?.caseCount || 0) > 0
+                          ? invoiceLineAmount /
+                            Math.max(1, Number(row?.caseCount || 1))
+                          : 0),
+                    ),
+                  );
 
                   return (
                     <tr key={index}>
@@ -770,15 +1394,23 @@ export default function AutomationHub() {
                         </div>
                       </td>
 
+                      <td><strong>{item.batchNumber || "—"}</strong></td>
+                      <td>{Number(item.mrp || 0) > 0 ? `₹${Number(item.mrp).toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
+
                       <td>
-                        {best ? (
+                        {row.source === "CREATED_PRODUCT" && row.productId ? (
+                          <div className="muted-text">
+                            <strong>Created product linked:</strong>{" "}
+                            {best?.product_name || "Product Master item"}
+                          </div>
+                        ) : best ? (
                           <div className="muted-text">
                             Best match: {best.product_name} ·{" "}
                             {Number(best.score || 0).toFixed(3)}
                           </div>
                         ) : (
                           <div className="muted-text">
-                            No product match found.
+                            No existing product match found.
                           </div>
                         )}
 
@@ -833,6 +1465,10 @@ export default function AutomationHub() {
                             )
                           }
                         />
+                        <div className="muted-text">{row.unitsPerCaseSource || "Review"}</div>
+                        {row.packConflict ? (
+                          <div className="purchase-message">Pack conflict: invoice {row.invoiceUnitsPerCase} vs Product Master {row.productUnitsPerCase}</div>
+                        ) : null}
                       </td>
 
                       <td>
@@ -856,15 +1492,63 @@ export default function AutomationHub() {
                       </td>
 
                       <td>
+                        {invoiceRatePerCase > 0
+                          ? `₹${invoiceRatePerCase.toLocaleString("en-IN", {
+                              maximumFractionDigits: 2,
+                            })}`
+                          : "—"}
+                      </td>
+
+                      <td>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
+                          value={Number(reviewedRatePerCase.toFixed(6))}
+                          onChange={(event) =>
+                            updateCasePrice(index, event.target.value)
+                          }
+                          title="Reviewed case rate. Price/Bottle is recalculated as Rate/Case ÷ Bottles/Case."
+                        />
+                      </td>
+
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.000001"
                           value={row.purchasePrice ?? 0}
                           onChange={(event) =>
                             updateBottlePrice(index, event.target.value)
                           }
                         />
+                      </td>
+
+                      <td>
+                        <strong>
+                          ₹{invoiceLineAmount.toLocaleString("en-IN", {
+                            maximumFractionDigits: 2,
+                          })}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <strong>
+                          ₹{reviewedLineAmount.toLocaleString("en-IN", {
+                            maximumFractionDigits: 2,
+                          })}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <strong title="Invoice line amount minus reviewed line amount">
+                          {Math.abs(lineGap) <= 1
+                            ? `MATCH · ₹${Math.abs(lineGap).toFixed(2)}`
+                            : `${lineGap > 0 ? "+" : ""}₹${lineGap.toLocaleString(
+                                "en-IN",
+                                { maximumFractionDigits: 2 },
+                              )}`}
+                        </strong>
                       </td>
 
                       <td>
@@ -921,4 +1605,3 @@ export default function AutomationHub() {
     </div>
   );
 }
-

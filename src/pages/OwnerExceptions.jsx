@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -28,7 +29,7 @@ export default function OwnerExceptions(){
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Requires Review</h3>
-      {rows.length===0?<EmptyState title="No unusual activity found" message="No configured rule exceeded its review threshold in this period."/>:<div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Severity</th><th>Type</th><th>When</th><th>Summary</th><th>Amount</th><th></th></tr></thead><tbody>{rows.map((r,i)=><tr key={`${r.entity_id}-${r.exception_type}-${i}`}><td><span className={`priority ${String(r.severity).toLowerCase()}`}>{r.severity}</span></td><td>{r.exception_type.replaceAll("_"," ")}</td><td>{new Date(r.event_time).toLocaleString("en-IN")}</td><td>{r.summary}</td><td>{money.format(r.amount||0)}</td><td><Link to={r.action_path||"/owner"}>Review</Link></td></tr>)}</tbody></table></div>}
+      {rows.length===0?<EmptyState title="No unusual activity found" message="No configured rule exceeded its review threshold in this period."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Severity</th><th>Type</th><th>When</th><th>Summary</th><th>Amount</th><th></th></tr></thead><tbody>{rows.map((r,i)=><tr key={`${r.entity_id}-${r.exception_type}-${i}`}><td><span className={`priority ${String(r.severity).toLowerCase()}`}>{r.severity}</span></td><td>{r.exception_type.replaceAll("_"," ")}</td><td>{new Date(r.event_time).toLocaleString("en-IN")}</td><td>{r.summary}</td><td>{money.format(r.amount||0)}</td><td><Link to={r.action_path||"/owner"}>Review</Link></td></tr>)}</tbody></SortableTable></div>}
     </section>
   </div>
 }

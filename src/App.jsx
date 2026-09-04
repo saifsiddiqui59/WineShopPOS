@@ -19,7 +19,9 @@ import BulkProductImport from "./pages/BulkProductImport";
 import EditProduct from "./pages/EditProduct";
 import BarcodeLabels from "./pages/BarcodeLabels";
 import Purchases from "./pages/Purchases";
+import PurchaseDetails from "./pages/PurchaseDetails";
 import AutomationHub from "./pages/AutomationHub";
+import InvoiceInbox from "./pages/InvoiceInbox";
 import Procurement from "./pages/Procurement";
 import Suppliers from "./pages/Suppliers";
 import PurchaseIntelligence from "./pages/PurchaseIntelligence";
@@ -48,6 +50,7 @@ import BackupRecovery from "./pages/BackupRecovery";
 import Settings from "./pages/Settings";
 import Audit from "./pages/Audit";
 import Account from "./pages/Account";
+import ProductCleanup from "./pages/ProductCleanup";
 
 function module(title, subtitle, tabs) {
   return <ModuleLayout title={title} subtitle={subtitle} tabs={tabs}/>;
@@ -86,7 +89,9 @@ export default function App() {
           <Route path="purchasing" element={module("Purchases & Suppliers", "Receive goods, control procurement and understand supplier/purchase cost changes.", MODULE_TABS.purchasing)}>
             <Route index element={<Navigate to="receive" replace/>}/>
             <Route path="receive" element={<Purchases/>}/>
+            <Route path="receipts/:id" element={<PurchaseDetails/>}/>
             <Route path="ocr" element={<AutomationHub/>}/>
+            <Route path="invoices" element={<InvoiceInbox/>}/>
             <Route path="suppliers" element={<Suppliers/>}/>
             <Route path="procurement" element={<Procurement/>}/>
             <Route path="intelligence" element={<PurchaseIntelligence/>}/>
@@ -141,6 +146,7 @@ export default function App() {
             <Route path="backup" element={<BackupRecovery/>}/>
             <Route path="audit" element={<Audit/>}/>
             <Route path="settings" element={<Settings/>}/>
+            <Route path="product-cleanup" element={<ProductCleanup/>}/>
           </Route>
         </Route>
 

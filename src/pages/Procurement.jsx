@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
@@ -207,7 +208,7 @@ export default function Procurement() {
           <button type="button" className="secondary-button" disabled={!selectedSupplier} onClick={() => setSupplierEditor({ open: true, supplier: selectedSupplier })}>Edit Selected Supplier</button>
         </div>
 
-        <div className="data-table-wrapper"><table className="data-table">
+        <div className="data-table-wrapper"><SortableTable className="data-table">
           <thead><tr><th>Product</th><th>Qty</th><th>Purchase Price</th><th></th></tr></thead>
           <tbody>{items.map((item, index) => <tr key={index}>
             <td><select value={item.productId} onChange={(e) => update(index, "productId", e.target.value)} required><option value="">Select</option>{products.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></td>
@@ -215,7 +216,7 @@ export default function Procurement() {
             <td><input type="number" min="0" step="0.01" value={item.purchasePrice} onChange={(e) => update(index, "purchasePrice", e.target.value)} /></td>
             <td><button type="button" className="icon-button" onClick={() => setItems((current) => current.filter((_, rowIndex) => rowIndex !== index))}>×</button></td>
           </tr>)}</tbody>
-        </table></div>
+        </SortableTable></div>
         <p><strong>Total: {money.format(total)}</strong></p>
         <div className="button-row"><button type="button" className="secondary-button" onClick={() => setItems((current) => [...current, line()])}>Add Line</button><button className="primary-button">Create Draft PO</button></div>
       </form>
@@ -285,10 +286,10 @@ export default function Procurement() {
 
     <section className="panel" style={{ marginTop: 16 }}>
       <h3>Supplier Balance</h3>
-      <div className="data-table-wrapper"><table className="data-table">
+      <div className="data-table-wrapper"><SortableTable className="data-table">
         <thead><tr><th>Supplier</th><th>Purchases</th><th>Payments</th><th>Returns</th><th>Balance</th></tr></thead>
         <tbody>{balances.map((balance) => <tr key={balance.supplier_id}><td>{balance.supplier_name}</td><td>{money.format(balance.purchases)}</td><td>{money.format(balance.payments)}</td><td>{money.format(balance.returns)}</td><td><strong>{money.format(balance.balance)}</strong></td></tr>)}</tbody>
-      </table></div>
+      </SortableTable></div>
     </section>
 
     <SupplierEditor

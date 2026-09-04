@@ -1,6 +1,6 @@
 # WineShopPOS Documentation
 
-**Current documentation generation: V2**
+**Current documentation generation: V3**
 
 WineShopPOS maintains one living Handbook, one living User Manual and one
 current Project Context. V2 updates the existing master documents rather than
@@ -14,12 +14,13 @@ creating competing copies.
 - `AI_PRODUCTION_BASELINE.md`
 - `DOCUMENTATION_REGISTER.md`
 
-## Historical + V2 chapters
+## Historical + V2/V3 chapters
 
 The same `docs/chapters/` collection is used for project history.
 
 - Chapters `01` through `26`: historical implementation record
-- Chapters `V2-01` through `V2-10`: current V2 implementation/QA program
+- Chapters `V2-01` through `V2-10`: completed V2 implementation/QA program
+- Chapter `V3-01`: current API Automation / invoice-ingestion program
 
 ## V2 execution records
 

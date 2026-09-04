@@ -10,6 +10,9 @@
     "preview": "vite preview",
     "sync:user-manual": "node scripts/sync-user-manual.mjs",
     "prebuild": "npm run guard:env && npm run sync:user-manual",
+    "test:e2e:list": "playwright test --list",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "guard:env": "node scripts/supabase-environment-policy.mjs",
     "predev": "npm run guard:env",
     "prepreview": "npm run guard:env"
@@ -23,6 +26,7 @@
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",

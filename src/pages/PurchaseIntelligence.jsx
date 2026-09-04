@@ -1,3 +1,4 @@
+import SortableTable from "../components/ui/SortableTable";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
@@ -78,8 +79,8 @@ export default function PurchaseIntelligence(){
         <HorizontalBarChartCard title="Supplier Average Price" subtitle="Lower bars indicate more competitive historical unit cost" data={supplierChart} formatValue={(v)=>money.format(v)}/>
       </div>
       <div className="settings-grid" style={{marginTop:16}}>
-        <section className="panel"><h3>Supplier Price Comparison</h3>{comparison.length===0?<EmptyState title="No supplier history yet" message="Receive this product from suppliers to build comparison history."/>:<div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Units</th><th>Avg</th><th>Min</th><th>Max</th><th>Last</th></tr></thead><tbody>{comparison.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name||"Supplier"}</td><td>{r.purchase_count}</td><td>{r.total_units}</td><td>{money.format(r.avg_price)}</td><td>{money.format(r.min_price)}</td><td>{money.format(r.max_price)}</td><td>{money.format(r.last_price)}</td></tr>)}</tbody></table></div>}</section>
-        <section className="panel"><h3>Recent Price History</h3>{history.length===0?<EmptyState title="No price history" message="Purchase receipts will populate this timeline."/>:<div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Date</th><th>Supplier</th><th>Price</th></tr></thead><tbody>{history.slice(0,10).map((r,i)=><tr key={`${r.invoice_date||i}-${r.invoice_date}`}><td>{r.invoice_date}</td><td>{r.supplier_name||"-"}</td><td>{money.format(r.purchase_price)}</td></tr>)}</tbody></table></div>}</section>
+        <section className="panel"><h3>Supplier Price Comparison</h3>{comparison.length===0?<EmptyState title="No supplier history yet" message="Receive this product from suppliers to build comparison history."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Units</th><th>Avg</th><th>Min</th><th>Max</th><th>Last</th></tr></thead><tbody>{comparison.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name||"Supplier"}</td><td>{r.purchase_count}</td><td>{r.total_units}</td><td>{money.format(r.avg_price)}</td><td>{money.format(r.min_price)}</td><td>{money.format(r.max_price)}</td><td>{money.format(r.last_price)}</td></tr>)}</tbody></SortableTable></div>}</section>
+        <section className="panel"><h3>Recent Price History</h3>{history.length===0?<EmptyState title="No price history" message="Purchase receipts will populate this timeline."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Date</th><th>Supplier</th><th>Price</th></tr></thead><tbody>{history.slice(0,10).map((r,i)=><tr key={`${r.invoice_date||i}-${r.invoice_date}`}><td>{r.invoice_date}</td><td>{r.supplier_name||"-"}</td><td>{money.format(r.purchase_price)}</td></tr>)}</tbody></SortableTable></div>}</section>
       </div>
     </>:null}
 
@@ -96,7 +97,7 @@ export default function PurchaseIntelligence(){
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Supplier Intelligence · Last 180 Days</h3>
-      {suppliers.length===0?<EmptyState title="No supplier activity yet" message="Purchases and supplier payments will build reliability and price history."/>:<div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Purchase Total</th><th>Returns</th><th>Outstanding</th><th>Ordered</th><th>Received</th><th>Variance</th></tr></thead><tbody>{suppliers.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name}</td><td>{r.purchase_count}</td><td>{money.format(r.purchase_total)}</td><td>{money.format(r.return_total)}</td><td>{money.format(r.outstanding)}</td><td>{r.po_ordered}</td><td>{r.po_received}</td><td>{r.receive_variance}</td></tr>)}</tbody></table></div>}
+      {suppliers.length===0?<EmptyState title="No supplier activity yet" message="Purchases and supplier payments will build reliability and price history."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Purchase Total</th><th>Returns</th><th>Outstanding</th><th>Ordered</th><th>Received</th><th>Variance</th></tr></thead><tbody>{suppliers.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name}</td><td>{r.purchase_count}</td><td>{money.format(r.purchase_total)}</td><td>{money.format(r.return_total)}</td><td>{money.format(r.outstanding)}</td><td>{r.po_ordered}</td><td>{r.po_received}</td><td>{r.receive_variance}</td></tr>)}</tbody></SortableTable></div>}
     </section>
 
     <div className="embedded-capability" style={{marginTop:20}}><AutomationHub/></div>

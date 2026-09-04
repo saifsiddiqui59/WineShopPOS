@@ -953,3 +953,157 @@ Top-right user menu
 The previous `#/help` URL is retained only as a compatibility redirect to
 `/account?tab=about`. Do not rebuild a separate category/chapter Help page.
 The customer manual is generated from the canonical master User Manual.
+
+## V3 — Invoice document ingestion and storage
+<!-- V3_API_AUTOMATION_20260831 -->
+Architecture: Manual OCR / future Email / future WhatsApp → private Blob → `invoice_ingestions` → human review → Receive Stock → `purchases`. `invoice_ingestions` is evidence/workflow, not a second purchase table. React reads RLS metadata and original files open through short-lived read-only SAS from the standalone V3 invoice Function after ADMIN/MANAGER/shop authorization. Existing manual OCR remains independently usable. Email template deployment now requires an already authorized Gmail API connection; do not create a fake Gmail connection in ARM.
+
+## V3 WhatsApp webhook boundary
+
+<!-- V3_WHATSAPP_WEBHOOK_20260831 -->
+
+The isolated V3 invoice Function exposes `https://wsp-v3-invoice-53b6e9a1.azurewebsites.net/api/whatsapp/webhook` for Meta WhatsApp Cloud API webhook verification/events. GET verification compares the configured verify token using timing-safe comparison. POST events require valid `x-hub-signature-256` HMAC-SHA256 calculated with the Meta App Secret before JSON is trusted.
+
+Current Step 1 only acknowledges/logs safe metadata for inbound messages. It does not download media and cannot alter inventory. The Meta temporary access token/App Secret/verify token are Azure App Settings only and must never be committed.
+
+### V3 Email invoice automation (20260831T123139Z)
+V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.
+
+### V3 Demo-Ready Runtime (20260831T160407Z)
+The production demo now uses the V3 invoice reliability flow. Gmail automation uses a Blob UID checkpoint rather than Seen/Unread state. Authorized senders receive one automated oversize rejection response for supported PDF/JPG/PNG attachments above 4 MB; SMTP uses the already-secured Gmail App Password and never mutates inventory. Barcode input is normalized and supports Enter/Tab scanner suffixes with a more tolerant HID timing threshold. ADMINs have a guarded **Demo / Test Data Reset** RPC/UI requiring the exact phrase `DELETE DEMO DATA`; it removes operational test data while preserving tenant/users/settings/categories/Email mapping and audit/configuration records. The V3 invoice Function worker is configured 64-bit. Logic App remains every 5 minutes until a later cost-optimization task.
+
+### V3-02 invoice finance / intake UX — local verified (20260831T182936Z)
+Feature commit `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310` adds shared Document Intelligence financial-summary reconciliation across manual OCR and Email ingestion. It maps common liquor supplier invoice summary rows into landed-cost adjustments and derives small rounding differences when a printed final total is available. Receive Stock blocks a >₹1 financial mismatch for OCR-linked invoices. Supplier invoice/reference is optional to the operator; OCR is preferred and a deterministic/internal AUTO reference is used when absent. Authorized Gmail invoice intake sends an idempotent "received; allow up to 1 hour" acknowledgement for accepted attachments. Required native fields are visibly starred. This state is locally build/lint/smoke verified and is not yet deployed/pushed.
+
+### V3-03 local verified patch
+Invoice finance matching now uses strict summary labels, rejects date/time false positives, and can override Azure subtotal-as-total using the printed bottom total. Bulk OCR onboarding carries table MRP and suggests first-token Brand plus an existing matching Category. Reconciliation failures use a blocking modal. Feature: `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5`; deployment/push pending.
+
+### V3-03B scanner capture and Email scheduler
+ScannerContext now supports explicit barcode inputs using `data-scanner-capture="barcode"`; these fields retain the completed HID scan while ordinary editable fields keep the existing protection behavior. Bulk Product Import also listens to the scanner event as a React-state fallback. Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally Disabled after testing and must be explicitly enabled before automatic Email polling resumes.
+
+### V3-04 OCR normalization
+Do not treat `prebuilt-invoice.fields.Items` as authoritative when a stronger supplier item table exists. Shared `invoiceDocument.js` maps table-header synonyms into WineShopPOS item semantics before quantity/cost logic. This prevents pack size from becoming quantity and preserves Batch/MRP/Case/Rate/Amount relationships.
+
+Purchase/base unit cost storage now preserves numeric(14,6) precision. Posted invoice and line totals remain two-decimal accounting amounts.
+
+FIFO stays lightweight: the oldest tracked lot is SELL FIRST and the derived BOX code can be written on the carton. Full rack/bin management is intentionally deferred.
+
+## V3-05 final reliability contract
+OCR never posts inventory directly; Receive Stock is the purchase-posting boundary. Scanner events are ephemeral and POS cart state is session-scoped by shop. Forward FIFO stock-out allocation records untracked opening balance before tracked receipt lots, then consumes tracked lots oldest-first and snapshots FIFO COGS on new sale items. Admin hard deletion is restricted to non-transactional test products.
+
+## V3-06 Invoice Inbox display vocabulary
+
+Persisted `invoice_ingestions.review_status` values are unchanged. UI mapping:
+`NEEDS_REVIEW` → Needs Review; `READY_TO_RECEIVE` → Ready for Stock; `RECEIVED` → Completed; `POSSIBLE_DUPLICATE` → Possible Duplicate; `DUPLICATE` → Duplicate — Closed; `OCR_FAILED` → OCR Failed; `FAILED` → Processing Failed; `CANCELLED` → Cancelled.
+
+Do not rename DB enum values merely to change UI copy. Cancel Review retains evidence and does not change inventory.
+
+Playwright read-only E2E is now repository-supported. Write-path E2E must use an isolated test shop.
+
+## V3-07 Supabase PGRST303 retry
+
+Observed production/test evidence showed successful Supabase Auth password grants followed immediately by intermittent PostgREST `401 PGRST303: JWT issued at future` on `my_profile` or `my_shop_access`. In the same interval the companion RPC could return 200.
+
+The auth bootstrap therefore retries only the precise JWT-timing condition (`PGRST303` or message `JWT issued at future`) with bounded backoff. Both profile and access RPCs are rerun as a pair. Other authorization errors are not hidden or generically retried.
+
+The browser regression uses sequential fresh-browser logins. Parallel same-account workers are not used as the acceptance criterion because they test backend concurrency rather than normal interactive login.
+
+## AI production trace-ingestion verification
+
+The Owner AI observability acceptance contract requires more than a successful `/api/ai/chat` call. A fresh authenticated production request must be followed by fresh AI/Foundry telemetry in the dedicated `wineshoppos-ai-insights` / `wineshoppos-ai-law` path.
+
+Raw telemetry evidence is local-only because trace payloads can contain operational context. Repository evidence stores only safe correlation metadata such as request id, telemetry table names, operation ids, and marker names.
+
+With trace ingestion verified, quality work proceeds to a versioned golden dataset, deterministic security/tool checks, evaluator scores and release gates.
+
+## Owner AI golden evaluation contract
+
+Do not evaluate Owner AI releases against an ad-hoc prompt list. Use the versioned assets under `docs/ai/evaluation/`.
+
+Security blockers are binary. Any cross-shop leakage, tenant isolation failure, unauthorized write claim, secret/token exposure or SQL/system-prompt exposure fails the release regardless of average LLM-judge scores.
+
+Before comparing two evaluation runs, record the dataset version, production model/deployment, agent version and evaluator package/version. Raw business answers should remain local evaluation artifacts unless explicitly sanitized.
+
+<!-- RELEASE_WITH_AI_EVAL_SKIPPED_20260901 -->
+## Edit Product persistence and release validation
+`Save & Close` uses the existing product update path and then re-reads `get_products`. Navigation occurs only when the persisted `selling_price` matches the entered Selling Price.
+
+The Edit Product page no longer renders the former Apply action or duplicate top-right Back/Close controls.
+
+For the 2026-09-01 release, AI-10/AI-11 evaluator work was explicitly skipped by the owner. It is not represented as PASS. Standard application lint/build checks remain required before deployment.
+
+<!-- OCR_BULK_PRODUCT_SYNC_FIX_20260902 -->
+## OCR bulk-created products — persistence and UI synchronization
+Bulk Product Import verifies returned `bulk_create_products` IDs against shop-scoped `get_products()` before linking the OCR review. On return, created rows are identified as created Product Master links and the Product Master is refreshed.
+
+`ShopContext.refreshAll()` publishes catalogue/categories/suppliers/inventory immediately after their own successful queries. Later Sales/Purchases failures are partial refresh failures and must not hide a valid catalogue.
+
+Before transition to Receive Stock, OCR Send Draft performs a fresh `get_products()` verification. The review grid also shows Invoice Rate/Case, editable Reviewed Rate/Case, Price/Bottle, Invoice Line Amount, Reviewed Line Amount and Gap (Invoice - Reviewed). Reviewed Rate/Case is converted back to bottle cost using Bottles/Case so FIFO stays bottle-based. Catalogue creation remains zero-stock; Receive Stock remains the authoritative physical inventory posting step.
+
+<!-- POS_SALES_RECEIPT_REPORT_SORT_20260902 -->
+## Durable POS completion and list sorting
+A committed sale remains authoritative even if another UI refresh domain fails. Sales and Purchases refresh independently. Sale Details falls back to a direct shop-authorized Supabase read by sale ID and can auto-print after checkout. Reports refreshes shop state before metrics. Read-only list views use `SortableTable`; editable OCR/receipt/stock-count/transfer grids remain unsorted during data entry.
+
+<!-- SALES_SPLIT_LOADER_20260902 -->
+## Sales read resilience
+A committed checkout must never be retried solely because the Sales list is stale. Sales history loads sale headers under RLS first, then sale items and payments separately, then merges them in React. Receipt fallback follows the same pattern for one sale ID. Read failures are surfaced to the operator.
+
+<!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
+## Receipt auto-print, list numbering and Shift cash control
+Receipt auto-print is intentionally device-local. Default OFF still routes to the durable receipt screen; ON adds the print request. SortableTable provides presentation-only Sr. No.; it is not a database identifier. FIFO/Ageing keep their default operational ordering until a user explicitly sorts.
+
+Expected Cash is system-calculated. Actual Cash is the physical drawer count and must never be auto-filled from Expected Cash. revise_shift_actual_cash allows the owning cashier or ADMIN/MANAGER to correct a CLOSE_REQUESTED count before approval and writes an audit event. Non-zero variance approval requires explicit confirmation.
+
+<!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
+## Release executor and premium UI rules
+Every new executor must fetch `origin/main` and `origin/V3`, derive the shared base dynamically, require remote equality and require local V3 HEAD to match that derived base. Do not hardcode the base SHA from a previous chat turn. See `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md`.
+
+Product images are optional static assets in Supabase Storage bucket `product-images`, path `{shop_id}/{product_id}/{timestamp}.{ext}`, JPEG/PNG/WebP, max 5 MB. Optional image failure must never cause a successfully created product to be created twice.
+
+Ageing/FIFO use `showSerial={false}` and precomputed stable product-lot priority. Display sorting must never mutate operational FIFO meaning.
+
+UI motion must remain CSS transform/opacity based, subtle, and honor `prefers-reduced-motion`.
+
+<!-- BRAND_THEME_REFINEMENT_20260902_V3 -->
+## Brand motion and theme rules
+The WineShop POS brand uses a custom inline SVG rather than an external animation library. It plays once on mount because CSS animations start with the mounted `brand-motion-sequence`. Hover/focus/click increments a React key to remount the motion sequence and replay it.
+
+Royal 21 shimmer uses a six-second CSS keyframe cycle with visible travel only during a short portion of the cycle.
+
+Theme authority remains `profile.theme` through `lib/theme.js`: SYSTEM resolves to OS preference; LIGHT and DARK are explicit. Brand/theme refinement is CSS-only and must preserve Account Settings as the sole user-facing theme control.
+
+Never claim visual-animation PASS from grep/lint/build. Authenticated production UAT is required.
+
+<!-- REFERENCE_BRANDING_TRUE_BLACK_20260902_V4 -->
+## Reference brand-zone rule
+Premium shop identity belongs in a dedicated center topbar zone, not inside `topbar-actions`. Dark theme must use true near-black/charcoal core surfaces; burgundy and gold remain accents.
+
+<!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
+## Spiritual tile / sidebar collapse
+Spiritual image is browser-local presentation data only. Sidebar collapse must physically change width to 76px. The brand sequence is lightweight inline SVG/CSS and respects reduced-motion.
+
+<!-- EXACT_REFERENCE_PIXEL_ANIMATION_V7 -->
+## Exact-reference brand assets
+When pixel fidelity to the approved storyboard is required, do not replace the raster source with a hand-redrawn SVG. The three `/public/brand/` assets are the visual source of truth. Animation code is limited to frame selection, timing, final lockup transition and reduced-motion behavior.
+
+<!-- ROYAL21_CROWN_COST_V8 -->
+## Royal 21 containment rule
+Do not stretch raster Royal 21 artwork in the topbar. Royal 21 uses text/ornament plus a separate crown. The shop lockup must remain fully inside the topbar and must never overlap page content. WineShop POS brand is not part of this release surface.
+
+Azure cost diagnostics are read-only. They must never stop/delete/resize resources automatically.
+
+<!-- ROYAL21_Y_AXIS_DARK_TILE_V9 -->
+## Royal 21 motion rule
+The crown uses `rotateY` 3D revolution; do not use 2D clock-style rotation. Royal shop name remains text, not a stretched raster image. It may use restrained horizontal `scaleX` to improve center prominence while remaining fully contained inside the topbar.
+
+<!-- ROYAL21_3D_SHIMMER_PITCH_BLACK_V10 -->
+## Royal 21 premium tile rule
+Royal 21 remains text-based, not a stretched image. Crown motion uses a layered 3D Y-axis revolve. The center shop tile background is pitch black (`#000000`) with a subtle shimmer pass across the full tile. The left WineShop POS brand remains outside this change surface.
+
+<!-- USER_CROWN_FULL_HERO_PITCH_BLACK_V11 -->
+## Royal 21 user crown rule
+The user-supplied crown asset is the Royal 21 crown source. Do not substitute a Lucide crown while this asset is active. The crown rotates on the Y axis with front/back faces. Premium shimmer belongs to the entire center topbar lane, not a small shop-name badge. Dark mode base/module backgrounds are pitch black.
+
+<!-- DEMO_SAFE_ROYAL_HERO_V12 -->
+## Demo-safe header ownership
+The consolidated topbar has three independent zones. Center-shop visual effects may never extend over `.topbar-actions`. UserMenu must retain a higher stacking context. Demo-time visual corrections should not rewrite POS, Layout, UserMenu, ShopSelector, AnimatedBrand or SpiritualImageTile logic when CSS overrides can achieve the requirement.

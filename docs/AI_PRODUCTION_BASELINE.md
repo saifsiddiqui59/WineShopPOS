@@ -81,7 +81,8 @@ results and critical tool regressions.
 1. Functionality knowledge / `get_app_help` - deployed and live.
 2. Help & User Manual reference - deployed and live.
 3. Foundry server-side tracing infrastructure - configured with dedicated Application Insights and Project Managed Identity authentication.
-4. Next - create one authenticated production interaction, verify it in Foundry Traces, then run trace evaluations and define quality gates.
+4. Authenticated production trace ingestion - VERIFIED.
+5. Next - create the versioned golden dataset, run trace/quality evaluations and enforce quality gates.
 <!-- NEXT_AI_PUSHES_END -->
 
 <!-- APP_HELP_KNOWLEDGE_START -->
@@ -111,7 +112,7 @@ The tool does not write application data and does not introduce a second RAG
 service or database. Unknown workflows return an explicit "not verified"
 fallback so the agent does not invent app functionality.
 
-Foundry/Application Insights tracing infrastructure is configured; authenticated trace ingestion and evaluation execution remain to be verified.
+Foundry/Application Insights tracing infrastructure is configured and authenticated production trace ingestion is VERIFIED. Evaluation execution and automated release gates remain pending.
 <!-- APP_HELP_KNOWLEDGE_END -->
 
 <!-- AI_OBSERVABILITY_START -->
@@ -139,7 +140,7 @@ Current state:
 TRACING INFRASTRUCTURE:  CONFIGURED
 MONITOR ACCESS:          RESOLVED
 TRACE VIEW:              NO RESULTS TO SHOW
-TRACE INGESTION E2E:     NOT YET VERIFIED
+TRACE INGESTION E2E:     VERIFIED
 ```
 
 The next verification is one fresh authenticated production Owner Assistant
@@ -147,3 +148,23 @@ interaction followed by confirmation of the corresponding Foundry trace after
 telemetry ingestion delay. Only then should trace evaluations and quality gates
 be treated as verified.
 <!-- AI_MONITOR_STATUS_20260831_END -->
+
+## V3-06 AI knowledge source update
+
+The repository Owner Assistant knowledge source now contains `invoice_inbox_workflow`, covering Needs Review, Ready for Stock, Completed (`RECEIVED` internally), Resume Review, Continue Receive Stock, Cancel Review, Reopen Review and duplicate handling.
+
+Knowledge source version: `2026-09-01-v4`.
+
+Committing this source does not automatically alter the running production Azure Function. Runtime AI knowledge changes only after an explicit tested AI Function deployment.
+
+## V3-07 login/access knowledge
+
+Repository Owner AI knowledge distinguishes verified disabled/suspended states from temporary verification failures. The application also retries the observed transient Supabase/PostgREST JWT timing rejection before surfacing an access-verification error.
+
+## V3-07 Owner AI production verification — 20260901T143945Z
+
+The Owner AI V3-07 Function package is live on `wineshoppos-ai-1a61d5885c`. Production health passed and an authenticated SHOP-scope chat successfully invoked `get_app_help` with source `/login`.
+
+The earlier authenticated-smoke interruption was a Git Bash CRLF parsing issue in the verification executor, not an Azure Function runtime failure. The continuation normalized Azure CLI output and completed the authenticated production verification.
+
+V3-06 Invoice Inbox workflow knowledge and V3-07 login/access-status knowledge are now verified live in production.

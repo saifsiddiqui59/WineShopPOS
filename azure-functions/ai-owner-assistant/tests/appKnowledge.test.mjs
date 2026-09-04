@@ -28,3 +28,23 @@ test("unknown feature returns explicit fallback", () => {
   assert.equal(result.found, false);
   assert.match(result.fallback,/do not invent/i);
 });
+
+
+test("invoice inbox help explains friendly workflow", () => {
+  const result = searchAppKnowledge("what does cancel review, resume draft and completed mean in invoice inbox?");
+  assert.equal(result.found, true);
+  assert.equal(result.matches[0].route, "/purchasing/invoices");
+  const text=JSON.stringify(result.matches[0]);
+  assert.match(text,/Completed/);
+  assert.match(text,/inventory is not changed/i);
+  assert.match(text,/Reopen Review/i);
+});
+
+test("login access help distinguishes verification from disabled", () => {
+  const result = searchAppKnowledge("why does login say account disabled or jwt issued at future?");
+  assert.equal(result.found, true);
+  assert.equal(result.matches[0].route, "/login");
+  const text=JSON.stringify(result.matches[0]);
+  assert.match(text,/explicitly inactive/i);
+  assert.match(text,/verification/i);
+});

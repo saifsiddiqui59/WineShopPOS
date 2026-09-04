@@ -1,24 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 import { useScanner } from "../context/ScannerContext";
+import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { findProductByBarcode, normalizeBarcode } from "../lib/barcode";
+import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPreference";
+import ProductThumb from "../components/ui/ProductThumb";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
 export default function POS(){
   const{products,getStock,completeSale}=useShop();
   const{lastScan,successBeep,errorBeep}=useScanner();
+  const { profile } = useAuth();
   const navigate=useNavigate();
 
   const[search,setSearch]=useState("");
   const[cart,setCart]=useState([]);
+  const cartStorageKey=useMemo(()=>`wineshop_pos_cart_v3_${profile?.shop_id||"unknown"}`,[profile?.shop_id]);
+  const loadedCartKeyRef=useRef("");
+  const posMountedAtRef=useRef(Date.now());
   const[paymentMethod,setPaymentMethod]=useState("CASH");
   const[paymentReference,setPaymentReference]=useState("");
   const[discount,setDiscount]=useState(0);
   const[message,setMessage]=useState("Scanner ready");
   const[unknown,setUnknown]=useState("");
   const[busy,setBusy]=useState(false);
+  const[autoPrint,setAutoPrint]=useState(false);
 
   const[customers,setCustomers]=useState([]);
   const[customerId,setCustomerId]=useState("");
@@ -37,6 +46,38 @@ export default function POS(){
   const[quote,setQuote]=useState(null);
 
   const active=products.filter((p)=>p.active);
+
+  useEffect(()=>{
+    setAutoPrint(getReceiptAutoPrint(profile?.shop_id));
+  },[profile?.shop_id]);
+
+  function toggleAutoPrint(){
+    const next=!autoPrint;
+    setAutoPrint(next);
+    setReceiptAutoPrint(profile?.shop_id,next);
+    setMessage(`Automatic receipt print ${next?"enabled":"disabled"} on this device.`);
+  }
+
+  useEffect(()=>{
+    if(!profile?.shop_id||!products.length||loadedCartKeyRef.current===cartStorageKey)return;
+    try{
+      const saved=JSON.parse(sessionStorage.getItem(cartStorageKey)||"[]");
+      const restored=Array.isArray(saved)?saved.map((row)=>{
+        const product=products.find((p)=>p.id===row.productId&&p.active);
+        if(!product)return null;
+        return {product,quantity:Math.max(1,Number(row.quantity||1)),unitPrice:Number(row.unitPrice??product.price)};
+      }).filter(Boolean):[];
+      setCart(restored);
+    }catch{sessionStorage.removeItem(cartStorageKey);setCart([]);}
+    finally{loadedCartKeyRef.current=cartStorageKey;}
+  },[cartStorageKey,profile?.shop_id,products]);
+
+  useEffect(()=>{
+    if(loadedCartKeyRef.current!==cartStorageKey)return;
+    const snapshot=cart.map((i)=>({productId:i.product.id,quantity:Number(i.quantity),unitPrice:Number(i.unitPrice??i.product.price)}));
+    if(snapshot.length)sessionStorage.setItem(cartStorageKey,JSON.stringify(snapshot));
+    else sessionStorage.removeItem(cartStorageKey);
+  },[cart,cartStorageKey]);
 
   const results=useMemo(()=>{
     const q=search.trim().toLowerCase();
@@ -72,6 +113,7 @@ export default function POS(){
   }
 
   function add(p){
+    if(Number(p.price)<=0){errorBeep();setMessage(`${p.name} has no selling price. Edit the product before billing.`);return false;}
     const stock=getStock(p.id);
     if(qty(p.id)>=stock){
       errorBeep();
@@ -92,17 +134,28 @@ export default function POS(){
   }
 
   function processBarcode(code){
-    const p=active.find((x)=>x.barcode===code);
+    const normalized=normalizeBarcode(code);
+    const p=findProductByBarcode(active,normalized);
     if(!p){
       errorBeep();
-      setUnknown(code);
-      setMessage(`PRODUCT NOT FOUND: ${code}`);
+      setUnknown(normalized);
+      setMessage(`PRODUCT NOT FOUND: ${normalized}`);
       return;
     }
     add(p);
   }
 
-  useEffect(()=>{if(lastScan?.barcode)processBarcode(lastScan.barcode)},[lastScan?.id]);
+  useEffect(()=>{
+    if(!lastScan?.barcode)return;
+    const scannedAt=Date.parse(lastScan.at||"");
+    if(Number.isFinite(scannedAt)&&scannedAt<posMountedAtRef.current)return;
+    processBarcode(lastScan.barcode);
+  },[lastScan?.id]);
+
+  function removeItem(id){
+    pricingChanged();setCart((rows)=>rows.filter((x)=>x.product.id!==id));
+    setMessage("Product removed from current bill.");
+  }
 
   function change(id,d){
     const item=cart.find((x)=>x.product.id===id);
@@ -193,6 +246,7 @@ export default function POS(){
   }
 
   async function checkout(){
+    if(cart.some((i)=>Number(i.unitPrice??i.product.price)<=0)){setMessage("Cart contains a product with no selling price. Remove it or edit the product first.");return;}
     if(needsReason&&!reasonCodeId){setMessage("Select a standardized reason for this manual override.");return}
     const selected=reasons.find((r)=>r.id===reasonCodeId);
     if(needsReason&&selected?.requires_note&&!reasonNote.trim()){setMessage("This reason requires a note.");return}
@@ -228,6 +282,7 @@ export default function POS(){
 
     setBusy(false);
     successBeep();
+    sessionStorage.removeItem(cartStorageKey);
     setCart([]);
     setDiscount(0);
     setPaymentReference("");
@@ -243,26 +298,31 @@ export default function POS(){
     setQuote(null);
 
     if(r.offline){setMessage(r.message);return}
-    navigate(`/sales/${r.sale.id}`);
+    navigate(autoPrint?`/sales/${r.sale.id}?print=1`:`/sales/${r.sale.id}`);
   }
 
   const finalDue=quote?Number(quote.external_payment_due||0):manualTotal;
 
   return <div className="pos-page"><div className="page-heading">
       <div><h2>Fast POS Billing</h2><p>Scan → Cart → Rewards → Pay → Print with controlled overrides.</p></div>
-      <button className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button>
+      <div className="button-row"><button type="button" className="secondary-button" onClick={toggleAutoPrint} title="Device setting. OFF still opens the receipt without opening the print dialog.">Auto Print: {autoPrint?"ON":"OFF"}</button><button type="button" className="secondary-button" onClick={()=>{setCart([]);setMessage("Current bill cleared.");}}>Clear Cart</button><button className="secondary-button" onClick={()=>navigate("/pos/scanner")}>Scanner Test</button></div>
     </div>
 
     {unknown&&<div className="product-not-found">
       <strong>PRODUCT NOT FOUND</strong><span>{unknown}</span>
-      <button className="primary-button" onClick={()=>navigate(`/products/new?barcode=${encodeURIComponent(unknown)}`)}>Add Product with this Barcode</button>
+      <span className="muted-text">Nothing is saved unless you choose Add Product.</span>
+      <button type="button" className="primary-button" onClick={()=>navigate(`/products/new?barcode=${encodeURIComponent(unknown)}`)}>Add Product with this Barcode</button>
+      <button type="button" className="secondary-button" onClick={()=>{setUnknown("");setMessage("Scanner ready");}}>× Ignore / Continue</button>
     </div>}
 
     <div className="pos-layout">
       <div className="pos-left">
         <div className="panel pos-search-card">
           <label>Manual Search<input style={{width:"100%"}} value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Name, barcode, SKU, brand..."/></label>
-          {results.map((p)=><button key={p.id} className="search-result" onClick={()=>add(p)}><span>{p.name}</span><span>{money.format(p.price)} · Stock {getStock(p.id)}</span></button>)}
+          {results.map((p)=><button key={p.id} className="search-result" onClick={()=>add(p)}>
+            <span className="pos-product-result-main"><ProductThumb product={p} size="sm"/><span><strong>{p.name}</strong><small>{p.brand} · {p.size}</small></span></span>
+            <span>{money.format(p.price)} · Stock {getStock(p.id)}</span>
+          </button>)}
           <div className="purchase-message" style={{marginTop:10}}>{message}</div>
         </div>
 
@@ -289,15 +349,16 @@ export default function POS(){
       <div className="panel pos-checkout-card"><div className="pos-section-heading"><div><span>Checkout</span><h3>Current Bill</h3></div><strong>{cart.reduce((n,i)=>n+Number(i.quantity||0),0)} item(s)</strong></div>
         <div className="data-table-wrapper">
           <table className="data-table">
-            <thead><tr><th>Product</th><th>Qty</th><th>Normal</th><th>Sale Price</th><th>Total</th></tr></thead>
+            <thead><tr><th>Product</th><th>Qty</th><th>Normal</th><th>Sale Price</th><th>Total</th><th>Remove</th></tr></thead>
             <tbody>{cart.map((i)=>{
               const changed=Math.abs(Number(i.unitPrice??i.product.price)-Number(i.product.price))>0.001;
               return <tr key={i.product.id}>
-                <td>{i.product.name}</td>
+                <td><div className="product-cell-with-image"><ProductThumb product={i.product} size="sm"/><span>{i.product.name}</span></div></td>
                 <td><button onClick={()=>change(i.product.id,-1)}>-</button> {i.quantity} <button onClick={()=>change(i.product.id,1)}>+</button></td>
                 <td>{money.format(i.product.price)}</td>
                 <td><input type="number" min="0" step="0.01" value={i.unitPrice} onChange={(e)=>setUnitPrice(i.product.id,e.target.value)} style={{maxWidth:110}}/>{changed?<small style={{display:"block"}}>Override</small>:null}</td>
                 <td>{money.format(Number(i.unitPrice??i.product.price)*i.quantity)}</td>
+                <td><button type="button" className="secondary-button" onClick={()=>removeItem(i.product.id)}>× Remove</button></td>
               </tr>
             })}</tbody>
           </table>
