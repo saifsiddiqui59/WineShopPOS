@@ -383,6 +383,13 @@ export default function POS(){
 
     if(!r.ok){
       setBusy(false);
+      if(/SHIFT_REQUIRED/i.test(r.message||"")){
+        setShiftOpen(false);
+        sessionStorage.removeItem(shiftStorageKey);
+        setMessage("Start your shift before making any bill.");
+        errorBeep();
+        return;
+      }
       if(/OVERRIDE_APPROVAL_REQUIRED/i.test(r.message||"")){
         setMessage("This cashier discount/price change requires manager approval.");
         return;

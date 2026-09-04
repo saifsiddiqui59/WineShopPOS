@@ -5980,3 +5980,13 @@ input,select,textarea{max-width:100%}
   .shift-required-backdrop{padding:10px}
   .shift-required-dialog{padding:18px;max-height:calc(100vh - 20px)}
 }
+
+/* V5H2_STOCK_COUNT_SCAN_SEARCH_20260903 */
+.stock-count-scan-panel{display:flex;flex-direction:column;gap:12px}
+.stock-count-scan-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.stock-count-search-results{display:grid;gap:8px}
+.stock-count-search-result{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:#111214;color:inherit;cursor:pointer}
+.stock-count-search-result:hover{border-color:rgba(59,130,246,.7)}
+.stock-count-search-result>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.stock-count-search-result small{color:#8a8c94;overflow-wrap:anywhere}
+@media(max-width:760px){.stock-count-scan-header,.stock-count-search-result{align-items:stretch;flex-direction:column}}

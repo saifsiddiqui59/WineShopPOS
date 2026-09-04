@@ -1107,3 +1107,15 @@ Products defines the SKU/barcode/category/pack/prices. Inventory owns current st
 ## Mobile and smaller screens
 
 WineShopPOS navigation, panels, tabs, forms and tables adapt to smaller screens. Wide tables remain horizontally scrollable rather than cutting off columns.
+
+## Physical Stock Count scan/search
+1. Start/select an OPEN Stock Count.
+2. Scan each bottle; one scanner event adds one unit.
+3. If needed, search by barcode, SKU, name, brand, category, subcategory or size.
+4. NOT COUNTED means not physically checked.
+5. MARKED ZERO means explicitly confirmed zero.
+6. Use Mark Unseen = 0 only after the physical walk/count is complete.
+7. Submit, then Manager/Admin approves discrepancies.
+
+## POS scanner rule
+POS remains barcode scan-first. **Scan barcode or search product** is the cashier's primary product-entry workflow. Manual search is fallback.

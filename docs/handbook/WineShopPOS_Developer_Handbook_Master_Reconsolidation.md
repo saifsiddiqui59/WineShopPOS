@@ -1275,3 +1275,8 @@ Scanner diagnostics are an Admin Hardware responsibility. POS keeps automatic ke
 
 ### Responsive contract
 Use responsive grids, min-width:0, horizontally scrollable tables/tabs and mobile-safe modal sizing. Do not solve overflow by shrinking text to unreadable sizes.
+
+## V5-H5 physical count scanner contract — 2026-09-04
+Physical Stock Count is scan-first. Each hardware scan is one bottle and is consumed once. Search is fallback. NOT COUNTED differs from MARKED ZERO. Products created after a count snapshot are not silently added to the active count. Submit only after unseen SKUs are resolved. Approval is the inventory-adjustment boundary.
+
+POS remains scan-first; removing a scanner diagnostics/settings tab must never remove barcode scanner capability.

@@ -282,3 +282,6 @@ Updated:
 - Project Context
 - Developer Handbook
 - User Manual/public manual
+
+## V5-H5 VERIFIED-SCHEMA RECOVERY — 2026-09-04
+Updated Stock Count scan/search, replay protection, stock-count snapshot RPC guard, V5-H migration live-schema compatibility, regression strategy and canonical documentation.

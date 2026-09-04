@@ -720,3 +720,13 @@ Planned/implemented together:
 - Product and Inventory remain separate backend concepts but are integrated operationally in Inventory;
 - authorized V5-F test product/purchase/invoice/stock/alias/count evidence is purged with strict safety preconditions;
 - the two original V5-F Azure invoice blobs are deleted by the executor after the DB transaction.
+
+## V5-H5 VERIFIED-SCHEMA RECOVERY — 2026-09-04
+- POS remains scan-first.
+- Physical Stock Count now has POS-style Scan/Search.
+- Search fallback covers barcode, SKU, name, brand, category, subcategory and size.
+- Each scanner event ID is consumed once.
+- Search is limited to the active count snapshot.
+- DB stock_count_scan rejects products outside that snapshot.
+- Live audit_logs.old_data/new_data are verified present and retained in the cleanup.
+- V5-H migration is corrected against current live schema before first application.

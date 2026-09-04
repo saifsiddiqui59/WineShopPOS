@@ -56,6 +56,71 @@ on public.sales
 for each row
 execute function public.enforce_completed_sale_shift();
 
+-- V5H5_STOCK_COUNT_SCAN_SNAPSHOT_GUARD
+create or replace function public.stock_count_scan(
+  p_stock_count_id uuid,
+  p_barcode text
+)
+returns table(
+  product_id uuid,
+  product_name text,
+  expected_quantity integer,
+  counted_quantity integer
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_shop uuid;
+  v_product uuid;
+begin
+  v_shop := public.assert_shop_access();
+  perform public.assert_manager_or_admin();
+
+  if not exists(
+    select 1
+    from public.stock_counts
+    where id=p_stock_count_id
+      and shop_id=v_shop
+      and status='OPEN'
+  ) then
+    raise exception 'Stock count is not open';
+  end if;
+
+  select id
+  into v_product
+  from public.products
+  where shop_id=v_shop
+    and barcode=trim(p_barcode)
+    and active=true;
+
+  if v_product is null then
+    raise exception 'PRODUCT_NOT_FOUND';
+  end if;
+
+  update public.stock_count_items
+  set counted_quantity=coalesce(counted_quantity,0)+1,
+      first_scanned_at=coalesce(first_scanned_at,now()),
+      last_scanned_at=now()
+  where stock_count_id=p_stock_count_id
+    and shop_id=v_shop
+    and product_id=v_product;
+
+  if not found then
+    raise exception 'PRODUCT_NOT_IN_COUNT_SNAPSHOT';
+  end if;
+
+  return query
+  select p.id,p.product_name,sci.expected_quantity,sci.counted_quantity
+  from public.stock_count_items sci
+  join public.products p on p.id=sci.product_id
+  where sci.stock_count_id=p_stock_count_id
+    and sci.shop_id=v_shop
+    and sci.product_id=v_product;
+end;
+$$;
+
 -- ============================================================================
 -- B. AUTHORIZED V5-F UAT FIXTURE PURGE
 -- Exact test fixture only; abort if it has any non-test operational usage.
@@ -70,8 +135,8 @@ declare
   v_purchase_count integer;
   v_ingestion_count integer;
 begin
-  select count(*), min(id), min(shop_id)
-  into v_product_count, v_product, v_shop
+  select count(*)
+  into v_product_count
   from public.products
   where regexp_replace(lower(coalesce(product_name,'')), '[^a-z0-9]+','','g')
         = 'heinekenorginallagerbeercan330ml'
@@ -83,8 +148,15 @@ begin
       v_product_count;
   end if;
 
-  select count(*), min(id)
-  into v_purchase_count, v_purchase
+  select id, shop_id
+  into v_product, v_shop
+  from public.products
+  where regexp_replace(lower(coalesce(product_name,'')), '[^a-z0-9]+','','g')
+        = 'heinekenorginallagerbeercan330ml'
+     or barcode = '111111111111111111111111';
+
+  select count(*)
+  into v_purchase_count
   from public.purchases
   where shop_id = v_shop
     and invoice_number = 'UAT-V5F-001';
@@ -94,6 +166,12 @@ begin
       'UAT_PURGE_ABORTED: expected exactly one UAT-V5F-001 purchase, found %',
       v_purchase_count;
   end if;
+
+  select id
+  into v_purchase
+  from public.purchases
+  where shop_id = v_shop
+    and invoice_number = 'UAT-V5F-001';
 
   select count(*)
   into v_ingestion_count
@@ -153,6 +231,46 @@ begin
   ) then
     raise exception
       'UAT_PURGE_ABORTED: UAT purchase has a purchase return';
+  end if;
+
+  -- V5-H5 exact live-verified fixture shape guard.
+  if not exists(
+    select 1 from public.inventory
+    where product_id=v_product and quantity=24
+  ) then
+    raise exception 'UAT_PURGE_ABORTED: test inventory is not exactly 24';
+  end if;
+
+  if (
+    select count(*) from public.inventory_receipt_lots
+    where product_id=v_product and purchase_id=v_purchase
+  ) <> 1
+  or not exists(
+    select 1 from public.inventory_receipt_lots
+    where product_id=v_product
+      and purchase_id=v_purchase
+      and received_quantity=24
+      and remaining_quantity=24
+  ) then
+    raise exception 'UAT_PURGE_ABORTED: receipt lot shape changed';
+  end if;
+
+  if (
+    select count(*) from public.stock_movements
+    where product_id=v_product
+  ) <> 1
+  or not exists(
+    select 1 from public.stock_movements
+    where product_id=v_product
+      and movement_type='PURCHASE'
+      and quantity_change=24
+      and quantity_after=24
+  ) then
+    raise exception 'UAT_PURGE_ABORTED: stock movement shape changed';
+  end if;
+
+  if (select count(*) from public.product_aliases where product_id=v_product) <> 1 then
+    raise exception 'UAT_PURGE_ABORTED: expected exactly one learned alias';
   end if;
 
   -- Remove old audit traces tied specifically to these test entities/labels.

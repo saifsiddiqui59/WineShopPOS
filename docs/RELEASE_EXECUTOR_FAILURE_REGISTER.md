@@ -627,3 +627,24 @@ Destructive UAT fixture cleanup requires exact identity and dependency precondit
 
 ### V5-G verifier failure carried forward
 The prior V5-G migration and OCR deployment succeeded, but its first verifier used multiple independent SELECT statements and the CLI surfaced only the final result set. Future post-mutation verification must return one result set.
+
+## V5-H MIN(UUID) MIGRATION FAILURE — 2026-09-03
+The V5-H migration failed because it used `min(id)` / `min(shop_id)` on UUID columns. The transaction rolled back and the migration remained local-only. Permanent rule: assert cardinality with `count(*)`, then select the UUID row directly.
+
+## SUPABASE MIGRATION LIST LOCAL/REMOTE FALSE POSITIVE — 2026-09-03
+Executor 22 matched the Local column of the formatted migration list and falsely reported the migration as remote. Permanent rule: remote migration truth comes from `supabase_migrations.schema_migrations`, not grep over CLI table output.
+
+## V5-H3 REGRESSION VARIABLE-NAME FALSE NEGATIVE — 2026-09-03
+Executor 23 reported `Stock Count search methods incomplete` because the regression expected literal `product.sku`/`product.brand` while the correct implementation used `p.sku`/`p.brand`. Permanent rule: regressions validate behavior/structure, not incidental local variable names.
+
+## V5-H4 AUDIT COLUMN PRECHECK FALSE NEGATIVE — 2026-09-04
+Executor 24 expected `audit_logs.old_data` and `audit_logs.new_data` to be absent and stopped when the live database correctly returned both columns as present. Both are JSONB and are valid cleanup predicates.
+
+Root cause: an earlier schema conclusion was encoded as a hard precondition without re-querying the exact live columns immediately before use.
+
+Permanent prevention: query destructive-migration columns directly from `information_schema.columns`; assert the current linked database state; keep valid old_data/new_data cleanup predicates when those columns exist.
+
+Safe continuation: executor 24 stopped before source, DB, Azure or preview mutation; the same five failed-23 local dirty paths remain.
+
+## STOCK COUNT ONE-SCAN/ONE-COUNT RULE — 2026-09-03
+A physical scanner event ID must be consumed once. React re-render/effect changes must not replay a bottle scan. `NOT COUNTED`, `COUNTED`, and explicit `MARKED ZERO` are separate states.
