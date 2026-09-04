@@ -748,3 +748,42 @@ The failure occurred before migration rename, documentation edits, staging,
 commit, push or deployment. The pre-existing four-file security patch remains
 the continuation source of truth.
 <!-- /V3_SECURITY_CHECKPOINT_MSYS_REF_PATH_INCIDENT_20260904 -->
+
+<!-- V3_MAIN_RECONCILIATION_20260904 -->
+### 2026-09-04 — Controlled main -> V3 environment-isolation reconciliation
+
+Pre-reconciliation condition:
+- V3 security checkpoint was committed/pushed and the V3 worktree was clean.
+- Git reported V3 ahead of and behind main because PROD and DEV environment
+  isolation had been committed independently.
+
+Safety proof before merge:
+- The complete main-only effective tree delta was exactly:
+  `.env.example`,
+  `.github/workflows/environment-isolation.yml`,
+  `docs/environment/ENVIRONMENT_ISOLATION.md`,
+  `package.json`,
+  `scripts/supabase-environment-policy.mjs`,
+  `src/lib/supabase.js`,
+  `vite.config.js`.
+- Six shared isolation files were byte-identical between main and V3.
+- `.env.example` was intentionally branch-specific:
+  main -> PROD `uiurgplnsgmawvxhjzzp`;
+  V3 -> DEV `juhcypzoacauzmtzqnwd`.
+
+Resolution:
+A Git `ours` merge strategy was used only after the above proof. This records
+main as an ancestor of V3 while retaining V3's already-equivalent isolation
+implementation and its required DEV binding.
+
+Permanent rule:
+Never use an `ours` merge merely to silence divergence. It is allowed only when
+the complete incoming effective delta is explicitly classified, all shared
+files are proven identical, and every intentional branch-specific difference is
+verified semantically before merge.
+
+Post-merge release requirement:
+V3 must report zero commits behind main, remain DEV-bound, pass the environment
+guard/security regressions/lint/build, and finish with a clean tree before
+preview/UAT work continues.
+<!-- /V3_MAIN_RECONCILIATION_20260904 -->
