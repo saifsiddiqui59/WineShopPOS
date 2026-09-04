@@ -7,6 +7,7 @@ import HomeRedirect from "./components/HomeRedirect";
 import { MODULE_TABS } from "./config/navigation";
 
 import Login from "./pages/Login";
+import UpdatePassword from "./pages/UpdatePassword";
 import POS from "./pages/POS";
 import Sales from "./pages/Sales";
 import SaleDetails from "./pages/SaleDetails";
@@ -59,6 +60,7 @@ function module(title, subtitle, tabs) {
 export default function App() {
   return <Routes>
     <Route path="/login" element={<Login/>}/>
+    <Route path="/update-password" element={<UpdatePassword/>}/>
 
     <Route element={<RequireAuth/>}>
       <Route element={<Layout/>}>
