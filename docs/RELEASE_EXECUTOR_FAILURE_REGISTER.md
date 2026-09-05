@@ -860,3 +860,71 @@ Recovery result:
 Static-site config mode: login
 Blob upload mode: key
 Live transport verification: HTTP 200 + exact built JS asset present.
+
+## VITE PREVIEW BASE PATH / WINDOWS EXECUTOR FAILURE — 2026-09-05
+
+### Failure sequence
+
+1. Windows Git Bash rewrote the Vite preview base and generated malformed paths
+   such as `/Program Files/Git/v3-preview/favicon.svg`.
+2. `spawnSync("npx.cmd", ..., shell:false)` failed with `EINVAL`.
+3. Verified resolution: Vite JavaScript API inside Node:
+   `await build({ base: "/v3-preview/" })`.
+
+### Permanent prevention
+
+- Do not pass path-like Vite preview bases through Git Bash/MSYS.
+- Use Vite's JavaScript API for this Windows preview build.
+- Reject drive letters, `Program Files`, or Git-install path leakage.
+- HTTP-check remote assets after deployment.
+
+## HOSTED E2E STALE UI CONTRACTS — 2026-09-05
+
+### Failure
+
+Hosted V3 Playwright assertions lagged behind current UI contracts:
+
+- Inventory expected exact H2 `Inventory`; current page H2 is
+  `Inventory & Product Stock`.
+- POS expected historical `Manual Search`, `.search-result`, and an in-POS
+  `Scanner Test` button.
+- Backup & Recovery used an unscoped heading selector although the shell H1 and
+  page H2 intentionally share the same title.
+
+### Root cause
+
+The application evolved but historical browser selectors were retained.
+The historical POS cart test also conflicted with the current mandatory
+cashier-shift rule and therefore no longer belonged in a read-only suite.
+
+### Permanent prevention
+
+1. Assert current accessible UI contracts rather than incidental classes.
+2. Scope duplicate shell/page titles semantically.
+3. Keep read-only release suites free of shifts, cart/billing mutations, sales,
+   and other operational writes.
+4. Verify scanner diagnostics at Admin → Hardware → Scanner.
+5. Update browser contracts in the same release when UI architecture changes.
+
+## EXECUTOR SELF-CHECK SELECTOR API MISMATCH — 2026-09-05
+
+### Failure
+
+The E2E structural patch correctly wrote:
+
+`getByLabel("Scan barcode or search products")`
+
+but the executor's static verifier incorrectly searched for:
+
+`name:"Scan barcode or search products"`
+
+The patch therefore succeeded and the verifier failed afterward, leaving one
+legitimate modified test file in the working tree.
+
+### Permanent prevention
+
+- Static release-executor assertions must verify the exact API form written by
+  the patch.
+- When a verifier fails after a write, resume from the known partial state
+  instead of replaying the mutation.
+- Require exact dirty-path classification before continuation.
