@@ -1093,6 +1093,21 @@ export default function AutomationHub() {
     (invoiceLineSubtotal - reviewedResolvedLineValue).toFixed(2),
   );
 
+  const invoiceTableTotals = useMemo(
+    () =>
+      (result?.items || []).reduce(
+        (totals, _item, index) => {
+          const row = resolution[index] || {};
+          totals.cases += Math.max(0, Number(row.caseCount || 0));
+          totals.looseBottles += Math.max(0, Number(row.looseBottles || 0));
+          totals.finalBottles += Math.max(0, Number(row.quantity || 0));
+          return totals;
+        },
+        { cases: 0, looseBottles: 0, finalBottles: 0 },
+      ),
+    [result, resolution],
+  );
+
   const reviewedAdjustment = useMemo(
     () =>
       Number(charges.freightAmount || 0) +
@@ -1788,6 +1803,56 @@ export default function AutomationHub() {
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr style={{ background: "var(--ws-surface-muted)" }}>
+                  <td>
+                    <strong>INVOICE TOTALS</strong>
+                    <div className="muted-text">
+                      {(result.items || []).length} line(s)
+                    </div>
+                  </td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>
+                    <strong>
+                      {unresolved ? `${unresolved} pending` : "All confirmed"}
+                    </strong>
+                  </td>
+                  <td><strong>{invoiceTableTotals.cases.toLocaleString("en-IN")}</strong></td>
+                  <td>—</td>
+                  <td><strong>{invoiceTableTotals.looseBottles.toLocaleString("en-IN")}</strong></td>
+                  <td><strong>{invoiceTableTotals.finalBottles.toLocaleString("en-IN")}</strong></td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>
+                    <strong>
+                      ₹{invoiceLineSubtotal.toLocaleString("en-IN", {
+                        maximumFractionDigits: 2,
+                      })}
+                    </strong>
+                  </td>
+                  <td>
+                    <strong>
+                      ₹{reviewedResolvedLineValue.toLocaleString("en-IN", {
+                        maximumFractionDigits: 2,
+                      })}
+                    </strong>
+                  </td>
+                  <td>
+                    <strong title="Invoice subtotal minus reviewed product total">
+                      {Math.abs(productLineGap) <= 1
+                        ? `MATCH · ₹${Math.abs(productLineGap).toFixed(2)}`
+                        : `${productLineGap > 0 ? "+" : ""}₹${productLineGap.toLocaleString(
+                            "en-IN",
+                            { maximumFractionDigits: 2 },
+                          )}`}
+                    </strong>
+                  </td>
+                  <td>—</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
