@@ -509,6 +509,25 @@ new browser tab. The manual includes its own clickable table of contents.
 WineShopPOS does not use a separate Help category in the main application
 navigation.
 <!-- SUPPLIER_MASTER_OCR_PATCH -->
+
+### Install WineShopPOS on Windows
+
+Windows users can download the official desktop-shortcut package from the Account **About** area:
+
+1. Open the top-right user menu.
+2. Open the Account **About** area.
+3. Select **Install WineShopPOS on Windows**.
+4. Extract `WineShopPOS_Customer_Windows_Setup.zip`.
+5. Double-click `WineShopPOS_Windows_App_Setup.cmd`.
+6. Use the new **WineShopPOS** Desktop or Start Menu shortcut.
+
+Microsoft Edge must already be installed. Administrator access is not required.
+The package creates shortcuts only and always opens:
+
+`https://wineshoppos.z29.web.core.windows.net/`
+
+Run `WineShopPOS_Windows_App_Remove.cmd` to remove the shortcuts.
+
 ## Supplier Master and OCR Supplier Review
 
 ADMIN and MANAGER can open **Purchases & Suppliers → Suppliers** to create, edit, deactivate or reactivate suppliers. While creating a Purchase Order, use **+ New Supplier** to create a supplier without leaving the PO, or **Edit Selected Supplier** to correct the selected supplier.
