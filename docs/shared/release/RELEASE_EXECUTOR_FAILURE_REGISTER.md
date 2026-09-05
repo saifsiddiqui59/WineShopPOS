@@ -205,3 +205,58 @@ Critical added lessons:
 - evidence files are release artifacts and must be literal-safe/validated;
 - latest `main` is not proof of the currently deployed frontend: record
   deployed source/artifact identity separately.
+
+<!-- RELEASE_SHA_STDOUT_CAPTURE_20260905 -->
+### 2026-09-05 — command substitution captured noisy Git commit stdout instead of only SHA
+
+Observed:
+A release helper was called inside command substitution while also allowing
+`git commit` to write its normal summary to stdout. The resulting variable
+contained the commit summary plus the SHA, and `git archive` rejected it.
+
+Permanent prevention:
+- never capture mutating Git helper mixed stdout as an identifier;
+- run commit/push normally, then call `git rev-parse HEAD`;
+- validate SHA variables with `^[0-9a-f]{40}$`;
+- reserve stdout exclusively for machine data when a helper must return data;
+- after a source push succeeds, resume from that pushed SHA rather than replaying it.
+
+<!-- EXACT_ARCHIVE_BRANCH_IDENTITY_20260905 -->
+### 2026-09-05 — exact Git archive lacked branch identity for environment isolation
+
+Observed:
+An exact-SHA `git archive` intentionally had no `.git` directory. Vite loaded
+the Supabase environment policy, which could not infer a branch and correctly
+blocked the build.
+
+Permanent prevention:
+- preserve exact Git-free archive builds;
+- do not disable environment isolation;
+- provide the repository-supported branch identity using `BRANCH_NAME`,
+  `GITHUB_REF_NAME`, or `GITHUB_HEAD_REF`;
+- use `BRANCH_NAME=V3` for QA and `BRANCH_NAME=main` for PROD;
+- verify resulting compiled assets contain only the expected Supabase ref.
+
+<!-- CONTINUATION_BRANCH_ADVANCED_20260905 -->
+### 2026-09-05 — resume executor required stale exact branch head after legitimate concurrent commit
+
+Observed:
+A resume executor correctly knew that the Help/User Manual removal had been
+pushed at `c8580a53c1a37cd174a82efa431d9154db9168ee`, but it required local V3
+HEAD to equal that exact SHA. Before the next run, V3 legitimately advanced by
+one descendant commit adding the Windows setup download. main also advanced
+with the related Windows setup work. The rigid equality check stopped safely.
+
+Root cause:
+The continuation confused "last verified release commit" with "branch must
+remain frozen forever."
+
+Permanent prevention:
+- fetch current branch state at every continuation;
+- if newer commits exist, inspect them before writing;
+- allow continuation when the last verified release commit is an ancestor of
+  the current candidate AND the required source invariant is still true;
+- preserve unrelated/newer functionality rather than resetting to the old SHA;
+- derive the actual candidate SHA after safe synchronization and bind the
+  artifact/deployment evidence to that SHA;
+- stop on divergence, target collision, or invariant regression.
