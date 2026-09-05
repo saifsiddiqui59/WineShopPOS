@@ -130,3 +130,26 @@ Before moving future OCR/purchase/UI changes between V3 and PROD:
 Source-of-truth order:
 
 `CURRENT SOURCE + CURRENT MIGRATIONS + VERIFIED DEPLOYMENT > OLD DOCUMENTATION`
+
+## In-app Windows setup distribution — 2026-09-05
+
+WineShopPOS distributes the customer Windows launcher from the Account About area.
+
+Package:
+
+`/downloads/WineShopPOS_Customer_Windows_Setup.zip`
+
+Verified endpoints:
+
+- PROD: `https://wineshoppos.z29.web.core.windows.net/downloads/WineShopPOS_Customer_Windows_Setup.zip`
+- V3 preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/downloads/WineShopPOS_Customer_Windows_Setup.zip`
+
+Both environments intentionally distribute the same customer package, and the package
+always opens the official production WineShopPOS site.
+
+V3 currently labels the account area `About`; PROD may still label it `Help / About`.
+The Windows installer control is available from the About area in both environments.
+
+The package contains no `.env`, Supabase key, Azure key, password, Git credential or
+repository access. This distribution change does not alter database, Supabase, Invoice
+API, Azure Functions, OCR calculation or inventory behavior.
