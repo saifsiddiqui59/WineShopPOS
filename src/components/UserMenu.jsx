@@ -30,7 +30,7 @@ export default function UserMenu() {
       <button onClick={() => go("/account")}><UserRound size={16}/> My Profile</button>
       <button onClick={() => go("/account?tab=settings")}><Settings size={16}/> Account Settings</button>
       <button onClick={() => go("/account?tab=security")}><Shield size={16}/> Security</button>
-      <button onClick={() => go("/account?tab=about")}><CircleHelp size={16}/> Help / About <small>{APP_VERSION}</small></button>
+      <button onClick={() => go("/account?tab=about")}><CircleHelp size={16}/> About <small>{APP_VERSION}</small></button>
       <div className="user-menu-divider"/>
       <button className="logout-menu-button" onClick={signOut}><LogOut size={16}/> Logout</button>
     </div> : null}

@@ -41,7 +41,7 @@ export default function Account() {
 
   return <div><PageHeader title="My Account" subtitle="Profile, preferences and security for your signed-in account."/>
     <nav className="module-tabs account-tabs">
-      {[['profile','My Profile'],['settings','Account Settings'],['security','Security'],['about','Help / About']].map(([key,label]) => <button key={key} className={tab===key ? "module-tab active" : "module-tab"} onClick={() => setParams({ tab:key })}>{label}</button>)}
+      {[['profile','My Profile'],['settings','Account Settings'],['security','Security'],['about','About']].map(([key,label]) => <button key={key} className={tab===key ? "module-tab active" : "module-tab"} onClick={() => setParams({ tab:key })}>{label}</button>)}
     </nav>
     {message ? <div className="purchase-message">{message}</div> : null}
 
@@ -52,6 +52,6 @@ export default function Account() {
 
     {tab === "security" ? <form className="panel compact-form" onSubmit={changePassword}><h3>Change Password</h3><label>New Password<input type="password" minLength="8" value={password.next} onChange={(e)=>setPassword({...password,next:e.target.value})} required/></label><label>Confirm Password<input type="password" minLength="8" value={password.confirm} onChange={(e)=>setPassword({...password,confirm:e.target.value})} required/></label><button className="primary-button" disabled={busy}>Change Password</button><p className="muted-text">Role changes remain Admin/Platform-controlled. Never share passwords or service keys.</p></form> : null}
 
-    {tab === "about" ? <section className="panel"><h3>WineShopPOS</h3><p><strong>Version:</strong> {APP_VERSION}</p><p className="about-faith-line"><strong>Trust the GOD.</strong></p><p><strong>Created by:</strong> Almighty sa_f</p><p><strong>Support:</strong> Contact your WineShopPOS software provider for account, subscription or database support.</p><a className="primary-button" href="/manual/index.html" target="_blank" rel="noreferrer">Open Full User Manual</a></section> : null}
+    {tab === "about" ? <section className="panel"><h3>WineShopPOS</h3><p><strong>Version:</strong> {APP_VERSION}</p><p className="about-faith-line"><strong>Trust the GOD.</strong></p><p><strong>Created by:</strong> Almighty sa_f</p><p><strong>Support:</strong> Contact your WineShopPOS software provider for account, subscription or database support.</p></section> : null}
   </div>;
 }
