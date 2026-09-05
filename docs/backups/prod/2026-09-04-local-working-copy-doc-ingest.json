@@ -1,0 +1,833 @@
+{
+  "source": "pre-existing local working-copy documentation",
+  "backup": "included in verified working-copy Azure backup before restructure",
+  "records": [
+    {
+      "source": "docs/code-history/README.md_before_v2_20260830_071729.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 2,
+      "v2_score": 7,
+      "v1_hits": [
+        "early chapters"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "RLS"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/README.md_before_v2_20260830_071729.md"
+    },
+    {
+      "source": "docs/code-history/V2_PREVIOUS_README.md_20260830_065028.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 0,
+      "v2_score": 10,
+      "v1_hits": [],
+      "v2_hits": [
+        "Supabase",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/V2_PREVIOUS_README.md_20260830_065028.md"
+    },
+    {
+      "source": "docs/code-history/V2_PREVIOUS_docs_PROJECT_CONTEXT.md_20260830_065028.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 3,
+      "v2_score": 6,
+      "v1_hits": [
+        "localStorage"
+      ],
+      "v2_hits": [
+        "Supabase",
+        "RLS",
+        "Owner/AI"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/V2_PREVIOUS_docs_PROJECT_CONTEXT.md_20260830_065028.md"
+    },
+    {
+      "source": "docs/code-history/V2_PREVIOUS_docs_README.md_20260830_065028.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 2,
+      "v2_score": 8,
+      "v1_hits": [
+        "early chapters"
+      ],
+      "v2_hits": [
+        "Supabase",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/V2_PREVIOUS_docs_README.md_20260830_065028.md"
+    },
+    {
+      "source": "docs/code-history/docs_PROJECT_CONTEXT.md_before_v2_20260830_071729.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 2,
+      "v2_score": 11,
+      "v1_hits": [
+        "early chapters"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/docs_PROJECT_CONTEXT.md_before_v2_20260830_071729.md"
+    },
+    {
+      "source": "docs/code-history/docs_README.md_before_v2_20260830_071729.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 1,
+      "v2_score": 7,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/docs_README.md_before_v2_20260830_071729.md"
+    },
+    {
+      "source": "docs/code-history/v2-doc-fix-20260830_072221/README.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 2,
+      "v2_score": 15,
+      "v1_hits": [
+        "early chapters"
+      ],
+      "v2_hits": [
+        "explicit V2 generation",
+        "V2 branding"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/v2-doc-fix-20260830_072221/README.md"
+    },
+    {
+      "source": "docs/code-history/v2-doc-fix-20260830_072221/docs_AI_PRODUCTION_BASELINE.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 0,
+      "v2_score": 17,
+      "v1_hits": [],
+      "v2_hits": [
+        "explicit V2 generation",
+        "V2 branding",
+        "Supabase"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/v2-doc-fix-20260830_072221/docs_AI_PRODUCTION_BASELINE.md"
+    },
+    {
+      "source": "docs/code-history/v2-doc-fix-20260830_072221/docs_DOCUMENTATION_REGISTER.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 0,
+      "v2_score": 23,
+      "v1_hits": [],
+      "v2_hits": [
+        "explicit V2 generation",
+        "current V2",
+        "V2 branding"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/v2-doc-fix-20260830_072221/docs_DOCUMENTATION_REGISTER.md"
+    },
+    {
+      "source": "docs/code-history/v2-doc-fix-20260830_072221/docs_PROJECT_CONTEXT.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 3,
+      "v2_score": 23,
+      "v1_hits": [
+        "early chapters",
+        "foundation"
+      ],
+      "v2_hits": [
+        "explicit V2 generation",
+        "V2 branding",
+        "Supabase",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/v2-doc-fix-20260830_072221/docs_PROJECT_CONTEXT.md"
+    },
+    {
+      "source": "docs/code-history/v2-doc-fix-20260830_072221/docs_README.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 2,
+      "v2_score": 25,
+      "v1_hits": [
+        "early chapters"
+      ],
+      "v2_hits": [
+        "explicit V2 generation",
+        "current V2",
+        "V2 branding",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/v2-doc-fix-20260830_072221/docs_README.md"
+    },
+    {
+      "source": "docs/code-history/v2-doc-fix-20260830_072221/docs_handbook_WineShopPOS_Developer_Handbook_Master_Reconsolidation.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 1,
+      "v2_score": 13,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/v2-doc-fix-20260830_072221/docs_handbook_WineShopPOS_Developer_Handbook_Master_Reconsolidation.md"
+    },
+    {
+      "source": "docs/code-history/v2-doc-fix-20260830_072221/docs_manual_WineShopPOS_User_Manual_Master_Reconsolidation.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 0,
+      "v2_score": 11,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "Owner/AI",
+        "OCR/invoice",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/code-history/v2-doc-fix-20260830_072221/docs_manual_WineShopPOS_User_Manual_Master_Reconsolidation.md"
+    },
+    {
+      "source": "docs/v2/AI_PRODUCTION_BASELINE.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 5,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/AI_PRODUCTION_BASELINE.md"
+    },
+    {
+      "source": "docs/v2/CODING_AGENT_EXECUTION_PROMPT.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 5,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "RLS"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/CODING_AGENT_EXECUTION_PROMPT.md"
+    },
+    {
+      "source": "docs/v2/README.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 2,
+      "v2_score": 7,
+      "v1_hits": [
+        "early chapters"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "RLS",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/README.md"
+    },
+    {
+      "source": "docs/v2/audit/AI_PRODUCTION_QUALITY_INVENTORY.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 7,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "Owner/AI"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/AI_PRODUCTION_QUALITY_INVENTORY.md"
+    },
+    {
+      "source": "docs/v2/audit/API_RLS_RPC_INVENTORY.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 0,
+      "v2_score": 9,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "RLS",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/API_RLS_RPC_INVENTORY.md"
+    },
+    {
+      "source": "docs/v2/audit/BUTTON_ACTION_INVENTORY.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 1,
+      "v2_score": 9,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "OCR/invoice",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/BUTTON_ACTION_INVENTORY.md"
+    },
+    {
+      "source": "docs/v2/audit/DEPLOYMENT_REPOSITORY_DRIFT.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 5,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/DEPLOYMENT_REPOSITORY_DRIFT.md"
+    },
+    {
+      "source": "docs/v2/audit/DOCUMENTATION_UPDATE_STATUS.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 5,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/DOCUMENTATION_UPDATE_STATUS.md"
+    },
+    {
+      "source": "docs/v2/audit/FEATURE_MATRIX.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 1,
+      "v2_score": 10,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "RLS",
+        "advanced inventory",
+        "V2 N-program"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/FEATURE_MATRIX.md"
+    },
+    {
+      "source": "docs/v2/audit/FINAL_REPORT_TEMPLATE.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 5,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "RLS"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/FINAL_REPORT_TEMPLATE.md"
+    },
+    {
+      "source": "docs/v2/audit/IMPLEMENTATION_LEDGER.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 1,
+      "v2_score": 5,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "RLS"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/IMPLEMENTATION_LEDGER.md"
+    },
+    {
+      "source": "docs/v2/audit/REGRESSION_PROTECTION_MATRIX.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 0,
+      "v2_score": 9,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/REGRESSION_PROTECTION_MATRIX.md"
+    },
+    {
+      "source": "docs/v2/audit/ROLE_SECURITY_INVENTORY.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 2,
+      "v2_score": 13,
+      "v1_hits": [
+        "early chapters"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/ROLE_SECURITY_INVENTORY.md"
+    },
+    {
+      "source": "docs/v2/audit/ROUTE_INVENTORY.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 1,
+      "v2_score": 5,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Owner/AI"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/ROUTE_INVENTORY.md"
+    },
+    {
+      "source": "docs/v2/audit/TEST_FRAMEWORK_INVENTORY.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 5,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/TEST_FRAMEWORK_INVENTORY.md"
+    },
+    {
+      "source": "docs/v2/audit/VALIDATION_RESULTS.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/audit/VALIDATION_RESULTS.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-01-current-production-baseline.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 0,
+      "v2_score": 13,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "RLS",
+        "Owner/AI",
+        "OCR/invoice",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-01-current-production-baseline.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-02-discovery-feature-classification.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-02-discovery-feature-classification.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-03-inventory-cost-lots-ageing-fifo.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 1,
+      "v2_score": 5,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "advanced inventory"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-03-inventory-cost-lots-ageing-fifo.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-04-controls-reasons-approvals.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-04-controls-reasons-approvals.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-05-customer-commercial.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-05-customer-commercial.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-06-purchase-intelligence.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-06-purchase-intelligence.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-07-operations-accounting.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-07-operations-accounting.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-08-reliability-security-hardware.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 7,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "RLS",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-08-reliability-security-hardware.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-09-ai-production-quality.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-09-ai-production-quality.md"
+    },
+    {
+      "source": "docs/v2/chapters/v2-10-full-application-qa-regression.md",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 3,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/chapters/v2-10-full-application-qa-regression.md"
+    },
+    {
+      "source": "docs/v2/evidence/00_repository_baseline.md",
+      "version": "v2",
+      "confidence": "HIGH",
+      "v1_score": 1,
+      "v2_score": 9,
+      "v1_hits": [
+        "foundation"
+      ],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "Owner/AI",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/00_repository_baseline.md"
+    },
+    {
+      "source": "docs/v2/evidence/00_untracked_files.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 7,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "OCR/invoice"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/00_untracked_files.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N1.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N1.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N10.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N10.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N11.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N11.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N12.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 6,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "V2 N-program"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N12.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N13.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 6,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "advanced inventory",
+        "V2 N-program"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N13.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N14.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 6,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "V2 N-program"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N14.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N15.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 6,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "V2 N-program"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N15.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N2.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N2.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N3.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 6,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "Supabase",
+        "V2 N-program"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N3.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N4.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N4.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N5.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N5.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N6.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N6.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N7.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N7.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N8.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N8.txt"
+    },
+    {
+      "source": "docs/v2/evidence/N9.txt",
+      "version": "v2",
+      "confidence": "MEDIUM",
+      "v1_score": 0,
+      "v2_score": 4,
+      "v1_hits": [],
+      "v2_hits": [
+        "V2 branding",
+        "V2 N-program",
+        "V2 local-history provenance"
+      ],
+      "target": "docs/versions/v2/releases/history/local-working-copy/v2/evidence/N9.txt"
+    }
+  ]
+}

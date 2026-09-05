@@ -7,7 +7,6 @@
 
 > This section is the current user-facing reference where an older section
 > conflicts with current production behavior.
-
 ### Current application areas
 
 Depending on role and shop authorization, WineShopPOS currently covers or has
@@ -34,7 +33,6 @@ developed workflows around:
 - offline foundation
 - owner WhatsApp summary
 - Ask WineShopPOS PRO AI Owner Assistant
-
 ### Cashier workflow
 
 Keep the cashier flow simple:
@@ -45,7 +43,6 @@ SCAN
 → PAY
 → PRINT
 ```
-
 ### V2 user-visible capabilities
 
 As V2 features are verified/implemented, this same manual will document:
@@ -68,7 +65,6 @@ As V2 features are verified/implemented, this same manual will document:
 
 A feature should not be shown as available to users until the actual
 application implementation is verified.
-
 ### Ask WineShopPOS PRO AI Owner Assistant
 
 The Owner Assistant is **verified working end-to-end in production**.
@@ -84,23 +80,17 @@ Example owner/manager questions include:
 - What requires my attention?
 - Which inventory is ageing?
 
-Access uses the currently logged-in Supabase user and authorized shop
-membership. The AI does not decide tenant access.
+Access follows your signed-in account and authorized shop permissions.
 
 If AI is unavailable, core POS should remain operational.
-
 ### Role rule
 
-UI visibility is not security. Backend/RLS/RPC authorization remains
-authoritative for ADMIN, MANAGER and CASHIER permissions.
-
+Permissions are enforced by the system for ADMIN, MANAGER and CASHIER roles.
 ### Manual versioning
 
 This remains the single master WineShopPOS User Manual.
-Future V2/V3 changes update this same file; Git and V2 chapter records preserve
-history.
+This manual describes the currently deployed V2 production experience.
 <!-- WINEPOS_V2_CURRENT_END -->
-
 ## 1. What changed
 
 WineShopPOS now groups work into eight clear areas instead of showing every feature in the main sidebar.
@@ -115,20 +105,15 @@ WineShopPOS now groups work into eight clear areas instead of showing every feat
 - Settings & Admin
 
 You only see modules allowed for your role.
-
 ## 2. Roles
-
 ### Cashier
 Use POS, sales lookup, returns where permitted, current shift, scanner and offline queue. Management/owner/admin screens are hidden.
-
 ### Manager
 Use cashier functions plus products, procurement, inventory, stock count, transfers, expenses, approvals, customer credit and operational reports.
-
 ### Admin / Owner
 Use all authorized shop functions including users, Owner Center, profit, exceptions, hardware, compliance configuration, backup evidence and audit.
 
 You cannot change your own role from the account menu.
-
 ## 3. Top Bar and Account Menu
 
 Top-right shows:
@@ -144,9 +129,7 @@ Click your avatar for:
 - Logout.
 
 You may update display name, phone and profile image URL. Email/role/shop security are controlled by administration.
-
 ## 4. POS & Billing
-
 ### Normal sale
 
 1. Open POS & Billing → Billing.
@@ -160,18 +143,15 @@ You may update display name, phone and profile image URL. Email/role/shop securi
 9. For UPI/Card, record the reference if available.
 10. Select Complete Sale.
 11. Print the receipt if needed.
-
 ### Unknown barcode
 
 If the barcode is unknown:
 - PRODUCT NOT FOUND is shown.
 - Manager/Admin can select Add Product with this Barcode.
 - The scanned barcode is prefilled.
-
 ### Scanner behavior
 
 The scanner works globally on the POS page. Rapid scanner input ending with Enter is separated from normal human typing. If the scanner appears unreliable, open Scanner diagnostics from the POS module or Admin Hardware.
-
 ## 5. Sales / Returns / Voids
 
 Open POS & Billing → Sales to find invoices.
@@ -185,7 +165,6 @@ For a return:
 6. approved returned quantity is added back to inventory through the controlled backend.
 
 Never manually increase stock to imitate a return.
-
 ## 6. Shift & Day Close
 
 1. Open Shift.
@@ -196,9 +175,7 @@ Never manually increase stock to imitate a return.
 6. Manager approves close where required.
 
 The app may block closing if this device still has unsynced/conflicting offline sales.
-
 ## 7. Products
-
 ### Add/Edit
 
 Managers/Admins use Products → Product Master.
@@ -215,7 +192,6 @@ Maintain:
 - active/inactive status.
 
 Editing product details does not directly rewrite inventory.
-
 ### Barcode Labels
 
 1. Open Products → Barcode Labels.
@@ -224,13 +200,10 @@ Editing product details does not directly rewrite inventory.
 4. Select Print Labels.
 5. Choose installed barcode/label printer in system print dialog.
 6. Verify paper size/calibration before bulk printing.
-
 ## 8. Purchases & Suppliers
-
 ### Receive Stock
 
 Use Receive Stock for direct supplier invoice receiving. Enter supplier/invoice/items and confirm. Stock increases only after controlled purchase receipt succeeds.
-
 ### Procurement PLUS
 
 Purchase order flow:
@@ -244,7 +217,6 @@ Purchase order flow:
 7. Inventory and stock movements update transactionally.
 
 Also use Procurement for supplier payments and purchase returns.
-
 ### Purchase Intelligence PRO
 
 Use Purchase Intelligence to view:
@@ -255,13 +227,10 @@ Use Purchase Intelligence to view:
 - estimated margin impact.
 
 OCR is a draft assistant. Always review extracted quantities, product match and price before receiving.
-
 ## 9. Inventory
-
 ### Overview
 
 Shows live stock from Supabase.
-
 ### Stock Count
 
 1. Start a count.
@@ -270,7 +239,6 @@ Shows live stock from Supabase.
 4. Submit count.
 5. Manager approves.
 6. Approved differences create stock adjustments/movements.
-
 ### Transfers PLUS
 
 1. Source requests transfer to another shop in same organization.
@@ -281,7 +249,6 @@ Shows live stock from Supabase.
 6. Destination completes transfer.
 
 Do not use manual adjustments instead of the transfer workflow.
-
 ### Inventory Intelligence PRO
 
 Use this screen to identify:
@@ -292,17 +259,13 @@ Use this screen to identify:
 - fast/slow stock.
 
 Explain My Stock summarizes movement categories for a selected product. Reorder-risk products can create a draft PO after selecting supplier.
-
 ## 10. Operations
-
 ### Expenses
 
 Managers/Admins record operating expenses such as rent, salary, electricity, transport and maintenance. If an entry is wrong, Void it with a reason instead of deleting history.
-
 ### Approvals
 
 The Approvals tab consolidates pending operational approvals such as returns, shift closes, stock counts, transfers and purchase orders.
-
 ### Customer & Credit PLUS
 
 Use Customer & Credit to:
@@ -312,7 +275,6 @@ Use Customer & Credit to:
 - review outstanding balance.
 
 Normal POS customer capture remains optional.
-
 ### Offline Queue
 
 If internet fails after the catalog was loaded:
@@ -323,25 +285,19 @@ If internet fails after the catalog was loaded:
 - resolve any conflict instead of forcing inventory.
 
 Never clear browser data while unsynced offline sales exist.
-
 ## 11. Owner Center
-
 ### Overview PRO
 
 Shows revenue, bills, gross profit, operating profit, expenses, low stock, inventory cost and cash variance for the current shop.
-
 ### Profit Intelligence PRO
 
 Shows revenue, COGS, gross profit and SKU margins. Older sales created before cost snapshots may not have complete historical COGS.
-
 ### Loss & Exceptions PRO
 
 Flags operational events for review using neutral wording. It does not accuse staff of fraud.
-
 ### Recommendations PLUS
 
 Shows rule-based suggestions such as stockout risk, dead/overstock and shift variance, with links to the relevant action screen.
-
 ### WhatsApp Summary PLUS
 
 1. Open WhatsApp Summary.
@@ -351,9 +307,7 @@ Shows rule-based suggestions such as stockout risk, dead/overstock and shift var
 5. Select recipient and manually send.
 
 WineShopPOS does not automatically send or schedule WhatsApp messages.
-
 ## 12. Reports & Compliance
-
 ### Reports / Exports
 
 Choose date range and export:
@@ -363,81 +317,62 @@ Choose date range and export:
 - expenses CSV.
 
 Confirm any accountant/Tally import format with your accountant before relying on it.
-
 ### Liquor Compliance
 
 Admin stores verified license/state metadata. The application does not currently claim generic state excise compliance. Only enter verified values supplied for the licensed shop.
-
 ## 13. Settings & Admin
-
 ### Users
 
 Shop Admin can create Manager/Cashier accounts. Shop Admin cannot create another Admin. Activate/deactivate operational users from Users.
-
 ### Hardware
 
 Hardware links to scanner diagnostics and receipt printer settings. Barcode labels are under Products.
-
 ### Backup & Recovery
 
 Admin can export an operational JSON snapshot. This is not a full PostgreSQL backup.
 
 A proper backup process also requires database backup and a successful restore drill in a separate environment. Record restore-test evidence only after it actually happened.
-
 ### Audit Log
 
 Admin can inspect technical audit history for changes/actions captured by the backend.
-
 ## 14. Troubleshooting
-
 ### Product does not scan
 - Open Scanner diagnostics.
 - Test barcode `8900000010016`.
 - Confirm scanner sends Enter after barcode.
 - Confirm product is active and barcode matches Product Master.
-
 ### Sale says inventory changed
 Refresh cloud stock and retry. Do not manually force a lower inventory number.
-
 ### Offline sale not syncing
 Reconnect internet, open Offline Queue and retry synchronization. If conflict remains, Manager should review live stock.
-
 ### OCR product match looks wrong
 Do not confirm. Correct the product match/quantity/price first.
-
 ### Printer layout wrong
 Use the correct installed printer, paper width (58/80mm) or label paper and recalibrate system printer settings.
-
 ### Subscription blocked
 Contact the WineShopPOS software provider. Shop data access may be intentionally suspended by the platform owner.
-
 ## 15. Daily Shop Checklist
-
 ### Opening
 - login,
 - confirm Online status,
 - open Cashier shift,
 - scanner quick test,
 - confirm printer paper.
-
 ### During day
 - use POS for sales,
 - use Receive Stock/PO workflow for stock-in,
 - use Returns for customer returns,
 - use Stock Adjustments/Stock Count rather than direct inventory editing,
 - monitor Offline indicator.
-
 ### Closing
 - sync offline queue,
 - close shift and reconcile cash,
 - review pending approvals,
 - review low-stock recommendations,
 - owner/manager reviews exceptions if needed.
-
 ## 18. Modern Theme and Dashboard
 
 WineShopPOS now uses a modern light/dark visual system with Power BI-inspired business charts on management screens.
-
 ### Change theme
 
 Use either:
@@ -452,11 +387,9 @@ Options:
 - System/Auto
 
 System/Auto follows the device/browser light or dark preference. The theme should change immediately; saved account preference is reused on later sessions.
-
 ### Charts
 
 Charts are management aids and do not replace transaction records. You will see visual trends in Owner Center, Profit Intelligence, Reports, Inventory Intelligence and Purchase Intelligence. Hover/labels and the detailed tables should be used when exact values are needed.
-
 ## 19. Shop Settings — ADMIN
 
 Open Settings & Admin → Shop Settings.
@@ -475,29 +408,23 @@ The Shop Admin can edit:
 Select **Save Shop Settings**. Successful changes are stored centrally and audited.
 
 The shop slug is read-only. Subscription status and the access kill switch are platform-controlled and are not editable here.
-
 ## 20. Users and Role Access — ADMIN
 
 Open Settings & Admin → Users to create staff and manage their role/status.
-
 ### Cashier
 
 Cashier is the fast-selling role. It can use POS/scanner, permitted sales/returns, its shift and offline queue. Cashier cannot edit product master, purchases, inventory, Owner Center or administration.
-
 ### Manager
 
 Manager can run operational workflows: products, purchases, suppliers, inventory, stock count/transfers, expenses, approvals, customer credit and reports. Manager cannot open Owner Center or Shop Admin administration.
-
 ### Shop Admin
 
 Shop Admin has all authorized shop functionality, including Owner Center, users, role management, Shop Settings, backup and audit.
-
 ### Change staff role
 
 For a non-admin staff row, choose **Cashier** or **Manager** in the Role field. Role changes are applied through the secure user-management function. ADMIN is platform-controlled and cannot be assigned from this screen.
 
 Open Settings & Admin → Access Control for the complete access matrix.
-
 ## 21. Help / About & User Manual
 
 Open the user menu from your name in the top-right corner, then select
@@ -519,13 +446,11 @@ For invoice OCR, first analyze the invoice, then confirm an existing supplier or
 ## Ask WineShopPOS (PRO)
 
 Ask WineShopPOS is the Owner Center business copilot for quick questions about your shop.
-
 ### Who can use it
 
 Ask WineShopPOS is currently available to authorized **ADMIN** users from:
 
 **Owner Center → Ask WineShopPOS**
-
 ### What you can ask
 
 Examples:
@@ -540,23 +465,19 @@ Examples:
 - Are there shift differences I should review?
 - What expenses affected my business?
 - Is there anything operational that needs my attention?
-
 ### Shop selection
 
 The shop context comes from your WineShopPOS account.
 
 If your account is authorized for more than one shop, use the available shop/scope selector to choose the business context you want to review.
-
 ### Using the answer
 
 Ask WineShopPOS explains the business information available in the application and can point you to the relevant screen for more detail.
 
 AI V1 provides **insights and recommendations**. Final operational actions remain under the user's control in the normal WineShopPOS workflows.
-
 ### If AI is temporarily unavailable
 
 Your normal POS, billing, inventory, purchasing and operational workflows continue to work. Try the AI question again after a short interval.
-
 ### Example
 
 **Question:** How is my shop performing today?
@@ -565,7 +486,6 @@ Ask WineShopPOS can combine current sales, profit, expenses, shift information a
 <!-- WSP_AI_VERIFIED_V1_END -->
 
 ---
-
 ## V2 Phase 1 — OCR Product Resolution & Landed Cost
 
 For purchase invoice OCR:
@@ -586,7 +506,6 @@ Receipt-based ageing and FIFO views are available under Inventory after the
 Phase-1 database migration is active.
 
 ---
-
 ## V2 POS and Billing Interface
 
 The POS is arranged as a retail workstation:
@@ -609,7 +528,6 @@ normal application navigation and uses receipt-focused print styling.
 ## V2 Current User Workflows
 
 This section is authoritative where older manual wording conflicts.
-
 ### Receive multiple inventory products
 
 Open **Purchasing → Receive Stock**.
@@ -620,7 +538,6 @@ Open **Purchasing → Receive Stock**.
 4. Enter purchase price and optional batch/expiry.
 5. Add applicable landed-cost charges/discounts.
 6. Review and confirm Receive Stock.
-
 ### Receive an invoice with OCR
 
 Open **Purchasing → Purchase Intelligence** and use Invoice OCR.
@@ -636,7 +553,6 @@ For every OCR line:
 7. Continue through controlled Receive Stock.
 
 Unresolved OCR lines must not post inventory.
-
 ### Discount or price override
 
 At POS:
@@ -649,7 +565,6 @@ At POS:
 6. Complete sale after approval.
 
 Changing controlled pricing after approval requires a new approval.
-
 ### Customer loyalty
 
 At POS select the customer, review points, enter points to redeem, preview
@@ -657,14 +572,12 @@ benefits, and complete checkout. The database revalidates balances.
 
 Authorized managers/admins can manage loyalty adjustments from
 **Operations → Customers**.
-
 ### Coupons and promotions
 
 Managers/admins create promotions from **Operations → Customers**. Promotions
 can use fixed/percentage discounts, coupon codes, minimum purchase, maximum
 discount, validity dates and automatic application. POS eligibility is
 revalidated at checkout.
-
 ### Gift voucher and store credit
 
 From **Operations → Customers**, authorized managers/admins can grant store
@@ -673,26 +586,22 @@ credit and issue gift vouchers.
 At POS select the customer for store credit or enter a gift-voucher code,
 preview the tender, then complete sale. These are non-cash tender, not hidden
 manual discounts.
-
 ### Accountant / Tally-ready export
 
 Open **Reports & Exports**, select the date range, then choose
 **Export Accountant / Tally-ready Ledger**. The output contains ledger-oriented
 date, voucher, debit, credit, reference and narration rows. The accountant
 should validate final ledger-name mapping for the target Tally company.
-
 ### Supplier Performance Score
 
 Open **Purchasing → Purchase Intelligence**. The score uses available evidence
 such as fill rate, on-time receipts, returns, price stability and purchase
 activity. It is decision support, not an accusation or contractual rating.
-
 ### Purchase Coach
 
 Open **Purchasing → Purchase Intelligence → Purchase Coach**. It can flag
 REORDER, NO_MOVEMENT, OVERSTOCK and MARGIN_RISK using stock, demand and recent
 purchase/supplier evidence.
-
 ### Advanced stock transfer
 
 Open **Inventory → Transfers**.
@@ -701,18 +610,15 @@ Open **Inventory → Transfers**.
 
 Use the action for the current state; do not directly edit stock to imitate a
 transfer.
-
 ### Leakage Shield
 
 Open **Owner Center → Leakage Shield / Exceptions** as ADMIN. Review neutral
 signals such as cash variance, unusual refunds/discounts, repeated approved POS
 overrides, large store-credit grants and high-value vouchers.
-
 ### Add a new user
 
 Open **Admin → Users** as ADMIN. Create/invite the user through the current user
 management workflow, then assign the intended shop membership and role.
-
 ### View historical data
 
 Use the relevant screen:
@@ -729,7 +635,6 @@ Deleted or never-retained records cannot be assumed recoverable.
 
 <!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
 ## Product Master — real product onboarding
-
 ### Add one product
 
 Open **Products → Product Master → Add Product**.
@@ -742,7 +647,6 @@ Open **Products → Product Master → Add Product**.
 
 The Product starts with stock 0. Use **Purchases & Suppliers → Receive Stock**
 when physical stock is actually received.
-
 ### Add many products manually
 
 Open **Products → Bulk Product Import**.
@@ -752,7 +656,6 @@ Open **Products → Bulk Product Import**.
 - Review Product Name, Size, Category and commercial fields.
 - Create the batch; WineShopPOS generates every SKU automatically.
 - Bulk Product creation does not increase inventory.
-
 ### Add new products from Invoice OCR
 
 1. Open **Purchases & Suppliers → Invoice OCR**.
@@ -765,69 +668,49 @@ Open **Products → Bulk Product Import**.
 8. Review cases, units/case, final bottles and purchase price per bottle.
 9. Confirm every line.
 10. Send the confirmed draft to Receive Stock.
-
 ### Find products that still need barcodes
 
 Open Product Master and use **All**, **With Barcode** or **Without Barcode**.
 Choose **Without Barcode**, open **Edit**, scan/enter the physical barcode and save.
-
 ## Invoice Inbox and stored supplier invoices
 <!-- V3_API_AUTOMATION_20260831 -->
 ADMIN/MANAGER users can use **Purchases & Suppliers → Invoice Inbox** in the V3 preview. Filter by Year, Month and Status. **View Original** opens the private invoice through temporary secure access. **Review OCR** reopens stored OCR. `POSSIBLE_DUPLICATE` must be resolved before Receive Stock. An Inbox invoice does not mean stock was received; only **Confirm & Receive Stock** changes inventory. Manual App OCR storage is part of V3. Email remains pending until the real Gmail/Google Workspace connection is authorized and tested.
-
 ### Email invoices in V3 (20260831T123139Z)
 V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.
-
 ### Demo / Test Data Reset
 ADMIN users can open **Settings → Demo / Test Data Reset** during testing. Type **DELETE DEMO DATA** exactly and accept the confirmation. This clears operational test data such as products, purchases, sales, inventory, suppliers and invoice-review records together. Shop identity, users, settings, categories and Email sender mapping remain available.
 
 This is destructive and is intended for controlled test/demo cleanup.
-
 ### Email attachment larger than 4 MB
 When a registered shop Email sends a supported invoice PDF/JPG/PNG larger than 4 MB, WineShopPOS does not OCR or receive stock from that oversized attachment. The system replies from the central WineShopPOS Gmail account with the filename, size, current 4 MB limit and a request to compress and resend.
-
 ### Barcode demo behavior
 USB/Bluetooth HID scanners may terminate a barcode with **Enter or Tab**. WineShopPOS normalizes scanner whitespace/control characters while preserving leading zeros. Use **POS → Scanner Test** to confirm the device before a live billing demo.
-
 ### Invoice financial reconciliation
 When Invoice OCR recognizes invoice-level values such as Freight/Carting, Cash Discount, Other Deduction, TCS, Stamp Duty or other additions, WineShopPOS pre-fills **Landed Cost Adjustments**. Always review the values before receiving stock. If a printed invoice total is available, WineShopPOS compares it with the calculated landed total and shows **MATCH** or **REVIEW**.
-
 ### Supplier Invoice / Reference
 The Supplier Invoice / Reference field is optional for the operator. WineShopPOS uses the OCR invoice number when available. If the invoice number cannot be read or is absent, WineShopPOS supplies an internal `AUTO-...` reference so stock receiving is not blocked.
-
 ### Invoice Email acknowledgement
 For an authorized shop Email with a supported invoice attachment, WineShopPOS sends one automatic acknowledgement confirming that the Email was received and asking the sender to allow up to **1 hour** for it to appear in Invoice Inbox. Oversized attachments continue to use the separate >4 MB rejection message.
-
 ### Required fields
 A red `*` identifies required fields. Fields explicitly labelled **optional** are not required.
-
 ### OCR Bulk Product suggestions
 For unmatched OCR products, Bulk Product Import suggests **Brand** from the first word of the product name, **MRP** from a recognized invoice MRP column, and **Category** when the description or beverage brand matches an active category. Review all suggestions before creating products.
-
 ### Invoice total mismatch popup
 If the calculated invoice does not match the printed invoice total, WineShopPOS shows a large warning with Calculated Invoice, Printed Invoice and Difference and blocks Receive Stock until reviewed.
-
 ### Scan barcode in Bulk Product Import
 Click the Barcode field for the desired row and scan the bottle/can. The complete barcode should remain in that row. You can still type the barcode manually.
-
 ### Automatic Email polling paused
 When the Email scheduler is paused, invoice Emails remain in the mailbox until the administrator enables automatic polling again.
-
 ### Better liquor invoice OCR
 Invoice OCR now checks the supplier's printed item table rather than trusting only generic invoice fields. It recognizes common liquor-invoice columns even when suppliers use different headings, including combined headings such as MRP Brand. If Azure misses the Cases header/value but Rate/Case and Amount are reliable, WineShopPOS derives Cases only when the ratio is near an integer and validates the invoice-level case total when printed.
-
 ### Batch / Lot
 When a Batch/Lot column exists, WineShopPOS preserves the raw OCR value during review and carries the reviewed value into Receive Stock and FIFO history. It does not invent corrected batch numbers when OCR is uncertain.
-
 ### Price/Bottle precision
 Price/Bottle can contain more than two decimal places because it may be calculated from the printed line amount divided by final bottles. Precise unit cost is retained; invoice totals remain two-decimal currency amounts.
-
 ### FIFO: what to sell
 Inventory → Ageing & FIFO marks the oldest tracked lot for each product as **SELL FIRST** and shows a **BOX-xxxxxx** code. Write that code on the physical carton/box. A full warehouse rack system is not required.
-
 ## Product Cleanup (Admin)
 Settings & Admin -> Product Cleanup can permanently purge only a non-transactional test product after typing DELETE. Products with sales, purchases, returns, transfers, stock-count or transactional stock movement history are blocked and should be deactivated/corrected instead. POS Current Bill survives navigation to Scanner Test; use × Remove or Clear Cart explicitly.
-
 ## Invoice Inbox — friendly workflow labels
 
 Open **Purchasing → Invoice Inbox** to see retained supplier invoice reviews.
@@ -845,14 +728,12 @@ Open **Purchasing → Invoice Inbox** to see retained supplier invoice reviews.
 **Cancel Review is not delete.** It retains the original document and does not change inventory.
 
 **Completed** is the user-facing term for internal status `RECEIVED`.
-
 ### Save & Close versus Apply on Product Edit
 
 - **Save & Close** saves and returns to Product Master.
 - **Apply** saves and keeps the Edit Product screen open.
 
 Selling Price remains a manual product-master value. POS blocks zero Selling Price instead of silently substituting MRP.
-
 ## Login status troubleshooting — V3-07
 
 WineShopPOS distinguishes a genuine disabled/suspended account from a temporary authorization verification failure.
@@ -889,20 +770,16 @@ Do not repeat the bill immediately. Open POS & Billing > Sales and click Refresh
 <!-- AUTOPRINT_SRNO_SHIFT_CASH_20260902 -->
 ## Automatic receipt printing
 Use **Auto Print: ON/OFF** in POS Billing or Printer Settings. OFF opens the receipt without automatically opening the print dialog. ON opens both the receipt and print dialog. This preference belongs to the current browser/device.
-
 ## Sr. No. and list sorting
 Read-only sortable lists show **Sr. No.**. Ageing and FIFO Rotation Queue also support sorting. FIFO starts in its operational FIFO order until you click a header.
-
 ## Shift Actual Cash
 Expected Cash is calculated by WineShopPOS. Actual Cash is the physical cash counted in the drawer. Enter it explicitly before Request Close. If a CLOSE_REQUESTED amount is wrong, use **Update Actual** before **Approve Close**. WineShopPOS recalculates variance and records the correction in the audit trail.
 
 <!-- PREMIUM_UI_PRODUCT_IMAGES_FIFO_PRIORITY_20260902_V2 -->
 ## Product bottle/can images
 Add Product and Edit Product support an optional JPEG, PNG or WebP bottle/can image up to 5 MB. Use an image you own or are permitted to use. Images appear in Products, Inventory and POS.
-
 ## Ageing and FIFO priority
 Normal read-only lists may use Sr. No. Ageing and FIFO instead show stable Product Ref plus Age Priority/FIFO Priority. FIFO Priority 1 means SELL FIRST. Sorting another column changes only the view and does not renumber the operational priority.
-
 ## UI polish
 WineShop POS uses a short cheers/reveal brand animation, subtle Royal 21 gold treatment, lightweight menu/page feedback, and a user menu that stays above page content. Theme remains under My Account → Account Settings.
 
@@ -921,7 +798,6 @@ Royal 21 appears as a large centered gold shop identity with crown and subtle pe
 <!-- BRAND_SPIRIT_TILE_V6_CANONICAL -->
 ## Spiritual image tile
 Below Settings & Admin, click + or drag/drop a JPEG/PNG/WebP image. Drag the bottom handle up/down to change tile height. The tile collapses with the sidebar.
-
 ## Sidebar collapse
 Collapse now narrows the whole sidebar and gives the freed space to the main application.
 

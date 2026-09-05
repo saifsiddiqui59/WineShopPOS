@@ -128,17 +128,15 @@ application implementation is verified.</p>
 <li>What requires my attention?</li>
 <li>Which inventory is ageing?</li>
 </ul>
-<p>Access uses the currently logged-in Supabase user and authorized shop
-membership. The AI does not decide tenant access.</p>
+<p>Access follows your signed-in account and authorized shop permissions.</p>
 <p>If AI is unavailable, core POS should remain operational.</p>
 <h3 id="role-rule">Role rule</h3>
-<p>UI visibility is not security. Backend/RLS/RPC authorization remains
-authoritative for ADMIN, MANAGER and CASHIER permissions.</p>
+<p>Permissions are enforced by the system for ADMIN, MANAGER and CASHIER roles.</p>
 <h3 id="manual-versioning">Manual versioning</h3>
 <p>This remains the single master WineShopPOS User Manual.
-Future V2/V3 changes update this same file; Git and V2 chapter records preserve
-history.</p>
-<!-- WINEPOS_V2_CURRENT_END --><h2 id="1-what-changed">1. What changed</h2>
+This manual describes the currently deployed V2 production experience.</p>
+<!-- WINEPOS_V2_CURRENT_END -->
+<h2 id="1-what-changed">1. What changed</h2>
 <p>WineShopPOS now groups work into eight clear areas instead of showing every feature in the main sidebar.</p>
 <ul>
 <li>POS &amp; Billing</li>
