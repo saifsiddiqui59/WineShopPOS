@@ -3,9 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
+import { useGlobalError } from "../context/GlobalErrorContext";
 import SupplierEditor from "../components/SupplierEditor";
 import { storeManualInvoice } from "../lib/invoiceClient";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import ProductEnrichmentPanel from "../components/ProductEnrichmentPanel";
+import { inferBrandFromProductName } from "../lib/productInference";
 
 const STRONG_MATCH = 0.90;
 const REVIEW_KEY = "wineshop_ocr_review_state";
@@ -20,6 +23,25 @@ function normalize(value) {
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function inferOcrSizeMl(item) {
+  const direct = Number(item?.sizeMl ?? item?.size_ml ?? item?.bottleSizeMl ?? item?.bottle_size_ml ?? 0);
+  if (Number.isInteger(direct) && direct > 0) return direct;
+
+  const text = [item?.description, item?.productName, item?.packSize, item?.packageSize, item?.size, item?.unitText]
+    .filter(Boolean)
+    .join(" ");
+  const matches = [...String(text).matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
+  if (!matches.length) return 750;
+
+  const [, rawValue, rawUnit] = matches[matches.length - 1];
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value <= 0) return 750;
+  const unit = rawUnit.toLowerCase();
+  if (unit === "cl") return Math.round(value * 10);
+  if (unit === "l") return Math.round(value * 1000);
+  return Math.round(value);
 }
 
 function supplierScore(ocrName, supplierName) {
@@ -244,6 +266,7 @@ export default function AutomationHub() {
   const { products, suppliers, refreshAll } = useShop();
   const { profile, session } = useAuth();
   const navigate = useNavigate();
+  const { showError } = useGlobalError();
 
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
@@ -255,10 +278,16 @@ export default function AutomationHub() {
   const [sourceFileName, setSourceFileName] = useState("");
   const [charges, setCharges] = useState(emptyCharges());
   const [financeWarning, setFinanceWarning] = useState(null);
+  const [analysisTiming, setAnalysisTiming] = useState(null);
 
   const [supplierId, setSupplierId] = useState("");
   const [confirmedSupplier, setConfirmedSupplier] = useState(null);
   const [supplierEditorOpen, setSupplierEditorOpen] = useState(false);
+
+  function raiseSystemError(error, title = "Something went wrong") {
+    setMessage("");
+    showError(error, { title });
+  }
 
   const activeProducts = useMemo(
     () => products.filter((product) => product.active),
@@ -309,9 +338,19 @@ export default function AutomationHub() {
             source: "CREATED_PRODUCT",
           },
         }));
+        setMatches((current) => ({
+          ...current,
+          [state.lineIndex]: [{
+            product_id: state.productId,
+            product_name: state.productName || "Newly created product",
+            score: 1,
+            match_source: "CREATED_PRODUCT",
+          }],
+        }));
         sessionStorage.removeItem(CREATED_KEY);
+        void refreshAll();
         setMessage(
-          "New product created and linked. Confirm this line after reviewing bottles per case, final bottle quantity and price.",
+          "New product created and linked. Review quantity/price, then Confirm Line to learn this supplier description for future invoices.",
         );
       }
 
@@ -386,35 +425,45 @@ export default function AutomationHub() {
   }
 
   async function resolveProductLines(invoice, nextSupplierId) {
+    // V5F1_REBUILT_PARALLEL_PRODUCT_MASTER_RESOLUTION
+    const resolved = await Promise.all(
+      (invoice.items || []).map(async (item, index) => {
+        const { data: candidates, error } = await supabase.rpc(
+          "resolve_product_master_text",
+          {
+            p_text: item.description,
+            p_size_ml: inferOcrSizeMl(item),
+            p_supplier_id: nextSupplierId || null,
+            p_limit: 8,
+          },
+        );
+        if (error) throw error;
+
+        const rows = candidates || [];
+        const best = rows[0];
+        const strong = best && Number(best.score || 0) >= STRONG_MATCH;
+        const product = activeProducts.find(
+          (row) => row.id === best?.product_id,
+        );
+
+        return {
+          index,
+          candidates: rows,
+          resolution: {
+            productId: strong ? best.product_id : "",
+            status: strong ? "STRONG_MATCH" : "NEEDS_PRODUCT",
+            source: strong ? best.match_source : null,
+            ...interpretQuantity(item, product),
+          },
+        };
+      }),
+    );
+
     const nextMatches = {};
     const nextResolution = {};
-
-    for (let i = 0; i < (invoice.items || []).length; i += 1) {
-      const item = invoice.items[i];
-      const { data: candidates, error } = await supabase.rpc(
-        "match_product_text",
-        {
-          p_text: item.description,
-          p_supplier_id: nextSupplierId || null,
-          p_limit: 8,
-        },
-      );
-      if (error) throw error;
-
-      nextMatches[i] = candidates || [];
-      const best = (candidates || [])[0];
-      const strong =
-        best && Number(best.score || 0) >= STRONG_MATCH;
-      const product = activeProducts.find(
-        (row) => row.id === best?.product_id,
-      );
-
-      nextResolution[i] = {
-        productId: strong ? best.product_id : "",
-        status: strong ? "STRONG_MATCH" : "NEEDS_PRODUCT",
-        source: strong ? best.match_source : null,
-        ...interpretQuantity(item, product),
-      };
+    for (const item of resolved) {
+      nextMatches[item.index] = item.candidates;
+      nextResolution[item.index] = item.resolution;
     }
 
     setMatches(nextMatches);
@@ -423,12 +472,24 @@ export default function AutomationHub() {
 
   async function analyze() {
     if (!file) return;
-    // V3_05_FRESH_ANALYZE_RESET
+    // V5F1_REBUILT_OCR_TIMING_EXACT_SUPPLIER_AUTO_CONFIRM
+    const analyzeStarted = performance.now();
+    const timing = {
+      encodeMs: 0,
+      storeMs: 0,
+      ocrMs: 0,
+      metadataMs: 0,
+      productMatchMs: 0,
+      totalMs: 0,
+    };
+
     sessionStorage.removeItem(REVIEW_KEY);
     setResult(null);setMatches({});setResolution({});
     setSupplierId("");setConfirmedSupplier(null);
     setIngestionId(null);setSourceFileName("");
     setCharges(emptyCharges());setFinanceWarning(null);
+    setAnalysisTiming(null);
+
     if (file.size > 4 * 1024 * 1024) {
       setMessage(
         "OCR accepts files up to 4 MB in the current configuration. Compress or split this invoice first.",
@@ -447,27 +508,53 @@ export default function AutomationHub() {
     setIngestionId(null);
 
     try {
+      let stageStarted = performance.now();
       const contentBase64 = await toBase64(file);
+      timing.encodeMs = Math.round(performance.now() - stageStarted);
+
       let nextIngestionId = null;
       let duplicateStatus = "";
       setSourceFileName(file.name || "");
 
+      stageStarted = performance.now();
       const stored = await storeManualInvoice({
         token: session?.access_token,
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
         contentBase64,
       });
+      timing.storeMs = Math.round(performance.now() - stageStarted);
 
       if (stored?.duplicate) {
         const existingStatus = String(stored.existing_status || "UNKNOWN");
-        const recoverable = ["NEEDS_REVIEW", "OCR_FAILED", "FAILED"].includes(existingStatus);
+        const recoverable = ["NEEDS_REVIEW", "OCR_FAILED", "FAILED", "CANCELLED"].includes(existingStatus);
         if (!recoverable) {
           setMessage(`Duplicate invoice file detected. Existing status: ${existingStatus}. Open Invoice Inbox instead of receiving it again.`);
           return;
         }
         nextIngestionId = stored?.ingestion_id || null;
         duplicateStatus = existingStatus;
+
+        if (existingStatus === "CANCELLED") {
+          if (!nextIngestionId) {
+            throw new Error(
+              "Cancelled invoice evidence exists, but its ingestion id is missing. Re-analysis is blocked to avoid duplicate evidence.",
+            );
+          }
+
+          const { error: reopenError } = await supabase.rpc(
+            "invoice_reopen_review",
+            { p_ingestion_id: nextIngestionId },
+          );
+
+          if (reopenError) {
+            throw new Error(
+              `Unable to reopen cancelled invoice review (${reopenError.message}).`,
+            );
+          }
+
+          duplicateStatus = "NEEDS_REVIEW";
+        }
       } else {
         nextIngestionId = stored?.ingestion_id || null;
       }
@@ -476,18 +563,40 @@ export default function AutomationHub() {
         throw new Error("Original invoice was not safely stored. OCR is blocked so stock cannot be received without audit evidence.");
       }
       setIngestionId(nextIngestionId);
-      const { data, error } = await supabase.functions.invoke("ocr-invoice", { body: { contentBase64, contentType: file.type || "application/octet-stream" } });
+
+      stageStarted = performance.now();
+      const { data, error } = await supabase.functions.invoke("ocr-invoice", {
+        body: {
+          contentBase64,
+          contentType: file.type || "application/octet-stream",
+        },
+      });
+      timing.ocrMs = Math.round(performance.now() - stageStarted);
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.message || "OCR failed");
+
       setResult(data.invoice);
       setCharges(chargesFromInvoice(data.invoice));
-      if (nextIngestionId) {
-        const { data: metadata, error: metadataError } = await supabase.rpc("invoice_record_ocr_result", { p_ingestion_id: nextIngestionId, p_supplier_name: data.invoice?.supplierName || null, p_invoice_number: data.invoice?.invoiceNumber || null, p_invoice_date: data.invoice?.invoiceDate || null, p_total: data.invoice?.total ?? null, p_normalized_invoice: data.invoice });
-        if (metadataError) {
-          throw new Error(`Original invoice is stored, but OCR history metadata could not be updated (${metadataError.message}). Receive Stock is blocked until the audit record is complete.`);
-        }
-        duplicateStatus = metadata?.review_status || duplicateStatus || "";
+
+      stageStarted = performance.now();
+      const { data: metadata, error: metadataError } = await supabase.rpc(
+        "invoice_record_ocr_result",
+        {
+          p_ingestion_id: nextIngestionId,
+          p_supplier_name: data.invoice?.supplierName || null,
+          p_invoice_number: data.invoice?.invoiceNumber || null,
+          p_invoice_date: data.invoice?.invoiceDate || null,
+          p_total: data.invoice?.total ?? null,
+          p_normalized_invoice: data.invoice,
+        },
+      );
+      timing.metadataMs = Math.round(performance.now() - stageStarted);
+      if (metadataError) {
+        throw new Error(
+          `Original invoice is stored, but OCR history metadata could not be updated (${metadataError.message}). Receive Stock is blocked until the audit record is complete.`,
+        );
       }
+      duplicateStatus = metadata?.review_status || duplicateStatus || "";
 
       const ranked = suppliers
         .filter((supplier) => supplier.active !== false)
@@ -500,18 +609,40 @@ export default function AutomationHub() {
         }))
         .sort((a, b) => b.score - a.score);
 
-      if (ranked[0]?.score >= 80) {
+      const exactMatches = ranked.filter((supplier) => supplier.score === 100);
+      let autoConfirmedSupplier = null;
+
+      if (exactMatches.length === 1) {
+        autoConfirmedSupplier = exactMatches[0];
+        setSupplierId(autoConfirmedSupplier.id);
+
+        stageStarted = performance.now();
+        await resolveProductLines(data.invoice, autoConfirmedSupplier.id);
+        timing.productMatchMs = Math.round(performance.now() - stageStarted);
+
+        setConfirmedSupplier(autoConfirmedSupplier);
+      } else if (ranked[0]?.score >= 80) {
         setSupplierId(ranked[0].id);
       }
 
-      setMessage(
-        duplicateStatus === "POSSIBLE_DUPLICATE"
-          ? "OCR complete, but this looks like a possible duplicate. Resolve it in Invoice Inbox before Receive Stock."
-          : "Original invoice saved. OCR complete. Confirm invoice date, supplier, products and quantities before stock receipt.",
-      );
+      if (duplicateStatus === "POSSIBLE_DUPLICATE") {
+        setMessage(
+          "OCR complete, but this looks like a possible duplicate. Resolve it in Invoice Inbox before Receive Stock.",
+        );
+      } else if (autoConfirmedSupplier) {
+        setMessage(
+          `OCR complete. Existing supplier ${autoConfirmedSupplier.supplier_name} matched exactly and was confirmed automatically. Review the product line and quantity.`,
+        );
+      } else {
+        setMessage(
+          "Original invoice saved. OCR complete. Confirm supplier, products and quantities before stock receipt.",
+        );
+      }
     } catch (error) {
-      setMessage(error.message || String(error));
+      raiseSystemError(error, "Invoice analysis failed");
     } finally {
+      timing.totalMs = Math.round(performance.now() - analyzeStarted);
+      setAnalysisTiming(timing);
       setBusy(false);
     }
   }
@@ -532,7 +663,7 @@ export default function AutomationHub() {
       );
     } catch (error) {
       setConfirmedSupplier(null);
-      setMessage(error.message || "Unable to resolve invoice products.");
+      raiseSystemError(error, "Unable to resolve invoice products");
     } finally {
       setBusy(false);
     }
@@ -549,7 +680,7 @@ export default function AutomationHub() {
         `Supplier created and confirmed: ${supplier.supplier_name}. Resolve every product line before continuing.`,
       );
     } catch (error) {
-      setMessage(error.message || "Unable to resolve invoice products.");
+      raiseSystemError(error, "Unable to resolve invoice products");
     }
   }
 
@@ -650,47 +781,15 @@ export default function AutomationHub() {
   }
 
   async function saveAlias(index, productId) {
-    const aliasText = String(
-      result?.items?.[index]?.description || "",
-    ).trim();
+    const aliasText = String(result?.items?.[index]?.description || "").trim();
+    if (!aliasText || !productId) return;
 
-    if (!aliasText || !productId || !profile?.shop_id) return;
-
-    const normalizedAlias = normalize(aliasText);
-
-    let query = supabase
-      .from("product_aliases")
-      .select("id,product_id")
-      .eq("shop_id", profile.shop_id)
-      .eq("normalized_alias", normalizedAlias);
-
-    query = confirmedSupplier?.id
-      ? query.eq("supplier_id", confirmedSupplier.id)
-      : query.is("supplier_id", null);
-
-    const { data: existing, error: findError } = await query.limit(1);
-    if (findError) throw findError;
-
-    if (existing?.[0]?.id) {
-      if (existing[0].product_id !== productId) {
-        const { error } = await supabase
-          .from("product_aliases")
-          .update({ product_id: productId })
-          .eq("id", existing[0].id);
-        if (error) throw error;
-      }
-      return;
-    }
-
-    const { error } = await supabase.from("product_aliases").insert({
-      shop_id: profile.shop_id,
-      product_id: productId,
-      supplier_id: confirmedSupplier?.id || null,
-      alias_text: aliasText,
-      created_by: profile.user_id || null,
+    const { error } = await supabase.rpc("remember_product_alias", {
+      p_product_id: productId,
+      p_alias_text: aliasText,
+      p_supplier_id: confirmedSupplier?.id || null,
     });
-
-    if (error && error.code !== "23505") throw error;
+    if (error) throw error;
   }
 
   async function confirmLine(index) {
@@ -729,13 +828,14 @@ export default function AutomationHub() {
             current[index]?.source === "CREATED_PRODUCT"
               ? "CREATED_PRODUCT"
               : "HUMAN_CONFIRMED",
+          aliasLearned: true,
         },
       }));
       setMessage(
-        "Line confirmed. Description-to-product mapping was stored as an alias for future invoices.",
+        "Line confirmed ✓ Alias learned for future invoices from this supplier.",
       );
     } catch (error) {
-      setMessage(error.message || "Unable to save the product mapping.");
+      raiseSystemError(error, "Unable to confirm invoice line");
     }
   }
 
@@ -761,10 +861,60 @@ export default function AutomationHub() {
       ocr: "1",
       ocrLineIndex: String(index),
       name: String(item?.description || ""),
+      brand: inferBrandFromProductName(item?.description || ""),
+      category: inferCandidateCategory(null, item),
       purchasePrice: String(row.purchasePrice || item?.unitPrice || 0),
+      sizeMl: String(inferOcrSizeMl(item)),
+      mrp: String(Math.max(0, Number(item?.mrp || 0))),
+      sellingPrice: String(Number(item?.mrp || 0) > 0 ? Number(item.mrp) + 15 : 0),
       unitsPerCase: String(row.unitsPerCase || 12),
     });
 
+    navigate(`/products/new?${params.toString()}`);
+  }
+
+  function inferCandidateCategory(candidate, item) {
+    const text = normalize(`${candidate?.title || ""} ${candidate?.category || ""} ${item?.description || ""}`);
+    const rules = [
+      ["beer","Beer"],["whisky","Whisky"],["whiskey","Whisky"],["wine","Wine"],
+      ["vodka","Vodka"],["rum","Rum"],["gin","Gin"],["brandy","Brandy"],
+      ["tequila","Tequila"],["liqueur","Liqueur"],["cider","Cider"],["champagne","Champagne"],
+    ];
+    return rules.find(([token]) => text.includes(token))?.[1] || "Other";
+  }
+
+  function createProductFromCandidate(index, candidate) {
+    const item = result?.items?.[index];
+    const row = resolution[index] || {};
+    const candidateBarcode = String(candidate?.barcode || "").trim();
+
+    const existing = candidateBarcode
+      ? activeProducts.find((product) => String(product.barcode || "").trim() === candidateBarcode)
+      : null;
+
+    if (existing) {
+      chooseProduct(index, existing.id);
+      setMessage(`External candidate barcode ${candidateBarcode} already exists in Product Master as ${existing.name}. Existing Product Master was linked instead of creating a duplicate.`);
+      return;
+    }
+
+    sessionStorage.setItem(REVIEW_KEY, JSON.stringify({
+      result,matches,resolution,supplierId,confirmedSupplier,ingestionId,sourceFileName,charges,
+    }));
+
+    const params = new URLSearchParams({
+      ocr:"1",ocrLineIndex:String(index),enriched:"1",
+      barcode:candidateBarcode,
+      name:String(candidate?.title || item?.description || ""),
+      brand:String(candidate?.brand || ""),
+      category:inferCandidateCategory(candidate,item),
+      purchasePrice:String(row.purchasePrice || item?.unitPrice || 0),
+      sizeMl:String(Number(candidate?.sizeMl || 0)>0?Number(candidate.sizeMl):inferOcrSizeMl(item)),
+      mrp:String(Math.max(0,Number(item?.mrp || 0))),
+      sellingPrice:String(Number(item?.mrp || 0)>0?Number(item.mrp)+15:0),
+      unitsPerCase:String(row.unitsPerCase || 12),
+      enrichmentSources:String((candidate?.providers || []).join(",")),
+    });
     navigate(`/products/new?${params.toString()}`);
   }
 
@@ -834,7 +984,7 @@ export default function AutomationHub() {
       p_ready: Boolean(ready),
     });
     if (error) {
-      if (!silent) setMessage(error.message || "Unable to save invoice review draft.");
+      if (!silent) raiseSystemError(error, "Unable to save invoice review draft");
       return { ok: false, error };
     }
     if (!silent) {
@@ -877,7 +1027,7 @@ export default function AutomationHub() {
     });
     setBusy(false);
     if (error) {
-      setMessage(error.message || "Unable to cancel invoice review.");
+      raiseSystemError(error, "Unable to cancel invoice review");
       return;
     }
     sessionStorage.removeItem(REVIEW_KEY);
@@ -1068,7 +1218,7 @@ export default function AutomationHub() {
       sessionStorage.removeItem(REVIEW_KEY);
       navigate("/purchasing/receive");
     } catch (error) {
-      setMessage(error.message || String(error));
+      raiseSystemError(error, "Unable to prepare Receive Stock");
     } finally {
       setBusy(false);
     }
@@ -1135,6 +1285,18 @@ export default function AutomationHub() {
         <p className="muted-text">
           OCR never posts inventory directly.
         </p>
+        {analysisTiming ? (
+          <p className="muted-text">
+            Last analysis · total {(analysisTiming.totalMs / 1000).toFixed(1)}s
+            {" · "}file prep {(analysisTiming.encodeMs / 1000).toFixed(1)}s
+            {" · "}evidence save {(analysisTiming.storeMs / 1000).toFixed(1)}s
+            {" · "}OCR {(analysisTiming.ocrMs / 1000).toFixed(1)}s
+            {" · "}audit save {(analysisTiming.metadataMs / 1000).toFixed(1)}s
+            {analysisTiming.productMatchMs > 0
+              ? ` · Product Master ${(analysisTiming.productMatchMs / 1000).toFixed(1)}s`
+              : ""}
+          </p>
+        ) : null}
       </section>
 
       {result ? (
@@ -1179,9 +1341,11 @@ export default function AutomationHub() {
           <p className="muted-text">
             Date source: {result.invoiceDateSource || "OCR"} · Original invoice evidence: {ingestionId ? "saved" : "NOT SAVED"}
           </p>
-          <p>
-            OCR Supplier: <strong>{result.supplierName || "Not detected"}</strong>
-          </p>
+          {!confirmedSupplier ? (
+            <p>
+              OCR Supplier: <strong>{result.supplierName || "Not detected"}</strong>
+            </p>
+          ) : null}
           {result.vendorTaxId ? (
             <p>
               Tax / GST ID: <strong>{result.vendorTaxId}</strong>
@@ -1264,12 +1428,18 @@ export default function AutomationHub() {
             <div className="metric-card"><span>Printed Invoice</span><strong>{printedInvoiceTotal > 0 ? `₹${printedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</strong></div>
             <div className="metric-card"><span>Reconciliation</span><strong>{reconciliationDifference == null ? "No printed total" : reconciliationMatches ? `MATCH · ₹${Math.abs(reconciliationDifference).toFixed(2)}` : `REVIEW · ₹${Math.abs(reconciliationDifference).toFixed(2)}`}</strong></div>
           </div>
-          <div className={Math.abs(productLineGap) <= 1 ? "purchase-message success" : "purchase-message"} style={{ marginTop: 12 }}>
-            Product-line check · Invoice lines: <strong>₹{invoiceLineSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
-            {" · "}Reviewed lines: <strong>₹{reviewedResolvedLineValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
-            {" · "}Gap (Invoice − Reviewed): <strong>₹{productLineGap.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>.
-            {" "}Use the per-row Rate/Case and Line Gap columns below to locate the difference.
-          </div>
+          {Math.abs(productLineGap) <= 1 ? (
+            <div className="purchase-message success" style={{ marginTop: 12 }}>
+              ✓ Product lines match the invoice subtotal — <strong>₹{invoiceLineSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>.
+            </div>
+          ) : (
+            <div className="purchase-message" style={{ marginTop: 12 }}>
+              Product-line difference · Invoice <strong>₹{invoiceLineSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
+              {" · "}Reviewed <strong>₹{reviewedResolvedLineValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
+              {" · "}Gap <strong>₹{productLineGap.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>.
+              {" "}Review the affected line below before continuing.
+            </div>
+          )}
           <div className="form-grid" style={{ marginTop: 12 }}>
             {[
               ["freightAmount", "Freight / Carting"],
@@ -1353,6 +1523,8 @@ export default function AutomationHub() {
                   const row = resolution[index] || {};
                   const candidates = matches[index] || [];
                   const best = candidates[0];
+                  const bestScore = Number(best?.score || 0);
+                  const reliableBest = Boolean(best && bestScore >= STRONG_MATCH);
                   const invoiceLineAmount = Math.max(
                     0,
                     Number(item?.amount || 0),
@@ -1399,18 +1571,39 @@ export default function AutomationHub() {
 
                       <td>
                         {row.source === "CREATED_PRODUCT" && row.productId ? (
-                          <div className="muted-text">
+                          <div className="purchase-message success">
                             <strong>Created product linked:</strong>{" "}
                             {best?.product_name || "Product Master item"}
                           </div>
-                        ) : best ? (
+                        ) : row.source === "ALIAS" && reliableBest ? (
+                          <div className="purchase-message success">
+                            Learned alias match: <strong>{best.product_name}</strong>
+                          </div>
+                        ) : reliableBest ? (
                           <div className="muted-text">
-                            Best match: {best.product_name} ·{" "}
-                            {Number(best.score || 0).toFixed(3)}
+                            Reliable Product Master match: <strong>{best.product_name}</strong>
+                            {" · "}{Math.round(bestScore * 100)}%
                           </div>
                         ) : (
-                          <div className="muted-text">
-                            No existing product match found.
+                          <div>
+                            <div className="muted-text">
+                              <strong>No reliable Product Master match.</strong>
+                              {best
+                                ? ` Closest score ${Math.round(bestScore * 100)}% was not selected.`
+                                : ""}
+                            </div>
+                            <div style={{ margin: "8px 0" }}>
+                              <ProductEnrichmentPanel
+                                shopId={profile?.shop_id}
+                                item={item}
+                                sizeMl={inferOcrSizeMl(item)}
+                                disabled={busy}
+                                onUseCandidate={(candidate) =>
+                                  createProductFromCandidate(index, candidate)
+                                }
+                                onCreateFallback={() => createProduct(index)}
+                              />
+                            </div>
                           </div>
                         )}
 
@@ -1431,12 +1624,16 @@ export default function AutomationHub() {
 
                       <td>
                         {row.status === "CONFIRMED"
-                          ? "Confirmed"
-                          : row.status === "STRONG_MATCH"
-                            ? "Strong match auto-selected — confirm line"
-                            : candidates.length
-                              ? "Uncertain match — human confirmation required"
-                              : "Unmatched — select or create product"}
+                          ? row.aliasLearned
+                            ? "Confirmed · alias learned"
+                            : "Confirmed"
+                          : row.source === "CREATED_PRODUCT"
+                            ? "Created product linked — confirm line"
+                            : row.status === "STRONG_MATCH" && row.source === "ALIAS"
+                              ? "Learned alias match — confirm line"
+                              : row.status === "STRONG_MATCH"
+                                ? "Reliable Product Master match — confirm line"
+                                : "Unmatched — search catalogue, select existing, or create"}
                       </td>
 
                       <td>
@@ -1564,7 +1761,7 @@ export default function AutomationHub() {
                             Confirm Line
                           </button>
                         ) : (
-                          <span>✓ Ready</span>
+                          <span>✓ Ready{row.aliasLearned ? " · learned" : ""}</span>
                         )}{" "}
 
                         {!row.productId ? (

@@ -26,7 +26,6 @@ export const MODULE_TABS = {
     { path: "/pos/sales", label: "Sales", roles: ["ADMIN", "MANAGER", "CASHIER"] },
     { path: "/pos/returns", label: "Returns & Voids", roles: ["ADMIN", "MANAGER", "CASHIER"] },
     { path: "/pos/shifts", label: "Shift", roles: ["ADMIN", "MANAGER", "CASHIER"] },
-    { path: "/pos/scanner", label: "Scanner", roles: ["ADMIN", "MANAGER", "CASHIER"] },
   ],
   products: [
     { path: "/products", label: "Product Master", roles: ["ADMIN", "MANAGER"] },
@@ -42,7 +41,7 @@ export const MODULE_TABS = {
     { path: "/purchasing/intelligence", label: "Purchase Intelligence", roles: ["ADMIN", "MANAGER"], tier: "PRO" },
   ],
   inventory: [
-    { path: "/inventory", label: "Overview", roles: ["ADMIN", "MANAGER"] },
+    { path: "/inventory", label: "Stock & Products", roles: ["ADMIN", "MANAGER"] },
     { path: "/inventory/count", label: "Stock Count", roles: ["ADMIN", "MANAGER"] },
     { path: "/inventory/transfers", label: "Transfers", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
     { path: "/inventory/intelligence", label: "Intelligence", roles: ["ADMIN", "MANAGER"], tier: "PRO" },

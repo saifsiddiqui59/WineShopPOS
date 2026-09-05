@@ -7,10 +7,22 @@ export default function AddProduct(){
   const navigate=useNavigate();
   const[params]=useSearchParams();
   const barcode=params.get("barcode")||"",fromOcr=params.get("ocr")==="1",line=params.get("ocrLineIndex");
+  const ocrMrp=Number(params.get("mrp")||0);
+  const requestedSelling=Number(params.get("sellingPrice")||0);
   const initial=(barcode||fromOcr)?{
     barcode,
     name:params.get("name")||"",
+    brand:params.get("brand")||"",
+    category:params.get("category")||"Other",
     purchasePrice:Number(params.get("purchasePrice")||0),
+    sizeMl:Math.max(1,Number(params.get("sizeMl")||750)),
+    mrp:Number.isFinite(ocrMrp)?ocrMrp:0,
+    price:
+      Number.isFinite(requestedSelling)&&requestedSelling>0
+        ? requestedSelling
+        : Number.isFinite(ocrMrp)&&ocrMrp>0
+          ? ocrMrp+15
+          : 0,
     unitsPerCase:Math.max(1,Number(params.get("unitsPerCase")||12))
   }:undefined;
 
@@ -18,7 +30,11 @@ export default function AddProduct(){
     const r=await addProduct(form);
     if(r.ok){
       if(fromOcr&&line!==null){
-        sessionStorage.setItem("wineshop_ocr_created_product",JSON.stringify({lineIndex:Number(line),productId:r.productId}));
+        sessionStorage.setItem("wineshop_ocr_created_product",JSON.stringify({
+          lineIndex:Number(line),
+          productId:r.productId,
+          productName:form.name||params.get("name")||"Newly created product"
+        }));
         navigate("/purchasing/ocr");
       }else navigate("/products");
     }
@@ -30,6 +46,9 @@ export default function AddProduct(){
     else navigate("/products");
   }
 
+  const enriched=params.get("enriched")==="1";
+  const enrichmentSources=params.get("enrichmentSources")||"";
+
   return <div>
     <div className="page-heading">
       <div><h2>Add Product</h2><p>{fromOcr?"Create the unmatched OCR product. Saving returns to the invoice review and links this line.":barcode?"Unknown scanned barcode has been prefilled.":"Create product directly in Supabase"}</p></div>
@@ -38,6 +57,16 @@ export default function AddProduct(){
         <button type="button" className="secondary-button" onClick={cancel}>× Close</button>
       </div>
     </div>
+    {enriched ? (
+      <div className="purchase-message" style={{marginBottom:12}}>
+        Catalogue suggestion applied from <strong>{enrichmentSources || "product catalogue"}</strong>.
+        Review barcode, corrected name, brand, category and size before saving.
+      </div>
+    ) : fromOcr && !barcode ? (
+      <div className="verification-guidance verification-guidance--neutral" style={{marginBottom:12}}>
+        OCR product details are prefilled. Scan or type the bottle/can barcode before creating the Product Master record.
+      </div>
+    ) : null}
     <ProductForm
       key={`${barcode}-${params.get("name")||""}-${fromOcr}`}
       initialValue={initial}

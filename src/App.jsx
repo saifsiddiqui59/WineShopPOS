@@ -73,7 +73,6 @@ export default function App() {
           <Route path="sales" element={<Sales/>}/>
           <Route path="returns" element={<Returns/>}/>
           <Route path="shifts" element={<Shifts/>}/>
-          <Route path="scanner" element={<ScannerSettings/>}/>
         </Route>
 
         {/* Current POS/Sales code already navigates to /sales/:id. Keep it stable. */}
@@ -156,7 +155,7 @@ export default function App() {
         <Route path="shifts" element={<Navigate to="/operations/shifts" replace/>}/>
         <Route path="returns" element={<Navigate to="/pos/returns" replace/>}/>
         <Route path="sales" element={<Navigate to="/pos/sales" replace/>}/>
-        <Route path="scanner-settings" element={<Navigate to="/pos/scanner" replace/>}/>
+        <Route path="scanner-settings" element={<Navigate to="/admin/hardware/scanner" replace/>}/>
         <Route path="offline-queue" element={<Navigate to="/operations/offline" replace/>}/>
         <Route path="stock-count" element={<Navigate to="/inventory/count" replace/>}/>
         <Route path="purchases" element={<Navigate to="/purchasing/receive" replace/>}/>

@@ -16,7 +16,6 @@
     "guard:env": "node scripts/supabase-environment-policy.mjs",
     "predev": "npm run guard:env",
     "prepreview": "npm run guard:env",
-    "docs:sync-current": "node scripts/docs/sync-current-version-docs.mjs",
     "docs:traceability": "node scripts/docs/generate-static-traceability.mjs",
     "docs:check": "node scripts/docs/check-doc-system.mjs"
   },

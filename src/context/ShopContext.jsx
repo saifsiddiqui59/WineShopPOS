@@ -5,7 +5,7 @@ import { listOfflineSales, queueOfflineSale, removeOfflineSale, setOfflineSaleSt
 import { productImageUrl, removeProductImage, uploadProductImage } from "../lib/productImages";
 
 const ShopContext = createContext(null);
-const DATA_CACHE_KEY = "wineshop_cloud_cache_v2";
+const DATA_CACHE_KEY = "wineshop_cloud_cache_v3";
 
 const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
 

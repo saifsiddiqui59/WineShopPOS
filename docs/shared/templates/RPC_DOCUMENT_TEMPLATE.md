@@ -6,13 +6,26 @@ Client-callable roles: `<roles>`
 Last verified: `<date/sha>`
 
 ## Purpose
+
 ## Signature
+
 ## Authorization / assertions
+
 ## Direct relations
+
+| Relation | Read/Write |
+|---|---|
+
 ## Nested functions
+
 ## Transitive relations
+
 ## Transaction behavior
+
 ## Errors / failure semantics
+
 ## Source migration
+
 ## Callers
+
 ## Tests / evidence

@@ -12,6 +12,10 @@ const EMPTY = {
   active: true,
 };
 
+function normalizeSupplierName(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
 export default function SupplierEditor({ open, supplier = null, defaults = null, onClose, onSaved }) {
   const { profile } = useAuth();
   const [form, setForm] = useState(EMPTY);
@@ -50,7 +54,7 @@ export default function SupplierEditor({ open, supplier = null, defaults = null,
 
   async function save(event) {
     event.preventDefault();
-    const name = String(form.supplier_name || "").trim();
+    const name = String(form.supplier_name || "").trim().replace(/\s+/g, " ");
     if (!name) {
       setMessage("Supplier name is required.");
       return;
@@ -70,8 +74,10 @@ export default function SupplierEditor({ open, supplier = null, defaults = null,
         .limit(500);
 
       if (duplicateQuery.error) throw duplicateQuery.error;
+      const normalizedName = normalizeSupplierName(name);
       const duplicate = (duplicateQuery.data || []).find((row) =>
-        row.id !== supplier?.id && String(row.supplier_name || "").trim().toLowerCase() === name.toLowerCase()
+        row.id !== supplier?.id &&
+        normalizeSupplierName(row.supplier_name) === normalizedName
       );
       if (duplicate) {
         setMessage(`A supplier named “${duplicate.supplier_name}” already exists.`);

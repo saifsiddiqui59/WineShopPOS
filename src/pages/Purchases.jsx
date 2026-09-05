@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useShop } from "../context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import { formatDateIN } from "../lib/dateFormat";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 const empty=()=>({description:"",productId:"",caseCount:0,unitsPerCase:12,looseBottles:0,quantity:0,purchasePrice:0,batchNumber:"",expiryDate:""});
@@ -31,7 +33,7 @@ export default function Purchases(){
       setSupplierName(d.supplierName||"");setInvoiceNumber(d.invoiceNumber||"");
       setInvoiceDate(d.invoiceDate||new Date().toISOString().slice(0,10));
       setNotes(d.notes||`OCR draft from ${d.sourceFile||"invoice"}. Product mapping and final bottle quantities were reviewed.`);
-      setItems((d.items||[]).map((x)=>({...empty(),...x,caseCount:Number(x.caseCount||0),unitsPerCase:Number(x.unitsPerCase||1),looseBottles:Number(x.looseBottles||0),quantity:Number(x.quantity||0),purchasePrice:Number(x.purchasePrice||0)})));
+      setItems((d.items||[]).map((x)=>({...empty(),...x,caseCount:Number(x.caseCount||0),unitsPerCase:Number(x.unitsPerCase||1),looseBottles:Number(x.looseBottles||0),quantity:Number(x.quantity||0),purchasePrice:Number(Number(x.purchasePrice||0).toFixed(2))})));
       setCharges({...emptyCharges(),...(d.charges||{})});
       setFinancialSummary(d.financialSummary||null);
       setIngestionId(d.ingestionId||null);
@@ -119,6 +121,29 @@ export default function Purchases(){
     if(!cleaned.length||cleaned.length!==items.length){setMessage("Every line must have a resolved product and positive final bottle quantity.");return;}
     if(new Set(cleaned.map((i)=>i.productId)).size!==cleaned.length){setMessage("Combine duplicate product lines before receiving.");return;}
     for(const i of cleaned){if(Number(i.quantity)!==Number(i.caseCount||0)*Number(i.unitsPerCase||1)+Number(i.looseBottles||0)){setMessage("Final Bottles must equal Cases × Bottles/Case + Loose Bottles.");return;}}
+
+    const packWarnings=cleaned.flatMap((i)=>{
+      const p=active.find((x)=>x.id===i.productId);
+      if(!p)return[];
+      const pack=resolveInvoiceUnitsPerCase(
+        {description:`${i.description||""} ${p.name||""}`,packing:p.size||`${p.sizeMl||0} ml`},
+        p,
+      );
+      const entered=Number(i.unitsPerCase||1);
+      const warnings=[];
+      if(entered!==Number(p.unitsPerCase||1)){
+        warnings.push(`${p.name}: entered ${entered}/case differs from Product Master ${p.unitsPerCase}/case.`);
+      }
+      if(pack.reviewRequired&&pack.suggestedValue&&entered!==Number(pack.suggestedValue)){
+        warnings.push(`${p.name}: ${pack.suggestionSource||"pack profile"} suggests ${pack.suggestedValue}/case; entered ${entered}.`);
+      }
+      return warnings;
+    });
+    if(packWarnings.length&&!window.confirm(`PACK REVIEW REQUIRED\n\n${packWarnings.join("\n")}\n\nContinue with the entered Bottles/Case values?`)){
+      setMessage("Receive Stock stopped for pack review. Correct Bottles/Case, then confirm again.");
+      return;
+    }
+
     if(landedTotal<0){setMessage("Total landed cost cannot be negative.");return;}
     if(!reconciliationMatches){setMessage(`Invoice financials do not reconcile. Difference: ₹${Math.abs(reconciliationDifference).toFixed(2)}. Review landed-cost adjustments before receiving.`);return;}
     setBusy(true);
@@ -139,7 +164,7 @@ export default function Purchases(){
         <label>Notes <span className="optional-field">(optional)</span><input value={notes} onChange={(e)=>setNotes(e.target.value)}/></label>
       </div>
       <div className="data-table-wrapper" style={{marginTop:18}}><table className="data-table"><thead><tr><th>OCR / Source</th><th>Product <span className="required-mark">*</span></th><th>Cases</th><th>Bottles/Case <span className="required-mark">*</span></th><th>Loose</th><th>Final Bottles <span className="required-mark">*</span></th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Amount</th><th></th></tr></thead>
-      <tbody>{items.map((i,n)=><tr key={n}><td>{i.description||"Manual entry"}</td><td><select value={i.productId} onChange={(e)=>update(n,"productId",e.target.value)} required><option value="">Select product</option>{active.map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></td><td><input type="number" min="0" value={i.caseCount} onChange={(e)=>update(n,"caseCount",e.target.value)}/></td><td><input type="number" min="1" value={i.unitsPerCase} onChange={(e)=>update(n,"unitsPerCase",e.target.value)} required/></td><td><input type="number" min="0" value={i.looseBottles} onChange={(e)=>update(n,"looseBottles",e.target.value)}/></td><td><strong>{i.quantity}</strong></td><td><input type="number" min="0" step="0.000001" value={i.purchasePrice} onChange={(e)=>update(n,"purchasePrice",e.target.value)}/></td><td><input value={i.batchNumber} placeholder="Optional" onChange={(e)=>update(n,"batchNumber",e.target.value)}/></td><td><input type="date" value={i.expiryDate} onChange={(e)=>update(n,"expiryDate",e.target.value)}/></td><td>{money.format(Number(i.quantity||0)*Number(i.purchasePrice||0))}</td><td><button type="button" aria-label="Remove purchase line" onClick={()=>setItems((x)=>x.filter((_,idx)=>idx!==n))}>×</button></td></tr>)}</tbody></table></div>
+      <tbody>{items.map((i,n)=><tr key={n}><td>{i.description||"Manual entry"}</td><td><select value={i.productId} onChange={(e)=>update(n,"productId",e.target.value)} required><option value="">Select product</option>{active.map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></td><td><input type="number" min="0" value={i.caseCount} onChange={(e)=>update(n,"caseCount",e.target.value)}/></td><td><input type="number" min="1" value={i.unitsPerCase} onChange={(e)=>update(n,"unitsPerCase",e.target.value)} required/></td><td><input type="number" min="0" value={i.looseBottles} onChange={(e)=>update(n,"looseBottles",e.target.value)}/></td><td><strong>{i.quantity}</strong></td><td><input type="number" min="0" step="0.01" value={i.purchasePrice} onChange={(e)=>update(n,"purchasePrice",e.target.value)} onBlur={()=>update(n,"purchasePrice",Number(i.purchasePrice||0).toFixed(2))}/></td><td><input value={i.batchNumber} placeholder="Optional" onChange={(e)=>update(n,"batchNumber",e.target.value)}/></td><td><input type="date" value={i.expiryDate} onChange={(e)=>update(n,"expiryDate",e.target.value)}/></td><td>{money.format(Number(i.quantity||0)*Number(i.purchasePrice||0))}</td><td><button type="button" aria-label="Remove purchase line" onClick={()=>setItems((x)=>x.filter((_,idx)=>idx!==n))}>×</button></td></tr>)}</tbody></table></div>
       <div className="button-row spread"><button type="button" className="secondary-button" onClick={()=>setItems((x)=>[...x,empty()])}>Add Line</button><strong>Product Value {money.format(baseTotal)}</strong></div>
       <section style={{marginTop:22}}><h3>Landed Cost Adjustments</h3><p className="muted-text">Auto-filled from OCR when recognized. Review before posting; invoice-level adjustments are allocated deterministically across purchase lines.</p><div className="form-grid">
       {[["freightAmount","Freight"],["transportAmount","Transport"],["handlingAmount","Handling"],["loadingUnloadingAmount","Loading / Unloading"],["supplierDiscountAmount","Supplier Discount"],["invoiceDiscountAmount","Invoice Discount"],["miscellaneousAmount","Miscellaneous"]].map(([k,l])=><label key={k}>{l}<input type="number" min="0" step="0.01" value={charges[k]} onChange={(e)=>setCharges((c)=>({...c,[k]:e.target.value}))}/></label>)}
@@ -154,6 +179,6 @@ export default function Purchases(){
         <button className="primary-button" disabled={busy||landedTotal<0}>{busy?"Receiving...":"Confirm & Receive Stock"}</button>
       </div>
     </form>
-    <section className="panel" style={{marginTop:16}}><h3>Recent Purchases</h3><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Purchase</th><th>Invoice</th><th>Supplier</th><th>Date</th><th>Units</th><th>Product Value</th><th>Landed / Invoice Total</th><th>Action</th></tr></thead><tbody>{purchases.slice(0,20).map((p)=><tr key={p.id}><td>{p.purchaseNumber}</td><td>{p.invoiceNumber}</td><td>{p.supplierName}</td><td>{p.invoiceDate}</td><td>{p.totalUnits}</td><td>{money.format(p.total)}</td><td>{money.format(p.landedTotal ?? p.total)}</td><td><button type="button" className="secondary-button" onClick={()=>navigate(`/purchasing/receipts/${p.id}`)}>Verify Receipt</button></td></tr>)}</tbody></table></div></section>
+    <section className="panel" style={{marginTop:16}}><h3>Recent Purchases</h3><div className="data-table-wrapper"><table className="data-table"><thead><tr><th>Purchase</th><th>Invoice</th><th>Supplier</th><th>Date</th><th>Units</th><th>Product Value</th><th>Landed / Invoice Total</th><th>Action</th></tr></thead><tbody>{purchases.slice(0,20).map((p)=><tr key={p.id}><td>{p.purchaseNumber}</td><td>{p.invoiceNumber}</td><td>{p.supplierName}</td><td>{formatDateIN(p.invoiceDate)}</td><td>{p.totalUnits}</td><td>{money.format(p.total)}</td><td>{money.format(p.landedTotal ?? p.total)}</td><td><button type="button" className="secondary-button" onClick={()=>navigate(`/purchasing/receipts/${p.id}`)}>Verify Receipt</button></td></tr>)}</tbody></table></div></section>
   </div>;
 }

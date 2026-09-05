@@ -1,23 +1,19 @@
 # WineShopPOS Documentation
 
-`CURRENT_VERSION` identifies the deployed documentation generation.
+Current branch documentation generation: **V3**
 
-Current production: **V2**
+`docs/CURRENT_VERSION` is authoritative for this branch and must remain `v3`.
 
-## Current V2
-- `versions/v2/README.md`
-- `versions/v2/user/USER_MANUAL.md`
-- `versions/v2/architecture/PROJECT_CONTEXT.md`
-- `versions/v2/operations/DEVELOPER_HANDBOOK.md`
-- `versions/v2/operations/AI_PRODUCTION_BASELINE.md`
-- `versions/v2/reference/data/TABLE_CATALOG.md`
-- `versions/v2/reference/interfaces/RPC_CATALOG.md`
-- `versions/v2/testing/`
-- `versions/v2/releases/prod-deltas/`
+## Current V3
+- `versions/v3/README.md`
+- `versions/v3/architecture/`
+- `versions/v3/reference/`
+- `versions/v3/security/`
+- `versions/v3/testing/`
 
-## Historical
-- `versions/v1/`
-- `versions/v2/releases/history/`
+## Previous deployed generations
+- `versions/v2/` — previous/current PROD lineage inherited from main for traceability
+- `versions/v1/` — historical early/basic generation
 
 ## Shared
 - `shared/governance/`
@@ -25,7 +21,14 @@ Current production: **V2**
 - `shared/security/`
 - `shared/release/`
 
-## Backup
+## Backup provenance
 - `backups/prod/`
 
-Development V3 documentation remains on the V3 branch until formal V3 promotion.
+## Version rule
+
+A feature-origin label does not automatically define the deployed product version.
+V3-origin work already deployed before formal V3 promotion remains recorded in
+V2 PROD-delta history, while the same feature may also be CURRENT in V3.
+
+Current V3 source + current V3 migrations + verified DEV/UAT evidence override
+older V1/V2 history when determining V3 behavior.

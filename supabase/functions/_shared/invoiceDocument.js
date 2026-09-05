@@ -50,22 +50,20 @@ function toIsoDate(parts) {
 function invoiceDateValue(field) {
   const raw = String(field?.content ?? field?.valueString ?? "").trim();
   const typed = String(field?.valueDate || "").trim();
+  const rawMatches = [...raw.matchAll(/\b(\d{1,4})[-/.](\d{1,2})[-/.](\d{1,4})\b/g)]
+    .map((match) => toIsoDate([match[1], match[2], match[3]]))
+    .filter(Boolean);
+  const uniqueRaw = [...new Set(rawMatches)];
+  if (uniqueRaw.length === 1) {
+    return { value: uniqueRaw[0], raw, reviewRequired: false, source: "RAW_DMY_DATE" };
+  }
+  if (uniqueRaw.length > 1) {
+    return { value: "", raw, reviewRequired: true, source: "RAW_AMBIGUOUS_DATE" };
+  }
   if (validIsoDate(typed)) {
     return { value: typed, raw, reviewRequired: false, source: "AZURE_TYPED_DATE" };
   }
-  const matches = [...raw.matchAll(/\b(\d{1,4})[-/.](\d{1,2})[-/.](\d{1,4})\b/g)]
-    .map((match) => toIsoDate([match[1], match[2], match[3]]))
-    .filter(Boolean);
-  const unique = [...new Set(matches)];
-  if (unique.length === 1) {
-    return { value: unique[0], raw, reviewRequired: false, source: "RAW_SINGLE_DATE" };
-  }
-  return {
-    value: "",
-    raw,
-    reviewRequired: true,
-    source: unique.length > 1 ? "RAW_AMBIGUOUS_DATE" : "DATE_NOT_RESOLVED",
-  };
+  return { value: "", raw, reviewRequired: true, source: "DATE_NOT_RESOLVED" };
 }
 
 function headerRole(value) {

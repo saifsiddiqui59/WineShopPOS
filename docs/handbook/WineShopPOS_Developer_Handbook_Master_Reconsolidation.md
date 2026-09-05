@@ -9,6 +9,7 @@
 > handbook when they conflict with current production state. Older references
 > to LocalStorage-only architecture, future/planned Supabase, hidden/future AI,
 > or a deferred Owner Assistant are historical implementation notes.
+
 ### Current architecture
 
 - React + Vite frontend
@@ -19,6 +20,7 @@
 - Azure Blob static hosting
 - current OCR/offline/backup foundations
 - production WineShopPOS AI Owner Assistant
+
 ### Critical protected workflows
 
 ```text
@@ -48,6 +50,7 @@ OCR invoice review
 Owner Center
 AI Owner Assistant
 ```
+
 ### Verified production AI
 
 ```text
@@ -87,6 +90,7 @@ Function-to-Foundry uses the Function system-assigned managed identity with
 required Foundry project-level User access.
 
 Production record indicates AI migration `20260830070000` is applied.
+
 ### V2 engineering program
 
 Before adding a requested V2 feature, inspect the current implementation and
@@ -122,6 +126,7 @@ Existing Purchase/PO/GRN, OCR, returns, sale void, shifts, counts, adjustments,
 transfers, multi-shop, Leakage Shield, Purchase Coach, supplier intelligence,
 offline, backup, scanner, receipt printing, RLS and AI should be verified and
 extended rather than rebuilt.
+
 ### AI observability / next quality milestone
 
 ```text
@@ -142,19 +147,22 @@ Tracing resources:
 
 
 AI failure must never break core POS availability.
+
 ### Documentation rule
 
 This master handbook remains the single developer/operations handbook.
-This V2 handbook is the canonical handbook for the current production generation. Version history is preserved in Git and
+V2/V3/etc. update this file in place. Version history is preserved in Git and
 the chapter records under `docs/chapters/`.
 <!-- WINEPOS_V2_CURRENT_END -->
 
 Version: 2026.08 Master Reconsolidation
+
 ## 1. Purpose
 
 This handbook is the canonical engineering guide for the WineShopPOS reconsolidated application. It must be read together with the repository code, migrations and actual Git code-history. The repository remains the primary source of truth when documentation and code disagree.
 
 The release does not rebuild WineShopPOS. It preserves the existing Supabase transaction engine and reorganizes the experience into eight predictable modules while adding genuine missing capabilities.
+
 ## 2. Production Architecture
 
 ```text
@@ -180,6 +188,7 @@ Human review
         ↓
 Controlled purchase receipt RPC
 ```
+
 ### Production resources
 
 - Azure Resource Group: `wineshopPOS`.
@@ -189,19 +198,25 @@ Controlled purchase receipt RPC
 - Document Intelligence resource: `wineshoppos-docintel-45b7d2b9`, `FormRecognizer`, F0, Central India.
 
 Never put the Supabase service-role key or Azure OCR key in the React bundle or Git.
+
 ## 3. Core Architectural Rules
+
 ### Preserve the engine
 
 Sales, purchases, returns, counts, transfers, stock adjustments and offline synchronization must reuse controlled database operations. React is an orchestration/UI layer and must not directly set arbitrary inventory quantities.
+
 ### Tenant isolation
 
 Every shop-scoped business query must remain constrained by RLS/security-definer functions. Organization membership is additionally required for cross-shop transfer destinations.
+
 ### Role security
 
 Frontend route/menu hiding improves UX but is not security. Database RLS/RPC validation remains authoritative.
+
 ### Tier metadata
 
 CORE has no badge. PLUS and PRO are visual/product classification only. This release does not add plan enforcement, payment-provider integration or RLS tier gating.
+
 ## 4. Final Application Navigation
 
 The primary sidebar contains only:
@@ -216,6 +231,7 @@ The primary sidebar contains only:
 8. Settings & Admin
 
 Cashiers see only relevant modules. Managers see operating modules. Admins see authorized full-shop administration. AI Owner Assistant is production-active; see Current V2 Production State.
+
 ## 5. Account and Shop Context
 
 The top bar provides:
@@ -239,7 +255,9 @@ The user cannot self-edit:
 - shop security assignment.
 
 `user_shop_memberships` provides a future-safe many-shop membership model. The current `profiles.shop_id` remains the active shop context so existing RPC/RLS helpers continue to work.
+
 ## 6. Module 1 — POS & Billing
+
 ### Fast billing
 
 The existing global scanner engine is preserved. Rapid keystrokes ending in Enter are treated as scanner input. Repeated scans increment quantity. Unknown barcode shows Product Not Found and links to Add Product with the barcode prefilled.
@@ -247,20 +265,25 @@ The existing global scanner engine is preserved. Rapid keystrokes ending in Ente
 The cashier mental model remains:
 
 **Scan → Cart → Pay → Print.**
+
 ### Customer attachment
 
 Online POS can optionally attach an existing customer to the sale through `link_sale_customer()`. Customer selection is optional and does not slow walk-in billing.
 
 Udhaar/credit ledger posting is intentionally management-controlled under Operations rather than silently changing payment behavior in the core sale RPC.
+
 ### Payment policy
 
 Cash, UPI and Card are operator-recorded. No bank/payment gateway integration is introduced.
+
 ## 7. Module 2 — Products
 
 Existing product CRUD is retained.
 
 The release adds CODE128 barcode label generation with `jsbarcode`. Label output uses browser printing so the operator can select an installed label printer. Paper size and printer calibration require a real-hardware test.
+
 ## 8. Module 3 — Purchases & Suppliers
+
 ### Procurement lifecycle
 
 New lifecycle:
@@ -278,6 +301,7 @@ PARTIALLY_RECEIVED / RECEIVED
 ```
 
 Receiving continues to call the controlled purchase receipt engine, so inventory changes and stock movements remain transaction-safe.
+
 ### Smart Purchase Intelligence — PRO
 
 Combines:
@@ -288,9 +312,11 @@ Combines:
 - current selling-margin impact.
 
 OCR never changes stock directly.
+
 ## 9. Module 4 — Inventory
 
 Existing stock overview and physical stock count are preserved.
+
 ### Advanced Transfers — PLUS
 
 New lifecycle:
@@ -315,6 +341,7 @@ Important accounting behavior:
 - Receive increases destination stock and records `TRANSFER_IN`.
 
 Legacy transfers whose old `APPROVED` state already moved stock are converted to `COMPLETED` before the new constraint is installed.
+
 ### Inventory Intelligence — PRO
 
 `inventory_health()` calculates deterministic classifications using recent sales and current stock:
@@ -327,10 +354,13 @@ Legacy transfers whose old `APPROVED` state already moved stock are converted to
 - HEALTHY.
 
 `stock_explanation()` groups movement history so the user can reconcile stock from auditable movements rather than opaque inventory numbers.
+
 ## 10. Module 5 — Operations
+
 ### Shift & Day Close
 
 Existing shift workflows remain intact, including protection against unsafe closing while offline sales are pending/conflicting.
+
 ### Expense Management
 
 New tables:
@@ -346,9 +376,11 @@ Default categories seeded for each shop:
 - Transport,
 - Maintenance,
 - Miscellaneous.
+
 ### Approval Center
 
 The centralized Approvals screen composes existing approval engines instead of duplicating them. It surfaces pending return requests, shift closes, stock counts, transfer requests and purchase orders awaiting approval.
+
 ### Customer & Credit — PLUS
 
 New tables:
@@ -362,7 +394,9 @@ Ledger types:
 - ADJUSTMENT_DEBIT.
 
 Balance is derived from ledger entries rather than storing a mutable outstanding field.
+
 ## 11. Module 6 — Owner Center
+
 ### Owner Control Center — PRO
 
 `owner_center_summary()` provides deterministic shop KPIs for a date range:
@@ -377,6 +411,7 @@ Balance is derived from ledger entries rather than storing a mutable outstanding
 - cash variance,
 - low-stock SKU count,
 - inventory cost.
+
 ### Profit Intelligence — PRO
 
 New sale-item cost snapshots record the product purchase cost at sale-item insert time. This enables later profit analysis without relying solely on the current product cost.
@@ -389,6 +424,7 @@ Gross Profit - Expenses = Operating Profit
 ```
 
 Historical sales created before cost snapshots may be incomplete. The UI explicitly warns about this limitation.
+
 ### Audit & Loss Control — PRO
 
 Rule-based exception detection looks for high/medium review conditions such as:
@@ -398,13 +434,17 @@ Rule-based exception detection looks for high/medium review conditions such as:
 - unusual stock adjustments.
 
 The system uses neutral terms such as **Requires Review** and does not label employees as fraudulent.
+
 ### Recommendations — PLUS
 
 `owner_recommendations()` combines reorder, inventory health and shift variance signals into actionable cards.
+
 ### Owner WhatsApp Summary — PLUS
 
 The app generates text and opens WhatsApp/WhatsApp Web using `wa.me`. The user chooses the recipient and manually sends. There is no WhatsApp API, scheduled sending or background alert.
+
 ## 12. Module 7 — Reports & Compliance
+
 ### Reports & Exports
 
 The release adds CSV exports for:
@@ -414,28 +454,34 @@ The release adds CSV exports for:
 - expenses.
 
 This is a safer first integration step for accountants/Tally than an unvalidated direct accounting API.
+
 ### Liquor Compliance Foundation
 
 `compliance_profiles` stores verified shop/license metadata. The application does not invent state excise rules or claim generic legal compliance.
 
 State-specific registers and formulas must be implemented only after verified requirements are supplied.
+
 ## 13. Module 8 — Settings & Admin
+
 ### Users
 
 The existing `manage-shop-users` Edge Function remains server-side and service-role protected. It is extended so a newly created Manager/Cashier also receives a `user_shop_memberships` row.
 
 Shop Admin still cannot create another Admin.
+
 ### Hardware
 
 The Hardware landing screen consolidates:
 - scanner diagnostics,
 - receipt printer settings,
 - barcode-label printing entry point.
+
 ### Backup & Recovery
 
 The operational JSON snapshot is retained but is explicitly described as **not a PostgreSQL backup**.
 
 `backup_restore_tests` stores evidence of restore drills performed in a separate environment. Production backup readiness is not considered proven until a real restore test succeeds.
+
 ## 14. Database Migration
 
 Migration:
@@ -484,6 +530,7 @@ Major new/extended RPCs:
 - `profit_by_product`,
 - `loss_control_exceptions`,
 - `owner_recommendations`.
+
 ## 15. RLS and Security
 
 New business tables have RLS enabled.
@@ -496,6 +543,7 @@ Key access rules:
 - user memberships: own memberships or platform admin.
 
 The migration revokes broad `sale_items` SELECT and re-grants safe non-cost columns to authenticated clients. Profit/cost analytics read through security-definer functions.
+
 ## 16. Offline Reliability
 
 The existing encrypted IndexedDB emergency queue and idempotent sync remain untouched by the reconsolidation.
@@ -513,6 +561,7 @@ cached product snapshot
 ```
 
 The server is never overwritten with locally calculated inventory.
+
 ## 17. OCR
 
 Azure Document Intelligence F0 remains the OCR engine. The Edge Function retains server-side OCR credentials.
@@ -529,6 +578,7 @@ Invoice PDF/photo
 ```
 
 Real invoices and F0 limits must be tested operationally.
+
 ## 18. Frontend Shared UX System
 
 Reusable components include:
@@ -549,6 +599,7 @@ Reusable components include:
 - `QuantityDisplay`.
 
 The new shell intentionally contains only eight primary sidebar items. Secondary capabilities live as module tabs.
+
 ## 19. Deployment
 
 The one-command installer:
@@ -570,11 +621,13 @@ The one-command installer:
 15. generates actual Git code-history,
 16. commits docs,
 17. performs one final Git push.
+
 ## 20. Rollback Principles
 
 Do not delete production transaction history to roll back a feature.
 
 Frontend rollback can deploy a checkpoint build. Database rollback must use a reviewed forward-fix/reversal migration because the migration is already recorded remotely.
+
 ## 21. Regression Testing
 
 The canonical matrix is:
@@ -582,6 +635,7 @@ The canonical matrix is:
 `docs/testing/MASTER_RECONSOLIDATION_TEST_MATRIX.md`
 
 A feature is not considered fully operational merely because the build passes. Hardware, offline, OCR and restore workflows require real-world validation.
+
 ## 22. Known Boundaries
 
 - Silent raw ESC/POS printing is not guaranteed by a static browser; browser/system printing remains the safe cross-printer path.
@@ -591,6 +645,7 @@ A feature is not considered fully operational merely because the build passes. H
 - AI Owner Assistant is live in production; see the current AI baseline.
 - Voice AI is hidden/deferred.
 - PLUS/PRO do not enforce payment plans yet.
+
 ## 23. Development Rules Going Forward
 
 - Use VS Code and Git Bash/Linux commands.
@@ -601,6 +656,7 @@ A feature is not considered fully operational merely because the build passes. H
 - Run build/lint/migration verification.
 - Update docs/tests/code-history with every major release.
 - Never commit `.env.local`, Supabase service-role, Azure OCR key or other secrets.
+
 ## 24. Source of Truth
 
 When continuing in a future chat, read in this order:
@@ -613,9 +669,11 @@ When continuing in a future chat, read in this order:
 6. actual Git code-history under `docs/code-history/`,
 7. this handbook,
 8. user manual.
+
 ## Modern UI / Theme / Dashboard Revision
 
 The master reconsolidation release now includes a modern business UI layer inspired by contemporary SaaS administration products and Power BI dashboard information design. This is a presentation-layer enhancement; transactional Supabase/RPC logic is not rewritten.
+
 ### Theme system
 
 Theme preference supports `SYSTEM`, `LIGHT`, and `DARK`.
@@ -625,6 +683,7 @@ Theme preference supports `SYSTEM`, `LIGHT`, and `DARK`.
 - A compact top-bar theme control allows fast switching.
 - Account Settings persists the preference through `update_my_theme()` / `update_my_profile()`.
 - `masterConsolidation.css` is loaded after legacy chapter styles so the modern design tokens consistently override older fixed colors.
+
 ### Dashboard visual language
 
 The chart palette is Power BI-inspired and uses restrained categorical colors led by `#118DFF`. The application uses reusable native React/CSS/SVG chart cards instead of coupling business screens to a large charting framework.
@@ -638,6 +697,7 @@ Charts now appear in:
 - Purchase Intelligence: purchase-price trend and supplier average-price comparison.
 
 Cashier POS deliberately remains visually simpler than management dashboards.
+
 ## Editable Shop Settings
 
 `Admin → Shop Settings` is no longer a read-only information screen.
@@ -658,6 +718,7 @@ Admin can edit operational shop identity and billing defaults through controlled
 The shop slug remains read-only. Commercial subscription state, access kill switch and platform ownership are not exposed to Shop Admin editing.
 
 `get_shop_configuration()` is ADMIN-only and `update_shop_configuration()` performs validation, updates only approved fields and writes an audit record through `write_audit()`.
+
 ## Role Access Management
 
 Security continues to use three shop roles: `CASHIER`, `MANAGER`, `ADMIN`.
@@ -675,6 +736,7 @@ A Shop Admin cannot:
 - demote the platform-controlled Shop Admin,
 - change the subscription/access kill switch,
 - bypass RLS/RPC checks.
+
 ### Role boundaries
 
 | Capability | CASHIER | MANAGER | ADMIN |
@@ -692,6 +754,7 @@ A Shop Admin cannot:
 | Shop settings/backup/audit | No | No | Manage |
 
 The role matrix is a clear product/security contract. Frontend route visibility remains secondary to backend RLS/RPC authorization.
+
 ## Help / About Branding
 
 The Help/About panel intentionally omits infrastructure architecture details. It includes the product version, support/documentation references, the line `Trust the GOD.` and creator attribution `Almighty sa_f`.
@@ -703,6 +766,7 @@ The Help/About panel intentionally omits infrastructure architecture details. It
 Purchases & Suppliers now includes a dedicated Supplier Master plus inline supplier create/edit actions in Purchase Order creation. Supplier CRUD reuses the existing suppliers table and existing ADMIN/MANAGER RLS. OCR performs a supplier-review step before continuing: existing suppliers are suggested from normalized name similarity, or the operator can review and create a supplier prefilled with Azure VendorName, VendorAddress and VendorTaxId. OCR never silently creates a supplier and never changes stock.
 
 ---
+
 ## V2 Phase 1 — Landed Cost, Receipt Lots & OCR Resolution
 
 Phase 1 source now covers deterministic invoice landed-cost allocation,
@@ -729,6 +793,7 @@ See `docs/chapters/V2-03-inventory-cost-lots-ageing-fifo.md`.
 This section is the current implementation summary. Older chapter text below is
 historical implementation evidence and must not override this section when the
 two conflict.
+
 ### Production architecture
 
 - React/Vite frontend on Azure Storage static website.
@@ -737,6 +802,7 @@ two conflict.
 - Roles: ADMIN, MANAGER, CASHIER.
 - Stock-changing workflows use transaction-safe database operations rather than
   arbitrary direct browser inventory edits.
+
 ### V2 feature status
 
 | ID | Capability | Current state |
@@ -756,6 +822,7 @@ two conflict.
 | N13 | Approval Center Expansion | Implemented |
 | N14 | Leakage Shield Expansion | Implemented |
 | N15 | Purchase Coach Expansion | Implemented |
+
 ### OCR receiving rules
 
 Every OCR line must resolve to a product before inventory is posted.
@@ -767,6 +834,7 @@ Every OCR line must resolve to a product before inventory is posted.
 - case count, bottles per case and loose bottles remain distinct
 - final bottle quantity is visible before receipt
 - inventory posting still occurs through controlled purchase receipt
+
 ### POS and billing controls
 
 - cashier discounts and item-price overrides are backend-authorized
@@ -774,6 +842,7 @@ Every OCR line must resolve to a product before inventory is posted.
 - manager/admin approval is required when policy thresholds demand it
 - loyalty, promotions, store credit and gift vouchers use controlled checkout
 - offline checkout cannot silently bypass authorization-required pricing/rewards
+
 ### Production AI
 
 Ask WineShopPOS PRO Owner Assistant is a live, read-only production assistant.
@@ -797,6 +866,7 @@ Current AI extension state:
 
 <!-- PRODUCT_MASTER_REAL_CATALOGUE_20260831 -->
 ## Product Master real-catalogue architecture
+
 ### Normal one-product creation
 
 ```text
@@ -813,11 +883,13 @@ The deployed RPC signature retains `p_sku` and `p_opening_stock` as compatibilit
 parameters during rollout, but the current Product Master ignores user-supplied
 values for both. This prevents an older browser bundle from breaking during the
 frontend/database rollout.
+
 ### SKU
 
 `shop_counters.product_sku_counter` is the per-shop sequence source. SKU is a
 stable internal business identity, not a category code. Category, Brand, Size and
 Barcode remain separate attributes. Product edits preserve SKU.
+
 ### Bulk Product Import
 
 `bulk_create_products(jsonb)` is ADMIN/MANAGER-only, shop-scoped and
@@ -825,6 +897,7 @@ Barcode remain separate attributes. Product edits preserve SKU.
 new product before the physical bottle/can barcode is captured. Every successful
 Product starts with inventory quantity 0. The existing Product audit trigger
 continues to audit INSERT/UPDATE operations.
+
 ### Invoice OCR integration
 
 The active OCR review state is `sessionStorage["wineshop_ocr_review_state"]`.
@@ -836,6 +909,7 @@ the supplier alias and only then creates the existing Receive Stock draft.
 
 The established `wineshop_ocr_purchase_draft` therefore remains a post-review
 handoff to Receive Stock, not an input to Product Master bulk creation.
+
 ### Barcode completion
 
 Product Master exposes All / With Barcode / Without Barcode filtering. A Product
@@ -879,9 +953,11 @@ Top-right user menu
 The previous `#/help` URL is retained only as a compatibility redirect to
 `/account?tab=about`. Do not rebuild a separate category/chapter Help page.
 The customer manual is generated from the canonical master User Manual.
+
 ## V3 — Invoice document ingestion and storage
 <!-- V3_API_AUTOMATION_20260831 -->
 Architecture: Manual OCR / future Email / future WhatsApp → private Blob → `invoice_ingestions` → human review → Receive Stock → `purchases`. `invoice_ingestions` is evidence/workflow, not a second purchase table. React reads RLS metadata and original files open through short-lived read-only SAS from the standalone V3 invoice Function after ADMIN/MANAGER/shop authorization. Existing manual OCR remains independently usable. Email template deployment now requires an already authorized Gmail API connection; do not create a fake Gmail connection in ARM.
+
 ## V3 WhatsApp webhook boundary
 
 <!-- V3_WHATSAPP_WEBHOOK_20260831 -->
@@ -889,24 +965,32 @@ Architecture: Manual OCR / future Email / future WhatsApp → private Blob → `
 The isolated V3 invoice Function exposes `https://wsp-v3-invoice-53b6e9a1.azurewebsites.net/api/whatsapp/webhook` for Meta WhatsApp Cloud API webhook verification/events. GET verification compares the configured verify token using timing-safe comparison. POST events require valid `x-hub-signature-256` HMAC-SHA256 calculated with the Meta App Secret before JSON is trusted.
 
 Current Step 1 only acknowledges/logs safe metadata for inbound messages. It does not download media and cannot alter inventory. The Meta temporary access token/App Secret/verify token are Azure App Settings only and must never be committed.
+
 ### V3 Email invoice automation (20260831T123139Z)
 V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.
+
 ### V3 Demo-Ready Runtime (20260831T160407Z)
 The production demo now uses the V3 invoice reliability flow. Gmail automation uses a Blob UID checkpoint rather than Seen/Unread state. Authorized senders receive one automated oversize rejection response for supported PDF/JPG/PNG attachments above 4 MB; SMTP uses the already-secured Gmail App Password and never mutates inventory. Barcode input is normalized and supports Enter/Tab scanner suffixes with a more tolerant HID timing threshold. ADMINs have a guarded **Demo / Test Data Reset** RPC/UI requiring the exact phrase `DELETE DEMO DATA`; it removes operational test data while preserving tenant/users/settings/categories/Email mapping and audit/configuration records. The V3 invoice Function worker is configured 64-bit. Logic App remains every 5 minutes until a later cost-optimization task.
+
 ### V3-02 invoice finance / intake UX — local verified (20260831T182936Z)
 Feature commit `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310` adds shared Document Intelligence financial-summary reconciliation across manual OCR and Email ingestion. It maps common liquor supplier invoice summary rows into landed-cost adjustments and derives small rounding differences when a printed final total is available. Receive Stock blocks a >₹1 financial mismatch for OCR-linked invoices. Supplier invoice/reference is optional to the operator; OCR is preferred and a deterministic/internal AUTO reference is used when absent. Authorized Gmail invoice intake sends an idempotent "received; allow up to 1 hour" acknowledgement for accepted attachments. Required native fields are visibly starred. This state is locally build/lint/smoke verified and is not yet deployed/pushed.
+
 ### V3-03 local verified patch
 Invoice finance matching now uses strict summary labels, rejects date/time false positives, and can override Azure subtotal-as-total using the printed bottom total. Bulk OCR onboarding carries table MRP and suggests first-token Brand plus an existing matching Category. Reconciliation failures use a blocking modal. Feature: `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5`; deployment/push pending.
+
 ### V3-03B scanner capture and Email scheduler
 ScannerContext now supports explicit barcode inputs using `data-scanner-capture="barcode"`; these fields retain the completed HID scan while ordinary editable fields keep the existing protection behavior. Bulk Product Import also listens to the scanner event as a React-state fallback. Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally Disabled after testing and must be explicitly enabled before automatic Email polling resumes.
+
 ### V3-04 OCR normalization
 Do not treat `prebuilt-invoice.fields.Items` as authoritative when a stronger supplier item table exists. Shared `invoiceDocument.js` maps table-header synonyms into WineShopPOS item semantics before quantity/cost logic. This prevents pack size from becoming quantity and preserves Batch/MRP/Case/Rate/Amount relationships.
 
 Purchase/base unit cost storage now preserves numeric(14,6) precision. Posted invoice and line totals remain two-decimal accounting amounts.
 
 FIFO stays lightweight: the oldest tracked lot is SELL FIRST and the derived BOX code can be written on the carton. Full rack/bin management is intentionally deferred.
+
 ## V3-05 final reliability contract
 OCR never posts inventory directly; Receive Stock is the purchase-posting boundary. Scanner events are ephemeral and POS cart state is session-scoped by shop. Forward FIFO stock-out allocation records untracked opening balance before tracked receipt lots, then consumes tracked lots oldest-first and snapshots FIFO COGS on new sale items. Admin hard deletion is restricted to non-transactional test products.
+
 ## V3-06 Invoice Inbox display vocabulary
 
 Persisted `invoice_ingestions.review_status` values are unchanged. UI mapping:
@@ -915,6 +999,7 @@ Persisted `invoice_ingestions.review_status` values are unchanged. UI mapping:
 Do not rename DB enum values merely to change UI copy. Cancel Review retains evidence and does not change inventory.
 
 Playwright read-only E2E is now repository-supported. Write-path E2E must use an isolated test shop.
+
 ## V3-07 Supabase PGRST303 retry
 
 Observed production/test evidence showed successful Supabase Auth password grants followed immediately by intermittent PostgREST `401 PGRST303: JWT issued at future` on `my_profile` or `my_shop_access`. In the same interval the companion RPC could return 200.
@@ -922,6 +1007,7 @@ Observed production/test evidence showed successful Supabase Auth password grant
 The auth bootstrap therefore retries only the precise JWT-timing condition (`PGRST303` or message `JWT issued at future`) with bounded backoff. Both profile and access RPCs are rerun as a pair. Other authorization errors are not hidden or generically retried.
 
 The browser regression uses sequential fresh-browser logins. Parallel same-account workers are not used as the acceptance criterion because they test backend concurrency rather than normal interactive login.
+
 ## AI production trace-ingestion verification
 
 The Owner AI observability acceptance contract requires more than a successful `/api/ai/chat` call. A fresh authenticated production request must be followed by fresh AI/Foundry telemetry in the dedicated `wineshoppos-ai-insights` / `wineshoppos-ai-law` path.
@@ -929,6 +1015,7 @@ The Owner AI observability acceptance contract requires more than a successful `
 Raw telemetry evidence is local-only because trace payloads can contain operational context. Repository evidence stores only safe correlation metadata such as request id, telemetry table names, operation ids, and marker names.
 
 With trace ingestion verified, quality work proceeds to a versioned golden dataset, deterministic security/tool checks, evaluator scores and release gates.
+
 ## Owner AI golden evaluation contract
 
 Do not evaluate Owner AI releases against an ad-hoc prompt list. Use the versioned assets under `docs/ai/evaluation/`.
@@ -1020,3 +1107,176 @@ The user-supplied crown asset is the Royal 21 crown source. Do not substitute a 
 <!-- DEMO_SAFE_ROYAL_HERO_V12 -->
 ## Demo-safe header ownership
 The consolidated topbar has three independent zones. Center-shop visual effects may never extend over `.topbar-actions`. UserMenu must retain a higher stacking context. Demo-time visual corrections should not rewrite POS, Layout, UserMenu, ShopSelector, AnimatedBrand or SpiritualImageTile logic when CSS overrides can achieve the requirement.
+
+<!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
+## Product edit draft stability
+Background `refreshAll()` must not clear an active product edit. Keep an existing form mounted while Product Master refreshes and initialize ProductForm by logical product identity rather than refreshed object identity.
+
+OCR defaults:
+- structured size evidence first, then ml/cl/l parsing;
+- positive OCR MRP defaults Selling to MRP + ₹15;
+- Selling remains editable and later MRP changes preserve a custom Selling value.
+
+<!-- V5A_RESPONSIVE_RESIZABLE_PREVIEW_20260902 -->
+## V5-A responsive/table/preview implementation
+- `Layout.jsx` owns a separate mobile drawer state; desktop sidebar collapse remains persisted independently.
+- Responsive CSS uses viewport-safe `min-width:0`, adaptive page padding, stacked grids, and horizontal overflow for data-dense tables.
+- `SortableTable` supports opt-in resizing through `resizeKey`; persisted widths use `wineshop_table_widths:<key>` in localStorage. Resizing is bounded and resettable and does not replace sorting.
+- `/v3-preview/` must not register a service worker. `main.jsx` removes only legacy preview-scoped registrations; the production root registration is preserved.
+- `sw.js` deletes only WineShopPOS-prefixed caches.
+- V3 preview deployment must build the exact committed V3 SHA with `/e/WineShopPOS/.env.local`, base `/v3-preview/`, and upload only to `$web/v3-preview`.
+
+<!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
+## V5-A.1 responsive/table rule
+At pointer-down, `SortableTable` snapshots every rendered header width and persists that frozen width map. Pointer movement changes only the active column. This guarantees boundaries to the left do not move. Desktop main content is owned by the fixed sidebar offset (`250px`, or `72px` collapsed); mobile removes the offset and uses the drawer. Do not combine `width:calc(...)` with an independent flex-growth width owner.
+
+<!-- V5B_PURCHASE_CORRECTION_OCR_PACK_SAFETY_20260902 -->
+## V5-B purchase correction invariants
+`correct_received_purchase_item` is the only V5-B path for changing a completed receipt line. It keeps `purchase_items.line_total` fixed, derives corrected quantity from cases × units/case + loose, derives base unit cost from line_total / quantity, updates inventory and the matching unconsumed receipt lot transactionally, writes STOCK_CORRECTION only for quantity deltas, and persists old/new JSON plus audit. If `remaining_quantity != received_quantity`, the simple correction is rejected because FIFO history has already been consumed.
+
+OCR/package profiles never directly post inventory. Product Master is authoritative for existing products; printed pack evidence and heuristics are surfaced as review evidence. CAN → 24 and small glass/bottle → 24 are suggestions unless supported by stronger evidence.
+
+<!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
+## V5-C verification/table rule
+Unknown OCR pack evidence must not be reported as MATCH. Resizable tables must opt in with a stable resizeKey; shared SortableTable preserves the one-sided resize invariant. Ageing uses Box Mark as the human-facing lot identifier while retaining the technical lot for audit/debug.
+
+<!-- V5D_ACTIONABLE_VERIFICATION_FRIENDLY_FIFO_20260903 -->
+## V5-D verification UX and receipt-reference rule
+Do not mutate retained OCR to manufacture a match. Evidence Quality and Business Resolution are separate states. Purchase Verification reads get_purchase_item_corrections so an audited pack correction can resolve business state while OCR remains unconfirmed.
+
+Amber = review/action, green = resolved/verified, neutral = information. Status tiles navigate to stable section IDs. FIFO database lot_number remains identity; Receipt Ref is presentation-only and must never be used as a database key.
+
+<!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
+## 2026-09-03 — V5-E
+V5-E architecture: purchase_verification_resolutions is verification state, not accounting state. Verification RPCs must never mutate purchase/items/inventory/FIFO/OCR. Amber=OPEN, green=resolved/corrected/accepted, neutral=historical/informational.
+
+<!-- V5F_PRODUCT_MASTER_FIRST_EXTERNAL_ENRICHMENT_20260903 -->
+## V5-F OCR product-resolution architecture
+Never call external catalogues before Product Master matching. Flow: resolve_product_master_text -> human confirmation/remember_product_alias -> external enrichment only if unresolved. External candidates never post inventory and never mutate products automatically.
+
+The Edge Function validates logged-in user/shop membership and keeps third-party calls server-side. UPCitemdb is text discovery; Open Food Facts is barcode enrichment. Cache TTL is 30 days. External images are previews only and are not copied to product storage automatically.
+
+<!-- V5G_OWNER_CENTER_QUALITY_20260903 -->
+## V5-G Owner Center exception classification
+Use `loss_control_exceptions_v3` for active Owner Center loss signals. Do not suppress STOCK_CORRECTION merely by movement type or by presence of a reason. Suppression requires a matching purchase_item_corrections row with the same shop, purchase reference, product, quantity delta, transaction timestamp and reason.
+
+Resolved audited corrections are read through `loss_control_resolved_activity_v1`; this is display/audit state only and does not mutate stock.
+
+Owner Profit SortableTable uses resizeKey `owner-profit-sku-profitability-v1`.
+
+<!-- V5G1_INVENTORY_RESIZE_20260903 -->
+## V5-G.1 Inventory table resize
+Inventory Current Stock uses the shared SortableTable resize engine with `resizeKey="inventory-current-stock-v1"`. This is presentation-only; stock quantities and adjustment behavior are unchanged.
+
+<!-- V5H_FAST_POS_AND_HEADER_FIX_20260903 -->
+## V5-H Fast POS UI contract
+POS.jsx keeps the existing transaction functions and Supabase/database flow. V5-H changes render hierarchy plus search-focus/category UI state. Do not bypass add, completeSale, request_sale_override, commercial_quote, stock checks or offline queue behavior.
+
+The register is scan/search-first with product tiles and a sticky current-sale/payment panel. Customer and commercial-benefit inputs remain available under Customer & Offers.
+
+Premium Royal 21 must use the established RoyalHero markup. Do not introduce a second compact shop-name pill. Do not alter Royal animation CSS or AnimatedBrand as part of POS work.
+
+## V5-F.1 rebuilt OCR resolver/enrichment rules
+
+Resolver order:
+`Product Master / learned alias -> user-requested catalogue -> human approval -> Product Master`.
+
+Auto-confirm supplier only when exactly one active supplier has a 100% normalized name match. Product matching is read-only and may run concurrently.
+
+Live `product-enrichment` version 6:
+- JWT verification enabled;
+- cache version 2;
+- UPCitemdb 404 treated as no-match;
+- independent Open Food Facts text search;
+- suggestion-only candidates;
+- no product creation, purchase receipt, inventory, FIFO, sale or image-library mutation.
+
+Failed pre-commit executors restore only their own modified targets from backup.
+
+## V3 V5-F.2 Engineering Rule — Generated Columns and Global Errors
+
+### Generated-column rule
+
+Never provide a non-DEFAULT value for a PostgreSQL `GENERATED ALWAYS` column. `product_aliases.normalized_alias` is derived by PostgreSQL from `alias_text`; application/RPC code must write `alias_text` and let the database derive `normalized_alias`.
+
+Any correction to an already-applied migration must be a new forward migration. Do not rewrite historical applied migrations.
+
+### Global application error rule
+
+Use the root `GlobalErrorProvider` for actual database, API, runtime and unexpected application failures. These failures must not be rendered as small normal page messages.
+
+Inline banners remain appropriate for:
+- successful operations,
+- informational workflow messages,
+- expected user validation such as missing required selections.
+
+Global Error Dialog is required for:
+- Supabase/Postgres errors,
+- failed RPCs/functions that prevent the requested operation,
+- unexpected API/runtime exceptions,
+- uncaught browser errors,
+- unhandled promise rejections.
+
+The dialog must remain readable, dismissible by Close/X/Esc, and must not imply that inventory changed when the failed operation did not post inventory.
+
+## V5-F.2 preview recovery and executor hygiene — 2026-09-03
+
+For V3 Azure Storage preview deployment:
+- read `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md` before creating/running the executor;
+- use the dedicated `/v3-preview/` build and `wspv35c9453b6e9a1` storage account;
+- if Blob RBAC login is unavailable, use the documented account-key fallback in memory only;
+- never print or persist the storage key;
+- never pass rooted `--base=/v3-preview/` through Git Bash to native Vite; use a temporary Vite config;
+- upload static assets before `index.html`;
+- verify exact remote index hash and referenced public assets;
+- never deploy V3 preview to production storage `wineshoppos`.
+
+Corruption hygiene is mandatory: Git-object integrity, zero-byte critical-file checks, partial-artifact checks, conflict-marker validation, exact staging allowlists and post-push HEAD verification are release gates.
+
+## V5-F.3 CANCELLED REVIEW RECOVERY — 2026-09-03
+
+Invoice duplicate-state rule:
+- NEEDS_REVIEW / OCR_FAILED / FAILED / CANCELLED → recoverable.
+- CANCELLED must call `invoice_reopen_review` before OCR to clear cancellation metadata.
+- The existing ingestion id is reused.
+- READY_TO_RECEIVE / RECEIVED / COMPLETED stay protected.
+- Never create a second ingestion simply to restart the same cancelled file.
+
+## V5-G Product vs Inventory and page consistency — 2026-09-03
+
+Products = SKU/barcode/name/category/pack/prices master. Inventory = live quantity/movements/counts/FIFO keyed by product_id. Do not merge the DB tables; combine them in operator UI.
+
+Supplier names are unique per shop after normalized alphanumeric comparison. Indian numeric supplier invoice dates use retained raw DD/MM/YYYY evidence, store ISO internally, and display DD/MM/YYYY.
+
+Every navigation/layout release must source-audit all routed pages and run full src lint/build; authenticated visual UAT remains separately pending.
+
+## Supabase multi-result verification rule — 2026-09-03
+
+After a remote mutation, SQL verification must return a single result set for all required assertions. Prefer `UNION ALL` or a one-row multi-column result. Do not treat missing output from earlier independent SELECT statements as evidence that a successful migration failed. First inspect migration history and live state; never blindly reapply an already successful migration.
+
+## V5-H POS shift and responsive rules — 2026-09-03
+
+### Billing
+A sale cannot be completed without a valid shift. This applies to ADMIN, MANAGER and CASHIER. UI checks are convenience only; the database trigger is the enforcement boundary.
+
+### Physical stock count
+Stock Count is a physical verification process:
+1. Start Stock Count to snapshot system quantities.
+2. Physically scan/count bottles or enter counted quantities.
+3. Review Match / Short / Excess.
+4. Submit.
+5. Manager/Admin approves discrepancies before inventory is adjusted.
+
+### Products vs Inventory
+Keep separate tables/domains. Product Master defines the SKU; Inventory owns mutable stock state. Integrate in UI, not by collapsing the data model.
+
+### Scanner
+Scanner diagnostics are an Admin Hardware responsibility. POS keeps automatic keyboard-style barcode scanning but no longer exposes a Scanner settings/test tab.
+
+### Responsive contract
+Use responsive grids, min-width:0, horizontally scrollable tables/tabs and mobile-safe modal sizing. Do not solve overflow by shrinking text to unreadable sizes.
+
+## V5-H5 physical count scanner contract — 2026-09-04
+Physical Stock Count is scan-first. Each hardware scan is one bottle and is consumed once. Search is fallback. NOT COUNTED differs from MARKED ZERO. Products created after a count snapshot are not silently added to the active count. Submit only after unseen SKUs are resolved. Approval is the inventory-adjustment boundary.
+
+POS remains scan-first; removing a scanner diagnostics/settings tab must never remove barcode scanner capability.

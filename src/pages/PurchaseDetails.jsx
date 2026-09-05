@@ -1,9 +1,12 @@
 import SortableTable from "../components/ui/SortableTable";
+import PurchaseCorrectionPanel from "../components/PurchaseCorrectionPanel";
+import PurchaseVerificationEngine from "../components/PurchaseVerificationEngine";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { getInvoiceReadUrl } from "../lib/invoiceClient";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import { formatDateIN } from "../lib/dateFormat";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 
@@ -18,6 +21,7 @@ export default function PurchaseDetails() {
   const [ingestion, setIngestion] = useState(null);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState("");
+  const [corrections, setCorrections] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -51,6 +55,23 @@ export default function PurchaseDetails() {
       if (!active) return;
       if (ie) setMessage(`Purchase loaded, but invoice evidence could not be loaded: ${ie.message}`);
       setIngestion(rows?.[0] || null);
+
+      const { data: correctionRows, error: correctionError } = await supabase.rpc(
+        "get_purchase_item_corrections",
+        { p_purchase_id: id },
+      );
+      if (!active) return;
+      if (correctionError) {
+        setMessage((current) =>
+          [current, `Correction history unavailable: ${correctionError.message}`]
+            .filter(Boolean)
+            .join(" "),
+        );
+        setCorrections([]);
+      } else {
+        setCorrections(correctionRows || []);
+      }
+
       setBusy(false);
     }
     load();
@@ -74,7 +95,7 @@ export default function PurchaseDetails() {
       const pack = resolveInvoiceUnitsPerCase(item, null);
       const cases = Number(item.caseCount || 0);
       const loose = Number(item.looseBottles || 0);
-      const strong = pack.source !== "DEFAULT_REVIEW" && cases > 0;
+      const strong = Boolean(pack.strong) && !pack.reviewRequired && cases > 0;
       return {
         description: item.description || "OCR line",
         cases,
@@ -112,8 +133,14 @@ export default function PurchaseDetails() {
   const productValue = Number(purchase.total || 0);
   const landedTotal = purchase.total_landed_cost == null ? productValue : Number(purchase.total_landed_cost || 0);
   const extractedTotal = ingestion?.extracted_total == null ? null : Number(ingestion.extracted_total);
-  const financialMatch = extractedTotal == null || Math.abs(extractedTotal - landedTotal) <= 1;
-  const unitMatch = ocrPackAudit.units == null || ocrPackAudit.units === postedUnits;
+  const unitEvidenceAvailable = ocrPackAudit.units != null;
+  const unitMatch = unitEvidenceAvailable && ocrPackAudit.units === postedUnits;
+  const packCorrections = corrections.filter((row) => {
+    const oldPack = Number(row?.old_values?.units_per_case || 0);
+    const newPack = Number(row?.new_values?.units_per_case || 0);
+    return Number(row?.quantity_delta || 0) !== 0 || (oldPack && newPack && oldPack !== newPack);
+  });
+  const packResolved = unitMatch || packCorrections.length > 0;
 
   return <div>
     <div className="page-heading">
@@ -130,56 +157,45 @@ export default function PurchaseDetails() {
     {message ? <div className="purchase-message">{message}</div> : null}
     {!ingestion ? <div className="purchase-message">No retained original invoice is linked to this purchase. Older/manual receipts may require the physical invoice for verification.</div> : null}
 
-    <section className="panel">
-      <div className="metric-grid four">
-        <div className="metric-card"><span>Purchase</span><strong>{purchase.purchase_number}</strong></div>
-        <div className="metric-card"><span>Supplier Invoice</span><strong>{purchase.invoice_number || "—"}</strong></div>
-        <div className="metric-card"><span>Invoice Date</span><strong>{purchase.invoice_date || "—"}</strong></div>
-        <div className="metric-card"><span>Status</span><strong>{purchase.status || "POSTED"}</strong></div>
-      </div>
-      <div className="metric-grid four" style={{ marginTop: 12 }}>
-        <div className="metric-card"><span>Posted Bottles</span><strong>{postedUnits}</strong></div>
-        <div className="metric-card"><span>OCR Expected Bottles</span><strong>{ocrPackAudit.units == null ? "Needs review" : ocrPackAudit.units}</strong></div>
-        <div className="metric-card"><span>Product Value</span><strong>{money.format(productValue)}</strong></div>
-        <div className="metric-card"><span>Landed / Invoice Total</span><strong>{money.format(landedTotal)}</strong></div>
-      </div>
-      <div className="metric-grid four" style={{ marginTop: 12 }}>
-        <div className="metric-card"><span>OCR Printed Total</span><strong>{extractedTotal == null ? "—" : money.format(extractedTotal)}</strong></div>
-        <div className="metric-card"><span>Financial Check</span><strong>{financialMatch ? "MATCH" : "REVIEW"}</strong></div>
-        <div className="metric-card"><span>Quantity Check</span><strong>{unitMatch ? "MATCH" : "REVIEW"}</strong></div>
-        <div className="metric-card"><span>Evidence</span><strong>{ingestion ? "Original retained" : "No linked image"}</strong></div>
-      </div>
-      {!financialMatch || !unitMatch ? (
-        <div className="purchase-message" style={{ marginTop: 14 }}>
-          REVIEW REQUIRED: posted receipt does not match the retained OCR evidence. Do not silently edit historical inventory; use an audited correction/reversal workflow.
-        </div>
-      ) : null}
-    </section>
+    <PurchaseVerificationEngine
+      purchase={purchase}
+      ingestion={ingestion}
+      postedUnits={postedUnits}
+      ocrPackAudit={ocrPackAudit}
+      corrections={corrections}
+      viewOriginal={viewOriginal}
+    />
 
-    <section className="panel" style={{ marginTop: 16 }}>
+    <section id="posted-purchase-lines" className="panel verification-target" style={{ marginTop: 16 }}>
       <h3>Posted Purchase Lines</h3>
-      <div className="data-table-wrapper"><SortableTable className="data-table">
-        <thead><tr><th>Product</th><th>Cases</th><th>Bottles/Case</th><th>Loose</th><th>Final Bottles</th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Line Value</th></tr></thead>
+      <div className="data-table-wrapper"><SortableTable className="data-table" resizeKey="purchase-verification-posted-lines" defaultColumnWidths={[220,90,90,120,85,105,105,120,120,125]}>
+        <thead><tr><th>Product</th><th>Size (ml)</th><th>Cases</th><th>Bottles/Case</th><th>Loose</th><th>Final Bottles</th><th>Price/Bottle</th><th>Batch</th><th>Expiry</th><th>Line Value</th></tr></thead>
         <tbody>
           {(purchase.purchase_items || []).map((item) => <tr key={item.id}>
             <td>{productById[item.product_id]?.name || item.product_id}</td>
+            <td>{productById[item.product_id]?.sizeMl || "—"}</td>
             <td>{item.case_count ?? 0}</td>
             <td>{item.units_per_case ?? 1}</td>
             <td>{item.loose_bottles ?? 0}</td>
             <td><strong>{item.quantity}</strong></td>
             <td>{money.format(Number(item.purchase_price || 0))}</td>
             <td>{item.batch_number || "—"}</td>
-            <td>{item.expiry_date || "—"}</td>
+            <td>{formatDateIN(item.expiry_date)}</td>
             <td>{money.format(Number(item.line_total || 0))}</td>
           </tr>)}
         </tbody>
       </SortableTable></div>
     </section>
 
-    {ocrPackAudit.rows.length ? <section className="panel" style={{ marginTop: 16 }}>
+    {ocrPackAudit.rows.length ? <section id="ocr-evidence" className="panel verification-target" style={{ marginTop: 16 }}>
       <h3>OCR Evidence Used for Physical Cross-check</h3>
-      <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Uncertain pack inference remains visibly marked for review.</p>
-      <div className="data-table-wrapper"><SortableTable className="data-table">
+      <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Old OCR is not rewritten after a stock correction.</p>
+      {!unitEvidenceAvailable && packResolved ? <div className="verification-guidance verification-guidance--neutral">
+        <strong>Historical information only.</strong> Original OCR could not prove Bottles/Case. The business pack state is already resolved through the audited correction.
+      </div> : !unitEvidenceAvailable ? <div className="verification-guidance verification-guidance--review">
+        <strong>Action required:</strong> OCR could not prove Bottles/Case and no audited pack resolution exists yet.
+      </div> : null}
+      <div className="data-table-wrapper"><SortableTable className="data-table" resizeKey="purchase-verification-ocr-evidence" defaultColumnWidths={[260,90,150,135,125,125,130]}>
         <thead><tr><th>OCR Description</th><th>Cases</th><th>Pack Hint</th><th>Expected Bottles</th><th>Rate/Case</th><th>Amount</th><th>Batch OCR</th></tr></thead>
         <tbody>{ocrPackAudit.rows.map((row, index) => <tr key={index}>
           <td>{row.description}</td>
@@ -193,7 +209,9 @@ export default function PurchaseDetails() {
       </SortableTable></div>
     </section> : null}
 
-    <section className="panel" style={{ marginTop: 16 }}>
+    <PurchaseCorrectionPanel purchase={purchase} products={products}/>
+
+    <section id="landed-cost-adjustments" className="panel verification-target" style={{ marginTop: 16 }}>
       <h3>Landed-cost Adjustments Posted</h3>
       <div className="metric-grid four">
         <div className="metric-card"><span>Freight</span><strong>{money.format(Number(purchase.freight_amount || 0))}</strong></div>

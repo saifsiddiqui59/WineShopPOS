@@ -7,6 +7,7 @@ This is the canonical current-state reference.
 Old Chapters 1–26 remain implementation history and must not be used as the
 current architecture/pending-work source without verification against current
 source, migrations and deployment state.
+
 ## Current application
 
 WineShopPOS is an existing React/Vite production POS application.
@@ -25,6 +26,7 @@ Current architecture/direction includes:
 - Azure Blob static hosting
 - Azure Document Intelligence OCR where configured
 - production AI Owner Assistant
+
 ## Existing functional areas
 
 The application has progressed substantially beyond the early MVP.
@@ -67,6 +69,7 @@ Existing/developed areas include:
 
 A V2 feature must be checked against the current implementation before it is
 treated as new development.
+
 ## Core business rules
 
 ```text
@@ -88,6 +91,7 @@ Backend authorization and RLS are authoritative.
 
 The browser never decides tenant authorization.
 ```
+
 ## Current verified production AI
 
 Status:
@@ -166,6 +170,7 @@ has been applied.
 
 The legacy East US Foundry resource named `wineshoppos-ai-1a61d5885c` is not
 the production Foundry environment and is cleanup-only after dependency review.
+
 ## AI observability and next quality milestone
 
 Foundry server-side tracing infrastructure is configured:
@@ -191,6 +196,7 @@ After trace ingestion is verified, the next AI quality work is:
 - monitoring/dashboarding
 
 AI failure must never break core POS availability.
+
 ## V2 feature program
 
 V2 requests include:
@@ -299,17 +305,59 @@ Customer Help access is intentionally simple:
   clickable table of contents;
 - legacy `#/help` navigation redirects to Account → Help / About instead of
   rendering a separate Help category page.
+
+## V3 API Automation Integration
+<!-- V3_API_AUTOMATION_20260831 -->
+V3 is isolated on branch `V3`; main is not merged. Private per-shop invoice storage, `invoice_ingestions`, duplicate protection, standalone invoice API, automation Edge Function and Invoice Inbox are deployed/previewed. Existing manual OCR and Receive Stock remain authoritative. Preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/`. Gmail Email ingestion is NOT DEPLOYED because a real OAuth-authorized Gmail connection is required; the failed unauthorised connection design was removed.
+
+### V3 Email automation current state (20260831T123139Z)
+V3 Email invoice automation is deployed on branch `V3`. Gmail uses a dedicated App Password kept only in Azure Function settings. Unread PDF/JPEG/PNG invoices from a registered EMAIL channel are polled every 5 minutes, deduplicated, stored in private Blob, OCR-processed, and routed to Invoice Inbox. Inventory remains unchanged until a human completes Receive Stock. WhatsApp V3-01B is preserved but ON HOLD.
+
+### Demo-ready production state (20260831T160407Z)
+V3 invoice reliability plus the demo fixes are deployed to the production static site. The invoice Email Function is 64-bit; Gmail IMAP and SMTP health passed; registered senders receive >4 MB rejection feedback; barcode handling was normalized/tolerance-tested; and ADMINs have a controlled whole-shop operational Demo/Test Data Reset. Production URL: https://wineshoppos.z29.web.core.windows.net/. Logic App remains every 5 minutes for acceptance testing; lowering recurrence for cost is a future task.
+
+### V3-02 local validated patch (20260831T182936Z)
+Feature `0bc8d8db4e0fadfe2cb5a942bc0d40de2e9a7310`: invoice financial-summary reconciliation/landed-cost auto-fill, Gmail receipt acknowledgement (up to 1 hour expectation), optional auto-filled supplier invoice/reference, and required-field star UX. First-row case logic intentionally unchanged. Build/lint/finance smoke passed locally. Deployment and push are pending explicit instruction.
+
+### V3-03 local verified state (20260831T193701Z)
+Feature `ce1c14c8772fdb024f346b64a3aa8c278da9f2c5` hardens invoice finance-row matching/final-total selection, adds a large mismatch popup, recovers OCR MRP from invoice tables, and improves Bulk Product Import Brand/Category prefilling. Quantity/case logic is unchanged. Build/lint and finance/product-prefill smoke tests passed. Deployment/push pending.
+
+### V3-03B production state (20260831T195134Z)
+V3-03 finance/product-prefill improvements and Bulk Product Import scanner capture are deployed to preview and production. Barcode feature `94e65616a4df66148dfcf1e9d8da13f6c7970d53` fixes the flash-then-blank input behavior. Logic App `wsp-v3-email-scheduler-53b6e9a1` is intentionally Disabled until testing resumes.
+
+### V3-02/V3-03 production clarification
+The V3-02 Email receipt acknowledgement ("received; allow up to 1 hour to reflect"), >4 MB rejection feedback, invoice finance UX, barcode capture and the other previous-build features are already in the production/main baseline. The Email Logic App is intentionally Disabled after testing; that pause does not remove deployed Email code.
+
+### V3-04 production state (20260901T055315Z)
+Feature `7340fac6604d9e0e6281dd7c82070ffb818d4c9f` passed synthetic tests plus a live Azure Document Intelligence regression using the supplied METRI SPIRITS invoice before deployment was allowed. Semantic-table-first liquor OCR, review-safe Batch/MRP handling, validated case derivation, 6-decimal unit-cost precision and FIFO SELL FIRST/BOX guidance are deployed. METRI normalized total: ₹148,132 with MATCH reconciliation. Logic App remains Disabled.
+
+## V3-05 FINAL END-TO-END
+V3-05 consolidates OCR evidence/review reliability, durable invoice routing, POS/scanner state reliability, receipt verification, forward FIFO sale allocation/COGS snapshots, and protected Admin Product Cleanup. The V3 preview, both OCR Edge Functions, and the V3-05 FIFO/Product Cleanup migration are deployed. Production static frontend remains pending final preview acceptance.
+
+## V3-06 friendly invoice workflow
+
+Invoice Inbox now uses business-friendly labels while preserving database workflow values. The actual Owner AI app knowledge source also contains the same semantics. A Playwright read-only E2E smoke framework is included.
+
+This local V3 change does not by itself deploy the production Owner AI Function.
+
+## V3-07 PGRST303 login resilience
+
+The login reliability fix now handles an observed Supabase/PostgREST transient `PGRST303: JWT issued at future` condition with bounded retry/backoff. This is separate from the original frontend null-profile/false-disabled bug.
+
 ## V3-07 hosted preview verification — 20260901T140823Z
 
 V3-07 passed five sequential hosted login/no-refresh checks and the full hosted read-only Playwright suite on the V3 preview. Production promotion remains a separate explicit step.
+
 ## V3-07 production AI complete — 20260901T143945Z
 
 Production Owner AI is verified after V3-07 deployment. Health is passing and authenticated SHOP-scope app-help successfully uses the `/login` knowledge route. The verification continuation fixed only a Git Bash CRLF issue in its local Azure-CLI parsing; no database or local-main mutation occurred.
+
 ## Production AI trace ingestion verified
 
 A fresh authenticated production Owner AI interaction produced qualifying AI/Foundry telemetry in the dedicated Application Insights / Log Analytics observability path. Trace ingestion is now verified end to end.
 
 The next AI milestone is evaluation engineering: golden dataset, deterministic tool/scope/security checks, LLM quality evaluators, release gates, and monitoring/alerting.
+
 ## AI-09 golden dataset and quality gates
 
 Production trace ingestion is verified. Evaluation engineering now has a versioned golden dataset and deterministic release-gate policy.
@@ -473,8 +521,227 @@ For the immediate demo, the approved Rajasthan-inspired fort SVG occupies the ce
 ## 2026-09-02 — Exact supplied Royal 21 banner
 The center header now uses the user's supplied Rajasthan fort/crown/Royal 21 artwork itself, cropped only to remove unused vertical black space for header fit. The previous rotating crown/name/ornament UI remains mounted but visually hidden. No React/business logic was changed.
 
-## Versioned production-delta history
+<!-- PRODUCT_MASTER_OCR_PREVIEW_V1 -->
+## 2026-09-02 — V3 preview: Product Master/OCR usability fixes
+Preview-only V3 change set; not promoted to production main.
+- Product Master list shows MRP between Purchase and Selling.
+- Product Name column is wider with stronger readable typography and balanced widths.
+- Single-product OCR onboarding forwards inferred Size (ml), OCR MRP and default Selling = MRP + ₹15.
+- Bulk OCR resolves size from structured size evidence first, then ml/cl/l product/package text, and defaults Selling = MRP + ₹15.
+- Selling remains editable; a customized Selling value is not overwritten by later MRP edits.
+- Product edit drafts survive background Product Master refresh.
+- Preview deployment is isolated at `/v3-preview/`; production main/root remains unchanged.
 
-Later workstreams sometimes used V3-origin labels before formal V3 promotion.
-Only changes actually deployed/verified in current production are retained as V2 PROD deltas.
-See `docs/versions/v2/releases/prod-deltas/`.
+<!-- PREVIEW_CURATED_7_PRODUCT_IMAGES_V4 -->
+## 2026-09-02 — V3 preview curated images for current seven products
+The seven currently active Royal 21 demo products have preview-only product-image fallbacks keyed primarily by barcode. Existing Supabase-uploaded product images retain first priority; a curated fallback is used only when `imageUrl` is empty. This avoids changing the existing product-image upload/storage workflow.
+
+Current preview mappings cover:
+- Carlsberg Elephant Strong 650 ml bottle
+- Carlsberg/Cartsberg Elephant Strong 500 ml can
+- Tuborg Classic with Scotch Malts 650 ml bottle
+- Tuborg Classic with Scotch Malts 500 ml can
+- Tuborg Strong 650 ml bottle
+- Tuborg Strong 500 ml can
+- Tuborg Strong 330 ml bottle
+
+The exact supplied Rajasthan/Royal 21 center banner remains the header source and receives only subtle background pan/glow/light-sweep motion. Existing WineShop POS animation remains unchanged.
+
+These are preview/reference images. Before commercial production promotion, replace any third-party demo image with a supplier/manufacturer-approved asset using the existing Product Image upload provision.
+
+<!-- V5A_RESPONSIVE_RESIZABLE_PREVIEW_20260902 -->
+## 2026-09-02 — V5-A responsive shell, resizable Product Master columns, preview isolation
+V3 preview only. The application shell now adapts across desktop, laptop, tablet and phone widths. Mobile navigation becomes an off-canvas drawer instead of permanently consuming a 72px rail. Page/panel/grid sizing is constrained to the viewport, while data-heavy tables keep safe horizontal scrolling.
+
+Product Master uses the shared SortableTable resizing capability. Users can drag header dividers, widths persist in browser localStorage, and Reset column widths restores defaults. Sorting remains available.
+
+The `/v3-preview/` build no longer registers its own service worker. It may unregister an old service worker only when that registration's scope is already `/v3-preview/`; it never unregisters the production-root registration. Production service-worker cache cleanup is also restricted to WineShopPOS-owned cache keys.
+
+Manual authenticated UAT is still required at 1920×1080, 1536×864, 1366×768, 1024×768, 768×1024 and 390×844 before production promotion.
+
+
+<!-- MANDATORY_EXECUTOR_FAILURE_REGISTER_PRE_READ_20260902 -->
+## Mandatory executor failure-register pre-read
+Before creating or running any WineShopPOS patch/executor/continuation, read `docs/RELEASE_EXECUTOR_FAILURE_REGISTER.md` from the current target branch in full. Reuse its verified resolutions for Git safety, Windows/Git Bash path conversion, authentication mode, CLI behavior, dependency/library issues, Vite environment injection, preview/production isolation and verification labeling. A new failure must be recorded in that register before the next continuation is created.
+
+<!-- V5A1_ONE_SIDED_COLUMNS_RESPONSIVE_REFINEMENT_20260902 -->
+## 2026-09-02 — V5-A.1 table and viewport refinement
+V3 preview locks all measured table widths at resize start. Dragging the right edge of a column changes only that column width; the selected column's left edge and every earlier boundary remain fixed. Responsive ownership was refined so the existing fixed desktop sidebar and main-area offset do not compete with a second width calculation. Manual visual UAT remains required.
+
+<!-- V5B_PURCHASE_CORRECTION_OCR_PACK_SAFETY_20260902 -->
+## 2026-09-02 — V5-B completed purchase correction and OCR pack safety
+V3 adds an audited completed-purchase-line correction workflow. The supplier line value is immutable; correcting Cases/Bottles-per-Case/Loose recalculates final bottles and the internal per-bottle/base/landed unit costs. Inventory and the unconsumed FIFO receipt lot move in the same transaction and a STOCK_CORRECTION movement plus audit/correction-history record is written. Simple correction is blocked after any unit from that receipt lot has been consumed.
+
+Packaging heuristics are suggestions, not truth: CAN of any size suggests 24/case; glass/bottle/beer under 500 ml suggests 24/case; large beer 501–750 ml suggests 12/case. Printed bottle-total evidence is stronger. Existing Product Master stays authoritative for known products, and conflicts require review/confirmation before Receive Stock.
+
+Purchase Price/Bottle user input is restricted to 2-decimal entry/display behavior; internal FIFO landed cost may retain 6-decimal precision.
+
+<!-- V5C_PURCHASE_VERIFICATION_FIFO_TABLE_USABILITY_20260903 -->
+## 2026-09-03 — V5-C verification/FIFO table usability
+Unknown retained OCR pack evidence is now REVIEW, not a quantity MATCH. Financial variance is shown explicitly. Purchase/correction views show Size (ml). Purchase verification/correction, Ageing and FIFO tables opt into persisted right-edge-only resizing. True Receipt Ageing shows friendly Box Mark and keeps the technical lot in a tooltip; FIFO labels the raw value Technical Lot.
+
+<!-- V5D_ACTIONABLE_VERIFICATION_FRIENDLY_FIFO_20260903 -->
+## 2026-09-03 — V5-D actionable verification + friendly FIFO receipt references
+Purchase Verification separates historical OCR evidence from resolved business state. OCR evidence may remain amber/unconfirmed; Pack Resolution becomes green when strong OCR agrees or an audited pack correction exists. Status tiles are clickable and navigate to posted lines, OCR evidence, financial reconciliation or correction history.
+
+Financial Reconciliation displays Product Value + Freight + Transport/Handling - Discounts + Misc/Round = WineShopPOS Landed Total, then compares OCR Printed Total and shows the unreconciled difference. V5-D never silently changes a received financial total.
+
+Ageing/FIFO primary human lot label is Receipt Ref derived from supplier first token + receipt date in DD/MM form, e.g. METRI-02/09. Technical database lot remains unchanged and is available in the tooltip.
+
+<!-- V5E_HYBRID_VERIFICATION_ENGINE_20260903 -->
+## 2026-09-03 — V5-E
+V5-E hybrid purchase verification: Active Exceptions + Resolution State + Historical Evidence. Amber only for open actions; green for resolved; historical OCR neutral. Financial verification decisions are audited separately and never mutate purchase totals, inventory, FIFO or OCR. Defaults: ₹1 auto tolerance, ₹10 manager-review threshold. Technical FIFO lot removed from normal UI.
+
+<!-- V5F_PRODUCT_MASTER_FIRST_EXTERNAL_ENRICHMENT_20260903 -->
+## 2026-09-03 — V5-F Product Master-first external enrichment
+Invoice OCR resolution order is Product Master -> learned OCR alias -> external enrichment only when unresolved/uncertain. resolve_product_master_text adds size-aware scoring. Human-confirmed OCR mappings use audited remember_product_alias.
+
+product-enrichment is a JWT-protected Supabase Edge Function. UPCitemdb performs text discovery to obtain barcode candidates; top barcode candidates are enriched from Open Food Facts. Results are suggestions only, cached per shop/query for 30 days, and never mutate Product Master or stock automatically.
+
+Find Product Info appears only on unresolved/uncertain OCR lines. If an external candidate barcode already exists locally, WineShopPOS links the existing Product Master product instead of creating a duplicate. External images are reference previews only.
+
+<!-- V5G_OWNER_CENTER_QUALITY_20260903 -->
+## 2026-09-03 — V5-G Owner Center quality pass
+Owner Center now consumes `loss_control_exceptions_v3`, which excludes a stock movement from active Loss & Exceptions only when it is strictly proven to be the same audited purchase correction (purchase/product/quantity/timestamp/reason all match). Generic STOCK_CORRECTION activity remains reviewable.
+
+`loss_control_resolved_activity_v1` exposes those legitimate purchase corrections in a separate green Resolved / Audited Activity section with a direct purchase link. The Owner Overview also uses the corrected active feed.
+
+Profit Intelligence SKU Profitability enables persisted one-sided column resizing. Recommendations gains explicit lookback/refresh. WhatsApp Summary gains refresh/copy while sending remains manual.
+
+The top header shop control is restored to the compact shop-name selector treatment. The WineShopPOS sidebar animation is untouched and Royal21 assets are retained.
+
+<!-- V5G1_INVENTORY_RESIZE_20260903 -->
+## 2026-09-03 — V5-G.1 Inventory Current Stock column resizing
+Inventory > Current Stock now opts into the existing one-sided persisted SortableTable resize engine using `resizeKey="inventory-current-stock-v1"`. No inventory logic, stock adjustment workflow, database schema, FIFO or Owner Center logic changed.
+
+<!-- V5H_FAST_POS_AND_HEADER_FIX_20260903 -->
+## 2026-09-03 — V5-H Fast POS register + premium header correction
+The accidental compact Royal 21 shop-name pill from V5-G is removed. Premium Royal 21 shops again use the established full center RoyalHero lockup and invisible shop-switch layer. Existing Royal animation CSS, user crown asset, topbar background effects and WineShopPOS sidebar animation are not modified by V5-H.
+
+Fast POS Billing adopts a Square-inspired retail-register interaction model while preserving WineShopPOS transaction logic: large scan/search dock, category/quick-product tiles, one-tap item add, sticky current-sale panel, compact quantity/price controls, collapsible Customer & Offers, prominent amount-to-collect and CASH/UPI/CARD actions.
+
+The existing barcode handler, stock guard, session cart persistence, customer/loyalty/store credit/gift voucher quote, price/discount approval, offline-sale support, auto print and completeSale backend flow remain in place.
+
+Inventory Current Stock resizing was already committed on V3 before V5-H (`resizeKey=inventory-current-stock-v1`); V5-H rebuilds and redeploys current V3 so that change reaches preview.
+
+## V5-F.1 rebuilt OCR/enrichment UAT correction — 2026-09-03
+
+- Single exact normalized supplier match auto-confirms.
+- Product Master line resolution runs in parallel after supplier confirmation.
+- OCR stage timing is visible for diagnosis.
+- Zero product-line difference uses a concise success message.
+- Weak Product Master candidates are not presented as reliable matches.
+- `Search Product Catalogue` moved into Product Resolution.
+- Live `product-enrichment` version 6 keeps JWT verification, cache version 2, UPCitemdb 404-as-no-match, and independent Open Food Facts search.
+- Raw provider HTTP errors are not user-facing catalogue results.
+- No-result catalogue flow offers OCR-prefilled product creation.
+- OCR creation passes inferred brand/category and uses `Other` rather than incorrectly defaulting OCR products to Whisky.
+- Single create/return records the actual new Product Master item as the linked row.
+- Confirm Line visibly reports alias learning.
+- Inventory search restored.
+- Global resize instruction removed and `Sr. No.` made resizable.
+- No Receive Stock, inventory, FIFO, sales, Logic App or Azure AI mutation is part of this patch.
+
+## V3 V5-F.2 — Generated Alias Fix + Global Error Dialog (2026-09-03)
+
+- UAT exposed `cannot insert a non-DEFAULT value into column "normalized_alias"` during Invoice OCR **Confirm Line**.
+- Root cause: `public.product_aliases.normalized_alias` is a PostgreSQL `GENERATED ALWAYS` column, while `remember_product_alias()` attempted to insert a manual value.
+- V5-F.2 is forward-only: the prior migration is not rewritten. A new migration replaces `remember_product_alias()` and omits `normalized_alias` from INSERT/UPDATE operations.
+- Product Master resolution itself was not the failure and must not be weakened or rewritten for this bug.
+- Application-wide error UX rule introduced:
+  - normal success/info/user validation may remain inline;
+  - database/API/runtime/system failures must use the reusable Global Error Dialog;
+  - dialog provides readable error text, Close button, X control, Esc close and responsive overlay;
+  - global listeners also surface unhandled browser errors and unhandled promise rejections.
+- Invoice OCR technical catches now route through the Global Error Dialog.
+- Inventory is not changed by Confirm Line alias learning.
+- UAT must re-test V5F-001/V5F-002 Confirm Line after the migration is applied to the intended V3 environment.
+
+<!-- V5F2_PREVIEW_RECOVERY_VERIFIED_20260903 -->
+## V5-F.2 PREVIEW RECOVERY VERIFIED 2026-09-03
+
+- V3 source SHA deployed: `b256cbd12ef1fa2b3e213f2db063b5d9f9623585`.
+- Supabase migration `20260903114500` was already applied and was not re-applied.
+- Prior Azure `--auth-mode login` preview upload failure was resolved with the failure-register-approved account-key path; the key was never printed and was unset after use.
+- V3 preview is isolated at `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/` under `/v3-preview/`.
+- Local and remote preview `index.html` SHA-256 matched: `66c84836237b568267d70d769b785989f4e198421e45bea572cfe9b898834b6c`.
+- Exact JS/CSS paths were verified under `/v3-preview/assets/`; no Git-Bash/MSYS Windows path contamination was present.
+- Production storage account `wineshoppos` was not deployed.
+- Global Error Dialog + Confirm Line alias fix are now present in the V3 preview build.
+- Inventory/Receive Stock was not intentionally changed by this continuation.
+- Manual authenticated UAT remains required for Confirm Line behavior.
+
+## V5-F.3 CANCELLED REVIEW RECOVERY — 2026-09-03
+
+- Cancel Review preserves the original invoice and does not receive stock.
+- CANCELLED is a recoverable review state.
+- Re-analyzing the identical cancelled PDF reuses the existing ingestion.
+- The frontend calls `invoice_reopen_review` before OCR so cancellation reason/time/user are cleared.
+- Invoice Inbox → Reopen Review remains the preferred continuation path.
+- READY_TO_RECEIVE / RECEIVED / COMPLETED remain protected from duplicate processing.
+
+## V5-F.3 CANCELLED REVIEW PREVIEW VERIFIED — 2026-09-03
+
+- Source commit: `b9ba27434da25c751a0b0ed9b9ec1bd5236688c1`
+- Preview URL: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+- Deployed index SHA-256: `89adf94e26c994b66109a3a0357e6636d314bfbe7deaeeb082f922fdf08aa545`
+- Cancelled same-file re-analysis reuses the existing ingestion and calls `invoice_reopen_review`.
+- Production frontend storage was not deployed.
+
+## V5-G CONSOLIDATED PAGE/DATA CLEANUP — 2026-09-03
+
+Supplier duplicates are merged/prevented; invoice dates use/display DD/MM/YYYY; Stock Count shows live baseline before a session; Product Master and Inventory stay separate in the database but are combined in Inventory operational UI; SortableTable layout fills panels; Purchase Intelligence no longer embeds OCR; all routed page modules are source-audited plus full src lint/build.
+
+## V5-G VERIFIER RECOVERY + PREVIEW VERIFIED — 2026-09-03
+
+- Source containing V5-G implementation: `91f815a99f7454eabf47eee2bdab46f5ff5c1d0e`
+- Migration `20260903193000` was already applied by the prior run and was NOT reapplied.
+- `ocr-invoice` was already deployed by the prior run and was NOT unnecessarily redeployed.
+- Live DB verification uses one SQL result set and confirms:
+  - duplicate normalized supplier groups = 0;
+  - METRI normalized supplier rows = 1;
+  - normalized supplier unique index = present;
+  - UAT-V5F-001 invoice date = 2026-09-03;
+  - UAT-V5F-002 invoice date = 2026-09-03.
+- V5-G route/regression/full-src lint gates passed.
+- V3 preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+- Preview index SHA-256: `c0de056959a1ab7d09499b28f1dbcc9dc710f5210693ba8f22115395e42536d0`
+- Production frontend storage `wineshoppos` was not deployed.
+- Authenticated visual page-by-page UAT remains a separate manual verification step.
+
+## V5-H POS SHIFT + MOBILE + TEST CLEANUP — 2026-09-03
+
+Planned/implemented together:
+- app-wide responsive/mobile hardening;
+- POS Scanner tab/button removed while scanner support remains under Admin Hardware;
+- POS blocks all billing until the current user has an open shift;
+- Start Shift dialog accepts Opening Cash and calls the existing `open_shift` RPC;
+- database trigger independently requires a valid shift for every completed sale and historical offline sync;
+- Product and Inventory remain separate backend concepts but are integrated operationally in Inventory;
+- authorized V5-F test product/purchase/invoice/stock/alias/count evidence is purged with strict safety preconditions;
+- the two original V5-F Azure invoice blobs are deleted by the executor after the DB transaction.
+
+## V5-H5 VERIFIED-SCHEMA RECOVERY — 2026-09-04
+- POS remains scan-first.
+- Physical Stock Count now has POS-style Scan/Search.
+- Search fallback covers barcode, SKU, name, brand, category, subcategory and size.
+- Each scanner event ID is consumed once.
+- Search is limited to the active count snapshot.
+- DB stock_count_scan rejects products outside that snapshot.
+- Live audit_logs.old_data/new_data are verified present and retained in the cleanup.
+- V5-H migration is corrected against current live schema before first application.
+
+## V5-H5 VERIFIED — 2026-09-04
+- Source commit: `7cdc5cd616b68445978939b6638d40a31b548f2e`
+- Migration `20260903195500`: remote and verified.
+- POS scan-first behavior preserved.
+- Physical Stock Count Scan/Search deployed with one-scan/one-count guard.
+- Search fallback: barcode, SKU, name, brand, category, subcategory, size.
+- Stock Count RPC rejects products outside the active snapshot.
+- Universal completed-sale shift trigger is active.
+- Authorized V5-F HEINEKEN test product/purchase/invoice rows are absent.
+- Exact two V5-F Azure invoice evidence blobs are absent.
+- V3 preview: `https://wspv35c9453b6e9a1.z29.web.core.windows.net/v3-preview/`
+- Preview index SHA-256: `90ed3aef21dfa9fe8829213aaac1debf8d7ac46f8d9ded9a180a6e5e5c119e1a`
+- Production frontend was not deployed.
+- Manual authenticated Stock Count/POS visual UAT remains pending.
