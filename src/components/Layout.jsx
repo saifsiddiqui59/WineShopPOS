@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { ChevronRight, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import OfflineStatus from "./OfflineStatus";
+import SaaSBanner from "./SaaSBanner";
 import ShopSelector from "./ShopSelector";
 import UserMenu from "./UserMenu";
 import AnimatedBrand from "./AnimatedBrand";
@@ -135,6 +136,7 @@ export default function Layout() {
         <div className="topbar-shop-hero"><ShopSelector/></div>
         <div className="topbar-actions"><OfflineStatus/><UserMenu/></div>
       </header>
+      <SaaSBanner/>
       <div className="page-area"><Outlet/></div>
     </main>
   </div>;

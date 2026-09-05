@@ -180,6 +180,7 @@ export function AuthProvider({ children }) {
 
   async function signOut() {
     localStorage.removeItem(CACHE_KEY);
+    sessionStorage.removeItem("wineshoppos_demo_workspace_v1");
     await supabase.auth.signOut();
   }
 

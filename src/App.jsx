@@ -4,6 +4,10 @@ import ModuleLayout from "./components/ModuleLayout";
 import RequireAuth from "./components/RequireAuth";
 import RequireRole from "./components/RequireRole";
 import HomeRedirect from "./components/HomeRedirect";
+import SaaSAccessBoundary from "./components/SaaSAccessBoundary";
+import RequirePlatformAdmin from "./components/RequirePlatformAdmin";
+import DemoWorkspace from "./pages/DemoWorkspace";
+import PlatformAdmin from "./pages/PlatformAdmin";
 import { MODULE_TABS } from "./config/navigation";
 
 import Login from "./pages/Login";
@@ -61,7 +65,10 @@ export default function App() {
     <Route path="/login" element={<Login/>}/>
 
     <Route element={<RequireAuth/>}>
-      <Route element={<Layout/>}>
+      <Route element={<SaaSAccessBoundary/>}>
+        <Route path="demo" element={<DemoWorkspace/>}/>
+        <Route element={<RequirePlatformAdmin/>}><Route path="platform-admin" element={<PlatformAdmin/>}/></Route>
+        <Route element={<Layout/>}>
         <Route index element={<HomeRedirect/>}/>
         <Route path="account" element={<Account/>}/>
         <Route path="help" element={<Navigate to="/account?tab=about" replace/>}/>
@@ -169,6 +176,7 @@ export default function App() {
         <Route path="settings" element={<Navigate to="/admin/settings" replace/>}/>
 
         <Route path="*" element={<HomeRedirect/>}/>
+        </Route>
       </Route>
     </Route>
   </Routes>;

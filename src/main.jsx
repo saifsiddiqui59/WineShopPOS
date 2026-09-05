@@ -4,6 +4,7 @@ import { HashRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { ShopProvider } from "./context/ShopContext";
+import { SaaSProvider } from "./context/SaaSContext";
 import { ScannerProvider } from "./context/ScannerContext";
 import { GlobalErrorProvider } from "./context/GlobalErrorContext";
 import "./index.css";
@@ -53,9 +54,11 @@ createRoot(document.getElementById("root")).render(
     <HashRouter>
       <GlobalErrorProvider>
         <AuthProvider>
-          <ScannerProvider>
-            <ShopProvider><App/></ShopProvider>
-          </ScannerProvider>
+          <SaaSProvider>
+            <ScannerProvider>
+              <ShopProvider><App/></ShopProvider>
+            </ScannerProvider>
+          </SaaSProvider>
         </AuthProvider>
       </GlobalErrorProvider>
     </HashRouter>
