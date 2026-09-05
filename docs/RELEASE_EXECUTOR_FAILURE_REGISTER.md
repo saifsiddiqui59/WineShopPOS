@@ -928,3 +928,33 @@ legitimate modified test file in the working tree.
 - When a verifier fails after a write, resume from the known partial state
   instead of replaying the mutation.
 - Require exact dirty-path classification before continuation.
+
+<!-- V3_TO_PROD_V4_REQUIRED_RELEASE_KNOWLEDGE_20260905 -->
+## V3 -> PROD completion addendum — mandatory V4 reference
+
+The V3 production promotion exposed additional release-mechanism failures after
+the earlier entries in this register. Full chronology and prevention rules:
+
+- `docs/versions/v3/releases/V3_TO_PROD_RELEASE_RETROSPECTIVE_2026-09-05.md`
+- `docs/shared/release/END_TO_END_RELEASE_TESTING_AND_PROMOTION_PLAYBOOK.md`
+
+V4+ executors must read both before writing or deploying.
+
+Critical added lessons:
+- reconcile live migration history; never blindly replay repo migrations;
+- verify backup tooling before PROD writes; targeted rollback is not full DR;
+- prefer isolated release checkout over forcing a dirty PROD worktree clean;
+- bootstrap locked Playwright/browser tooling before PROD writes;
+- validate PROD E2E credentials before Git promotion;
+- avoid unsupported `git grep -x`, MSYS path rewriting, native Python POSIX
+  paths, fragile `npx.cmd` spawning, CRLF-sensitive exact matching and
+  locale-sensitive `comm`;
+- with `set -u`, literal `$web` must be escaped/single-quoted;
+- known Azure Blob RBAC failure must use the established safe auth mechanism
+  or a least-privilege OIDC/RBAC replacement; do not rediscover it mid-release;
+- run staged whitespace checks before build and rebuild after any correction;
+- no service delta means no redeploy; auth/config is part of service identity;
+- report Playwright counts separately from broader qualification counts;
+- evidence files are release artifacts and must be literal-safe/validated;
+- latest `main` is not proof of the currently deployed frontend: record
+  deployed source/artifact identity separately.

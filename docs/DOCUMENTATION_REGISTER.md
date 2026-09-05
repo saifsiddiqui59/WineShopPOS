@@ -13,8 +13,23 @@
 | `docs/versions/v2/` | PREVIOUS PROD GENERATION + PROD DELTA HISTORY |
 | `docs/versions/v1/` | HISTORICAL V1 |
 | `docs/shared/release/RELEASE_EXECUTOR_FAILURE_REGISTER.md` | CROSS-VERSION RELEASE FAILURE KNOWLEDGE |
+| `docs/versions/v3/releases/PROD_PROMOTION_2026-09-05.md` | VERIFIED V3->PROD PROMOTION EVIDENCE |
+| `docs/versions/v3/releases/V3_TO_PROD_RELEASE_RETROSPECTIVE_2026-09-05.md` | V3 RELEASE LESSONS / REQUIRED V4 INPUT |
+| `docs/shared/release/README.md` | CROSS-VERSION RELEASE DOCUMENT ENTRY POINT |
+| `docs/shared/release/END_TO_END_RELEASE_TESTING_AND_PROMOTION_PLAYBOOK.md` | REQUIRED V4+ E2E TEST/PROMOTION STANDARD |
 | `docs/backups/prod/` | VERIFIED PROD PRE-RESTRUCTURE BACKUP PROVENANCE |
 
 Compatibility files at legacy paths remain V3 branch references until the
 current V3 user/architecture/operations documents are fully migrated into the
 versioned tree.
+
+## V4 release documentation contract
+
+Before any V4 production executor or deployment is generated, read:
+
+1. the canonical shared failure register;
+2. the cross-version E2E release playbook;
+3. the V3->PROD retrospective;
+4. current Git/source/migrations/live deployment state.
+
+Do not infer deployed application identity from the latest `main` SHA alone.

@@ -70,9 +70,11 @@ No password is stored in this evidence.
 
 Azure Blob data-plane deployment used the project's existing verified Failure-Class-6 fallback:
 
+`--auth-mode key`
 
+This was required because the current Azure identity did not have the Storage Blob Data RBAC role needed for:
 
-This was required because the current Azure identity does not have the Storage Blob Data RBAC role needed for .
+`--auth-mode login`
 
 No Storage account key was printed, written to the repository, or recorded in release evidence.
 
@@ -106,6 +108,10 @@ byte-for-byte unchanged during this continuation:
 Pre-existing untracked paths preserved: `425`.
 
 No destructive Git cleanup was used.
+
+## Evidence-document correction
+
+The original generated Markdown lost the literal Azure auth-mode values because shell command substitution interpreted backtick-wrapped content. This documentation-only correction restores `--auth-mode key` and `--auth-mode login`; the production deployment result itself is unchanged.
 
 ## Final release state
 
