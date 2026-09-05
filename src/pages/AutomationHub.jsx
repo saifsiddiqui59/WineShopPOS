@@ -79,7 +79,17 @@ function chargesFromInvoice(invoice) {
     handlingAmount: Math.max(0, Number(invoice?.handlingAmount || finance?.handlingAmount || 0)),
     loadingUnloadingAmount: Math.max(0, Number(invoice?.loadingUnloadingAmount || finance?.loadingUnloadingAmount || 0)),
     supplierDiscountAmount: Math.max(0, Number(invoice?.supplierDiscountAmount || finance?.cashDiscountAmount || 0)),
-    invoiceDiscountAmount: Math.max(0, Number(invoice?.invoiceDiscountAmount || finance?.otherDeductionAmount || invoice?.discountAmount || 0)),
+    // A structured zero for otherDeductionAmount is meaningful. Do not let it
+    // fall through to generic discountAmount, which may be the same Cash Discount.
+    invoiceDiscountAmount: Math.max(
+      0,
+      Number(
+        invoice?.invoiceDiscountAmount ??
+          finance?.otherDeductionAmount ??
+          invoice?.discountAmount ??
+          0,
+      ),
+    ),
     miscellaneousAmount: Math.max(0, Number(invoice?.miscellaneousAmount || finance?.miscellaneousAmount || invoice?.otherCharges || 0)),
     roundingAdjustment: Number(invoice?.roundingAdjustment ?? finance?.roundingAdjustment ?? 0),
   };
