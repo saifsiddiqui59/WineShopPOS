@@ -1,58 +1,39 @@
 # WineShopPOS
 
-**Current product/documentation generation: V3**
+**Current branch generation: V4 (DEV / QA, not yet PROD)**
 
-WineShopPOS is an existing production multi-shop Wine Shop POS application
-covering POS, barcode scanning, payments, inventory, purchasing, receiving,
-returns, cashier operations, stock controls, owner intelligence, reporting,
-OCR/offline foundations and the production WineShopPOS AI Owner Assistant.
+WineShopPOS is an existing production multi-shop POS application. V4 extends
+the current product; it is not a rewrite.
 
-## Production
+## Environment rule
 
-`https://wineshoppos.z29.web.core.windows.net/`
+- `main` -> PROD only.
+- V4 and other non-main development branches -> DEV only.
+- PROD runtime/state, credentials and business data are never blindly copied
+  into a development version.
 
-## Current canonical documentation
+## Canonical documentation
 
-- `docs/PROJECT_CONTEXT.md`
-- `docs/handbook/WineShopPOS_Developer_Handbook_Master_Reconsolidation.md`
-- `docs/manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
-- `docs/AI_PRODUCTION_BASELINE.md`
-- `docs/DOCUMENTATION_REGISTER.md`
+Start with:
 
-## Chapter history
+1. `docs/CURRENT_VERSION`
+2. `docs/DOCUMENTATION_REGISTER.md`
+3. `docs/versions/v4/README.md`
+4. `docs/versions/v4/reference/FEATURE_TRACEABILITY_CORE.md`
+5. relevant architecture/security/testing/release records
+6. `docs/shared/release/` before promotion work
 
-Chapters 1–26 remain historical implementation records.
+## Global version inheritance rule
 
-V2 continues in the SAME chapter collection:
+Every new version inherits PROD's repository structure, coding conventions,
+documentation governance, testing structure, migration discipline, security
+controls, environment-isolation rules, and release/promotion workflow — while
+keeping its own version-specific code, migrations, DEV configuration, QA/UAT
+evidence and version documentation.
 
-- `docs/chapters/V2-01-current-production-baseline.md`
-- `docs/chapters/V2-02-discovery-feature-classification.md`
-- `docs/chapters/V2-03-inventory-cost-lots-ageing-fifo.md`
-- `docs/chapters/V2-04-controls-reasons-approvals.md`
-- `docs/chapters/V2-05-customer-commercial.md`
-- `docs/chapters/V2-06-purchase-intelligence.md`
-- `docs/chapters/V2-07-operations-accounting.md`
-- `docs/chapters/V2-08-reliability-security-hardware.md`
-- `docs/chapters/V2-09-ai-production-quality.md`
-- `docs/chapters/V2-10-full-application-qa-regression.md`
-- `docs/chapters/V3-01-api-automation-integration.md`
+PROD-only runtime/state items are not blindly copied.
 
-## Source-of-truth rule
+## Truth order
 
-```text
-CURRENT SOURCE + CURRENT MIGRATIONS + VERIFIED DEPLOYMENT
->
-OLD DOCUMENTATION
-```
-
-V2 means:
-
-```text
-EXTEND + VERIFY + FIX
-```
-
-not:
-
-```text
-REWRITE + DUPLICATE + HOPE
-```
+CURRENT SOURCE + CURRENT MIGRATIONS + VERIFIED LIVE ENVIRONMENT +
+VERIFIED TEST EVIDENCE > stale historical documentation.

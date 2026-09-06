@@ -1,0 +1,23 @@
+{
+  "lock_version": "2026-09-01-v1",
+  "dataset_version": "golden-owner-assistant-v1",
+  "dataset_path": "docs/ai/evaluation/golden-owner-assistant-v1.jsonl",
+  "gate_policy_path": "docs/ai/evaluation/quality-gates-v1.json",
+  "foundry_resource": "wineshoppos-ai-in-1a61d5885c",
+  "foundry_project": "wineshoppos-ai",
+  "agent_name": "WineShopPOS-Owner-Agent",
+  "model_deployment": "gpt-5-mini",
+  "model_version": "2025-08-07",
+  "evaluator_api_family": "azure-ai-evaluation",
+  "evaluator_set": [
+    "ToolCallAccuracyEvaluator",
+    "TaskAdherenceEvaluator",
+    "IntentResolutionEvaluator",
+    "GroundednessEvaluator",
+    "RelevanceEvaluator"
+  ],
+  "notes": [
+    "The exact Python package version will be pinned when AI-10 installs and executes the evaluator runner.",
+    "Do not compare evaluator runs across model/dataset/evaluator-version changes without recording a new lock version."
+  ]
+}

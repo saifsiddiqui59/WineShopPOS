@@ -1,0 +1,6 @@
+src/App.jsx:29:import Approvals from "./pages/Approvals";
+src/App.jsx:103:            <Route path="approvals" element={<Approvals/>}/>
+src/components/Layout.jsx:23:    count: "Stock Count", transfers: "Transfers", expenses: "Expenses", approvals: "Approvals",
+src/config/accessMatrix.js:12:  { capability: "Approvals", cashier: "NO", manager: "OPERATIONS", admin: "ALL", note: "Sensitive decisions remain manager/admin controlled." },
+src/config/navigation.js:50:    { path: "/operations/approvals", label: "Approvals", roles: ["ADMIN", "MANAGER"] },
+src/pages/Approvals.jsx:7:export default function Approvals(){const[items,setItems]=useState([]);const[message,setMessage]=useState("");const[busy,setBusy]=useState("");

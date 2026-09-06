@@ -1,60 +1,54 @@
 # WineShopPOS Documentation
 
-**Current documentation generation: V3**
+Current branch documentation generation: **V4**
 
-WineShopPOS maintains one living Handbook, one living User Manual and one
-current Project Context. V2 updates the existing master documents rather than
-creating competing copies.
+`docs/CURRENT_VERSION` is authoritative for this branch and must remain `v4`
+while V4 is under DEV/QA qualification.
 
-## Canonical current documents
+## Current V4
 
-- `PROJECT_CONTEXT.md`
-- `handbook/WineShopPOS_Developer_Handbook_Master_Reconsolidation.md`
-- `manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
-- `AI_PRODUCTION_BASELINE.md`
-- `DOCUMENTATION_REGISTER.md`
+- `versions/v4/README.md`
+- `versions/v4/architecture/`
+- `versions/v4/reference/`
+- `versions/v4/security/`
+- `versions/v4/testing/`
+- `versions/v4/releases/`
 
-## Historical + V2/V3 chapters
+## Inherited production lineage
 
-The same `docs/chapters/` collection is used for project history.
+- `versions/v3/` — verified PROD/V3 lineage inherited from pinned PROD/main
+- `versions/v2/` — previous PROD lineage/history
+- `versions/v1/` — historical early/basic generation
 
-- Chapters `01` through `26`: historical implementation record
-- Chapters `V2-01` through `V2-10`: completed V2 implementation/QA program
-- Chapter `V3-01`: current API Automation / invoice-ingestion program
+## Shared cross-version governance
 
-## V2 execution records
+- `shared/governance/`
+- `shared/templates/`
+- `shared/security/` when present
+- `shared/release/`
 
-- `v2/MASTER_IMPLEMENTATION_SPECIFICATION_V2.md`
-- `v2/audit/`
-- `v2/evidence/`
+## Version inheritance rule
 
-These are execution/evidence artifacts, not duplicate manuals.
+Every new version inherits PROD's repository structure, coding conventions,
+documentation governance, testing structure, migration discipline, security
+controls, environment-isolation rules, and release/promotion workflow — but
+keeps its own version-specific code, migrations, DEV configuration, QA/UAT
+evidence, and version documentation.
 
-## Documentation rule
+PROD-only runtime/state items, credentials, business data, deployment state,
+emergency fixes, backups, or unknown production-only artifacts are never
+blindly copied.
 
-When an application feature changes, update all affected current documents in
-the same implementation batch:
+## Truth order
 
-1. Project Context when architecture/current status changes
-2. existing master Developer Handbook
-3. existing master User Manual when the user workflow changes
-4. AI Production Baseline when AI deployment/runtime changes
-5. relevant V2 chapter
-6. V2 implementation/audit record
+CURRENT SOURCE + CURRENT MIGRATIONS + VERIFIED LIVE ENVIRONMENT +
+VERIFIED TEST EVIDENCE override stale historical documentation.
 
-<!-- CURRENT_DOC_STATUS_START -->
-## Current V2 documentation status
+## AI context start order
 
-Canonical current sources:
-
-1. `PROJECT_CONTEXT.md`
-2. `handbook/WineShopPOS_Developer_Handbook_Master_Reconsolidation.md`
-3. `manual/WineShopPOS_User_Manual_Master_Reconsolidation.md`
-4. `AI_PRODUCTION_BASELINE.md`
-5. `chapters/V2-01...V2-10`
-6. `v2/audit/`
-
-Current documentation covers N1–N15, OCR product resolution, POS/billing
-controls, customer commercial features, accounting export, supplier
-intelligence, Leakage Shield and responsive POS/receipt UI.
-<!-- CURRENT_DOC_STATUS_END -->
+1. `CURRENT_VERSION`
+2. `versions/v4/README.md`
+3. V4 traceability/reference
+4. V4 architecture/security/testing/releases
+5. shared governance/release controls
+6. older versions only when lineage/history is needed

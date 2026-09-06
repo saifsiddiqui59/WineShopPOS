@@ -1,3 +1,8 @@
+> **V4 CURRENT-BRANCH OVERRIDE:** `docs/CURRENT_VERSION` is `v4` on this branch.
+> For V4 behavior, current V4 source + current V4 migrations + verified DEV/QA
+> evidence override stale V1/V2/V3 narrative. V3 remains the verified PROD
+> lineage until V4 is explicitly promoted. See `docs/versions/v4/README.md`.
+>
 # WineShopPOS — Current Project Context
 
 **Current product/documentation generation: V2**

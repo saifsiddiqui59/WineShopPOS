@@ -1,0 +1,59 @@
+
+================================================================
+V4_12A SAFE DEV MIGRATION FETCH REPORT
+================================================================
+PASS=47 WARN=1 FAIL=0 BLOCKERS=0
+
+STATE  | CHECK                                            | DETAIL
+-------+--------------------------------------------------+--------------------------------
+PASS   | Main worktree branch                             | main
+PASS   | V4 worktree branch                               | V4
+PASS   | main matches origin/main                         | 3b2c3e98b310c430169229106b80d63abfb87705
+PASS   | V4 matches origin/V4                             | d541c1ea63f8092416c1d0f85ff7508d7ab682ee
+PASS   | V4 tracked tree clean                            | 
+PASS   | V4 frontend bound to DEV                         | juhcypzoacauzmtzqnwd
+PASS   | PROD ref absent from V4 .env.local               | 
+PASS   | Supabase CLI located                             | /e/WineShopPOS_V4/node_modules/.bin/supabase
+PASS   | Explicit temporary DEV link succeeded            | juhcypzoacauzmtzqnwd
+PASS   | Temp project-ref exactly DEV                     | juhcypzoacauzmtzqnwd
+PASS   | PROD ref absent from temporary link state        | 
+PASS   | DEV migration history fetched                    | isolated temp cwd
+PASS   | Fetched canonical V4 migration                   | 20260905210140_v4_commercial_readiness_batch1_canonical.sql
+PASS   | Recovered missing migration source               | 20260905121213_v4_saas_subscription_platform_control.sql
+PASS   | Recovered missing migration source               | 20260905121323_v4_saas_plan_admin_controls.sql
+PASS   | Recovered missing migration source               | 20260905121348_v4_saas_runtime_config_environment_neutral.sql
+PASS   | Recovered missing migration source               | 20260905121457_v4_saas_rpc_execute_hardening.sql
+PASS   | Recovered missing migration source               | 20260905121610_v4_saas_align_plan_feature_tiers.sql
+PASS   | Recovered missing migration source               | 20260905123241_v4_saas_public_catalog_policy_and_platform_plan_list.sql
+PASS   | Recovered missing migration source               | 20260905123708_v4_saas_subscription_demo_control_layer.sql
+PASS   | Recovered missing migration source               | 20260905204846_v3_first_five_commercial_security_hardening.sql
+PASS   | Recovered missing migration source               | 20260905205918_v3_set_updated_at_search_path.sql
+PASS   | Recovered missing migration source               | 20260905210140_v4_commercial_readiness_batch1_canonical.sql
+PASS   | Migration version already represented locally    | 20260906050120_v4_commercial_readiness_batch1_hardening.sql
+PASS   | Migration version already represented locally    | 20260906050403_v4_platform_runtime_flag_read.sql
+PASS   | No UAT product markers in V4 migration SQL       | 
+PASS   | Reconciliation document generated                | 
+PASS   | Pre-PROD manifest generated                      | 
+PASS   | Environment guard                                | 
+PASS   | Lint                                             | 
+PASS   | V4 commercial regression                         | 
+PASS   | Platform Control UX regression                   | 
+PASS   | Fresh V4 build                                   | 
+PASS   | Built V4 artifact excludes PROD ref              | 
+PASS   | Built V4 artifact contains DEV ref               | juhcypzoacauzmtzqnwd
+PASS   | Staged-file allowlist verified                   | 
+PASS   | Staged diff formatting check                     | 
+PASS   | Committed reconciled V4 candidate                | 81107e0833abe4d2c7a09d5bd0d75bb924b7634a
+PASS   | Pushed origin/V4                                 | 81107e0833abe4d2c7a09d5bd0d75bb924b7634a
+PASS   | Existing V4 QA storage verified                  | wspv4d66ca1d443
+WARN   | Entra blob upload unavailable                    | Existing account-key fallback only.
+PASS   | QA upload via existing account key               | 
+PASS   | QA artifact index hash match                     | 7a7a729921c93fb5e6e5851a772de499b8ac0dffcc603be70197ebaeb2847264
+PASS   | Hosted V4 QA HTTP 200                            | 
+PASS   | Hosted V4 commercial-readiness browser suite     | 
+PASS   | main/PROD source unchanged                       | 3b2c3e98b310c430169229106b80d63abfb87705
+PASS   | V3 unchanged                                     | 54794c4e25d75183cbefda5821cac866e0e4b0c4
+PASS   | origin/V4 matches reconciled candidate           | 81107e0833abe4d2c7a09d5bd0d75bb924b7634a
+
+PROD WAS NOT MODIFIED.
+Report: /e/WineShopPOS_V4/V4_12A_SAFE_DEV_MIGRATION_FETCH_REPORT.txt

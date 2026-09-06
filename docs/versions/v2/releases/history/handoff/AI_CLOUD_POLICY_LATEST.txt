@@ -1,0 +1,32 @@
+WineShopPOS AI Cloud Policy — VERIFIED 2026-08-30
+
+RESOURCE GROUP
+wineshopPOS
+
+FUNCTION
+wineshoppos-ai-1a61d5885c
+Central India
+Consumption Y1
+No Always On / Premium / Dedicated AI hosting
+
+FOUNDRY PRODUCTION
+wineshoppos-ai-in-1a61d5885c
+South India
+Project: wineshoppos-ai
+Model: gpt-5-mini
+Agent: WineShopPOS-Owner-Agent
+
+RUNTIME IDENTITY
+Function system-assigned managed identity
+Foundry User at project scope for the current AIProjectClient Conversations/Responses architecture
+
+SUPABASE
+Project ref: uiurgplnsgmawvxhjzzp
+AI migration: 20260830070000_ai_owner_assistant_v1.sql
+
+PRODUCTION AUTH
+Dynamic current user session → membership → authorized shop scope.
+No hardcoded shop/admin identity.
+
+LEGACY EAST US
+Not production. Cleanup after dependency review.

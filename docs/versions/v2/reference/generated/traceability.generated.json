@@ -1,0 +1,855 @@
+{
+  "version": "v2",
+  "generatedAt": "2026-09-05T06:45:12.786Z",
+  "rows": [
+    {
+      "file": "src/components/Receipt80mm.jsx",
+      "tables": [
+        "shop_settings"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/components/ShopSelector.jsx",
+      "tables": [],
+      "rpcs": [
+        "my_shop_memberships",
+        "switch_shop"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/components/SupplierEditor.jsx",
+      "tables": [
+        "suppliers"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/components/ThemeToggle.jsx",
+      "tables": [],
+      "rpcs": [
+        "update_my_theme"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/context/AuthContext.jsx",
+      "tables": [],
+      "rpcs": [
+        "my_profile",
+        "my_shop_access"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/context/ShopContext.jsx",
+      "tables": [
+        "categories",
+        "inventory",
+        "payments",
+        "purchases",
+        "sale_items",
+        "sales",
+        "suppliers"
+      ],
+      "rpcs": [
+        "adjust_stock",
+        "complete_sale_v4",
+        "create_new_product",
+        "get_product_images",
+        "get_products",
+        "receive_purchase_v2",
+        "set_product_active",
+        "sync_offline_sale",
+        "update_product_details"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/lib/productImages.js",
+      "tables": [],
+      "rpcs": [
+        "set_product_image"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Account.jsx",
+      "tables": [],
+      "rpcs": [
+        "update_my_profile"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Approvals.jsx",
+      "tables": [
+        "cashier_shifts",
+        "purchase_orders",
+        "sale_override_requests",
+        "sale_return_requests",
+        "stock_counts",
+        "stock_transfers"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Audit.jsx",
+      "tables": [
+        "audit_logs"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/AutomationHub.jsx",
+      "tables": [
+        "product_aliases"
+      ],
+      "rpcs": [
+        "get_products",
+        "invoice_cancel_review",
+        "invoice_record_ocr_result",
+        "invoice_save_review_draft",
+        "match_product_text"
+      ],
+      "edge": [
+        "ocr-invoice"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/BackupRecovery.jsx",
+      "tables": [
+        "backup_restore_tests"
+      ],
+      "rpcs": [
+        "record_backup_restore_test"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/BulkProductImport.jsx",
+      "tables": [],
+      "rpcs": [
+        "bulk_create_products",
+        "get_products"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Compliance.jsx",
+      "tables": [
+        "compliance_profiles"
+      ],
+      "rpcs": [
+        "upsert_compliance_profile"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/CustomerCredit.jsx",
+      "tables": [
+        "gift_vouchers",
+        "promotions"
+      ],
+      "rpcs": [
+        "adjust_loyalty_points",
+        "create_customer",
+        "create_promotion",
+        "customer_balances",
+        "grant_store_credit",
+        "issue_gift_voucher",
+        "record_customer_credit"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/EditProduct.jsx",
+      "tables": [],
+      "rpcs": [
+        "get_products"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Expenses.jsx",
+      "tables": [
+        "expense_categories",
+        "expenses"
+      ],
+      "rpcs": [
+        "record_expense",
+        "void_expense"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/InventoryAgeing.jsx",
+      "tables": [],
+      "rpcs": [
+        "fifo_receipt_lots",
+        "inventory_ageing_report"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/InventoryIntelligence.jsx",
+      "tables": [],
+      "rpcs": [
+        "create_purchase_order",
+        "inventory_health",
+        "stock_explanation"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/InvoiceInbox.jsx",
+      "tables": [
+        "invoice_ingestions"
+      ],
+      "rpcs": [
+        "invoice_cancel_review",
+        "invoice_reopen_review",
+        "invoice_resolve_duplicate"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/OwnerAI.jsx",
+      "tables": [],
+      "rpcs": [
+        "my_shop_memberships"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/OwnerCenter.jsx",
+      "tables": [],
+      "rpcs": [
+        "loss_control_exceptions",
+        "owner_center_summary",
+        "owner_recommendations"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/OwnerExceptions.jsx",
+      "tables": [],
+      "rpcs": [
+        "loss_control_exceptions_v2"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/OwnerProfit.jsx",
+      "tables": [],
+      "rpcs": [
+        "owner_center_summary",
+        "profit_by_product"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/OwnerWhatsApp.jsx",
+      "tables": [],
+      "rpcs": [
+        "owner_center_summary"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/POS.jsx",
+      "tables": [
+        "customers",
+        "reason_codes",
+        "sale_override_requests"
+      ],
+      "rpcs": [
+        "commercial_quote",
+        "customer_commercial_summary",
+        "request_sale_override"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/PriceHistory.jsx",
+      "tables": [],
+      "rpcs": [
+        "purchase_price_history"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/PrinterSettings.jsx",
+      "tables": [
+        "shop_settings"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Procurement.jsx",
+      "tables": [
+        "purchase_orders"
+      ],
+      "rpcs": [
+        "create_purchase_order",
+        "create_purchase_return",
+        "receive_purchase_order",
+        "receive_purchase_order_v2",
+        "record_supplier_payment",
+        "supplier_balances"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/ProductCleanup.jsx",
+      "tables": [],
+      "rpcs": [
+        "admin_delete_test_product",
+        "admin_product_cleanup_check"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/PurchaseDetails.jsx",
+      "tables": [
+        "invoice_ingestions",
+        "purchases"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/PurchaseIntelligence.jsx",
+      "tables": [],
+      "rpcs": [
+        "purchase_coach_v2",
+        "purchase_price_history",
+        "supplier_intelligence",
+        "supplier_performance_scores",
+        "supplier_price_comparison"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Purchases.jsx",
+      "tables": [],
+      "rpcs": [
+        "invoice_assert_receivable",
+        "invoice_cancel_review",
+        "invoice_link_purchase",
+        "invoice_save_review_draft"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Recommendations.jsx",
+      "tables": [],
+      "rpcs": [
+        "owner_recommendations"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Reorder.jsx",
+      "tables": [],
+      "rpcs": [
+        "create_purchase_order",
+        "reorder_suggestions"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/ReportsConsolidated.jsx",
+      "tables": [
+        "expenses"
+      ],
+      "rpcs": [
+        "accountant_export_v2"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Returns.jsx",
+      "tables": [
+        "sale_return_requests"
+      ],
+      "rpcs": [
+        "create_return_request",
+        "void_sale"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/SaleDetails.jsx",
+      "tables": [
+        "payments",
+        "sale_items",
+        "sales"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Settings.jsx",
+      "tables": [],
+      "rpcs": [
+        "demo_reset_current_shop",
+        "get_shop_configuration",
+        "update_shop_configuration"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Shifts.jsx",
+      "tables": [
+        "cashier_shifts"
+      ],
+      "rpcs": [
+        "approve_shift_close",
+        "open_shift",
+        "request_close_shift",
+        "revise_shift_actual_cash"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/StockCount.jsx",
+      "tables": [
+        "stock_count_items",
+        "stock_counts"
+      ],
+      "rpcs": [
+        "approve_stock_count",
+        "create_stock_count",
+        "mark_unseen_stock_count_zero",
+        "set_stock_count_quantity",
+        "stock_count_scan",
+        "submit_stock_count"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Suppliers.jsx",
+      "tables": [
+        "suppliers"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Transfers.jsx",
+      "tables": [
+        "stock_transfers"
+      ],
+      "rpcs": [
+        "available_transfer_destinations",
+        "create_stock_transfer"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "src/pages/Users.jsx",
+      "tables": [],
+      "rpcs": [],
+      "edge": [
+        "manage-shop-users"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "supabase/functions/invoice-automation-ingest/index.ts",
+      "tables": [
+        "invoice_ingestion_channels",
+        "invoice_ingestions",
+        "purchases"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "supabase/functions/manage-shop-users/index.ts",
+      "tables": [
+        "profiles",
+        "shops",
+        "user_shop_memberships"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "supabase/functions/ocr-invoice/index.ts",
+      "tables": [
+        "profiles"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/functions-js/dist/main/FunctionsClient.d.ts",
+      "tables": [],
+      "rpcs": [],
+      "edge": [
+        "hello",
+        "hello-world"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/functions-js/dist/main/FunctionsClient.js",
+      "tables": [],
+      "rpcs": [],
+      "edge": [
+        "hello",
+        "hello-world"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts",
+      "tables": [],
+      "rpcs": [],
+      "edge": [
+        "hello",
+        "hello-world"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/functions-js/dist/module/FunctionsClient.js",
+      "tables": [],
+      "rpcs": [],
+      "edge": [
+        "hello",
+        "hello-world"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/functions-js/src/FunctionsClient.ts",
+      "tables": [],
+      "rpcs": [],
+      "edge": [
+        "hello",
+        "hello-world"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/postgrest-js/dist/index.cjs",
+      "tables": [
+        "characters",
+        "countries",
+        "games",
+        "instruments",
+        "messages",
+        "mytable",
+        "orchestral_sections",
+        "profiles",
+        "users",
+        "very_big_table"
+      ],
+      "rpcs": [
+        "add_one_each",
+        "echo",
+        "function_a",
+        "hello_world",
+        "list_stored_countries"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/postgrest-js/dist/index.mjs",
+      "tables": [
+        "characters",
+        "countries",
+        "games",
+        "instruments",
+        "messages",
+        "mytable",
+        "orchestral_sections",
+        "profiles",
+        "users",
+        "very_big_table"
+      ],
+      "rpcs": [
+        "add_one_each",
+        "echo",
+        "function_a",
+        "hello_world",
+        "list_stored_countries"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/postgrest-js/src/PostgrestBuilder.ts",
+      "tables": [
+        "characters",
+        "countries",
+        "users"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/postgrest-js/src/PostgrestClient.ts",
+      "tables": [
+        "profiles"
+      ],
+      "rpcs": [
+        "add_one_each",
+        "echo",
+        "function_a",
+        "hello_world",
+        "list_stored_countries"
+      ],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/postgrest-js/src/PostgrestFilterBuilder.ts",
+      "tables": [
+        "characters",
+        "classes",
+        "countries",
+        "issues",
+        "orchestral_sections",
+        "quotes",
+        "reservations",
+        "texts",
+        "users"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/postgrest-js/src/PostgrestQueryBuilder.ts",
+      "tables": [
+        "characters",
+        "countries",
+        "games",
+        "instruments",
+        "messages",
+        "mytable",
+        "orchestral_sections",
+        "users"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/postgrest-js/src/PostgrestTransformBuilder.ts",
+      "tables": [
+        "characters",
+        "countries",
+        "instruments",
+        "orchestral_sections",
+        "very_big_table"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/dist/index.cjs",
+      "tables": [
+        "analytics-data",
+        "avatars",
+        "bucket",
+        "embeddings-prod",
+        "public-bucket"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": [
+        "avatars"
+      ]
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/dist/index.mjs",
+      "tables": [
+        "analytics-data",
+        "avatars",
+        "bucket",
+        "embeddings-prod",
+        "public-bucket"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": [
+        "avatars"
+      ]
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/src/packages/StorageAnalyticsClient.ts",
+      "tables": [
+        "analytics-data"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/src/packages/StorageFileApi.ts",
+      "tables": [
+        "avatars",
+        "public-bucket"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/src/packages/StorageVectorsClient.ts",
+      "tables": [
+        "embeddings-prod"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/src/packages/VectorDataApi.ts",
+      "tables": [
+        "bucket"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/src/packages/VectorIndexApi.ts",
+      "tables": [
+        "bucket"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/storage-js/src/StorageClient.ts",
+      "tables": [
+        "avatars"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": [
+        "avatars"
+      ]
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/supabase-js/dist/index.cjs",
+      "tables": [
+        "profiles",
+        "users"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/supabase-js/dist/index.mjs",
+      "tables": [
+        "profiles",
+        "users"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/supabase-js/src/index.ts",
+      "tables": [
+        "profiles"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/supabase-js/src/lib/types.ts",
+      "tables": [
+        "users"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/ai-owner-assistant/node_modules/@supabase/supabase-js/src/SupabaseClient.ts",
+      "tables": [
+        "profiles",
+        "users"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    },
+    {
+      "file": "azure-functions/v3-invoice-api/src/invoiceStorage.js",
+      "tables": [
+        "invoice_ingestions",
+        "profiles"
+      ],
+      "rpcs": [],
+      "edge": [],
+      "buckets": []
+    }
+  ]
+}

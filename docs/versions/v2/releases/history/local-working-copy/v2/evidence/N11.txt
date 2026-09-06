@@ -1,0 +1,5 @@
+src/pages/AutomationHub.jsx:46:      .map((supplier) => ({ ...supplier, score: supplierScore(result.supplierName, supplier.supplier_name) }))
+src/pages/AutomationHub.jsx:47:      .filter((supplier) => supplier.score >= 35)
+src/pages/AutomationHub.jsx:95:        .map((supplier) => ({ ...supplier, score: supplierScore(data.invoice.supplierName, supplier.supplier_name) }))
+src/pages/AutomationHub.jsx:191:        {supplierMatches[0] ? <p className="muted-text">Best existing match: <strong>{supplierMatches[0].supplier_name}</strong> · confidence score {supplierMatches[0].score}%</p> : <p className="muted-text">No close existing supplier match was found.</p>}
+src/pages/AutomationHub.jsx:198:                return <option key={supplier.id} value={supplier.id}>{supplier.supplier_name}{scored ? ` · ${scored.score}% match` : ""}</option>;
