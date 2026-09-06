@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { getEnvironment } from "../config/environment";
 
 const card = {
   background:"#0b0b0d",
@@ -20,6 +21,7 @@ const control = {
 };
 
 export default function LegalAdminCard() {
+  const environment = getEnvironment();
   const [documents, setDocuments] = useState([]);
   const [config, setConfig] = useState({
     enabled:false,
@@ -28,6 +30,7 @@ export default function LegalAdminCard() {
     customerImport:false,
   });
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     const [docsResult, flagsResult] = await Promise.all([
@@ -55,36 +58,95 @@ export default function LegalAdminCard() {
     void load();
   }, []);
 
-  async function save(event) {
-    event.preventDefault();
+  async function persist(nextEnabled, { confirmEnable=false } = {}) {
+    if (!config.documentId) {
+      setMessage("Choose the legal document version first.");
+      return;
+    }
+
+    if (nextEnabled && confirmEnable) {
+      const approved = window.confirm(
+        `Enable the Pilot / Privacy Notice in ${environment.label}?\n\n` +
+        "This applies to ALL normal LIVE shop users after login. " +
+        "They must accept the selected notice before entering the app.\n\n" +
+        "Demo and Platform Control remain exempt."
+      );
+      if (!approved) return;
+    }
+
+    setBusy(true);
+    setMessage("");
     const { error } = await supabase.rpc("saas_admin_set_legal_notice", {
-      p_enabled:config.enabled,
-      p_document_id:config.documentId || null,
+      p_enabled:nextEnabled,
+      p_document_id:config.documentId,
     });
+    setBusy(false);
+
     if (error) {
       setMessage(error.message);
       return;
     }
-    setMessage(config.enabled ? "Pilot/privacy notice enabled for normal live shop users." : "Pilot/privacy notice remains disabled.");
+
+    setMessage(
+      nextEnabled
+        ? "Pilot / Privacy Notice ENABLED for all normal LIVE shop users."
+        : "Pilot / Privacy Notice DISABLED. Normal live users can enter without notice acceptance."
+    );
     await load();
   }
 
   return (
-    <form style={card} onSubmit={save}>
+    <section style={card}>
       <h2 style={{marginTop:0}}>Pilot / Privacy Notice</h2>
-      <p style={{color:"#94a3b8",fontSize:12,lineHeight:1.55}}>
-        Prepared for V4 but intentionally disabled until you choose to activate it.
-        Demo and Platform Control are not gated by this notice.
-      </p>
 
-      <label style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,fontWeight:800}}>
-        <input
-          type="checkbox"
-          checked={config.enabled}
-          onChange={(event) => setConfig({...config,enabled:event.target.checked})}
-        />
-        Require notice acceptance after login
-      </label>
+      <div
+        style={{
+          display:"flex",
+          justifyContent:"space-between",
+          alignItems:"center",
+          gap:12,
+          padding:"11px 12px",
+          marginBottom:12,
+          border:"1px solid #334155",
+          borderRadius:10,
+          background:"#050608",
+        }}
+      >
+        <strong>Current status</strong>
+        <span
+          aria-label={`Pilot privacy notice ${config.enabled ? "enabled" : "disabled"}`}
+          style={{
+            borderRadius:999,
+            padding:"5px 10px",
+            fontSize:12,
+            fontWeight:900,
+            letterSpacing:".05em",
+            background:config.enabled ? "rgba(220,38,38,.18)" : "rgba(22,163,74,.16)",
+            color:config.enabled ? "#fecaca" : "#bbf7d0",
+            border:`1px solid ${config.enabled ? "#7f1d1d" : "#166534"}`,
+          }}
+        >
+          {config.enabled ? "ENABLED" : "DISABLED"}
+        </span>
+      </div>
+
+      <div
+        style={{
+          padding:"10px 12px",
+          marginBottom:14,
+          border:"1px solid #7c2d12",
+          borderRadius:10,
+          background:"rgba(124,45,18,.14)",
+          color:"#fed7aa",
+          fontSize:12,
+          lineHeight:1.55,
+        }}
+      >
+        <strong>Scope:</strong> this is a GLOBAL live-user gate for the current environment.
+        When enabled, it applies to <strong>ALL normal LIVE shop users after login</strong>,
+        not only the email being edited in Account / Subscription.
+        Demo and Platform Control are exempt.
+      </div>
 
       <label style={{display:"grid",gap:6,marginBottom:14,fontWeight:700}}>
         Document version
@@ -92,6 +154,7 @@ export default function LegalAdminCard() {
           style={control}
           value={config.documentId}
           onChange={(event) => setConfig({...config,documentId:event.target.value})}
+          disabled={busy}
         >
           <option value="">Choose active document</option>
           {documents.map((document) => (
@@ -102,7 +165,36 @@ export default function LegalAdminCard() {
         </select>
       </label>
 
-      <button className="primary-button">Save Pilot / Privacy Control</button>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={busy || !config.documentId}
+          onClick={() => void persist(config.enabled)}
+        >
+          Save Selected Document
+        </button>
+
+        {config.enabled ? (
+          <button
+            type="button"
+            className="danger-button"
+            disabled={busy}
+            onClick={() => void persist(false)}
+          >
+            {busy ? "Saving…" : "DISABLE NOTICE"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="primary-button"
+            disabled={busy || !config.documentId}
+            onClick={() => void persist(true,{confirmEnable:true})}
+          >
+            {busy ? "Saving…" : "ENABLE NOTICE"}
+          </button>
+        )}
+      </div>
 
       {message ? <div style={{marginTop:12,color:"#bae6fd",fontSize:12}}>{message}</div> : null}
 
@@ -113,6 +205,6 @@ export default function LegalAdminCard() {
         <br/>• Source IP capture: NOT IMPLEMENTED
         <br/>• MAC address capture: NOT IMPLEMENTED
       </div>
-    </form>
+    </section>
   );
 }

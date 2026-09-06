@@ -6057,3 +6057,24 @@ input,select,textarea{max-width:100%}
 @media(prefers-reduced-motion:reduce){
   .wsp-critical-modal-card{animation:none!important}
 }
+
+/* V4_11_PLATFORM_CONTROL_UX */
+html:has(.wsp-platform-control-page),
+body:has(.wsp-platform-control-page),
+#root:has(.wsp-platform-control-page){
+  background:#050608 !important;
+  color:#f8fafc !important;
+  min-height:100%;
+}
+.wsp-platform-control-page{
+  box-sizing:border-box;
+}
+.wsp-platform-control-page table td,
+.wsp-platform-control-page table th{
+  color:inherit;
+}
+@media(max-width:720px){
+  .wsp-platform-control-page{
+    padding:14px !important;
+  }
+}

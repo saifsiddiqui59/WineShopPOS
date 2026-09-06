@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSaaS } from "../context/SaaSContext";
 import { getEnvironment } from "../config/environment";
@@ -38,6 +39,7 @@ function expiryDisplay(value) {
 }
 
 export default function PlatformAdmin() {
+  const navigate = useNavigate();
   const saas = useSaaS();
   const environment = getEnvironment();
 
@@ -146,7 +148,12 @@ export default function PlatformAdmin() {
   }
 
   return (
-    <div style={{padding:24,maxWidth:1280,margin:"0 auto",color:"#fff"}}>
+    <div className="wsp-platform-control-page" style={{padding:24,maxWidth:1280,margin:"0 auto",color:"#f8fafc",background:"#050608",minHeight:"100vh"}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
+        <button type="button" className="secondary-button" onClick={() => navigate("/")} aria-label="Back to WineShopPOS">← Back to WineShopPOS</button>
+        <span style={{color:"#94a3b8",fontSize:12}}>Provider controls · {environment.label}</span>
+      </div>
+
       <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
         <h1 style={{margin:"0 0 6px"}}>WineShopPOS Platform Control</h1>
         <span style={{
@@ -401,7 +408,7 @@ export default function PlatformAdmin() {
         border:"1px solid #27272a",
         borderRadius:14,
       }}>
-        <table style={{width:"100%",borderCollapse:"collapse"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",background:"#0b0b0d",color:"#f8fafc"}}>
           <thead style={{background:"#111827"}}>
             <tr>
               {["Email","Role","Mode","Plan","Status","Expiry"].map((item) => (
@@ -412,7 +419,7 @@ export default function PlatformAdmin() {
             </tr>
           </thead>
 
-          <tbody>
+          <tbody style={{color:"#e5e7eb"}}>
             {accounts.map((item) => (
               <tr
                 key={`${item.user_id}-${item.email}`}
