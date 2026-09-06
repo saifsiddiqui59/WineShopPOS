@@ -1,0 +1,13 @@
+{
+  "release": "V4",
+  "state": "PREPROD_SOURCE_RECONCILED_NOT_APPROVED",
+  "candidate_sha_before_reconciliation": "d541c1ea63f8092416c1d0f85ff7508d7ab682ee",
+  "main_sha_at_freeze": "3b2c3e98b310c430169229106b80d63abfb87705",
+  "v3_reference_sha": "54794c4e25d75183cbefda5821cac866e0e4b0c4",
+  "dev_supabase_ref": "juhcypzoacauzmtzqnwd",
+  "prod_supabase_ref": "uiurgplnsgmawvxhjzzp",
+  "dev_business_data_copy_to_prod": false,
+  "prod_write_authorized": false,
+  "prod_migration_allowlist": [],
+  "prod_legal_notice_required_default": false
+}

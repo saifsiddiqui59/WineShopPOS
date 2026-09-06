@@ -4,7 +4,9 @@ import path from "node:path";
 const root = process.cwd();
 const sourceRoots = ["src", "supabase/functions", "azure-functions"];
 const migrationRoot = "supabase/migrations";
-const outDir = "docs/versions/v3/reference/generated";
+const currentVersion = fs.readFileSync("docs/CURRENT_VERSION", "utf8").trim();
+if (!/^v[0-9]+$/i.test(currentVersion)) throw new Error(`Invalid CURRENT_VERSION: ${currentVersion}`);
+const outDir = `docs/versions/${currentVersion}/reference/generated`;
 
 const codeExt = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]);
 const sqlExt = ".sql";

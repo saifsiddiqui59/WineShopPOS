@@ -34,3 +34,18 @@ If a document spans multiple generations:
 - keep the original as historical evidence,
 - extract current facts into the correct version documents,
 - record a classification note rather than duplicating the whole file.
+
+## Global version inheritance rule
+
+Every new version inherits PROD's repository structure, coding conventions,
+documentation governance, testing structure, migration discipline, security
+controls, environment-isolation rules, and release/promotion workflow — but
+keeps its own version-specific code, migrations, DEV configuration, QA/UAT
+evidence, and version documentation.
+
+PROD-only runtime/state items, credentials, business data, deployment state,
+emergency fixes, backups, or unknown production-only artifacts must never be
+blindly copied.
+
+This inheritance is established when a version is created, not reconstructed
+only at production-promotion time.

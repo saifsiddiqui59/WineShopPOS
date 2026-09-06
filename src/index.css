@@ -5990,3 +5990,91 @@ input,select,textarea{max-width:100%}
 .stock-count-search-result>span{display:flex;flex-direction:column;gap:3px;min-width:0}
 .stock-count-search-result small{color:#8a8c94;overflow-wrap:anywhere}
 @media(max-width:760px){.stock-count-scan-header,.stock-count-search-result{align-items:stretch;flex-direction:column}}
+
+/* V4_COMMERCIAL_READINESS_BATCH1 */
+.wsp-version-badge{
+  position:absolute;right:9px;top:8px;z-index:5;
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:27px;height:18px;padding:0 6px;border-radius:999px;
+  background:rgba(15,23,42,.92);border:1px solid rgba(56,189,248,.42);
+  color:#bae6fd;font-size:9px;font-weight:900;letter-spacing:.08em;
+}
+.exact-reference-brand{position:relative}
+.wsp-critical-modal-card{
+  animation-name:wsp-critical-card-pulse;
+  animation-duration:700ms;
+  animation-timing-function:ease-out;
+  animation-iteration-count:3;
+}
+@keyframes wsp-critical-card-pulse{
+  0%,100%{transform:scale(1);box-shadow:0 30px 90px rgba(0,0,0,.62)}
+  50%{transform:scale(1.018);box-shadow:0 0 0 4px rgba(248,113,113,.28),0 30px 105px rgba(127,29,29,.62)}
+}
+.wsp-import-center{display:grid;gap:16px}
+.wsp-import-grid{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(380px,1.15fr);gap:16px}
+.wsp-import-center label{display:grid;gap:6px;margin-top:12px;font-weight:750}
+.wsp-import-center input,.wsp-import-center select{width:100%;min-height:42px}
+.wsp-import-safety ul{margin:9px 0 0 20px;display:grid;gap:5px}
+.wsp-import-disabled-card{display:grid;gap:4px;margin:12px 0;padding:11px;border:1px dashed rgba(148,163,184,.45);border-radius:10px;opacity:.82}
+.wsp-import-disabled-card span{font-size:12px;color:var(--muted,#94a3b8)}
+.wsp-import-file-meta{display:grid;gap:3px;margin-top:12px;font-size:12px;word-break:break-word}
+.wsp-import-mapping{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
+.wsp-import-actions{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.wsp-import-results{display:grid;gap:12px;margin-top:14px}
+.wsp-import-batch{margin-top:12px;font-size:12px;word-break:break-all}
+.wsp-legal-loading{min-height:100vh;display:grid;place-items:center;padding:24px;font-weight:800}
+.wsp-legal-screen{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at top,#172033 0,#050608 54%)}
+.wsp-legal-card{width:min(820px,96vw);max-height:92vh;overflow:auto;background:#0b0b0d;border:1px solid #334155;border-radius:20px;padding:26px;color:#f8fafc;box-shadow:0 30px 90px rgba(0,0,0,.55)}
+.wsp-legal-kicker{font-size:11px;letter-spacing:.13em;font-weight:900;color:#7dd3fc}
+.wsp-legal-card h1{font-size:27px;margin:8px 0}
+.wsp-legal-meta{font-size:12px;color:#94a3b8;word-break:break-word}
+.wsp-legal-content{margin:18px 0;padding:16px;border:1px solid #27272a;border-radius:12px;background:#09090b;line-height:1.62}
+.wsp-legal-content p{margin:0 0 13px}
+.wsp-legal-check{display:flex!important;grid-template-columns:none!important;align-items:flex-start;gap:10px!important;margin:16px 0!important}
+.wsp-legal-check input{width:auto!important;min-height:0!important;margin-top:3px}
+@media(max-width:780px){
+  .page-area{padding-left:12px!important;padding-right:12px!important}
+  .wsp-import-grid{grid-template-columns:1fr}
+  .wsp-import-mapping{grid-template-columns:1fr}
+  .wsp-import-actions{align-items:stretch;flex-direction:column}
+  .wsp-import-actions .button-row{width:100%}
+  .wsp-import-actions .button-row button{flex:1}
+  .wsp-import-center .page-heading{align-items:stretch}
+  .wsp-import-center .page-heading .secondary-button{width:100%}
+  .wsp-legal-screen{padding:10px}
+  .wsp-legal-card{width:100%;max-height:96vh;padding:18px;border-radius:14px}
+  .wsp-legal-card h1{font-size:22px}
+  input,select,textarea{font-size:16px}
+}
+@media(max-width:520px){
+  .pos-v5h-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .pos-v5h-cart-controls{grid-template-columns:1fr!important}
+  .button-row{flex-wrap:wrap}
+}
+@media(max-width:390px){
+  .pos-v5h-product-grid{grid-template-columns:1fr!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .wsp-critical-modal-card{animation:none!important}
+}
+
+/* V4_11_PLATFORM_CONTROL_UX */
+html:has(.wsp-platform-control-page),
+body:has(.wsp-platform-control-page),
+#root:has(.wsp-platform-control-page){
+  background:#050608 !important;
+  color:#f8fafc !important;
+  min-height:100%;
+}
+.wsp-platform-control-page{
+  box-sizing:border-box;
+}
+.wsp-platform-control-page table td,
+.wsp-platform-control-page table th{
+  color:inherit;
+}
+@media(max-width:720px){
+  .wsp-platform-control-page{
+    padding:14px !important;
+  }
+}
