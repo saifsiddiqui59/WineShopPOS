@@ -1,6 +1,6 @@
 # WineShopPOS V4
 
-Status: **ACTIVE DEV / QA — PRE-PROD**
+Status: **DEPLOYED TO PROD — V4 CLOSED 2026-09-06**
 
 V4 extends the existing WineShopPOS production application. It is not a rewrite.
 
@@ -59,3 +59,14 @@ CURRENT V4 SOURCE
 
 V3 documentation remains authoritative for verified PROD lineage, not for
 V4-only behavior.
+
+
+## Production close — 2026-09-06
+
+- Production URL: `https://wineshoppos.z29.web.core.windows.net/`
+- Controlled V4 promotion SHA: `dcd6cbbc15f73c3dd201a7e8261fe93b79b43e10`
+- Final deployed mobile-hotfix app SHA: `eaedaf5fc7aa2885c8a2f0f0d9797dd3e9063d7d`
+- Final verified frontend SHA-256: `92c2770fb9d0e406509c715cafb84fcdc347979397a6504584d2bd9dc3e8bde8`
+- Platform Control and Shop Import were owner-visible in PROD.
+- Owner explicitly confirmed PROD DONE.
+- Whole-version lessons: `releases/V4_TO_PROD_RELEASE_RETROSPECTIVE_2026-09-06.md`.

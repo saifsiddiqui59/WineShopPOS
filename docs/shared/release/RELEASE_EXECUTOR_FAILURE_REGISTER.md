@@ -260,3 +260,17 @@ Permanent prevention:
 - derive the actual candidate SHA after safe synchronization and bind the
   artifact/deployment evidence to that SHA;
 - stop on divergence, target collision, or invariant regression.
+
+## V4 WHOLE-RELEASE LESSONS 2026-09-06
+
+Detailed retrospective:
+`docs/versions/v4/releases/V4_TO_PROD_RELEASE_RETROSPECTIVE_2026-09-06.md`
+
+Reusable failure classes:
+
+1. Classify migration risk before choosing backup tooling.
+2. Preflight known PROD endpoints/config before expensive release stages.
+3. Selective promotion requires tracked delta plus new non-ignored additions.
+4. Use isolated worktrees around legitimate dirty long-lived PROD/main.
+5. Require real-device mobile visual UAT before release close.
+6. Treat operator path/paste/file-transfer friction as release engineering quality.
