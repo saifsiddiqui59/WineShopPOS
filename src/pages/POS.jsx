@@ -12,7 +12,7 @@ import ShiftRequiredDialog from "../components/ui/ShiftRequiredDialog";
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
 export default function POS(){
-  const{products,getStock,completeSale}=useShop();
+  const{products,getStock,completeSale,stockSyncStatus}=useShop();
   const{lastScan,successBeep,errorBeep}=useScanner();
   const { profile } = useAuth();
   const navigate=useNavigate();
@@ -476,6 +476,7 @@ export default function POS(){
           <div className="pos-v5h-search-meta">
             <div>
               <span className={`pos-v5h-connection ${navigator.onLine?"online":"offline"}`}>{navigator.onLine?"ONLINE":"OFFLINE"}</span>
+              <span className={`pos-v5h-connection ${stockSyncStatus==="LIVE"?"online":"offline"}`}>STOCK {stockSyncStatus}</span>
               <strong>Scan barcode or search product</strong>
             </div>
             <small>{active.length} active products</small>

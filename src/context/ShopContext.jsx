@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
+import { useSaaS } from "./SaaSContext";
 import { listOfflineSales, queueOfflineSale, removeOfflineSale, setOfflineSaleStatus } from "../lib/offlineQueue";
 import { productImageUrl, removeProductImage, uploadProductImage } from "../lib/productImages";
 
@@ -119,6 +120,7 @@ function writeCache(data) { try { localStorage.setItem(DATA_CACHE_KEY, JSON.stri
 
 export function ShopProvider({ children }) {
   const { user, profile, access } = useAuth();
+  const { isDemo, loading:saasLoading } = useSaaS();
   const cached = readCache();
   const [products, setProducts] = useState(cached?.products || []);
   const [inventory, setInventory] = useState(cached?.inventory || {});
@@ -128,7 +130,8 @@ export function ShopProvider({ children }) {
   const [suppliers, setSuppliers] = useState(cached?.suppliers || []);
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState("");
-  const canUseShop = Boolean(user && profile?.active && access?.allowed);
+  const [stockSyncStatus, setStockSyncStatus] = useState("IDLE");
+  const canUseShop = Boolean(user && profile?.active && access?.allowed && !saasLoading && !isDemo);
 
   const refreshAll = useCallback(async () => {
     if (!canUseShop) return { ok: false, message: "Shop session is not active." };
@@ -205,6 +208,54 @@ export function ShopProvider({ children }) {
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
   useEffect(() => { const fn = () => refreshAll(); window.addEventListener("online", fn); return () => window.removeEventListener("online", fn); }, [refreshAll]);
+
+  useEffect(() => {
+    if (!canUseShop || !profile?.shop_id || !user?.id) {
+      setStockSyncStatus(isDemo ? "DEMO" : "IDLE");
+      return undefined;
+    }
+    if (!navigator.onLine) {
+      setStockSyncStatus("OFFLINE");
+      return undefined;
+    }
+
+    setStockSyncStatus("CONNECTING");
+    const channel = supabase
+      .channel(`wsp-inventory-${profile.shop_id}-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event:"*",
+          schema:"public",
+          table:"inventory",
+          filter:`shop_id=eq.${profile.shop_id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            void refreshAll();
+            return;
+          }
+          const row = payload.new;
+          if (!row?.product_id) return;
+          setInventory((current) => {
+            const next = { ...current, [row.product_id]:num(row.quantity) };
+            const cachedNow = readCache();
+            if (cachedNow) writeCache({ ...cachedNow, inventory:next });
+            return next;
+          });
+        },
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setStockSyncStatus("LIVE");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setStockSyncStatus("DEGRADED");
+        else if (status === "CLOSED") setStockSyncStatus("IDLE");
+      });
+
+    return () => {
+      setStockSyncStatus("IDLE");
+      void supabase.removeChannel(channel);
+    };
+  }, [canUseShop, profile?.shop_id, user?.id, isDemo, refreshAll]);
 
   const getStock = (id) => num(inventory[id]);
 
@@ -423,7 +474,7 @@ export function ShopProvider({ children }) {
   function createBackup(){return{meta:{app:"WineShopPOS",mode:"SUPABASE_CLOUD",exportedAt:new Date().toISOString()},data:{products,inventory,sales,purchases}}}
   const lowStockProducts=useMemo(()=>products.filter((p)=>p.active&&getStock(p.id)<=p.minimumStock),[products,inventory]);
 
-  return <ShopContext.Provider value={{products,inventory,sales,purchases,categories,suppliers,loadingData,dataError,lowStockProducts,getStock,refreshAll,addProduct,updateProduct,deactivateProduct,activateProduct,completeSale,receiveStock,adjustStock,createBackup,syncOfflineSales}}>{children}</ShopContext.Provider>;
+  return <ShopContext.Provider value={{products,inventory,sales,purchases,categories,suppliers,loadingData,dataError,stockSyncStatus,lowStockProducts,getStock,refreshAll,addProduct,updateProduct,deactivateProduct,activateProduct,completeSale,receiveStock,adjustStock,createBackup,syncOfflineSales}}>{children}</ShopContext.Provider>;
 }
 
 export function useShop(){const c=useContext(ShopContext);if(!c)throw new Error("useShop must be used inside ShopProvider");return c;}

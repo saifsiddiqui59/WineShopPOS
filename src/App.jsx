@@ -6,6 +6,7 @@ import RequireRole from "./components/RequireRole";
 import HomeRedirect from "./components/HomeRedirect";
 import SaaSAccessBoundary from "./components/SaaSAccessBoundary";
 import RequirePlatformAdmin from "./components/RequirePlatformAdmin";
+import LegalNoticeBoundary from "./components/LegalNoticeBoundary";
 import DemoWorkspace from "./pages/DemoWorkspace";
 import PlatformAdmin from "./pages/PlatformAdmin";
 import { MODULE_TABS } from "./config/navigation";
@@ -20,6 +21,7 @@ import ScannerSettings from "./pages/ScannerSettings";
 import Products from "./pages/Products";
 import AddProduct from "./pages/AddProduct";
 import BulkProductImport from "./pages/BulkProductImport";
+import ShopImport from "./pages/ShopImport";
 import EditProduct from "./pages/EditProduct";
 import BarcodeLabels from "./pages/BarcodeLabels";
 import Purchases from "./pages/Purchases";
@@ -68,6 +70,7 @@ export default function App() {
       <Route element={<SaaSAccessBoundary/>}>
         <Route path="demo" element={<DemoWorkspace/>}/>
         <Route element={<RequirePlatformAdmin/>}><Route path="platform-admin" element={<PlatformAdmin/>}/></Route>
+        <Route element={<LegalNoticeBoundary/>}>
         <Route element={<Layout/>}>
         <Route index element={<HomeRedirect/>}/>
         <Route path="account" element={<Account/>}/>
@@ -87,6 +90,7 @@ export default function App() {
           <Route path="products" element={module("Products", "Product master, barcode configuration and physical label printing.", MODULE_TABS.products)}>
             <Route index element={<Products/>}/>
             <Route path="new" element={<AddProduct/>}/>
+            <Route path="import" element={<ShopImport/>}/>
             <Route path="bulk-import" element={<BulkProductImport/>}/>
             <Route path=":id/edit" element={<EditProduct/>}/>
             <Route path="labels" element={<BarcodeLabels/>}/>
@@ -176,6 +180,7 @@ export default function App() {
         <Route path="settings" element={<Navigate to="/admin/settings" replace/>}/>
 
         <Route path="*" element={<HomeRedirect/>}/>
+        </Route>
         </Route>
       </Route>
     </Route>

@@ -29,7 +29,8 @@ export const MODULE_TABS = {
   ],
   products: [
     { path: "/products", label: "Product Master", roles: ["ADMIN", "MANAGER"] },
-    { path: "/products/bulk-import", label: "Bulk Product Import", roles: ["ADMIN", "MANAGER"] },
+    { path: "/products/import", label: "Shop Import", roles: ["ADMIN", "MANAGER"] },
+    { path: "/products/bulk-import", label: "Manual / OCR Add", roles: ["ADMIN", "MANAGER"] },
     { path: "/products/labels", label: "Barcode Labels", roles: ["ADMIN", "MANAGER"] },
   ],
   purchasing: [

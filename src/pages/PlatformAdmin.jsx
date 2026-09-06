@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSaaS } from "../context/SaaSContext";
 import { getEnvironment } from "../config/environment";
+import LegalAdminCard from "../components/LegalAdminCard";
 
 const card = {
   background:"#0b0b0d",
@@ -236,7 +237,6 @@ export default function PlatformAdmin() {
                   <option>BASIC</option>
                   <option>PLUS</option>
                   <option>PRO</option>
-                  <option>ENTERPRISE</option>
                 </select>
               </label>
 
@@ -330,6 +330,8 @@ export default function PlatformAdmin() {
             not silently convert version controls into a hard application block.
           </div>
         </form>
+
+        <LegalAdminCard/>
 
         <form style={card} onSubmit={publish}>
           <h2 style={{marginTop:0}}>Operational Announcement</h2>

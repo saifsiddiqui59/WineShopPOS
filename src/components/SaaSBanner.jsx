@@ -122,7 +122,7 @@ function palette(level) {
   };
 }
 
-function Modal({ title, body, detail, level="critical", onAcknowledge }) {
+function Modal({ title, body, detail, level="critical", onAcknowledge, flashy=false, buttonLabel="I understand" }) {
   const p = palette(level);
 
   return (
@@ -141,7 +141,7 @@ function Modal({ title, body, detail, level="critical", onAcknowledge }) {
         padding:20,
       }}
     >
-      <section style={{
+      <section className={flashy ? "wsp-critical-modal-card" : undefined} style={{
         width:"min(640px, 96vw)",
         background:p.bg,
         border:p.border,
@@ -187,7 +187,7 @@ function Modal({ title, body, detail, level="critical", onAcknowledge }) {
             cursor:"pointer",
           }}
         >
-          I understand
+          {buttonLabel}
         </button>
       </section>
     </div>
@@ -507,7 +507,7 @@ export default function SaaSBanner() {
         </section>
       ) : null}
 
-      {announcement ? (
+      {announcement && (announcement.severity === "CRITICAL" || !announcementAcked) ? (
         <section style={{
           margin:"10px 16px 0",
           border:palette(announcementLevel).border,
@@ -558,8 +558,10 @@ export default function SaaSBanner() {
         <Modal
           title="Important WineShopPOS notice"
           body={announcement.message}
-          detail="This announcement was marked CRITICAL by the WineShopPOS platform administrator."
+          detail="Please review this notice before continuing."
           level="critical"
+          flashy
+          buttonLabel="ACKNOWLEDGE"
           onAcknowledge={ackAnnouncement}
         />
       ) : null}
