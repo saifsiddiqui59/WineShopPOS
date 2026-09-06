@@ -1,0 +1,102 @@
+/* V4_MOBILE_PROD_HOTFIX_20260906
+   Owner-observed iPhone correction. Frontend layout only. */
+
+@media (max-width: 780px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .app-shell.mobile-sidebar-open .sidebar,
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .sidebar {
+    width: min(88vw, 320px) !important;
+    max-width: 320px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell.mobile-sidebar-open .nav-menu,
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .nav-menu {
+    flex: 1 1 auto;
+    gap: 4px !important;
+    padding: 12px 10px !important;
+    overflow-y: auto;
+  }
+
+  .app-shell.mobile-sidebar-open .nav-item,
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .nav-item {
+    width: 100% !important;
+    min-height: 48px !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 0 14px !important;
+  }
+
+  .app-shell.mobile-sidebar-open .nav-item span,
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .nav-item span {
+    display: inline !important;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Keep navigation useful on a phone; decorative tile remains available on desktop. */
+  .app-shell.mobile-sidebar-open .spiritual-tile,
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .spiritual-tile {
+    display: none !important;
+  }
+
+  .app-shell.mobile-sidebar-open .exact-reference-brand,
+  .app-shell.sidebar-collapsed.mobile-sidebar-open .exact-reference-brand {
+    min-height: 108px !important;
+    max-height: 108px !important;
+    overflow: hidden !important;
+  }
+
+  .page-area,
+  .page-area > *,
+  .panel,
+  .module-shell,
+  .module-content {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .data-table-wrapper,
+  .table-wrap,
+  .table-scroll {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page-actions,
+  .button-row {
+    flex-wrap: wrap !important;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .page-area {
+    padding: 10px !important;
+  }
+
+  .mobile-sidebar-close {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    right: 10px !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+}

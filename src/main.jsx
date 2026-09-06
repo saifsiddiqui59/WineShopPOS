@@ -13,6 +13,7 @@ import "./chapters16to26.css";
 import "./masterConsolidation.css";
 import "./aiOwnerAssistant.css";
 import "./globalError.css";
+import "./v4MobileProdHotfix.css";
 
 // V5_PREVIEW_SERVICE_WORKER_ISOLATION
 // Production root keeps its service worker. The additive /v3-preview/ build
