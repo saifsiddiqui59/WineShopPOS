@@ -1013,3 +1013,54 @@ Permanent prevention:
 - derive the actual candidate SHA after safe synchronization and bind the
   artifact/deployment evidence to that SHA;
 - stop on divergence, target collision, or invariant regression.
+
+<!-- V5_DEV_INVOICE_MISSING_SUBSCRIPTION_20260907 -->
+## 2026-09-07 — V5 DEV Invoice API Azure `MissingSubscription` continuation failure
+
+Incident marker:
+`V5_DEV_INVOICE_MISSING_SUBSCRIPTION_20260907`
+
+Date / release / stage:
+2026-09-07 — V5 bootstrap — isolated DEV Invoice API setup, managed-identity/storage-access stage.
+
+Symptom:
+The resume executor reached the DEV managed-identity/storage-access stage and stopped with:
+
+`(MissingSubscription) The request did not have a subscription or a valid tenant level resource provider.`
+
+Confirmed partial cloud state before this incident was recorded:
+- DEV storage account `wspv5invdev53b6e9a1` exists.
+- Private invoice container had been created by the earlier run.
+- DEV Function App `wsp-v5-invoice-dev-53b6e9a1` exists.
+- HTTPS-only was enabled successfully.
+- Azure auto-created Application Insights during Function creation; Function telemetry connection settings were later removed, but the Application Insights resource itself was not deleted.
+- PROD Invoice API `wsp-v3-invoice-53b6e9a1` remained bound to PROD Supabase.
+- No PROD business data was copied.
+- The DEV Invoice API code deployment and final DEV runtime binding had not yet been reached when this failure occurred.
+
+Authentication/tool/platform involved:
+Azure CLI 2.87.0 on Windows Git Bash; active Azure subscription was visible and management-plane reads had previously succeeded.
+
+Root cause:
+NOT YET PROVEN. The exact Azure CLI subcommand producing `MissingSubscription` must be isolated by read-only diagnosis before another mutation is attempted. Do not infer that Git cloning, Supabase, or application source caused this error.
+
+Resolution used:
+1. Stop further DEV cloud mutation.
+2. Record this incident in the canonical failure register.
+3. Run read-only Azure checks with the subscription ID supplied explicitly to account/resource/RBAC commands.
+4. Only after the exact failing command/auth context is known may a resume executor be generated.
+
+Permanent prevention:
+- New Azure continuation scripts must pass the resolved active subscription explicitly where the command supports `--subscription`.
+- Do not diagnose Azure management-plane/RBAC failures by assumption.
+- Separate resource existence, identity read, role-assignment read, role-definition read, storage data-plane access and app-setting configuration into independently labelled checks.
+- Reuse existing resources after partial success; do not delete/recreate them to make an executor pass.
+- PROD resources remain read-only during V5 DEV bootstrap.
+- A failed run with successful prior cloud creation is partial state, not rollback.
+
+Safe continuation point:
+Start from current V5 HEAD and the existing DEV Function/storage resources. First complete read-only Azure diagnosis. Do not rerun source bootstrap, recreate V5, copy PROD data, or recreate the already-existing DEV resources.
+
+Verified outcome:
+Pending read-only diagnosis.
+<!-- /V5_DEV_INVOICE_MISSING_SUBSCRIPTION_20260907 -->
