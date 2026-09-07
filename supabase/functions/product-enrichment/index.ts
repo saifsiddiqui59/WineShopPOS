@@ -1293,6 +1293,506 @@ async function searchSerpImagesFree(identity: any) {
   };
 }
 
+async function imageChoiceCacheKeyFor(product: any, identity: any) {
+  return sha256(JSON.stringify({
+    v: 4,
+    mode: "IMAGE_CHOICES",
+    productId: String(product.id || ""),
+    q: normalizeText(identity?.expected?.query || ""),
+    brand: normalizeText(identity?.expected?.brand || ""),
+    sizeMl: Number(identity?.expected?.sizeMl || 0) || null,
+    packageType: normalizePackageType(identity?.expected?.packageType),
+  }));
+}
+
+async function imageCandidateHistory(
+  admin: any,
+  shopId: string,
+  productId: string,
+  imagePath: string | null,
+) {
+  const relevantActions = [
+    "PRODUCT_IMAGE_AUTO_ENRICHED_SERPAPI_FREE",
+    "PRODUCT_IMAGE_SELECTED_FROM_CHOOSER",
+    "PRODUCT_IMAGE_TRY_ANOTHER",
+  ];
+
+  const { data, error } = await admin
+    .from("audit_logs")
+    .select("action,new_data,metadata,created_at")
+    .eq("shop_id", shopId)
+    .eq("entity_type", "product")
+    .eq("entity_id", String(productId))
+    .in("action", relevantActions)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+
+  const usedCandidateIds: string[] = [];
+  let currentCandidateId: string | null = null;
+
+  for (const row of data || []) {
+    const candidateId = String(row?.metadata?.candidate_id || "").trim();
+    if (candidateId && !usedCandidateIds.includes(candidateId)) {
+      usedCandidateIds.push(candidateId);
+    }
+
+    if (
+      !currentCandidateId &&
+      imagePath &&
+      String(row?.new_data?.image_path || "") === String(imagePath) &&
+      candidateId
+    ) {
+      currentCandidateId = candidateId;
+    }
+  }
+
+  return {
+    currentCandidateId,
+    usedCandidateIds,
+  };
+}
+
+async function storeImageChoiceCache({
+  admin,
+  shopId,
+  productId,
+  cacheKey,
+  identity,
+  provider,
+  candidates,
+  userId,
+}: any) {
+  const usable = Array.isArray(candidates) ? candidates : [];
+  const ttlMs = usable.length
+    ? 24 * 60 * 60 * 1000
+    : 30 * 60 * 1000;
+
+  const response = {
+    ok: true,
+    mode: "IMAGE_CHOICES",
+    strategyVersion: 4,
+    productId,
+    searchIdentity: {
+      productName: identity?.canonical?.productName || null,
+      brand: identity?.canonical?.brand || null,
+      brandCorrectedOnlyForSearch:
+        Boolean(identity?.canonical?.brandCorrectedForSearchOnly),
+    },
+    providerAccount: provider?.account || null,
+    providerAttempts: provider?.attempts || [],
+    candidates: usable.slice(0, 12),
+    createdAt: new Date().toISOString(),
+    positiveCache: usable.length > 0,
+  };
+
+  const { error } = await admin
+    .from("product_enrichment_cache")
+    .upsert({
+      shop_id: shopId,
+      cache_key: cacheKey,
+      query_text: String(identity?.queries?.[0] || identity?.expected?.query || "image choices"),
+      query_size_ml: Number(identity?.expected?.sizeMl || 0) || null,
+      query_barcode: null,
+      response,
+      providers: ["SERPAPI_GOOGLE_IMAGES"],
+      hit_count: 0,
+      expires_at: new Date(Date.now() + ttlMs).toISOString(),
+      created_by: userId,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: "shop_id,cache_key",
+    });
+
+  if (error) throw error;
+  return response;
+}
+
+function publicImageChoice(candidate: any, history: any) {
+  const previewCandidate = String(
+    candidate?.imagePreviewUrl || candidate?.originalImageUrl || ""
+  ).trim();
+
+  const previewUrl = previewCandidate.startsWith("https://")
+    ? previewCandidate
+    : null;
+
+  const candidateId = String(candidate?.candidateId || "");
+
+  return {
+    candidateId,
+    title: candidate?.title || "Product image",
+    publisher: candidate?.publisher || "Web image",
+    sourcePageUrl: candidate?.sourcePageUrl || null,
+    imagePreviewUrl: previewUrl,
+    sizeMl: Number(candidate?.sizeMl || 0) || null,
+    packageType: candidate?.packageType || null,
+    score: candidate?.score ?? null,
+    confidenceBand: candidate?.confidenceBand || null,
+    isCurrent:
+      Boolean(candidateId) &&
+      candidateId === history?.currentCandidateId,
+    wasUsed:
+      Boolean(candidateId) &&
+      (history?.usedCandidateIds || []).includes(candidateId),
+  };
+}
+
+async function getProductImageChoices({
+  admin,
+  user,
+  membership,
+  shopId,
+  productId,
+}: any) {
+  if (!["ADMIN", "MANAGER"].includes(String(membership?.role || "").toUpperCase())) {
+    throw new HttpError(403, "Manager or Admin access is required");
+  }
+
+  if (!productId) throw new HttpError(400, "productId is required");
+
+  const { data: product, error: productError } = await admin
+    .from("products")
+    .select("id,shop_id,barcode,product_name,brand,size_ml,image_path")
+    .eq("id", productId)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+
+  if (productError) throw productError;
+  if (!product) throw new HttpError(404, "Product not found in current shop");
+
+  const identity = await buildSerpImageIdentity(admin, shopId, product);
+  const cacheKey = await imageChoiceCacheKeyFor(product, identity);
+
+  let cached = await getCached(admin, shopId, cacheKey, true);
+  let response = cached?.response;
+  let cacheHit = false;
+
+  if (
+    response?.mode === "IMAGE_CHOICES" &&
+    String(response?.productId || "") === String(productId)
+  ) {
+    cacheHit = true;
+
+    await admin
+      .from("product_enrichment_cache")
+      .update({
+        hit_count: Number(cached?.hit_count || 0) + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", cached.id);
+  } else {
+    const provider = await searchSerpImagesFree(identity);
+
+    response = await storeImageChoiceCache({
+      admin,
+      shopId,
+      productId,
+      cacheKey,
+      identity,
+      provider,
+      candidates: provider.candidates || [],
+      userId: user.id,
+    });
+  }
+
+  const history = await imageCandidateHistory(
+    admin,
+    shopId,
+    productId,
+    product.image_path || null,
+  );
+
+  const choices = (response?.candidates || [])
+    .slice(0, 8)
+    .map((candidate: any) => publicImageChoice(candidate, history));
+
+  return {
+    ok: true,
+    action: "IMAGE_CHOICES",
+    strategyVersion: 4,
+    productId,
+    choiceCacheKey: cacheKey,
+    cacheHit,
+    cachePolicy: choices.length
+      ? "24_HOURS_POSITIVE"
+      : "30_MINUTES_EMPTY",
+    maxProviderSearchesWhenFresh: 2,
+    freeOnly: true,
+    paidAllowed: false,
+    choices,
+    currentCandidateId: history.currentCandidateId,
+    usedCandidateIds: history.usedCandidateIds,
+    searchIdentity: response?.searchIdentity || null,
+    providerAccount: response?.providerAccount || null,
+    providerAttempts: cacheHit ? [] : response?.providerAttempts || [],
+    barcodeBefore: String(product.barcode || ""),
+    barcodeAfter: String(product.barcode || ""),
+    barcodeUnchanged: true,
+  };
+}
+
+async function applyCachedImageChoice({
+  caller,
+  admin,
+  user,
+  membership,
+  shopId,
+  productId,
+  choiceCacheKey,
+  candidateId,
+  selectionMode,
+}: any) {
+  if (!["ADMIN", "MANAGER"].includes(String(membership?.role || "").toUpperCase())) {
+    throw new HttpError(403, "Manager or Admin access is required");
+  }
+
+  const mode = String(selectionMode || "CHOOSER").toUpperCase();
+  if (!["CHOOSER", "TRY_ANOTHER"].includes(mode)) {
+    throw new HttpError(400, "Unsupported image selection mode");
+  }
+
+  if (!productId || !choiceCacheKey || !candidateId) {
+    throw new HttpError(400, "Product, image choices and candidate are required");
+  }
+
+  const cached = await getCached(admin, shopId, String(choiceCacheKey), true);
+  const choiceSet = cached?.response;
+
+  if (
+    !choiceSet ||
+    choiceSet.mode !== "IMAGE_CHOICES" ||
+    String(choiceSet.productId || "") !== String(productId)
+  ) {
+    throw new HttpError(
+      410,
+      "Image choices expired. Open Choose Image again to refresh the list.",
+    );
+  }
+
+  const candidate = (choiceSet.candidates || []).find(
+    (row: any) => String(row?.candidateId || "") === String(candidateId)
+  );
+
+  if (!candidate?.originalImageUrl) {
+    throw new HttpError(400, "Selected image is not available in the verified choice set");
+  }
+
+  const { data: product, error: productError } = await admin
+    .from("products")
+    .select("id,shop_id,barcode,product_name,brand,size_ml,image_path")
+    .eq("id", productId)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+
+  if (productError) throw productError;
+  if (!product) throw new HttpError(404, "Product not found in current shop");
+
+  const barcodeBefore = String(product.barcode || "");
+  const oldPath = product.image_path || null;
+
+  const image = await downloadSafeImage(candidate.originalImageUrl);
+  const newPath =
+    `${shopId}/${productId}/${Date.now()}-` +
+    `${mode === "TRY_ANOTHER" ? "try-another" : "chosen"}-image.${image.ext}`;
+
+  const { error: uploadError } = await admin.storage
+    .from(IMAGE_BUCKET)
+    .upload(newPath, image.bytes, {
+      contentType: image.mime,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { error: linkError } = await caller.rpc("set_product_image", {
+    p_product_id: productId,
+    p_image_path: newPath,
+  });
+
+  if (linkError) {
+    await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+    throw linkError;
+  }
+
+  const { data: verified, error: verifyError } = await admin
+    .from("products")
+    .select("barcode,image_path,product_name,brand,size_ml")
+    .eq("id", productId)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+
+  const identityUnchanged =
+    verified &&
+    String(verified.barcode || "") === barcodeBefore &&
+    String(verified.product_name || "") === String(product.product_name || "") &&
+    String(verified.brand || "") === String(product.brand || "") &&
+    Number(verified.size_ml || 0) === Number(product.size_ml || 0);
+
+  if (
+    verifyError ||
+    !verified ||
+    !identityUnchanged ||
+    String(verified.image_path || "") !== newPath
+  ) {
+    await caller.rpc("set_product_image", {
+      p_product_id: productId,
+      p_image_path: oldPath,
+    }).catch(() => {});
+
+    await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+
+    throw new HttpError(
+      409,
+      "Image-only safety verification failed. Image change was rolled back.",
+    );
+  }
+
+  const { data: shop } = await admin
+    .from("shops")
+    .select("organization_id")
+    .eq("id", shopId)
+    .maybeSingle();
+
+  const auditAction =
+    mode === "TRY_ANOTHER"
+      ? "PRODUCT_IMAGE_TRY_ANOTHER"
+      : "PRODUCT_IMAGE_SELECTED_FROM_CHOOSER";
+
+  const { error: auditError } = await admin.from("audit_logs").insert({
+    shop_id: shopId,
+    organization_id: shop?.organization_id || null,
+    actor_id: user.id,
+    action: auditAction,
+    entity_type: "product",
+    entity_id: String(productId),
+    old_data: { image_path: oldPath },
+    new_data: { image_path: newPath },
+    metadata: {
+      image_only: true,
+      strategy_version: 4,
+      selection_mode: mode,
+      chosen_by_user: mode === "CHOOSER",
+      try_another: mode === "TRY_ANOTHER",
+      free_only: true,
+      paid_provider_allowed: false,
+      choice_cache_key: choiceCacheKey,
+      candidate_id: candidate.candidateId || null,
+      candidate_title: candidate.title || null,
+      candidate_publisher: candidate.publisher || null,
+      source_page_url: candidate.sourcePageUrl || null,
+      original_image_source: image.finalUrl || candidate.originalImageUrl || null,
+      match_score: candidate.score ?? null,
+      confidence_band: candidate.confidenceBand || null,
+      barcode_before: barcodeBefore,
+      barcode_after: String(verified.barcode || ""),
+      barcode_changed: false,
+      product_identity_changed: false,
+      inventory_changed: false,
+      prices_changed: false,
+    },
+  });
+
+  if (auditError) {
+    await caller.rpc("set_product_image", {
+      p_product_id: productId,
+      p_image_path: oldPath,
+    }).catch(() => {});
+
+    await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+
+    throw new HttpError(
+      503,
+      "Image audit could not be recorded. Image change was not retained.",
+    );
+  }
+
+  if (oldPath && oldPath !== newPath) {
+    await admin.storage.from(IMAGE_BUCKET).remove([oldPath]).catch(() => {});
+  }
+
+  return {
+    ok: true,
+    action:
+      mode === "TRY_ANOTHER"
+        ? "TRY_ANOTHER_IMAGE"
+        : "APPLY_IMAGE_CHOICE",
+    strategyVersion: 4,
+    productId,
+    imagePath: newPath,
+    candidate: {
+      candidateId: candidate.candidateId || null,
+      title: candidate.title || null,
+      publisher: candidate.publisher || null,
+      sourcePageUrl: candidate.sourcePageUrl || null,
+      score: candidate.score ?? null,
+      confidenceBand: candidate.confidenceBand || null,
+    },
+    barcodeBefore,
+    barcodeAfter: String(verified.barcode || ""),
+    barcodeUnchanged: true,
+    productIdentityUnchanged: true,
+    note:
+      mode === "TRY_ANOTHER"
+        ? "Next unused image candidate applied. Barcode and Product Master identity unchanged."
+        : "Selected image applied. Barcode and Product Master identity unchanged.",
+  };
+}
+
+async function tryAnotherProductImage({
+  caller,
+  admin,
+  user,
+  membership,
+  shopId,
+  productId,
+}: any) {
+  const choices = await getProductImageChoices({
+    admin,
+    user,
+    membership,
+    shopId,
+    productId,
+  });
+
+  if (!choices.choices?.length) {
+    throw new HttpError(
+      404,
+      "No alternative image choices are currently available.",
+    );
+  }
+
+  let next = choices.choices.find(
+    (choice: any) => !choice.isCurrent && !choice.wasUsed
+  );
+
+  if (!next) {
+    next = choices.choices.find((choice: any) => !choice.isCurrent);
+  }
+
+  if (!next) {
+    throw new HttpError(
+      404,
+      "No different image is available in the current search results.",
+    );
+  }
+
+  return applyCachedImageChoice({
+    caller,
+    admin,
+    user,
+    membership,
+    shopId,
+    productId,
+    choiceCacheKey: choices.choiceCacheKey,
+    candidateId: next.candidateId,
+    selectionMode: "TRY_ANOTHER",
+  });
+}
+
+
 async function autoFindAndAttachImage({
   caller,
   admin,
@@ -1757,7 +2257,36 @@ Deno.serve(async (req) => {
 
     let response: any;
 
-    if (action === "AUTO_IMAGE") {
+    if (action === "IMAGE_CHOICES") {
+      response = await getProductImageChoices({
+        admin,
+        user,
+        membership,
+        shopId,
+        productId: String(body?.productId || ""),
+      });
+    } else if (action === "APPLY_IMAGE_CHOICE") {
+      response = await applyCachedImageChoice({
+        caller,
+        admin,
+        user,
+        membership,
+        shopId,
+        productId: String(body?.productId || ""),
+        choiceCacheKey: String(body?.choiceCacheKey || ""),
+        candidateId: String(body?.candidateId || ""),
+        selectionMode: "CHOOSER",
+      });
+    } else if (action === "TRY_ANOTHER_IMAGE") {
+      response = await tryAnotherProductImage({
+        caller,
+        admin,
+        user,
+        membership,
+        shopId,
+        productId: String(body?.productId || ""),
+      });
+    } else if (action === "AUTO_IMAGE") {
       response = await autoFindAndAttachImage({
         caller,
         admin,

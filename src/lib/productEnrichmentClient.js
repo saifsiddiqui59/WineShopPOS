@@ -54,3 +54,41 @@ export function autoFindProductImage({ shopId, productId, replace = false }, opt
     options,
   );
 }
+
+export function getProductImageChoices({ shopId, productId }, options) {
+  return invoke(
+    {
+      action: "IMAGE_CHOICES",
+      shopId,
+      productId,
+    },
+    options,
+  );
+}
+
+export function applyProductImageChoice(
+  { shopId, productId, choiceCacheKey, candidateId },
+  options,
+) {
+  return invoke(
+    {
+      action: "APPLY_IMAGE_CHOICE",
+      shopId,
+      productId,
+      choiceCacheKey,
+      candidateId,
+    },
+    options,
+  );
+}
+
+export function tryAnotherProductImage({ shopId, productId }, options) {
+  return invoke(
+    {
+      action: "TRY_ANOTHER_IMAGE",
+      shopId,
+      productId,
+    },
+    options,
+  );
+}

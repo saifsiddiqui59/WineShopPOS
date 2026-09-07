@@ -1293,3 +1293,20 @@ AUTO_IMAGE receives a dedicated broad-image path that:
 - never uses barcode in the search query,
 - mutates only image_path,
 - verifies product identity/barcode unchanged.
+
+### 2026-09-07 — V5 image correction UX gap
+
+Marker: `V5_IMAGE_CHOOSER_TRY_ANOTHER_UX_20260907`
+
+UAT found that automatic product image lookup could successfully attach an
+image, but correcting a visually wrong result was still awkward because
+Find/Replace could choose the same top-ranked image again.
+
+Permanent UX fix:
+- Try Another Image skips the current and previously used candidates first.
+- Choose Image opens a thumbnail picker with up to 8 server-generated choices.
+- Choice sets are cached positively for 24 hours to conserve the free quota.
+- Empty choice sets cache only 30 minutes.
+- The browser cannot submit arbitrary image URLs; it can select only a
+  server-cached candidate ID.
+- Barcode/Product Master identity remains immutable during image correction.
