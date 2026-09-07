@@ -833,27 +833,464 @@ async function downloadSafeImage(raw: string) {
   throw new HttpError(400, "Candidate image could not be downloaded safely");
 }
 
-async function exactSameShopImage(admin: any, shopId: string, product: any) {
-  const { data, error } = await admin
-    .from("products")
-    .select("id,product_name,brand,size_ml,image_path")
-    .eq("shop_id", shopId)
-    .neq("id", product.id)
-    .not("image_path", "is", null)
-    .limit(200);
+function imageEditDistance(aRaw: unknown, bRaw: unknown) {
+  const a = normalizeText(aRaw);
+  const b = normalizeText(bRaw);
+  const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
 
-  if (error) throw error;
+  for (let i = 0; i <= a.length; i += 1) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j += 1) dp[0][j] = j;
 
-  const name = normalizeText(product.product_name);
-  const brand = normalizeText(product.brand);
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+  }
+
+  return dp[a.length][b.length];
+}
+
+const IMAGE_GENERIC_WORDS = new Set([
+  "beer", "premium", "strong", "super", "classic", "lager",
+  "whisky", "whiskey", "vodka", "rum", "gin", "brandy", "wine",
+  "bottle", "can", "original", "reserve", "gold", "silver",
+]);
+
+function imageDistinctiveTokens(value: unknown) {
+  return normalizeText(value)
+    .split(" ")
+    .filter((token) =>
+      token.length >= 5 &&
+      !IMAGE_GENERIC_WORDS.has(token) &&
+      !/^\d+$/.test(token)
+    );
+}
+
+function correctedImageToken(tokenRaw: string) {
+  const token = normalizeText(tokenRaw);
+  if (!token || token.length < 5 || /^\d+$/.test(token)) return token;
+
+  // Search-only domain corrections. These do not mutate Product Master.
+  const domain = [
+    "premium", "lager", "original", "classic", "strong",
+    "elephant", "reserve",
+  ];
+
+  let best = token;
+  let bestDistance = 99;
+  for (const candidate of domain) {
+    if (Math.abs(candidate.length - token.length) > 2) continue;
+    const d = imageEditDistance(token, candidate);
+    if (d < bestDistance) {
+      best = candidate;
+      bestDistance = d;
+    }
+  }
+
+  return bestDistance <= 2 ? best : token;
+}
+
+async function buildSerpImageIdentity(admin: any, shopId: string, product: any) {
+  const [{ data: aliases, error: aliasError }, { data: shopProducts, error: productsError }] =
+    await Promise.all([
+      admin
+        .from("product_aliases")
+        .select("alias_text")
+        .eq("shop_id", shopId)
+        .eq("product_id", product.id)
+        .limit(30),
+      admin
+        .from("products")
+        .select("id,product_name,brand,size_ml,image_path")
+        .eq("shop_id", shopId)
+        .eq("active", true)
+        .limit(500),
+    ]);
+
+  if (aliasError) throw aliasError;
+  if (productsError) throw productsError;
+
+  const rawName = String(product.product_name || "").trim();
+  const rawBrand = String(product.brand || "").trim();
+  const rawBrandNorm = normalizeText(rawBrand);
   const sizeMl = Number(product.size_ml || 0) || null;
+  const packageType = inferPackageType(rawName);
 
-  return (data || []).find((row: any) =>
-    Boolean(row.image_path) &&
-    normalizeText(row.product_name) === name &&
-    normalizeText(row.brand) === brand &&
-    (Number(row.size_ml || 0) || null) === sizeMl
-  ) || null;
+  const currentDistinctive = new Set([
+    ...imageDistinctiveTokens(rawName),
+    ...(aliases || []).flatMap((row: any) => imageDistinctiveTokens(row.alias_text)),
+  ]);
+
+  // Search-only brand correction is conservative:
+  // 1) brand spelling must be very close
+  // 2) a sibling product using that brand must share a distinctive family token
+  // This lets Cartsberg Elephant -> Carlsberg Elephant, but avoids arbitrary
+  // correction between unrelated similarly-spelled brands.
+  let searchBrand = rawBrand;
+  let bestEvidence: any = null;
+
+  for (const sibling of shopProducts || []) {
+    const siblingBrand = String(sibling.brand || "").trim();
+    const siblingBrandNorm = normalizeText(siblingBrand);
+    if (!siblingBrandNorm || siblingBrandNorm === rawBrandNorm) continue;
+
+    const distance = imageEditDistance(rawBrandNorm, siblingBrandNorm);
+    const maxDistance = Math.max(rawBrandNorm.length, siblingBrandNorm.length) >= 7 ? 2 : 1;
+    if (distance > maxDistance) continue;
+
+    const siblingDistinctive = imageDistinctiveTokens(sibling.product_name);
+    const overlap = siblingDistinctive.filter((token) => currentDistinctive.has(token));
+    if (!overlap.length) continue;
+
+    const evidence = {
+      brand: siblingBrand,
+      distance,
+      overlap,
+    };
+
+    if (
+      !bestEvidence ||
+      evidence.distance < bestEvidence.distance ||
+      (
+        evidence.distance === bestEvidence.distance &&
+        evidence.overlap.length > bestEvidence.overlap.length
+      )
+    ) {
+      bestEvidence = evidence;
+      searchBrand = siblingBrand;
+    }
+  }
+
+  let workingName = rawName;
+  if (
+    rawBrand &&
+    searchBrand &&
+    normalizeText(rawBrand) !== normalizeText(searchBrand)
+  ) {
+    const escaped = rawBrand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    workingName = workingName.replace(new RegExp(`\\b${escaped}\\b`, "i"), searchBrand);
+  }
+
+  const correctedTokens = normalizeText(workingName)
+    .split(" ")
+    .filter(Boolean)
+    .map(correctedImageToken);
+
+  let searchName = correctedTokens.join(" ");
+  const searchBrandNorm = normalizeText(searchBrand);
+
+  if (searchBrand && searchName.startsWith(searchBrandNorm)) {
+    searchName = searchBrand + searchName.slice(searchBrandNorm.length);
+  }
+
+  const packageLabel =
+    packageType === "CAN" ? "Can" :
+      packageType === "BOTTLE" ? "Bottle" : "";
+
+  const distinctive = correctedTokens.filter((token) =>
+    !IMAGE_GENERIC_WORDS.has(token) &&
+    !searchBrandNorm.split(" ").includes(token)
+  );
+
+  // At most TWO search requests per product.
+  const query1 = [
+    searchName,
+    sizeMl ? `${sizeMl} ml` : "",
+    packageLabel,
+    "India",
+  ].filter(Boolean).join(" ");
+
+  const query2 = [
+    searchBrand,
+    distinctive.slice(0, 4).join(" "),
+    sizeMl ? `${sizeMl} ml` : "",
+    packageLabel,
+    "India",
+  ].filter(Boolean).join(" ");
+
+  const queries = [...new Set([query1, query2].map((q) => q.trim()).filter(Boolean))]
+    .slice(0, 2);
+
+  return {
+    expected: {
+      query: searchName,
+      title: searchName,
+      brand: searchBrand,
+      sizeMl,
+      packageType,
+    },
+    queries,
+    raw: {
+      productName: rawName,
+      brand: rawBrand,
+      aliases: (aliases || []).map((row: any) => row.alias_text),
+    },
+    canonical: {
+      productName: searchName,
+      brand: searchBrand,
+      brandCorrectedForSearchOnly: normalizeText(searchBrand) !== rawBrandNorm,
+      brandEvidence: bestEvidence,
+    },
+    shopProducts: shopProducts || [],
+  };
+}
+
+async function serpApiFreeAccount() {
+  const key = String(Deno.env.get("SERPAPI_API_KEY") || "").trim();
+  if (!key) {
+    throw new HttpError(
+      503,
+      "Free Google Images search is not configured. Add a SerpApi FREE API key or upload an image manually.",
+    );
+  }
+
+  const url = new URL("https://serpapi.com/account.json");
+  url.searchParams.set("api_key", key);
+
+  const result = await fetchJson(
+    url.toString(),
+    { headers: { Accept: "application/json" } },
+    5000,
+  );
+
+  if (!result.ok) {
+    throw new HttpError(503, "Could not verify the free image-search account.");
+  }
+
+  const price = Number(result.payload?.plan_monthly_price);
+  const allowPaid =
+    String(Deno.env.get("SERPAPI_ALLOW_PAID") || "false").toLowerCase() === "true";
+
+  if (!Number.isFinite(price)) {
+    throw new HttpError(
+      503,
+      "Image search stopped because the provider plan price could not be verified.",
+    );
+  }
+
+  if (price > 0 && !allowPaid) {
+    throw new HttpError(
+      402,
+      "Image search stopped because the configured provider is a paid plan. No paid search was attempted.",
+    );
+  }
+
+  const searchesLeft = Number(
+    result.payload?.plan_searches_left ??
+    result.payload?.total_searches_left ??
+    NaN
+  );
+
+  if (Number.isFinite(searchesLeft) && searchesLeft <= 0) {
+    throw new HttpError(
+      429,
+      "Free internet image-search quota is exhausted. No paid search was attempted. Upload an image manually or wait for the free quota to renew.",
+    );
+  }
+
+  return {
+    key,
+    planName: String(result.payload?.plan_name || result.payload?.plan_id || "Free"),
+    monthlyPrice: price,
+    searchesPerMonth: Number(result.payload?.searches_per_month || 0) || null,
+    searchesLeft: Number.isFinite(searchesLeft) ? searchesLeft : null,
+  };
+}
+
+async function serpApiGoogleImages(query: string, account: any) {
+  const url = new URL("https://serpapi.com/search.json");
+  url.searchParams.set("engine", "google_images");
+  url.searchParams.set("q", query);
+  url.searchParams.set("gl", "in");
+  url.searchParams.set("hl", "en");
+  url.searchParams.set("google_domain", "google.co.in");
+  url.searchParams.set("ijn", "0");
+  url.searchParams.set("api_key", account.key);
+
+  const result = await fetchJson(
+    url.toString(),
+    { headers: { Accept: "application/json" } },
+    9000,
+  );
+
+  if (!result.ok) {
+    return {
+      items: [],
+      state: `UNAVAILABLE_${result.status}`,
+      error: String(result.payload?.error || ""),
+    };
+  }
+
+  if (result.payload?.error) {
+    return {
+      items: [],
+      state: "PROVIDER_ERROR",
+      error: String(result.payload.error),
+    };
+  }
+
+  return {
+    items: Array.isArray(result.payload?.images_results)
+      ? result.payload.images_results
+      : [],
+    state: "OK",
+    error: "",
+  };
+}
+
+function fromSerpApiImage(item: any, expected: any) {
+  const title = String(item?.title || "").trim();
+  const pageUrl = String(item?.link || "").trim() || null;
+  const publisher = String(item?.source || "").trim();
+  const originalImageUrl = String(item?.original || "").trim() || null;
+  const imagePreviewUrl = String(item?.thumbnail || "").trim() || null;
+
+  const expectedBrand = String(expected?.brand || "").trim();
+  const titleNorm = normalizeText(title);
+  let brand = "";
+
+  if (
+    expectedBrand &&
+    titleNorm.includes(normalizeText(expectedBrand))
+  ) {
+    brand = expectedBrand;
+  } else {
+    try {
+      const host = new URL(pageUrl || "").hostname
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      const brandToken = normalizeText(expectedBrand).replace(/\s+/g, "");
+      if (brandToken && host.includes(brandToken)) brand = expectedBrand;
+    } catch {}
+  }
+
+  const result = {
+    title,
+    brand,
+    sizeMl: inferSizeMl(title),
+    packageType: inferPackageType(title),
+    category: "",
+    barcode: null,
+    barcodeStatus: "NOT_VERIFIED",
+    imagePreviewUrl,
+    originalImageUrl,
+    sourcePageUrl: pageUrl,
+    publisher,
+    providers: ["SERPAPI_GOOGLE_IMAGES"],
+    originalWidth: Number(item?.original_width || 0) || null,
+    originalHeight: Number(item?.original_height || 0) || null,
+    isProduct: Boolean(item?.is_product),
+    unsafe: Boolean(item?.unsafe),
+    licenseDetailsUrl: String(item?.license_details_url || "").trim() || null,
+  };
+
+  return {
+    ...result,
+    sourceTier: sourceQualityTier(result),
+  };
+}
+
+async function bestSameShopSerpImage(identity: any, product: any) {
+  const ranked = (identity.shopProducts || [])
+    .filter((row: any) =>
+      row.id !== product.id &&
+      Boolean(row.image_path) &&
+      (Number(row.size_ml || 0) || null) === identity.expected.sizeMl
+    )
+    .map((row: any) => {
+      const candidate = {
+        title: row.product_name,
+        brand: row.brand,
+        sizeMl: Number(row.size_ml || 0) || null,
+        packageType: inferPackageType(row.product_name),
+        sourceTier: "A",
+      };
+
+      return {
+        row,
+        scored: scoreEnrichmentCandidate(identity.expected, candidate, "DISCOVERY"),
+      };
+    })
+    .filter((entry: any) =>
+      !(entry.scored.conflicts || []).length &&
+      Number(entry.scored.score || 0) >= 0.82
+    )
+    .sort((a: any, b: any) =>
+      Number(b.scored.score || 0) - Number(a.scored.score || 0)
+    );
+
+  return ranked[0] || null;
+}
+
+async function searchSerpImagesFree(identity: any) {
+  const account = await serpApiFreeAccount();
+
+  const allRows: any[] = [];
+  const attempts: any[] = [];
+
+  for (const query of identity.queries.slice(0, 2)) {
+    const result = await serpApiGoogleImages(query, account);
+
+    attempts.push({
+      query,
+      state: result.state,
+      error: result.error || null,
+    });
+
+    const rows = (result.items || [])
+      .filter((item: any) =>
+        !item?.unsafe &&
+        String(item?.original || "").startsWith("https://")
+      )
+      .slice(0, 100)
+      .map((item: any) => fromSerpApiImage(item, identity.expected));
+
+    allRows.push(...rows);
+
+    const ranked = await rankCandidates(
+      identity.expected,
+      allRows,
+      "DISCOVERY",
+      16,
+    );
+
+    const useful = ranked.filter((candidate: any) =>
+      Boolean(candidate.originalImageUrl) &&
+      !(candidate.conflicts || []).length &&
+      Number(candidate.score || 0) >= 0.50
+    );
+
+    // A single Google Images request can return a large result set.
+    // Do not spend the second free request when the first already has choices.
+    if (useful.length >= 4) break;
+  }
+
+  const ranked = await rankCandidates(
+    identity.expected,
+    allRows,
+    "DISCOVERY",
+    20,
+  );
+
+  return {
+    account: {
+      planName: account.planName,
+      monthlyPrice: account.monthlyPrice,
+      searchesPerMonth: account.searchesPerMonth,
+      searchesLeftBefore: account.searchesLeft,
+      paidAllowed: false,
+    },
+    attempts,
+    candidates: ranked.filter((candidate: any) =>
+      Boolean(candidate.originalImageUrl) &&
+      !(candidate.conflicts || []).length &&
+      Number(candidate.score || 0) >= 0.38
+    ),
+  };
 }
 
 async function autoFindAndAttachImage({
@@ -887,6 +1324,7 @@ async function autoFindAndAttachImage({
     return {
       ok: true,
       action: "AUTO_IMAGE",
+      strategyVersion: 3,
       productId,
       imagePath: product.image_path,
       sourceType: "EXISTING",
@@ -894,43 +1332,48 @@ async function autoFindAndAttachImage({
       barcodeAfter: barcodeBefore,
       barcodeUnchanged: true,
       reviewRecommended: false,
-      note: "Product already has a managed image. Use Edit Product to replace it.",
+      note: "Product already has an image. Open Edit Product to replace it.",
     };
   }
+
+  const identity = await buildSerpImageIdentity(admin, shopId, product);
 
   let bytes: Uint8Array | null = null;
   let mime: string | null = null;
   let ext: string | null = null;
-  let sourceType = "INTERNET";
+  let sourceType = "SERPAPI_GOOGLE_IMAGES";
   let sourceProductId: string | null = null;
   let sourceImagePath: string | null = null;
   let downloadedFrom: string | null = null;
   let candidate: any = null;
-  let providerStatus: any = {};
+  let provider: any = null;
+  const downloadFailures: any[] = [];
 
-  const peer = await exactSameShopImage(admin, shopId, product);
+  const peer = await bestSameShopSerpImage(identity, product);
 
-  if (peer?.image_path) {
+  if (peer?.row?.image_path) {
     const { data: blob, error: downloadError } = await admin.storage
       .from(IMAGE_BUCKET)
-      .download(peer.image_path);
+      .download(peer.row.image_path);
 
     if (!downloadError && blob) {
       const raw = new Uint8Array(await blob.arrayBuffer());
       const detected = sniffImage(raw);
+
       bytes = raw;
       mime = detected.mime;
       ext = detected.ext;
       sourceType = "SHOP_IMAGE";
-      sourceProductId = String(peer.id);
-      sourceImagePath = String(peer.image_path);
+      sourceProductId = String(peer.row.id);
+      sourceImagePath = String(peer.row.image_path);
+
       candidate = {
-        title: peer.product_name,
-        brand: peer.brand,
-        sizeMl: Number(peer.size_ml || 0) || null,
-        packageType: inferPackageType(peer.product_name),
-        candidateId: `shop-${peer.id}`,
-        score: 1,
+        candidateId: `shop-${peer.row.id}`,
+        title: peer.row.product_name,
+        brand: peer.row.brand,
+        sizeMl: Number(peer.row.size_ml || 0) || null,
+        packageType: inferPackageType(peer.row.product_name),
+        score: Number(peer.scored.score || 1),
         confidenceBand: "HIGH",
         conflicts: [],
         providers: ["SHOP_IMAGE"],
@@ -940,35 +1383,34 @@ async function autoFindAndAttachImage({
   }
 
   if (!bytes) {
-    const discoveryResult = await discovery({
-      admin,
-      user,
-      shopId,
-      query: String(product.product_name || "").trim(),
-      brand: String(product.brand || "").trim(),
-      sizeMl: Number(product.size_ml || 0) || null,
-      packageType: inferPackageType(product.product_name || ""),
-    });
+    provider = await searchSerpImagesFree(identity);
 
-    providerStatus = discoveryResult.providerStatus || {};
+    for (const rankedCandidate of provider.candidates.slice(0, 8)) {
+      try {
+        const image = await downloadSafeImage(rankedCandidate.originalImageUrl);
 
-    candidate = (discoveryResult.candidates || []).find((row: any) =>
-      Boolean(row?.originalImageUrl) &&
-      !(row?.conflicts || []).length
-    ) || null;
-
-    if (!candidate) {
-      throw new HttpError(
-        404,
-        "No usable internet image was found for this product name/brand/size. Barcode was not changed.",
-      );
+        candidate = rankedCandidate;
+        bytes = image.bytes;
+        mime = image.mime;
+        ext = image.ext;
+        downloadedFrom = image.finalUrl;
+        break;
+      } catch (error) {
+        downloadFailures.push({
+          candidateId: rankedCandidate.candidateId || null,
+          publisher: rankedCandidate.publisher || null,
+          sourcePageUrl: rankedCandidate.sourcePageUrl || null,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
-    const image = await downloadSafeImage(candidate.originalImageUrl);
-    bytes = image.bytes;
-    mime = image.mime;
-    ext = image.ext;
-    downloadedFrom = image.finalUrl;
+    if (!bytes) {
+      throw new HttpError(
+        404,
+        "Google Images search ran but no safe matching image could be attached. Barcode was not changed. Use Edit Product to upload an image or try again later.",
+      );
+    }
   }
 
   if (!bytes || !mime || !ext) {
@@ -976,7 +1418,7 @@ async function autoFindAndAttachImage({
   }
 
   const oldPath = product.image_path || null;
-  const newPath = `${shopId}/${productId}/${Date.now()}-auto-image.${ext}`;
+  const newPath = `${shopId}/${productId}/${Date.now()}-serpapi-image.${ext}`;
 
   const { error: uploadError } = await admin.storage
     .from(IMAGE_BUCKET)
@@ -998,27 +1440,37 @@ async function autoFindAndAttachImage({
     throw linkError;
   }
 
+  // Only image_path is allowed to change. Prove identity/barcode stayed intact.
   const { data: verified, error: verifyError } = await admin
     .from("products")
-    .select("barcode,image_path")
+    .select("barcode,image_path,product_name,brand,size_ml")
     .eq("id", productId)
     .eq("shop_id", shopId)
     .maybeSingle();
 
+  const identityUnchanged =
+    verified &&
+    String(verified.barcode || "") === barcodeBefore &&
+    String(verified.product_name || "") === String(product.product_name || "") &&
+    String(verified.brand || "") === String(product.brand || "") &&
+    Number(verified.size_ml || 0) === Number(product.size_ml || 0);
+
   if (
     verifyError ||
     !verified ||
-    String(verified.barcode || "") !== barcodeBefore ||
+    !identityUnchanged ||
     String(verified.image_path || "") !== newPath
   ) {
     await caller.rpc("set_product_image", {
       p_product_id: productId,
       p_image_path: oldPath,
     }).catch(() => {});
+
     await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+
     throw new HttpError(
       409,
-      "Image-only safety verification failed. Image change was rolled back.",
+      "Image-only safety verification failed. Image attachment was rolled back.",
     );
   }
 
@@ -1032,30 +1484,54 @@ async function autoFindAndAttachImage({
     shop_id: shopId,
     organization_id: shop?.organization_id || null,
     actor_id: user.id,
-    action: "PRODUCT_IMAGE_AUTO_ENRICHED",
+    action: "PRODUCT_IMAGE_AUTO_ENRICHED_SERPAPI_FREE",
     entity_type: "product",
     entity_id: String(productId),
     old_data: { image_path: oldPath },
     new_data: { image_path: newPath },
     metadata: {
       image_only: true,
-      product_identity_changed: false,
+      strategy_version: 3,
+      free_only: true,
+      paid_provider_allowed: false,
+      max_searches_per_product: 2,
+
+      raw_product_name: identity.raw.productName,
+      raw_brand: identity.raw.brand,
+      learned_aliases_used: identity.raw.aliases,
+
+      search_product_name: identity.canonical.productName,
+      search_brand: identity.canonical.brand,
+      search_brand_corrected_only_for_search:
+        identity.canonical.brandCorrectedForSearchOnly,
+      search_brand_evidence: identity.canonical.brandEvidence,
+
+      search_queries: provider?.attempts?.map((x: any) => x.query) || [],
+      provider_attempts: provider?.attempts || [],
+      provider_account: provider?.account || null,
+
       barcode_before: barcodeBefore,
       barcode_after: String(verified.barcode || ""),
       barcode_changed: false,
+      product_identity_changed: false,
       inventory_changed: false,
       prices_changed: false,
+
       source_type: sourceType,
       source_product_id: sourceProductId,
       source_image_path: sourceImagePath,
       candidate_id: candidate?.candidateId || null,
-      providers: candidate?.providers || [],
+      candidate_title: candidate?.title || null,
       source_publisher: candidate?.publisher || null,
       source_page_url: candidate?.sourcePageUrl || null,
-      original_image_source: downloadedFrom || candidate?.originalImageUrl || null,
+      original_image_source:
+        downloadedFrom || candidate?.originalImageUrl || null,
+      license_details_url: candidate?.licenseDetailsUrl || null,
       match_score: candidate?.score ?? null,
       confidence_band: candidate?.confidenceBand || null,
-      provider_status: providerStatus,
+
+      download_failures: downloadFailures.slice(0, 8),
+      generic_discovery_cache_used: false,
     },
   });
 
@@ -1064,7 +1540,9 @@ async function autoFindAndAttachImage({
       p_product_id: productId,
       p_image_path: oldPath,
     }).catch(() => {});
+
     await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+
     throw new HttpError(
       503,
       "Image audit could not be recorded. Image change was not retained.",
@@ -1078,29 +1556,47 @@ async function autoFindAndAttachImage({
   return {
     ok: true,
     action: "AUTO_IMAGE",
+    strategyVersion: 3,
     productId,
     imagePath: newPath,
     sourceType,
+
+    searchIdentity: {
+      rawProductName: identity.raw.productName,
+      rawBrand: identity.raw.brand,
+      searchProductName: identity.canonical.productName,
+      searchBrand: identity.canonical.brand,
+      brandCorrectedOnlyForSearch:
+        identity.canonical.brandCorrectedForSearchOnly,
+      queries: provider?.attempts?.map((x: any) => x.query) || [],
+    },
+
+    freeProvider: provider?.account || null,
+
     candidate: candidate
       ? {
           candidateId: candidate.candidateId || null,
           title: candidate.title || null,
           publisher: candidate.publisher || null,
+          sourcePageUrl: candidate.sourcePageUrl || null,
           providers: candidate.providers || [],
           score: candidate.score ?? null,
           confidenceBand: candidate.confidenceBand || null,
         }
       : null,
-    providerStatus,
+
     barcodeBefore,
     barcodeAfter: String(verified.barcode || ""),
     barcodeUnchanged: true,
+
     reviewRecommended:
-      sourceType === "INTERNET" && Number(candidate?.score || 0) < 0.68,
+      sourceType === "SERPAPI_GOOGLE_IMAGES" &&
+      Number(candidate?.score || 0) < 0.62,
+
     note:
       sourceType === "SHOP_IMAGE"
-        ? "Exact same-shop product image reused. Barcode unchanged."
-        : "Internet image attached automatically using saved product name/brand/size. Barcode unchanged.",
+        ? "Approved same-shop image reused. Barcode and Product Master identity unchanged."
+        : "Google Images result attached through the free-only provider. Barcode and Product Master identity unchanged.",
   };
 }
 

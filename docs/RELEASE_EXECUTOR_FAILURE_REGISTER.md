@@ -1246,3 +1246,50 @@ V5-06 cleanup restored only release-owned source files and stopped before Git co
 
 Verified outcome:
 Pending V5-06B.
+
+### 2026-09-07 — Paid/card-required image provider was proposed before explicit user approval
+
+Marker: `V5_PAID_PROVIDER_PREAPPROVAL_GAP_20260907`
+
+Context:
+The broad image-search fix initially selected Brave Images. UAT then exposed that the provider required payment details/card setup. The user had an existing project rule that any paid or potentially chargeable service must be explicitly approved before implementation.
+
+Outcome:
+The Brave-based executor was stopped at the missing-secret prompt before Git/code/cloud product mutation. No Brave key was configured.
+
+Permanent rule:
+Any new service that:
+- has a non-zero subscription,
+- requires payment details for the intended plan,
+- can automatically move from free to paid,
+- or can create usage charges,
+must stop and request explicit user approval before implementation.
+
+Current corrective design:
+Use SerpApi only when its Account API reports monthly price = $0.
+Runtime defaults `SERPAPI_ALLOW_PAID=false`.
+If free quota is exhausted, image search stops and manual image upload remains available.
+No automatic upgrade, paid fallback, Azure paid search resource, or alternate paid provider is allowed.
+
+### 2026-09-07 — AUTO_IMAGE returned false "no image" because broad provider was absent and negative discovery was cached
+
+Marker: `V5_AUTO_IMAGE_FALSE_NO_RESULT_CACHE_PROVIDER_GAP_20260907`
+
+Observed UAT:
+`Cartsberg Elephant Strong Super Premium Beer CAN: No usable internet image was found...`
+
+Verified provider/cache state:
+- UPCItemDB: NO_MATCH
+- OpenFoodFacts: no useful candidate
+- Brave Images: NOT_CONFIGURED
+- negative generic discovery response was reused from the enrichment cache
+
+Permanent fix:
+AUTO_IMAGE receives a dedicated broad-image path that:
+- does not use generic product-discovery negative cache,
+- uses existing aliases and same-shop product-family knowledge,
+- runs at most two SerpApi Google Images requests,
+- safely retries multiple returned image URLs,
+- never uses barcode in the search query,
+- mutates only image_path,
+- verifies product identity/barcode unchanged.
