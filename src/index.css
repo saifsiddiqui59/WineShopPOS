@@ -6078,3 +6078,121 @@ body:has(.wsp-platform-control-page),
     padding:14px !important;
   }
 }
+
+/* V5_PRODUCT_ENRICHMENT_V2_20260907 */
+.environment-preview-badge {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 20050;
+  max-width: min(92vw, 360px);
+  padding: 8px 12px;
+  border: 2px solid rgba(255,255,255,.94);
+  border-radius: 999px;
+  background: #991b1b;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.product-enrichment-form-tools {
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px dashed rgba(148,163,184,.55);
+  border-radius: 12px;
+  background: rgba(148,163,184,.06);
+}
+
+.product-enrichment-scan-box {
+  margin-top: 14px;
+  padding: 15px;
+  border: 2px solid rgba(14,165,233,.38);
+  border-radius: 12px;
+  background: rgba(14,165,233,.06);
+}
+
+.product-enrichment-barcode-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 10px;
+}
+
+.product-enrichment-barcode-row input {
+  min-width: 0;
+  width: 100%;
+}
+
+.product-enrichment-import-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-weight: 700;
+}
+
+.product-enrichment-import-choice input {
+  width: auto;
+}
+
+.product-enrichment-comparison {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.product-enrichment-comparison > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(148,163,184,.35);
+  border-radius: 10px;
+  background: rgba(255,255,255,.7);
+}
+
+.product-enrichment-conflict-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 10px 0;
+  font-weight: 700;
+}
+
+.product-enrichment-conflict-text {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.product-enrichment-source-link {
+  width: fit-content;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.product-enrichment-rights-note {
+  margin-top: 14px !important;
+}
+
+html[data-theme="dark"] .product-enrichment-form-tools,
+html[data-theme="dark"] .product-enrichment-comparison > div {
+  background: rgba(15,23,42,.45);
+}
+
+@media (max-width: 700px) {
+  .environment-preview-badge {
+    right: 50%;
+    transform: translateX(50%);
+    bottom: 8px;
+    text-align: center;
+  }
+
+  .product-enrichment-barcode-row,
+  .product-enrichment-comparison {
+    grid-template-columns: 1fr;
+  }
+}

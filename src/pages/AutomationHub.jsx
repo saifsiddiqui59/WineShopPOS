@@ -893,18 +893,26 @@ export default function AutomationHub() {
     return rules.find(([token]) => text.includes(token))?.[1] || "Other";
   }
 
-  function createProductFromCandidate(index, candidate) {
+  function createProductFromCandidate(index, selection) {
     const item = result?.items?.[index];
     const row = resolution[index] || {};
-    const candidateBarcode = String(candidate?.barcode || "").trim();
+    const candidate = selection?.candidate || null;
+    const physicalBarcode = String(selection?.physicalBarcode || "").trim();
 
-    const existing = candidateBarcode
-      ? activeProducts.find((product) => String(product.barcode || "").trim() === candidateBarcode)
-      : null;
+    if (!physicalBarcode) {
+      setMessage("Scan the physical bottle/can barcode before creating the Product Master record.");
+      return;
+    }
+
+    const existing = activeProducts.find(
+      (product) => String(product.barcode || "").trim() === physicalBarcode,
+    );
 
     if (existing) {
       chooseProduct(index, existing.id);
-      setMessage(`External candidate barcode ${candidateBarcode} already exists in Product Master as ${existing.name}. Existing Product Master was linked instead of creating a duplicate.`);
+      setMessage(
+        `Physical barcode ${physicalBarcode} already exists in Product Master as ${existing.name}. Existing Product Master was linked instead of creating a duplicate.`,
+      );
       return;
     }
 
@@ -912,19 +920,36 @@ export default function AutomationHub() {
       result,matches,resolution,supplierId,confirmedSupplier,ingestionId,sourceFileName,charges,
     }));
 
+    const selectedName = String(candidate?.title || item?.description || "");
+    const selectedBrand = String(
+      candidate?.brand || inferBrandFromProductName(item?.description || ""),
+    );
+    const selectedSize =
+      Number(candidate?.sizeMl || 0) > 0
+        ? Number(candidate.sizeMl)
+        : inferOcrSizeMl(item);
+
     const params = new URLSearchParams({
-      ocr:"1",ocrLineIndex:String(index),enriched:"1",
-      barcode:candidateBarcode,
-      name:String(candidate?.title || item?.description || ""),
-      brand:String(candidate?.brand || ""),
+      ocr:"1",
+      ocrLineIndex:String(index),
+      enriched:"1",
+      barcode:physicalBarcode,
+      name:selectedName,
+      brand:selectedBrand,
       category:inferCandidateCategory(candidate,item),
       purchasePrice:String(row.purchasePrice || item?.unitPrice || 0),
-      sizeMl:String(Number(candidate?.sizeMl || 0)>0?Number(candidate.sizeMl):inferOcrSizeMl(item)),
+      sizeMl:Number(selectedSize || 0) > 0 ? String(selectedSize) : "",
+      packageType:String(candidate?.packageType || ""),
       mrp:String(Math.max(0,Number(item?.mrp || 0))),
       sellingPrice:String(Number(item?.mrp || 0)>0?Number(item.mrp)+15:0),
       unitsPerCase:String(row.unitsPerCase || 12),
       enrichmentSources:String((candidate?.providers || []).join(",")),
+      enrichmentOutcome:String(selection?.outcome || "UNVERIFIED"),
+      enrichmentCacheKey:String(selection?.confirmationCacheKey || ""),
+      enrichmentCandidateId:String(selection?.candidateId || ""),
+      enrichmentImportImage:selection?.importImage ? "1" : "0",
     });
+
     navigate(`/products/new?${params.toString()}`);
   }
 

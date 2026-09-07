@@ -1,7 +1,9 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import ProductForm from "../components/ProductForm";
 import { useShop } from "../context/ShopContext";
+import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { finalizeProductEnrichment } from "../lib/productEnrichmentClient";
 
 const moneyNumber = (value) => {
   const number = Number(value);
@@ -11,6 +13,7 @@ const moneyNumber = (value) => {
 export default function EditProduct() {
   const { id } = useParams();
   const { products, updateProduct, loadingData } = useShop();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const product = products.find((item) => item.id === id);
 
@@ -46,6 +49,26 @@ export default function EditProduct() {
       };
     }
 
+    const selection = form.enrichmentSelection;
+    if (selection?.confirmationCacheKey && selection?.outcome !== "MANUAL") {
+      try {
+        await finalizeProductEnrichment({
+          shopId: profile?.shop_id,
+          productId: id,
+          confirmationCacheKey: selection.confirmationCacheKey,
+          candidateId: selection.candidateId || null,
+          importImage: Boolean(selection.importImage),
+        });
+      } catch (enrichmentError) {
+        return {
+          ok: false,
+          message:
+            `Product details were saved, but enrichment finalization failed: ` +
+            `${enrichmentError?.message || String(enrichmentError)}. Retry Find Product if you still want the external image/evidence finalization.`,
+        };
+      }
+    }
+
     navigate("/products");
     return result;
   }
@@ -53,7 +76,10 @@ export default function EditProduct() {
   return (
     <div>
       <div className="page-heading">
-        <div><h2>Edit Product</h2><p>Stock is not changed by editing product details</p></div>
+        <div>
+          <h2>Edit Product</h2>
+          <p>Stock is not changed by editing or enriching product details</p>
+        </div>
       </div>
       <ProductForm
         initialValue={product}

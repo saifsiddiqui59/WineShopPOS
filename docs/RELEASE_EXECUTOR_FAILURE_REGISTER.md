@@ -1108,3 +1108,39 @@ Full V5 DEV runtime completion: pending this same continuation.
 - PROD Invoice API/storage bindings: verified unchanged after continuation.
 - Authenticated OCR/manual browser UAT remains a separate pending verification class.
 <!-- /V5_DEV_INVOICE_SINGLE_PUSH_VERIFIED_20260907 -->
+
+### 2026-09-07 — V5-04 exact allowlist ignored new untracked release files
+
+Marker: `V5_04_ALLOWLIST_UNTRACKED_20260907`
+
+Release/stage:
+V5 Product Enrichment V2 + dedicated QA/DEV preview, Step 5 exact Git allowlist.
+
+Symptom:
+The executor expected both modified tracked files and newly-created release files, but computed:
+`ACTUAL_CHANGED="$(git diff --name-only | sort)"`.
+`git diff --name-only` reports tracked modifications only, so new release-owned files were omitted from the actual list and the executor falsely stopped with `Unexpected changed-file set`.
+
+Git/tool behavior involved:
+Git worktree status and exact allowlist validation.
+
+Root cause:
+The validator compared an allowlist containing tracked + untracked paths against a command that can enumerate only tracked diffs.
+
+Resolution used:
+Build the exact changed set from:
+1. `git diff --name-only` for tracked modifications, plus
+2. only the expected release-owned paths that currently exist and are not tracked.
+Then sort/deduplicate and compare that union to the exact allowlist. Unrelated pre-existing untracked executor/download files remain ignored and unstaged.
+
+Permanent prevention:
+- Never use `git diff --name-only` alone when an executor intentionally creates new files.
+- Exact release validation must include both tracked modifications and newly-created allowlisted paths.
+- Preserve unrelated untracked files; never use destructive cleanup to make the set pass.
+- Stage only the explicit release allowlist and separately verify the staged set.
+
+Safe continuation point:
+The failed V5-04 run stopped before commit/push, DEV Edge Function deployment and Azure V5 preview deployment. Its cleanup restored only executor-owned source files. Continue from the unchanged V5 remote base with the corrected 04B executor.
+
+Verified outcome:
+Pending this continuation.

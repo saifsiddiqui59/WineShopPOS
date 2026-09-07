@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ProductEnrichmentPanel from "./ProductEnrichmentPanel";
+import { useAuth } from "../context/AuthContext";
 
 const CATEGORY_OPTIONS = [
   "Beer", "Whisky", "Wine", "Vodka", "Rum", "Gin", "Brandy",
@@ -23,8 +25,9 @@ const SUBCATEGORY_BY_CATEGORY = {
 
 const emptyProduct = {
   barcode: "", name: "", brand: "", category: "Whisky", subcategory: "",
-  sizeMl: 750, alcoholPercentage: "", purchasePrice: "0.00", mrp: "0.00",
+  sizeMl: "", alcoholPercentage: "", purchasePrice: "0.00", mrp: "0.00",
   price: "0.00", minimumStock: 5, unitsPerCase: 12,
+  lookupPackageType: "", enrichmentSelection: null,
   imagePath: "", imageUrl: "", imageFile: null, removeImage: false,
 };
 
@@ -48,7 +51,7 @@ function initialFormIdentity(value) {
 function normalizedProduct(form) {
   return {
     ...form,
-    sizeMl: Math.max(1, Number(form.sizeMl || 0)),
+    sizeMl: form.sizeMl === "" ? 0 : Number(form.sizeMl || 0),
     alcoholPercentage: form.alcoholPercentage === "" ? "" : Math.max(0, Number(form.alcoholPercentage || 0)),
     purchasePrice: Number(Number(form.purchasePrice || 0).toFixed(2)),
     mrp: Number(Number(form.mrp || 0).toFixed(2)),
@@ -59,6 +62,7 @@ function normalizedProduct(form) {
 }
 
 export default function ProductForm({ initialValue, onSubmit, submitLabel, onApply, onCancel }) {
+  const { profile } = useAuth();
   const [form, setForm] = useState(emptyProduct);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -144,6 +148,24 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     setForm((current) => ({...current,imageFile:null,removeImage:Boolean(current.imagePath)}));
   }
 
+  function applyEnrichmentSelection(selection) {
+    const candidate = selection?.candidate || null;
+    setForm((current) => ({
+      ...current,
+      barcode: String(selection?.physicalBarcode || current.barcode || ""),
+      name: candidate?.title || current.name,
+      brand: candidate?.brand || current.brand,
+      sizeMl: Number(candidate?.sizeMl || 0) > 0 ? Number(candidate.sizeMl) : current.sizeMl,
+      lookupPackageType: candidate?.packageType || current.lookupPackageType,
+      enrichmentSelection: selection || null,
+    }));
+    setMessage(
+      selection?.outcome === "MANUAL"
+        ? "Physical barcode applied. Manual Product Master details were kept."
+        : "Physically confirmed product details applied. Review the form, then save.",
+    );
+  }
+
   async function run(handler, successMessage = "") {
     setBusy(true);
     setMessage("");
@@ -168,9 +190,50 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     <form className="panel" onSubmit={submit}>
       {/* PRODUCT_MASTER_REAL_CATALOGUE_20260831 */}
       <div className="purchase-message" style={{ marginBottom: 14 }}>
-        SKU is generated automatically. Barcode is required when adding one product.
-        Click the Barcode field before scanning on this form. For invoice/OCR or manual bulk onboarding, use{" "}
+        SKU is generated automatically. Barcode is required when saving, but Find Product can run before a barcode is known.
+        Physical barcode confirmation is separate from internet barcode suggestions. For spreadsheet onboarding, use{" "}
         <a href="#/products/bulk-import">Bulk Product Import</a>.
+      </div>
+
+      <div className="product-enrichment-form-tools">
+        <div className="form-grid">
+          <label>
+            Package (lookup only)
+            <select
+              value={form.lookupPackageType || ""}
+              onChange={(event) => set("lookupPackageType", event.target.value)}
+            >
+              <option value="">Infer / Unknown</option>
+              <option value="CAN">Can / Tin</option>
+              <option value="BOTTLE">Bottle / Btl</option>
+            </select>
+            <small>Used for search/verification only; Product Master has no package-type column yet.</small>
+          </label>
+        </div>
+        <div className="button-row" style={{ marginTop: 10 }}>
+          <ProductEnrichmentPanel
+            shopId={profile?.shop_id}
+            item={{ description: form.name, brand: form.brand }}
+            brand={form.brand}
+            sizeMl={Number(form.sizeMl || 0) || null}
+            packageType={form.lookupPackageType || ""}
+            barcode={form.barcode}
+            disabled={busy}
+            onUseCandidate={applyEnrichmentSelection}
+          />
+        </div>
+        {form.enrichmentSelection ? (
+          <div className="purchase-message success" style={{ marginTop: 10 }}>
+            Physical barcode: <strong>{form.enrichmentSelection.physicalBarcode}</strong>
+            {" · "}
+            {form.enrichmentSelection.outcome === "CONFIRMED"
+              ? "Internet identity confirmed"
+              : form.enrichmentSelection.outcome === "UNVERIFIED"
+                ? "Internet identity unverified — explicitly accepted"
+                : "Manual details retained"}
+            {form.enrichmentSelection.importImage ? " · image will import after save" : ""}
+          </div>
+        ) : null}
       </div>
 
       <div className="product-image-editor">

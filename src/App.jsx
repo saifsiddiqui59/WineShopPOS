@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import EnvironmentBadge from "./components/EnvironmentBadge";
 import ModuleLayout from "./components/ModuleLayout";
 import RequireAuth from "./components/RequireAuth";
 import RequireRole from "./components/RequireRole";
@@ -64,7 +65,7 @@ function module(title, subtitle, tabs) {
 }
 
 export default function App() {
-  return <Routes>
+  return <><EnvironmentBadge/><Routes>
     <Route path="/login" element={<Login/>}/>
     <Route path="/update-password" element={<UpdatePassword/>}/>
 
@@ -186,5 +187,5 @@ export default function App() {
         </Route>
       </Route>
     </Route>
-  </Routes>;
+  </Routes></>;
 }

@@ -24,3 +24,21 @@ export function findProductByBarcode(products, value) {
     normalizeBarcode(product?.barcode) === wanted
   ) || null;
 }
+
+export function validateGtin(value) {
+  const code = normalizeBarcode(value).replace(/\D/g, "");
+  if (![8, 12, 13, 14].includes(code.length)) {
+    return { recognized: false, valid: false, code };
+  }
+
+  const checkDigit = Number(code.at(-1));
+  const body = code.slice(0, -1);
+  let sum = 0;
+  let weight = 3;
+  for (let i = body.length - 1; i >= 0; i -= 1) {
+    sum += Number(body[i]) * weight;
+    weight = weight === 3 ? 1 : 3;
+  }
+  const expected = (10 - (sum % 10)) % 10;
+  return { recognized: true, valid: expected === checkDigit, expected, code };
+}
