@@ -1064,3 +1064,47 @@ Start from current V5 HEAD and the existing DEV Function/storage resources. Firs
 Verified outcome:
 Pending read-only diagnosis.
 <!-- /V5_DEV_INVOICE_MISSING_SUBSCRIPTION_20260907 -->
+
+<!-- V5_DEV_INVOICE_MSYS_SCOPE_RESOLVED_20260907 -->
+## 2026-09-07 — V5 DEV Invoice API `MissingSubscription` root cause resolved
+
+Incident marker:
+`V5_DEV_INVOICE_MSYS_SCOPE_RESOLVED_20260907`
+
+Linked incident:
+`V5_DEV_INVOICE_MISSING_SUBSCRIPTION_20260907`
+
+Verified root cause:
+Windows Git Bash/MSYS path conversion affected the Azure RBAC `--scope` argument because the Azure resource ID begins with `/subscriptions/...`. Azure account, resource-group, Function, storage, managed-identity, provider and role-definition reads were valid; the same storage-scope role-assignment read succeeded when executed with `MSYS_NO_PATHCONV=1`.
+
+Resolution:
+Use `MSYS_NO_PATHCONV=1` only for Azure CLI role-assignment commands that receive Azure resource IDs beginning with `/subscriptions/...`. Do not disable MSYS conversion globally for the executor.
+
+Permanent prevention:
+- Treat Azure ARM resource IDs as Azure identifiers, not filesystem paths.
+- On this Windows Git Bash workflow, wrap `az role assignment list/create/delete ... --scope "/subscriptions/..."` with `MSYS_NO_PATHCONV=1`.
+- Continue to pass `--subscription` explicitly.
+- Do not replace the inherited managed-identity architecture with storage keys merely to work around a shell argument-conversion defect.
+- Keep PROD resources read-only during DEV/V5 work.
+
+Safe continuation point:
+Reuse existing `wsp-v5-invoice-dev-53b6e9a1` and `wspv5invdev53b6e9a1`, grant the existing Function managed identity the required DEV storage role, deploy the inherited Invoice API source, bind V5 to DEV and verify.
+
+Verified outcome:
+Azure storage-scope role-assignment READ with `MSYS_NO_PATHCONV=1`: PASS.
+Full V5 DEV runtime completion: pending this same continuation.
+<!-- /V5_DEV_INVOICE_MSYS_SCOPE_RESOLVED_20260907 -->
+
+
+<!-- V5_DEV_INVOICE_SINGLE_PUSH_VERIFIED_20260907 -->
+### 2026-09-07 — V5 DEV Invoice runtime continuation verified
+
+- MSYS Azure scope handling with `MSYS_NO_PATHCONV=1`: PASS.
+- Existing DEV Function managed identity storage role: verified/granted.
+- DEV Invoice API deployment from inherited current source: PASS.
+- DEV Invoice API bound to WineshopPOS_DEV: PASS.
+- DEV private invoice storage health: PASS.
+- V5 frontend DEV-only build isolation: PASS.
+- PROD Invoice API/storage bindings: verified unchanged after continuation.
+- Authenticated OCR/manual browser UAT remains a separate pending verification class.
+<!-- /V5_DEV_INVOICE_SINGLE_PUSH_VERIFIED_20260907 -->

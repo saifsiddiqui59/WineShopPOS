@@ -40,3 +40,17 @@ Before new Purchase/OCR feature development:
 7. only then begin Purchase Receiving Workspace changes.
 
 PROD remains untouched until explicit promotion.
+
+<!-- V5_DEV_RUNTIME_COMPLETE_20260907 -->
+## V5 DEV runtime — completed 2026-09-07
+
+- V5 application source/features remain PROD-derived.
+- Existing WineshopPOS_DEV business data was retained; PROD business data was not copied.
+- Supabase DEV ref: `juhcypzoacauzmtzqnwd`.
+- Existing DEV `ocr-invoice` Edge Function retained.
+- Dedicated DEV Invoice API: `https://wsp-v5-invoice-dev-53b6e9a1.azurewebsites.net`.
+- Dedicated private DEV invoice storage: `wspv5invdev53b6e9a1/invoice-documents`.
+- DEV Invoice API uses the inherited current Invoice API source with managed identity against DEV storage.
+- PROD Invoice API and PROD invoice storage were not rebound.
+- V5 browser code fails closed when `VITE_INVOICE_API_URL` is missing instead of falling back to PROD.
+<!-- /V5_DEV_RUNTIME_COMPLETE_20260907 -->
