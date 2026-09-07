@@ -833,6 +833,278 @@ async function downloadSafeImage(raw: string) {
   throw new HttpError(400, "Candidate image could not be downloaded safely");
 }
 
+async function exactSameShopImage(admin: any, shopId: string, product: any) {
+  const { data, error } = await admin
+    .from("products")
+    .select("id,product_name,brand,size_ml,image_path")
+    .eq("shop_id", shopId)
+    .neq("id", product.id)
+    .not("image_path", "is", null)
+    .limit(200);
+
+  if (error) throw error;
+
+  const name = normalizeText(product.product_name);
+  const brand = normalizeText(product.brand);
+  const sizeMl = Number(product.size_ml || 0) || null;
+
+  return (data || []).find((row: any) =>
+    Boolean(row.image_path) &&
+    normalizeText(row.product_name) === name &&
+    normalizeText(row.brand) === brand &&
+    (Number(row.size_ml || 0) || null) === sizeMl
+  ) || null;
+}
+
+async function autoFindAndAttachImage({
+  caller,
+  admin,
+  user,
+  membership,
+  shopId,
+  productId,
+  replace,
+}: any) {
+  if (!["ADMIN", "MANAGER"].includes(String(membership?.role || "").toUpperCase())) {
+    throw new HttpError(403, "Manager or Admin access is required");
+  }
+
+  if (!productId) throw new HttpError(400, "productId is required");
+
+  const { data: product, error: productError } = await admin
+    .from("products")
+    .select("id,shop_id,barcode,product_name,brand,size_ml,image_path")
+    .eq("id", productId)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+
+  if (productError) throw productError;
+  if (!product) throw new HttpError(404, "Product not found in current shop");
+
+  const barcodeBefore = String(product.barcode || "");
+
+  if (product.image_path && !replace) {
+    return {
+      ok: true,
+      action: "AUTO_IMAGE",
+      productId,
+      imagePath: product.image_path,
+      sourceType: "EXISTING",
+      barcodeBefore,
+      barcodeAfter: barcodeBefore,
+      barcodeUnchanged: true,
+      reviewRecommended: false,
+      note: "Product already has a managed image. Use Edit Product to replace it.",
+    };
+  }
+
+  let bytes: Uint8Array | null = null;
+  let mime: string | null = null;
+  let ext: string | null = null;
+  let sourceType = "INTERNET";
+  let sourceProductId: string | null = null;
+  let sourceImagePath: string | null = null;
+  let downloadedFrom: string | null = null;
+  let candidate: any = null;
+  let providerStatus: any = {};
+
+  const peer = await exactSameShopImage(admin, shopId, product);
+
+  if (peer?.image_path) {
+    const { data: blob, error: downloadError } = await admin.storage
+      .from(IMAGE_BUCKET)
+      .download(peer.image_path);
+
+    if (!downloadError && blob) {
+      const raw = new Uint8Array(await blob.arrayBuffer());
+      const detected = sniffImage(raw);
+      bytes = raw;
+      mime = detected.mime;
+      ext = detected.ext;
+      sourceType = "SHOP_IMAGE";
+      sourceProductId = String(peer.id);
+      sourceImagePath = String(peer.image_path);
+      candidate = {
+        title: peer.product_name,
+        brand: peer.brand,
+        sizeMl: Number(peer.size_ml || 0) || null,
+        packageType: inferPackageType(peer.product_name),
+        candidateId: `shop-${peer.id}`,
+        score: 1,
+        confidenceBand: "HIGH",
+        conflicts: [],
+        providers: ["SHOP_IMAGE"],
+        publisher: "WineShopPOS shop catalogue",
+      };
+    }
+  }
+
+  if (!bytes) {
+    const discoveryResult = await discovery({
+      admin,
+      user,
+      shopId,
+      query: String(product.product_name || "").trim(),
+      brand: String(product.brand || "").trim(),
+      sizeMl: Number(product.size_ml || 0) || null,
+      packageType: inferPackageType(product.product_name || ""),
+    });
+
+    providerStatus = discoveryResult.providerStatus || {};
+
+    candidate = (discoveryResult.candidates || []).find((row: any) =>
+      Boolean(row?.originalImageUrl) &&
+      !(row?.conflicts || []).length
+    ) || null;
+
+    if (!candidate) {
+      throw new HttpError(
+        404,
+        "No usable internet image was found for this product name/brand/size. Barcode was not changed.",
+      );
+    }
+
+    const image = await downloadSafeImage(candidate.originalImageUrl);
+    bytes = image.bytes;
+    mime = image.mime;
+    ext = image.ext;
+    downloadedFrom = image.finalUrl;
+  }
+
+  if (!bytes || !mime || !ext) {
+    throw new HttpError(500, "Image candidate could not be prepared safely");
+  }
+
+  const oldPath = product.image_path || null;
+  const newPath = `${shopId}/${productId}/${Date.now()}-auto-image.${ext}`;
+
+  const { error: uploadError } = await admin.storage
+    .from(IMAGE_BUCKET)
+    .upload(newPath, bytes, {
+      contentType: mime,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { error: linkError } = await caller.rpc("set_product_image", {
+    p_product_id: productId,
+    p_image_path: newPath,
+  });
+
+  if (linkError) {
+    await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+    throw linkError;
+  }
+
+  const { data: verified, error: verifyError } = await admin
+    .from("products")
+    .select("barcode,image_path")
+    .eq("id", productId)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+
+  if (
+    verifyError ||
+    !verified ||
+    String(verified.barcode || "") !== barcodeBefore ||
+    String(verified.image_path || "") !== newPath
+  ) {
+    await caller.rpc("set_product_image", {
+      p_product_id: productId,
+      p_image_path: oldPath,
+    }).catch(() => {});
+    await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+    throw new HttpError(
+      409,
+      "Image-only safety verification failed. Image change was rolled back.",
+    );
+  }
+
+  const { data: shop } = await admin
+    .from("shops")
+    .select("organization_id")
+    .eq("id", shopId)
+    .maybeSingle();
+
+  const { error: auditError } = await admin.from("audit_logs").insert({
+    shop_id: shopId,
+    organization_id: shop?.organization_id || null,
+    actor_id: user.id,
+    action: "PRODUCT_IMAGE_AUTO_ENRICHED",
+    entity_type: "product",
+    entity_id: String(productId),
+    old_data: { image_path: oldPath },
+    new_data: { image_path: newPath },
+    metadata: {
+      image_only: true,
+      product_identity_changed: false,
+      barcode_before: barcodeBefore,
+      barcode_after: String(verified.barcode || ""),
+      barcode_changed: false,
+      inventory_changed: false,
+      prices_changed: false,
+      source_type: sourceType,
+      source_product_id: sourceProductId,
+      source_image_path: sourceImagePath,
+      candidate_id: candidate?.candidateId || null,
+      providers: candidate?.providers || [],
+      source_publisher: candidate?.publisher || null,
+      source_page_url: candidate?.sourcePageUrl || null,
+      original_image_source: downloadedFrom || candidate?.originalImageUrl || null,
+      match_score: candidate?.score ?? null,
+      confidence_band: candidate?.confidenceBand || null,
+      provider_status: providerStatus,
+    },
+  });
+
+  if (auditError) {
+    await caller.rpc("set_product_image", {
+      p_product_id: productId,
+      p_image_path: oldPath,
+    }).catch(() => {});
+    await admin.storage.from(IMAGE_BUCKET).remove([newPath]).catch(() => {});
+    throw new HttpError(
+      503,
+      "Image audit could not be recorded. Image change was not retained.",
+    );
+  }
+
+  if (oldPath && oldPath !== newPath) {
+    await admin.storage.from(IMAGE_BUCKET).remove([oldPath]).catch(() => {});
+  }
+
+  return {
+    ok: true,
+    action: "AUTO_IMAGE",
+    productId,
+    imagePath: newPath,
+    sourceType,
+    candidate: candidate
+      ? {
+          candidateId: candidate.candidateId || null,
+          title: candidate.title || null,
+          publisher: candidate.publisher || null,
+          providers: candidate.providers || [],
+          score: candidate.score ?? null,
+          confidenceBand: candidate.confidenceBand || null,
+        }
+      : null,
+    providerStatus,
+    barcodeBefore,
+    barcodeAfter: String(verified.barcode || ""),
+    barcodeUnchanged: true,
+    reviewRecommended:
+      sourceType === "INTERNET" && Number(candidate?.score || 0) < 0.68,
+    note:
+      sourceType === "SHOP_IMAGE"
+        ? "Exact same-shop product image reused. Barcode unchanged."
+        : "Internet image attached automatically using saved product name/brand/size. Barcode unchanged.",
+  };
+}
+
+
 async function finalizeSelection({
   caller,
   admin,
@@ -989,7 +1261,17 @@ Deno.serve(async (req) => {
 
     let response: any;
 
-    if (action === "FINALIZE") {
+    if (action === "AUTO_IMAGE") {
+      response = await autoFindAndAttachImage({
+        caller,
+        admin,
+        user,
+        membership,
+        shopId,
+        productId: String(body?.productId || ""),
+        replace: Boolean(body?.replace),
+      });
+    } else if (action === "FINALIZE") {
       response = await finalizeSelection({
         caller,
         admin,

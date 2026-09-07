@@ -91,7 +91,6 @@ export default function ProductEnrichmentPanel({
   const [confirmation, setConfirmation] = useState(null);
   const [physicalBarcode, setPhysicalBarcode] = useState("");
   const [message, setMessage] = useState("");
-  const [importImage, setImportImage] = useState(false);
   const [showBarcodeMatch, setShowBarcodeMatch] = useState(false);
   const requestRef = useRef(null);
   const selectedAtRef = useRef(0);
@@ -129,7 +128,6 @@ export default function ProductEnrichmentPanel({
     setSelected(null);
     setConfirmation(null);
     setPhysicalBarcode("");
-    setImportImage(false);
 
     if (!shopId) {
       setStage("DISCOVERY_IDLE");
@@ -170,7 +168,6 @@ export default function ProductEnrichmentPanel({
     setSelected(candidate);
     setConfirmation(null);
     setPhysicalBarcode("");
-    setImportImage(Boolean(candidate?.imagePreviewUrl));
     setShowBarcodeMatch(false);
     selectedAtRef.current = Date.now();
     setStage("SELECTED_AWAITING_BARCODE");
@@ -211,7 +208,6 @@ export default function ProductEnrichmentPanel({
       );
       setConfirmation(data);
       if (!selected && data.selectedCandidate) setSelected(data.selectedCandidate);
-      setImportImage(Boolean((selected || data.selectedCandidate)?.imagePreviewUrl));
       setStage(
         data.outcome === "CONFIRMED"
           ? "CONFIRMED"
@@ -254,7 +250,7 @@ export default function ProductEnrichmentPanel({
       confirmationCacheKey: confirmation?.confirmationCacheKey || null,
       candidateId: candidate?.candidateId || null,
       candidate,
-      importImage: Boolean(importImage && candidate?.imagePreviewUrl),
+      importImage: false,
       providerStatus: confirmation?.providerStatus || {},
     });
     setOpen(false);
@@ -284,7 +280,7 @@ export default function ProductEnrichmentPanel({
         disabled={disabled || busy}
         onClick={runDiscovery}
       >
-        Find Product
+        Verify Product / Barcode
       </button>
 
       {open ? (
@@ -297,7 +293,7 @@ export default function ProductEnrichmentPanel({
           >
             <div className="section-row">
               <div>
-                <h3>Find Product</h3>
+                <h3>Verify Product / Barcode</h3>
                 <p className="muted-text">
                   Discover visually first if needed, then verify the barcode printed on the physical product.
                 </p>
@@ -413,15 +409,10 @@ export default function ProductEnrichmentPanel({
                 <strong>✓ BARCODE CONFIRMED</strong>
                 <p>{confirmation?.note}</p>
                 {displayCandidate ? <CandidateCard candidate={displayCandidate} /> : null}
-                <label className="product-enrichment-import-choice">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(importImage && displayCandidate?.imagePreviewUrl)}
-                    disabled={!displayCandidate?.imagePreviewUrl}
-                    onChange={(event) => setImportImage(event.target.checked)}
-                  />
-                  Import this selected image after I save the Product Master record
-                </label>
+
+                <p className="muted-text product-enrichment-image-separation">
+                  Image is handled separately. Barcode/product verification never changes the Product Master image.
+                </p>
                 <button type="button" className="primary-button" onClick={useConfirmedSelection}>
                   Use This Product
                 </button>
@@ -435,15 +426,10 @@ export default function ProductEnrichmentPanel({
                   The physical scan is retained. Lack of an internet match does not mean the barcode is wrong.
                 </p>
                 {displayCandidate ? <CandidateCard candidate={displayCandidate} /> : null}
-                <label className="product-enrichment-import-choice">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(importImage && displayCandidate?.imagePreviewUrl)}
-                    disabled={!displayCandidate?.imagePreviewUrl}
-                    onChange={(event) => setImportImage(event.target.checked)}
-                  />
-                  I approve this image for the manually confirmed product
-                </label>
+
+                <p className="muted-text product-enrichment-image-separation">
+                  Image is handled separately. Barcode/product verification never changes the Product Master image.
+                </p>
                 <div className="button-row">
                   <button type="button" className="primary-button" onClick={useConfirmedSelection}>
                     Use Physical Barcode + Confirmed Details

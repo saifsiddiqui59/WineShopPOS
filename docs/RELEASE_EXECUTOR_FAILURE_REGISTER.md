@@ -1215,3 +1215,34 @@ The failed V5-05 run stopped before commit and preview redeployment. Cleanup res
 
 Verified outcome:
 Pending 05B.
+
+### 2026-09-07 — V5-06 nested template literal broke executor source generation
+
+Marker: `V5_06_NESTED_TEMPLATE_LITERAL_SYNTAX_20260907`
+
+Release/stage:
+V5 automatic product image separation, Step 3/8 source generation.
+
+Symptom:
+Node stopped before source mutation completed with:
+`SyntaxError: Unexpected identifier 'shop'`
+at:
+`candidateId: \`shop-${peer.id}\``
+
+Root cause:
+The executor embedded a TypeScript block inside a JavaScript `String.raw` template literal, while the generated TypeScript itself also contained template literals. The inner backtick closed the outer generator string, so Node parsed the remaining TypeScript as generator code and failed.
+
+Resolution used:
+V5-06B writes the generated TypeScript block to a temporary file with a single-quoted shell heredoc. A small Node patcher reads that file as plain text and inserts it into the current Edge Function source. Embedded TypeScript backticks no longer interact with the generator parser.
+
+Permanent prevention:
+- Avoid nested same-delimiter template literals in executor code generation.
+- Prefer literal quoted heredoc files for large generated source blocks.
+- Parser-check generator code before Git/cloud mutation.
+- Treat this as a local executor-generation failure, not a product-code failure.
+
+Safe continuation point:
+V5-06 cleanup restored only release-owned source files and stopped before Git commit, DEV Edge Function deployment or preview redeployment. Resume from unchanged V5 with V5-06B.
+
+Verified outcome:
+Pending V5-06B.

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProductEnrichmentPanel from "./ProductEnrichmentPanel";
 import { useAuth } from "../context/AuthContext";
+import { useShop } from "../context/ShopContext";
+import { autoFindProductImage } from "../lib/productEnrichmentClient";
+import { productImageUrl } from "../lib/productImages";
 
 const CATEGORY_OPTIONS = [
   "Beer", "Whisky", "Wine", "Vodka", "Rum", "Gin", "Brandy",
@@ -63,10 +66,12 @@ function normalizedProduct(form) {
 
 export default function ProductForm({ initialValue, onSubmit, submitLabel, onApply, onCancel }) {
   const { profile } = useAuth();
+  const { refreshAll } = useShop();
   const [form, setForm] = useState(emptyProduct);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
+  const [imageSearchBusy, setImageSearchBusy] = useState(false);
   const initializedIdentityRef = useRef(null);
   const [sellingPriceTouched, setSellingPriceTouched] = useState(false);
 
@@ -166,6 +171,53 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     );
   }
 
+  async function findImageOnline() {
+    const productId = initialValue?.id;
+    if (!productId || !profile?.shop_id) {
+      setMessage("Save the product first. Then click its image icon or use Edit Product to find an image automatically.");
+      return;
+    }
+
+    const barcodeBefore = String(form.barcode || "");
+    setImageSearchBusy(true);
+    setMessage("");
+
+    try {
+      const result = await autoFindProductImage({
+        shopId: profile.shop_id,
+        productId,
+        replace: Boolean(imagePreview || form.imagePath),
+      });
+
+      if (result?.barcodeUnchanged !== true) {
+        throw new Error("Barcode safety verification failed.");
+      }
+
+      const url = productImageUrl(result.imagePath);
+      setImagePreview(url);
+      setForm((current) => ({
+        ...current,
+        imagePath: result.imagePath,
+        imageFile: null,
+        removeImage: false,
+      }));
+
+      await refreshAll();
+
+      setMessage(
+        `Image updated automatically ${result.sourceType === "SHOP_IMAGE" ? "from the shop catalogue" : "from internet search"}. ` +
+        `Barcode ${barcodeBefore || "(none)"} was not changed.` +
+        (result.reviewRecommended ? " Review the image before leaving this page." : ""),
+      );
+    } catch (error) {
+      setMessage(
+        `${error?.message || String(error)} Barcode ${barcodeBefore || "(none)"} was not changed.`,
+      );
+    } finally {
+      setImageSearchBusy(false);
+    }
+  }
+
   async function run(handler, successMessage = "") {
     setBusy(true);
     setMessage("");
@@ -236,15 +288,40 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
         ) : null}
       </div>
 
-      <div className="product-image-editor">
+      <div className="product-image-editor product-image-editor--auto">
         <div className="product-image-preview">
           {imagePreview ? <img src={imagePreview} alt="Product bottle or can preview" /> : <span>No image</span>}
         </div>
         <div>
-          <strong>Original Bottle / Can Image</strong>
+          <strong>Product Image</strong>
           <p className="muted-text">
-            Optional. JPEG, PNG or WebP up to 5 MB. Use an image you own or are
-            permitted to use from the manufacturer/distributor.
+            Automatic image search uses the saved product name, brand and size only.
+            <strong> It never changes the barcode.</strong>
+          </p>
+
+          {initialValue?.id ? (
+            <div className="button-row" style={{ marginBottom: 10 }}>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={busy || imageSearchBusy}
+                onClick={() => void findImageOnline()}
+              >
+                {imageSearchBusy
+                  ? "Finding Image..."
+                  : imagePreview
+                    ? "Find / Replace Image Online"
+                    : "Find Image Online"}
+              </button>
+            </div>
+          ) : (
+            <p className="muted-text">
+              Save this product first; then click its image icon in Product Master to find the image automatically.
+            </p>
+          )}
+
+          <p className="muted-text">
+            If the automatic image is not right, upload your own JPEG, PNG or WebP (max 5 MB).
           </p>
           <input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage} />
           {imagePreview ? (

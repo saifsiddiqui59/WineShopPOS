@@ -2,7 +2,9 @@ import SortableTable from "../components/ui/SortableTable";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
+import { useAuth } from "../context/AuthContext";
 import ProductThumb from "../components/ui/ProductThumb";
+import { autoFindProductImage } from "../lib/productEnrichmentClient";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -11,10 +13,21 @@ const money = new Intl.NumberFormat("en-IN", {
 });
 
 export default function Products() {
-  const { products, getStock, deactivateProduct, activateProduct, loadingData } = useShop();
+  const {
+    products,
+    getStock,
+    deactivateProduct,
+    activateProduct,
+    loadingData,
+    refreshAll,
+  } = useShop();
+  const { profile } = useAuth();
+
   const [search, setSearch] = useState("");
   const [barcodeFilter, setBarcodeFilter] = useState("ALL");
   const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState("success");
+  const [imageBusyId, setImageBusyId] = useState("");
 
   const visibleProducts = useMemo(
     () => products.filter(
@@ -43,7 +56,54 @@ export default function Products() {
     const result = product.active
       ? await deactivateProduct(product.id)
       : await activateProduct(product.id);
+    setMessageKind(result?.ok ? "success" : "error");
     setMessage(result.message);
+  }
+
+  async function findImage(product) {
+    if (!profile?.shop_id || !product?.id) {
+      setMessageKind("error");
+      setMessage("Active shop/product is unavailable.");
+      return;
+    }
+
+    const barcodeBefore = String(product.barcode || "");
+    setImageBusyId(product.id);
+    setMessage("");
+
+    try {
+      const result = await autoFindProductImage({
+        shopId: profile.shop_id,
+        productId: product.id,
+        replace: false,
+      });
+
+      if (
+        result?.barcodeUnchanged !== true ||
+        String(result?.barcodeBefore || "") !== barcodeBefore ||
+        String(result?.barcodeAfter || "") !== barcodeBefore
+      ) {
+        throw new Error("Barcode safety verification failed. Refresh before continuing.");
+      }
+
+      await refreshAll();
+
+      setMessageKind("success");
+      setMessage(
+        `${product.name}: image added automatically` +
+        `${result.sourceType === "SHOP_IMAGE" ? " from the shop catalogue" : " from internet search"}. ` +
+        `Barcode ${barcodeBefore || "(none)"} was not changed.` +
+        `${result.reviewRecommended ? " Review the image in Edit Product if needed." : ""}`,
+      );
+    } catch (error) {
+      setMessageKind("error");
+      setMessage(
+        `${product.name}: ${error?.message || String(error)} ` +
+        `Barcode ${barcodeBefore || "(none)"} was not changed.`,
+      );
+    } finally {
+      setImageBusyId("");
+    }
   }
 
   return (
@@ -56,7 +116,7 @@ export default function Products() {
         </div>
       </div>
 
-      {message && <div className="purchase-message success">{message}</div>}
+      {message ? <div className={`purchase-message ${messageKind}`}>{message}</div> : null}
 
       <div className="panel">
         <div className="button-row" style={{ marginBottom: 12 }}>
@@ -98,24 +158,60 @@ export default function Products() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id}>
-                  <td className="products-product-column"><div className="product-cell-with-image"><ProductThumb product={p}/><span className="products-product-copy"><strong className="products-product-name">{p.name}</strong><br/><small className="products-product-meta">{p.brand} · {p.size}</small></span></div></td>
-                  <td>{p.barcode || <strong>Missing barcode</strong>}</td>
-                  <td>{p.category}</td>
-                  <td>{getStock(p.id)}</td>
-                  <td>{money.format(p.purchasePrice)}</td>
-                  <td>{money.format(p.mrp)}</td>
-                  <td>{money.format(p.price)}</td>
-                  <td>{p.active ? "ACTIVE" : "INACTIVE"}</td>
-                  <td>
-                    <Link className="secondary-button" to={`/products/${p.id}/edit`}>Edit</Link>{" "}
-                    <button className="secondary-button" onClick={() => toggle(p)}>
-                      {p.active ? "Deactivate" : "Activate"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((p) => {
+                const findingImage = imageBusyId === p.id;
+
+                return (
+                  <tr key={p.id}>
+                    <td className="products-product-column">
+                      <div className="product-cell-with-image">
+                        {p.imageUrl ? (
+                          <Link
+                            to={`/products/${p.id}/edit`}
+                            className="product-image-existing-link"
+                            title="Open Edit Product to replace or upload a different image"
+                            aria-label={`Edit image for ${p.name}`}
+                          >
+                            <ProductThumb product={p}/>
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`product-image-auto-button${findingImage ? " is-finding" : ""}`}
+                            onClick={() => void findImage(p)}
+                            disabled={findingImage}
+                            title="Find image automatically by product name, brand and size. Barcode will not change."
+                            aria-label={`Find image online for ${p.name}. Barcode will not change.`}
+                          >
+                            <ProductThumb product={p}/>
+                            <span className="product-image-auto-indicator" aria-hidden="true">
+                              {findingImage ? "…" : "+"}
+                            </span>
+                          </button>
+                        )}
+
+                        <span className="products-product-copy">
+                          <strong className="products-product-name">{p.name}</strong><br/>
+                          <small className="products-product-meta">{p.brand} · {p.size}</small>
+                        </span>
+                      </div>
+                    </td>
+                    <td>{p.barcode || <strong>Missing barcode</strong>}</td>
+                    <td>{p.category}</td>
+                    <td>{getStock(p.id)}</td>
+                    <td>{money.format(p.purchasePrice)}</td>
+                    <td>{money.format(p.mrp)}</td>
+                    <td>{money.format(p.price)}</td>
+                    <td>{p.active ? "ACTIVE" : "INACTIVE"}</td>
+                    <td>
+                      <Link className="secondary-button" to={`/products/${p.id}/edit`}>Edit</Link>{" "}
+                      <button className="secondary-button" onClick={() => toggle(p)}>
+                        {p.active ? "Deactivate" : "Activate"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </SortableTable>
         )}

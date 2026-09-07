@@ -42,3 +42,15 @@ export function confirmPhysicalBarcode(body, options) {
 export function finalizeProductEnrichment(body, options) {
   return invoke({ ...body, action: "FINALIZE" }, options);
 }
+
+export function autoFindProductImage({ shopId, productId, replace = false }, options) {
+  return invoke(
+    {
+      action: "AUTO_IMAGE",
+      shopId,
+      productId,
+      replace: Boolean(replace),
+    },
+    options,
+  );
+}
