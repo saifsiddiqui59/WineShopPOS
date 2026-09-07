@@ -1144,3 +1144,74 @@ The failed V5-04 run stopped before commit/push, DEV Edge Function deployment an
 
 Verified outcome:
 Pending this continuation.
+
+### 2026-09-07 — V5 preview QA/DEV badge automated marker passed but visual UAT failed
+
+Marker: `V5_PREVIEW_BADGE_VISUAL_UAT_FAILED_20260907`
+
+Release/stage:
+V5 dedicated QA/DEV preview after Product Enrichment V2 deployment.
+
+Symptom:
+Automated checks proved that the deployed JavaScript contained the `QA / DEV · V5 · NOT PROD` marker, but authenticated browser visual UAT showed no visible QA/DEV environment badge. The inherited sidebar brand also visibly showed `V4`.
+
+Verified source issue:
+`src/components/AnimatedBrand.jsx` on V5 still hard-coded the sidebar version badge and aria label as V4.
+
+Root cause:
+The V4 sidebar label was a source carry-forward defect. The reason the separate fixed-position environment badge was not visually observable is not treated as proven from bundle-marker checks alone.
+
+Resolution used:
+- Change V5 sidebar version badge from V4 to V5.
+- Keep the environment badge component environment-controlled.
+- Add a redundant high-z-index top-center QA/DEV warning style so the environment state is unmistakable in browser UAT.
+- Rebuild and redeploy only the dedicated V5 QA storage from the exact committed V5 SHA.
+- Keep visual status pending until a human confirms the new preview.
+
+Permanent prevention:
+- Bundle-string presence is not visual UAT.
+- Version branding must be checked explicitly when bootstrapping a new generation.
+- QA/DEV previews should use redundant visible cues: generation badge plus environment warning.
+- Automated deployment must continue to verify DEV runtime binding and PROD non-mutation separately from visual UAT.
+
+Safe continuation point:
+V5 source and DEV runtime remain authoritative. Redeploy the existing dedicated V5 preview storage only after the badge fix commit.
+
+Verified outcome:
+Pending V5 preview visual re-test.
+
+### 2026-09-07 — V5-05 built-CSS verification falsely failed on a source comment marker
+
+Marker: `V5_PREVIEW_CSS_COMMENT_CHECK_FALSE_FAILURE_20260907`
+
+Release/stage:
+V5 visible QA/DEV badging fix, automated build verification.
+
+Symptom:
+The V5-05 executor completed lint with 111 warnings and 0 errors and Vite built successfully, then stopped at:
+`FAILED: Built CSS missing visible badge fix.`
+
+Root cause:
+The executor attempted to prove the built CSS by searching the production/minified CSS bundle for a source comment marker:
+`V5_PREVIEW_BADGE_VISIBILITY_FIX_20260907`.
+Production CSS minification is allowed to remove comments, so the absence of that comment in `dist/assets/*.css` does not prove the CSS rules are missing.
+
+Resolution used:
+Keep the source-marker assertion against `src/index.css`, but validate built/public CSS semantically using durable selectors/properties:
+- `environment-preview-badge`
+- `data-environment-visible`
+- highest z-index `2147483647`
+- fixed positioning / top-center warning rule
+The validator must not depend on preservation of source comments in minified artifacts.
+
+Permanent prevention:
+- Never use non-license source comments as proof of production CSS/JS behavior.
+- Use selectors, data attributes, runtime strings, durable declarations, artifact hashes and browser UAT.
+- Lint warnings are not release failures when the configured linter reports zero errors.
+- Visual UAT remains separate from bundle verification.
+
+Safe continuation point:
+The failed V5-05 run stopped before commit and preview redeployment. Cleanup restored only executor-owned files. Remote V5 therefore remains at the previously deployed Product Enrichment commit until this 05B continuation succeeds.
+
+Verified outcome:
+Pending 05B.

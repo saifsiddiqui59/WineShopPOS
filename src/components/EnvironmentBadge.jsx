@@ -6,10 +6,14 @@ export default function EnvironmentBadge() {
     <div
       className="environment-preview-badge"
       data-environment-badge="QA-DEV-V5"
+      data-environment-visible="true"
       role="status"
+      aria-live="polite"
       aria-label={label}
     >
-      {label}
+      <strong>QA / DEV</strong>
+      <span>V5</span>
+      <span>NOT PROD</span>
     </div>
   );
 }

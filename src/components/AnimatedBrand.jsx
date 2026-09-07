@@ -26,7 +26,7 @@ export default function AnimatedBrand({ collapsed = false }) {
           draggable="false"
         />
       </span>
-      {!collapsed ? <span className="wsp-version-badge" aria-label="WineShopPOS version 4">V4</span> : null}
+      {!collapsed ? <span className="wsp-version-badge" aria-label="WineShopPOS version 5">V5</span> : null}
     </button>
   );
 }
