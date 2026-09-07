@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { getInvoiceReadUrl } from "../lib/invoiceClient";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import { evaluatePurchasePackResolution } from "../lib/packVerification";
 import { formatDateIN } from "../lib/dateFormat";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
@@ -48,7 +49,7 @@ export default function PurchaseDetails() {
 
       const { data: rows, error: ie } = await supabase
         .from("invoice_ingestions")
-        .select("id,purchase_id,source,original_file_name,stored_file_name,received_at,review_status,extracted_supplier_name,extracted_invoice_number,extracted_invoice_date,extracted_total,normalized_invoice")
+        .select("id,purchase_id,source,original_file_name,stored_file_name,received_at,review_status,extracted_supplier_name,extracted_invoice_number,extracted_invoice_date,extracted_total,normalized_invoice,review_draft")
         .eq("purchase_id", id)
         .order("received_at", { ascending: false })
         .limit(1);
@@ -135,12 +136,13 @@ export default function PurchaseDetails() {
   const extractedTotal = ingestion?.extracted_total == null ? null : Number(ingestion.extracted_total);
   const unitEvidenceAvailable = ocrPackAudit.units != null;
   const unitMatch = unitEvidenceAvailable && ocrPackAudit.units === postedUnits;
-  const packCorrections = corrections.filter((row) => {
-    const oldPack = Number(row?.old_values?.units_per_case || 0);
-    const newPack = Number(row?.new_values?.units_per_case || 0);
-    return Number(row?.quantity_delta || 0) !== 0 || (oldPack && newPack && oldPack !== newPack);
+  const packState = evaluatePurchasePackResolution({
+    purchaseItems: purchase.purchase_items || [],
+    reviewDraft: ingestion?.review_draft || null,
+    corrections,
+    ocrUnitMatch: unitMatch,
   });
-  const packResolved = unitMatch || packCorrections.length > 0;
+  const packResolved = packState.resolved;
 
   return <div>
     <div className="page-heading">
@@ -163,6 +165,7 @@ export default function PurchaseDetails() {
       postedUnits={postedUnits}
       ocrPackAudit={ocrPackAudit}
       corrections={corrections}
+      packState={packState}
       viewOriginal={viewOriginal}
     />
 
@@ -191,7 +194,7 @@ export default function PurchaseDetails() {
       <h3>OCR Evidence Used for Physical Cross-check</h3>
       <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Old OCR is not rewritten after a stock correction.</p>
       {!unitEvidenceAvailable && packResolved ? <div className="verification-guidance verification-guidance--neutral">
-        <strong>Historical information only.</strong> Original OCR could not prove Bottles/Case. The business pack state is already resolved through the audited correction.
+        <strong>Historical information only.</strong> Original OCR could not prove Bottles/Case. The business pack state is already resolved line-by-line through receiving verification or audited correction.
       </div> : !unitEvidenceAvailable ? <div className="verification-guidance verification-guidance--review">
         <strong>Action required:</strong> OCR could not prove Bottles/Case and no audited pack resolution exists yet.
       </div> : null}

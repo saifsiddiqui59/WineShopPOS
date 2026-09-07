@@ -1,20 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const stateLabel = (s) => s === "RESOLVED" ? "VERIFIED" : s === "ACCEPTED_WITH_TOLERANCE" ? "ACCEPTED" : s === "INFORMATIONAL" ? "INFO" : "REVIEW";
 const stateTone = (s) => ["RESOLVED","ACCEPTED_WITH_TOLERANCE"].includes(s) ? "ok" : s === "OPEN" ? "review" : "neutral";
 
-export default function PurchaseVerificationEngine({ purchase, ingestion, postedUnits, ocrPackAudit, corrections, viewOriginal }) {
+export default function PurchaseVerificationEngine({ purchase, ingestion, postedUnits, ocrPackAudit, corrections, packState, viewOriginal }) {
   const [serverState,setServerState]=useState(null),[stateError,setStateError]=useState("");
   const [busy,setBusy]=useState(false),[resolutionType,setResolutionType]=useState(""),[verifiedInvoiceTotal,setVerifiedInvoiceTotal]=useState(""),[reason,setReason]=useState(""),[actionMessage,setActionMessage]=useState("");
   const productValue=Number(purchase?.total||0);
   const landedTotal=purchase?.total_landed_cost==null?productValue:Number(purchase.total_landed_cost||0);
   const extractedTotal=ingestion?.extracted_total==null?null:Number(ingestion.extracted_total);
-  const packCorrections=useMemo(()=>(corrections||[]).filter((row)=>{const a=Number(row?.old_values?.units_per_case||0),b=Number(row?.new_values?.units_per_case||0);return Number(row?.quantity_delta||0)!==0||(a&&b&&a!==b);}),[corrections]);
   const unitEvidenceAvailable=ocrPackAudit?.units!=null;
-  const unitMatch=unitEvidenceAvailable&&Number(ocrPackAudit.units)===Number(postedUnits);
-  const packResolved=unitMatch||packCorrections.length>0;
+  const packResolved=Boolean(packState?.resolved);
+  const packCorrectionCount=Number(packState?.correctedCount||0);
   const productMasterUpdated=(corrections||[]).some((r)=>r?.updated_product_master);
 
   async function loadState(){const{data,error}=await supabase.rpc("get_purchase_verification_state",{p_purchase_id:purchase.id});if(error){setStateError(`Verification engine unavailable; showing safe fallback: ${error.message}`);setServerState(null);}else{setStateError("");setServerState(data||null);}}
@@ -45,7 +44,7 @@ export default function PurchaseVerificationEngine({ purchase, ingestion, posted
       <div className="verification-engine-header"><div><span className="verification-engine-kicker">CURRENT BUSINESS STATE</span><h3>{activeExceptionCount?`${activeExceptionCount} action${activeExceptionCount===1?"":"s"} required`:"Purchase verified"}</h3><p>Only unresolved business actions appear as warnings. Historical OCR uncertainty is kept separately below.</p></div><span className={`verification-engine-status verification-engine-status--${overallTone}`}>{activeExceptionCount?"NEEDS ATTENTION":"VERIFIED"}</span></div>
       {stateError?<div className="verification-guidance verification-guidance--review">{stateError}</div>:null}
       <div className="verification-state-grid">
-        <button type="button" className={`verification-state-card verification-state-card--${packResolved?"ok":"review"}`} onClick={()=>goTo(packResolved?"correction-history":"purchase-correction")}><span>Pack Quantity</span><strong>{packResolved?(packCorrections.length?"CORRECTED":"VERIFIED"):"REVIEW"}</strong><small>{packCorrections.length?`${packCorrections.length} audited correction applied`:unitMatch?"Receipt and OCR agree":"Action required"}</small></button>
+        <button type="button" className={`verification-state-card verification-state-card--${packResolved?"ok":"review"}`} onClick={()=>goTo(packResolved?"correction-history":"purchase-correction")}><span>Pack Quantity</span><strong>{packResolved?(packState?.label||"VERIFIED"):"REVIEW"}</strong><small>{packState?.mode==="VERIFIED_DURING_RECEIVING"?"All lines verified during receiving":packCorrectionCount?`${packCorrectionCount} audited line correction(s)`:packState?.mode==="OCR_TOTAL_MATCH"?"Receipt and OCR agree":"Action required"}</small></button>
         <button type="button" className="verification-state-card verification-state-card--ok" onClick={()=>goTo("posted-purchase-lines")}><span>Inventory Receipt</span><strong>{purchase.status==="RECEIVED"?"VERIFIED":purchase.status}</strong><small>{postedUnits} bottles posted</small></button>
         <button type="button" className={`verification-state-card verification-state-card--${productMasterUpdated?"ok":"neutral"}`} onClick={()=>goTo("purchase-correction")}><span>Product Master</span><strong>{productMasterUpdated?"UPDATED":"NO CORRECTION"}</strong><small>{productMasterUpdated?"Pack correction synchronized":"No audited Product Master change"}</small></button>
         <button type="button" className={`verification-state-card verification-state-card--${stateTone(financial.state)}`} onClick={()=>goTo("financial-reconciliation")}><span>Financial Total</span><strong>{stateLabel(financial.state)}</strong><small>{financial.state==="OPEN"?`${money.format(Number(financial.variance||0))} to review`:financial.resolution_type?"Audited resolution recorded":financial.state==="ACCEPTED_WITH_TOLERANCE"?`Within ${money.format(Number(financial.auto_accept_amount||0))} tolerance`:"No actionable discrepancy"}</small></button>

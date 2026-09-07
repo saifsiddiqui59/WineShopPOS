@@ -1101,14 +1101,24 @@ async function serpApiFreeAccount() {
   };
 }
 
-async function serpApiGoogleImages(query: string, account: any) {
+async function serpApiGoogleImages(query: string, account: any, choiceScope = "INDIA") {
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
+
   const url = new URL("https://serpapi.com/search.json");
   url.searchParams.set("engine", "google_images");
   url.searchParams.set("q", query);
-  url.searchParams.set("gl", "in");
   url.searchParams.set("hl", "en");
-  url.searchParams.set("google_domain", "google.co.in");
   url.searchParams.set("ijn", "0");
+
+  if (scope === "INDIA") {
+    url.searchParams.set("gl", "in");
+    url.searchParams.set("google_domain", "google.co.in");
+  } else {
+    url.searchParams.set("google_domain", "google.com");
+  }
+
   url.searchParams.set("api_key", account.key);
 
   const result = await fetchJson(
@@ -1226,14 +1236,17 @@ async function bestSameShopSerpImage(identity: any, product: any) {
   return ranked[0] || null;
 }
 
-async function searchSerpImagesFree(identity: any) {
+async function searchSerpImagesFree(identity: any, choiceScope = "INDIA") {
   const account = await serpApiFreeAccount();
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
 
   const allRows: any[] = [];
   const attempts: any[] = [];
 
   for (const query of identity.queries.slice(0, 2)) {
-    const result = await serpApiGoogleImages(query, account);
+    const result = await serpApiGoogleImages(query, account, scope);
 
     attempts.push({
       query,
@@ -1255,7 +1268,7 @@ async function searchSerpImagesFree(identity: any) {
       identity.expected,
       allRows,
       "DISCOVERY",
-      16,
+      100,
     );
 
     const useful = ranked.filter((candidate: any) =>
@@ -1273,7 +1286,7 @@ async function searchSerpImagesFree(identity: any) {
     identity.expected,
     allRows,
     "DISCOVERY",
-    20,
+    100,
   );
 
   return {
@@ -1293,16 +1306,44 @@ async function searchSerpImagesFree(identity: any) {
   };
 }
 
-async function imageChoiceCacheKeyFor(product: any, identity: any) {
+async function imageChoiceCacheKeyFor(product: any, identity: any, choiceScope = "INDIA") {
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
+
   return sha256(JSON.stringify({
-    v: 4,
+    v: 5,
     mode: "IMAGE_CHOICES",
+    scope,
     productId: String(product.id || ""),
     q: normalizeText(identity?.expected?.query || ""),
     brand: normalizeText(identity?.expected?.brand || ""),
     sizeMl: Number(identity?.expected?.sizeMl || 0) || null,
     packageType: normalizePackageType(identity?.expected?.packageType),
   }));
+}
+
+function scopedImageIdentity(identity: any, choiceScope = "INDIA") {
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
+
+  if (scope === "INDIA") return { ...identity, choiceScope: scope };
+
+  const queries = (identity?.queries || [])
+    .map((query: string) => {
+      const text = String(query || "").trim();
+      return text.toLowerCase().endsWith(" india")
+        ? text.slice(0, -6).trim()
+        : text;
+    })
+    .filter(Boolean);
+
+  return {
+    ...identity,
+    queries: [...new Set(queries)].slice(0, 2),
+    choiceScope: scope,
+  };
 }
 
 async function imageCandidateHistory(
@@ -1363,6 +1404,7 @@ async function storeImageChoiceCache({
   provider,
   candidates,
   userId,
+  choiceScope,
 }: any) {
   const usable = Array.isArray(candidates) ? candidates : [];
   const ttlMs = usable.length
@@ -1372,8 +1414,9 @@ async function storeImageChoiceCache({
   const response = {
     ok: true,
     mode: "IMAGE_CHOICES",
-    strategyVersion: 4,
+    strategyVersion: 5,
     productId,
+    choiceScope,
     searchIdentity: {
       productName: identity?.canonical?.productName || null,
       brand: identity?.canonical?.brand || null,
@@ -1382,7 +1425,7 @@ async function storeImageChoiceCache({
     },
     providerAccount: provider?.account || null,
     providerAttempts: provider?.attempts || [],
-    candidates: usable.slice(0, 12),
+    candidates: usable.slice(0, 100),
     createdAt: new Date().toISOString(),
     positiveCache: usable.length > 0,
   };
@@ -1445,6 +1488,7 @@ async function getProductImageChoices({
   membership,
   shopId,
   productId,
+  choiceScope,
 }: any) {
   if (!["ADMIN", "MANAGER"].includes(String(membership?.role || "").toUpperCase())) {
     throw new HttpError(403, "Manager or Admin access is required");
@@ -1462,8 +1506,12 @@ async function getProductImageChoices({
   if (productError) throw productError;
   if (!product) throw new HttpError(404, "Product not found in current shop");
 
-  const identity = await buildSerpImageIdentity(admin, shopId, product);
-  const cacheKey = await imageChoiceCacheKeyFor(product, identity);
+  const rawIdentity = await buildSerpImageIdentity(admin, shopId, product);
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
+  const identity = scopedImageIdentity(rawIdentity, scope);
+  const cacheKey = await imageChoiceCacheKeyFor(product, identity, scope);
 
   let cached = await getCached(admin, shopId, cacheKey, true);
   let response = cached?.response;
@@ -1483,7 +1531,7 @@ async function getProductImageChoices({
       })
       .eq("id", cached.id);
   } else {
-    const provider = await searchSerpImagesFree(identity);
+    const provider = await searchSerpImagesFree(identity, scope);
 
     response = await storeImageChoiceCache({
       admin,
@@ -1494,6 +1542,7 @@ async function getProductImageChoices({
       provider,
       candidates: provider.candidates || [],
       userId: user.id,
+      choiceScope: scope,
     });
   }
 
@@ -1505,14 +1554,15 @@ async function getProductImageChoices({
   );
 
   const choices = (response?.candidates || [])
-    .slice(0, 8)
+    .slice(0, 100)
     .map((candidate: any) => publicImageChoice(candidate, history));
 
   return {
     ok: true,
     action: "IMAGE_CHOICES",
-    strategyVersion: 4,
+    strategyVersion: 5,
     productId,
+    choiceScope: scope,
     choiceCacheKey: cacheKey,
     cacheHit,
     cachePolicy: choices.length
@@ -1755,6 +1805,7 @@ async function tryAnotherProductImage({
     membership,
     shopId,
     productId,
+    choiceScope: "INDIA",
   });
 
   if (!choices.choices?.length) {
@@ -2264,6 +2315,7 @@ Deno.serve(async (req) => {
         membership,
         shopId,
         productId: String(body?.productId || ""),
+        choiceScope: String(body?.choiceScope || "INDIA"),
       });
     } else if (action === "APPLY_IMAGE_CHOICE") {
       response = await applyCachedImageChoice({

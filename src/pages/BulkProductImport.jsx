@@ -15,7 +15,7 @@ function blankRow(overrides = {}) {
     brand: "",
     categoryId: "",
     subcategory: "",
-    sizeMl: 750,
+    sizeMl: "",
     alcoholPercentage: "",
     purchasePrice: 0,
     mrp: 0,
@@ -36,11 +36,11 @@ function inferSizeMl(item) {
     .filter(Boolean)
     .join(" ");
   const matches = [...text.matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
-  if (!matches.length) return 750;
+  if (!matches.length) return 0;
 
   const [, rawValue, rawUnit] = matches[matches.length - 1];
   const value = Number(rawValue);
-  if (!Number.isFinite(value) || value <= 0) return 750;
+  if (!Number.isFinite(value) || value <= 0) return 0;
   const unit = rawUnit.toLowerCase();
   if (unit === "cl") return Math.round(value * 10);
   if (unit === "l") return Math.round(value * 1000);

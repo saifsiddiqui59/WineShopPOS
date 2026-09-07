@@ -55,12 +55,16 @@ export function autoFindProductImage({ shopId, productId, replace = false }, opt
   );
 }
 
-export function getProductImageChoices({ shopId, productId }, options) {
+export function getProductImageChoices(
+  { shopId, productId, choiceScope = "INDIA" },
+  options,
+) {
   return invoke(
     {
       action: "IMAGE_CHOICES",
       shopId,
       productId,
+      choiceScope,
     },
     options,
   );

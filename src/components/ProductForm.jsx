@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProductEnrichmentPanel from "./ProductEnrichmentPanel";
+import MobileBarcodeScanner from "./MobileBarcodeScanner";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import {
   applyProductImageChoice,
-  autoFindProductImage,
   getProductImageChoices,
-  tryAnotherProductImage,
 } from "../lib/productEnrichmentClient";
 import { productImageUrl } from "../lib/productImages";
 
@@ -76,13 +75,16 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
-  const [imageSearchBusy, setImageSearchBusy] = useState(false);
   const [imageChooserOpen, setImageChooserOpen] = useState(false);
   const [imageChoices, setImageChoices] = useState([]);
   const [imageChoiceCacheKey, setImageChoiceCacheKey] = useState("");
   const [imageChoiceBusy, setImageChoiceBusy] = useState(false);
   const [imageChoiceApplying, setImageChoiceApplying] = useState("");
   const [imageChoiceError, setImageChoiceError] = useState("");
+  const [imageChoiceScope, setImageChoiceScope] = useState("INDIA");
+  const [imageChoicePage, setImageChoicePage] = useState(0);
+  const [barcodeCameraOpen, setBarcodeCameraOpen] = useState(false);
+  const cameraImageInputRef = useRef(null);
   const initializedIdentityRef = useRef(null);
   const [sellingPriceTouched, setSellingPriceTouched] = useState(false);
 
@@ -136,10 +138,22 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
   }, [imageChooserOpen, imageChoiceApplying]);
 
   const subcategoryOptions = useMemo(() => {
-    const direct = SUBCATEGORY_BY_CATEGORY[form.category] || [];
-    const all = Object.values(SUBCATEGORY_BY_CATEGORY).flat();
+    const source = SUBCATEGORY_BY_CATEGORY[form.category];
+    const direct = Array.isArray(source) ? source : [];
+    const all = Object.values(SUBCATEGORY_BY_CATEGORY).flatMap((value) => Array.isArray(value) ? value : []);
     return [...new Set([...direct, ...all])];
   }, [form.category]);
+
+  const imageChoicePageSize = 20;
+  const imageChoiceTotalPages = Math.max(
+    1,
+    Math.ceil(imageChoices.length / imageChoicePageSize),
+  );
+  const imageChoiceStart = imageChoicePage * imageChoicePageSize;
+  const visibleImageChoices = imageChoices.slice(
+    imageChoiceStart,
+    imageChoiceStart + imageChoicePageSize,
+  );
 
   function set(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -218,14 +232,17 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     );
   }
 
-  async function openImageChooser() {
+  async function loadImageChoices(scope) {
     const productId = initialValue?.id;
+    const normalizedScope = scope === "GLOBAL" ? "GLOBAL" : "INDIA";
+
     if (!productId || !profile?.shop_id) {
       setMessage("Save the product first, then choose an online image.");
       return;
     }
 
-    setImageChooserOpen(true);
+    setImageChoiceScope(normalizedScope);
+    setImageChoicePage(0);
     setImageChoiceBusy(true);
     setImageChoiceError("");
     setMessage("");
@@ -234,6 +251,7 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
       const result = await getProductImageChoices({
         shopId: profile.shop_id,
         productId,
+        choiceScope: normalizedScope,
       });
 
       if (result?.barcodeUnchanged !== true) {
@@ -245,7 +263,9 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
 
       if (!result.choices?.length) {
         setImageChoiceError(
-          "No alternative images were found in the current free search results.",
+          "No " +
+          (normalizedScope === "INDIA" ? "India" : "Global") +
+          " image choices were found in the current free search results.",
         );
       }
     } catch (error) {
@@ -255,6 +275,17 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     } finally {
       setImageChoiceBusy(false);
     }
+  }
+
+  async function openImageChooser() {
+    setImageChooserOpen(true);
+    await loadImageChoices(imageChoiceScope || "INDIA");
+  }
+
+  async function switchImageChoiceScope(scope) {
+    const normalizedScope = scope === "GLOBAL" ? "GLOBAL" : "INDIA";
+    if (normalizedScope === imageChoiceScope && imageChoices.length) return;
+    await loadImageChoices(normalizedScope);
   }
 
   async function chooseOnlineImage(candidateId) {
@@ -278,82 +309,6 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
       setImageChoiceError(error?.message || String(error));
     } finally {
       setImageChoiceApplying("");
-    }
-  }
-
-  async function tryAnotherOnlineImage() {
-    const productId = initialValue?.id;
-    if (!productId || !profile?.shop_id) {
-      setMessage("Save the product first, then try another image.");
-      return;
-    }
-
-    setImageSearchBusy(true);
-    setMessage("");
-
-    try {
-      const result = await tryAnotherProductImage({
-        shopId: profile.shop_id,
-        productId,
-      });
-
-      await applyReturnedOnlineImage(
-        result,
-        "Another image was applied from the current search choices.",
-      );
-    } catch (error) {
-      setMessage(
-        `${error?.message || String(error)} Barcode was not changed.`,
-      );
-    } finally {
-      setImageSearchBusy(false);
-    }
-  }
-
-  async function findImageOnline() {
-    const productId = initialValue?.id;
-    if (!productId || !profile?.shop_id) {
-      setMessage("Save the product first. Then click its image icon or use Edit Product to find an image automatically.");
-      return;
-    }
-
-    const barcodeBefore = String(form.barcode || "");
-    setImageSearchBusy(true);
-    setMessage("");
-
-    try {
-      const result = await autoFindProductImage({
-        shopId: profile.shop_id,
-        productId,
-        replace: Boolean(imagePreview || form.imagePath),
-      });
-
-      if (result?.barcodeUnchanged !== true) {
-        throw new Error("Barcode safety verification failed.");
-      }
-
-      const url = productImageUrl(result.imagePath);
-      setImagePreview(url);
-      setForm((current) => ({
-        ...current,
-        imagePath: result.imagePath,
-        imageFile: null,
-        removeImage: false,
-      }));
-
-      await refreshAll();
-
-      setMessage(
-        `Image updated automatically ${result.sourceType === "SHOP_IMAGE" ? "from the shop catalogue" : "from internet search"}. ` +
-        `Barcode ${barcodeBefore || "(none)"} was not changed.` +
-        (result.reviewRecommended ? " Review the image before leaving this page." : ""),
-      );
-    } catch (error) {
-      setMessage(
-        `${error?.message || String(error)} Barcode ${barcodeBefore || "(none)"} was not changed.`,
-      );
-    } finally {
-      setImageSearchBusy(false);
     }
   }
 
@@ -387,7 +342,9 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
       </div>
 
       <div className="product-enrichment-form-tools">
-        <div className="form-grid">
+        <MobileBarcodeScanner open={barcodeCameraOpen} title="Scan Product Barcode" onClose={()=>setBarcodeCameraOpen(false)} onDetected={(code)=>{set("barcode",code);setBarcodeCameraOpen(false);setMessage(`Barcode ${code} scanned. Review and Save Product to persist it.`);}}/>
+
+      <div className="form-grid">
           <label>
             Package (lookup only)
             <select
@@ -443,23 +400,10 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
               <button
                 type="button"
                 className="primary-button"
-                disabled={busy || imageSearchBusy || imageChoiceBusy}
-                onClick={() => void (imagePreview ? tryAnotherOnlineImage() : findImageOnline())}
-              >
-                {imageSearchBusy
-                  ? imagePreview ? "Trying Another..." : "Finding Image..."
-                  : imagePreview
-                    ? "Try Another Image"
-                    : "Find Image Online"}
-              </button>
-
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={busy || imageSearchBusy || imageChoiceBusy}
+                disabled={busy || imageChoiceBusy}
                 onClick={() => void openImageChooser()}
               >
-                {imageChoiceBusy ? "Loading Choices..." : "Choose Image"}
+                {imageChoiceBusy ? "Loading Images..." : "Try Another Image"}
               </button>
             </div>
           ) : (
@@ -469,9 +413,9 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
           )}
 
           <p className="muted-text">
-            If the automatic image is not right, upload your own JPEG, PNG or WebP (max 5 MB).
+            If the image is not right, click Try Another Image to open the image gallery, or upload your own JPEG, PNG or WebP (max 5 MB).
           </p>
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage} />
+          <div className="product-image-local-actions"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage}/><input ref={cameraImageInputRef} type="file" accept="image/*" capture="environment" onChange={chooseImage} style={{display:"none"}}/><button type="button" className="secondary-button" onClick={()=>cameraImageInputRef.current?.click()}>Open Camera</button></div>
           {imagePreview ? (
             <button type="button" className="secondary-button" onClick={clearImage} style={{marginLeft:8}}>
               Remove Image
@@ -500,7 +444,7 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
               <div>
                 <h3 id="product-image-chooser-title">Choose Product Image</h3>
                 <p className="muted-text">
-                  Pick the closest bottle/can image. Search uses product identity only and never changes the barcode.
+                  Pick the closest bottle/can image. This flow never changes the barcode.
                 </p>
               </div>
               <button
@@ -514,78 +458,137 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
               </button>
             </div>
 
-            {imageChoiceBusy ? (
-              <div className="product-image-chooser-loading">Finding image choices...</div>
-            ) : null}
-
-            {imageChoiceError ? (
-              <div className="purchase-message error">{imageChoiceError}</div>
-            ) : null}
-
-            {!imageChoiceBusy && imageChoices.length ? (
-              <div className="product-image-choice-grid">
-                {imageChoices.map((choice) => (
-                  <button
-                    type="button"
-                    key={choice.candidateId}
-                    className={`product-image-choice-card${choice.isCurrent ? " is-current" : ""}`}
-                    disabled={Boolean(imageChoiceApplying) || choice.isCurrent}
-                    onClick={() => void chooseOnlineImage(choice.candidateId)}
-                  >
-                    <div className="product-image-choice-preview">
-                      {choice.imagePreviewUrl ? (
-                        <img
-                          src={choice.imagePreviewUrl}
-                          alt={choice.title || "Product image choice"}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span>Preview unavailable</span>
-                      )}
-                    </div>
-
-                    <div className="product-image-choice-copy">
-                      <strong>{choice.title || "Product image"}</strong>
-                      <span>{choice.publisher || "Web image"}</span>
-                    </div>
-
-                    <div className="product-image-choice-badges">
-                      {choice.isCurrent ? <span>Current</span> : null}
-                      {!choice.isCurrent && choice.wasUsed ? <span>Previously used</span> : null}
-                      {choice.confidenceBand ? <span>{choice.confidenceBand}</span> : null}
-                    </div>
-
-                    <div className="product-image-choice-action">
-                      {imageChoiceApplying === choice.candidateId
-                        ? "Applying..."
-                        : choice.isCurrent
-                          ? "Current image"
-                          : "Use this image"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="product-image-chooser-footer">
-              <span className="muted-text">
-                Results are cached for 24 hours to conserve the free search quota.
-              </span>
+            <div className="product-image-scope-toggle" role="group" aria-label="Image search region">
               <button
                 type="button"
-                className="secondary-button"
-                disabled={Boolean(imageChoiceApplying)}
-                onClick={() => setImageChooserOpen(false)}
+                className={imageChoiceScope === "INDIA" ? "is-active" : ""}
+                disabled={imageChoiceBusy || Boolean(imageChoiceApplying)}
+                onClick={() => void switchImageChoiceScope("INDIA")}
               >
-                Cancel
+                India
               </button>
+              <button
+                type="button"
+                className={imageChoiceScope === "GLOBAL" ? "is-active" : ""}
+                disabled={imageChoiceBusy || Boolean(imageChoiceApplying)}
+                onClick={() => void switchImageChoiceScope("GLOBAL")}
+              >
+                Global
+              </button>
+              <span className="muted-text">
+                {imageChoiceScope === "INDIA"
+                  ? "India is the default and is cached separately."
+                  : "Global runs only when requested and its cache is missing."}
+              </span>
+            </div>
+
+            <div className="product-image-chooser-scroll">
+              {imageChoiceBusy ? (
+                <div className="product-image-chooser-loading">
+                  Finding {imageChoiceScope === "INDIA" ? "India" : "Global"} image choices...
+                </div>
+              ) : null}
+
+              {imageChoiceError ? (
+                <div className="purchase-message error">{imageChoiceError}</div>
+              ) : null}
+
+              {!imageChoiceBusy && visibleImageChoices.length ? (
+                <>
+                  <div className="product-image-choice-count">
+                    Showing {imageChoiceStart + 1}-
+                    {Math.min(imageChoiceStart + visibleImageChoices.length, imageChoices.length)}
+                    {" "}of {imageChoices.length} cached image choices
+                  </div>
+
+                  <div className="product-image-choice-grid">
+                    {visibleImageChoices.map((choice) => (
+                      <button
+                        type="button"
+                        key={choice.candidateId}
+                        className={"product-image-choice-card" + (choice.isCurrent ? " is-current" : "")}
+                        disabled={Boolean(imageChoiceApplying) || choice.isCurrent}
+                        onClick={() => void chooseOnlineImage(choice.candidateId)}
+                      >
+                        <div className="product-image-choice-preview">
+                          {choice.imagePreviewUrl ? (
+                            <img
+                              src={choice.imagePreviewUrl}
+                              alt={choice.title || "Product image choice"}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span>Preview unavailable</span>
+                          )}
+                        </div>
+
+                        <div className="product-image-choice-copy">
+                          <strong>{choice.title || "Product image"}</strong>
+                          <span>{choice.publisher || "Web image"}</span>
+                        </div>
+
+                        <div className="product-image-choice-badges">
+                          {choice.isCurrent ? <span>Current</span> : null}
+                          {!choice.isCurrent && choice.wasUsed ? <span>Previously used</span> : null}
+                          {choice.confidenceBand ? <span>{choice.confidenceBand}</span> : null}
+                        </div>
+
+                        <div className="product-image-choice-action">
+                          {imageChoiceApplying === choice.candidateId
+                            ? "Applying..."
+                            : choice.isCurrent
+                              ? "Current image"
+                              : "Use this image"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            <div className="product-image-chooser-footer">
+              <div>
+                <strong>{imageChoiceScope === "INDIA" ? "India" : "Global"}</strong>
+                <span className="muted-text">
+                  {" "}· 20 per page · Next 20 uses cached results
+                </span>
+              </div>
+
+              <div className="button-row">
+                {imageChoices.length > imageChoicePageSize ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={imageChoiceBusy || Boolean(imageChoiceApplying)}
+                    onClick={() => {
+                      setImageChoicePage((current) =>
+                        current + 1 < imageChoiceTotalPages ? current + 1 : 0
+                      );
+                    }}
+                  >
+                    {imageChoicePage + 1 < imageChoiceTotalPages
+                      ? "Refresh / Next 20"
+                      : "Back to First 20"}
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={Boolean(imageChoiceApplying)}
+                  onClick={() => setImageChooserOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </section>
         </div>
       ) : null}
 
       <div className="form-grid">
-        <label>Barcode<input data-scanner-capture="barcode" value={form.barcode} onChange={(e) => set("barcode", e.target.value)} required /></label>
+        <label>Barcode<div className="inline-field-actions"><input data-scanner-capture="barcode" inputMode="numeric" value={form.barcode} onChange={(e)=>set("barcode",e.target.value)} required/><button type="button" className="secondary-button" onClick={()=>setBarcodeCameraOpen(true)}>Scan Barcode</button></div></label>
         <label>SKU<input value={initialValue?.sku || "Auto-generated on save"} readOnly /></label>
         <label>Product Name<input value={form.name} onChange={(e) => set("name", e.target.value)} required /></label>
         <label>Brand<input value={form.brand} onChange={(e) => set("brand", e.target.value)} required /></label>

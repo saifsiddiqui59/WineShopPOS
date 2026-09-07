@@ -1138,3 +1138,11 @@ WineShopPOS navigation, panels, tabs, forms and tables adapt to smaller screens.
 
 ## POS scanner rule
 POS remains barcode scan-first. **Scan barcode or search product** is the cashier's primary product-entry workflow. Manual search is fallback.
+
+## V5 Product image and mobile capture
+Edit Product → **Try Another Image** opens the India/Global gallery. **Open Camera** captures a product photo from a phone. **Scan Barcode** opens the phone camera barcode scanner. Camera/barcode scanning uses a free/open-source browser library; no paid scanning service is introduced.
+
+## V5 Purchase Receiving Workspace
+Use Invoice OCR, then open **Purchase Receiving Workspace**. Review product match/create, Cases, Bottles/Case, Loose, Final Bottles, Rate/Case, Price/Bottle, MRP and financial reconciliation. Use **Confirm as Posted** or **Correct Pack** line-by-line. Barcode may be Known, Scan Now or Assign Later and does not block receiving. Inline-created products begin with zero stock. **Approve & Receive Stock** is online-only. Offline draft edits are encrypted locally and show OFFLINE/SYNCING/SYNCED state. Products → **Barcode Setup (N)** shows products still missing barcode.
+
+`ml`, `cl` and `l` are liquid measurement units. Unknown size is review-required; WineShopPOS does not silently invent 750 ml.

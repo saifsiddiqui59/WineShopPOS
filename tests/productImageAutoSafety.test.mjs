@@ -57,7 +57,7 @@ test("Product Master missing image icon triggers auto image and promises barcode
 });
 
 test("Edit Product image action is separate from barcode verification", () => {
-  assert.match(form, /Find Image Online/);
+  assert.match(form, /Try Another Image/);
   assert.match(form, /It never changes the barcode/);
   assert.match(panel, /Image is handled separately/);
   assert.match(panel, /importImage: false/);

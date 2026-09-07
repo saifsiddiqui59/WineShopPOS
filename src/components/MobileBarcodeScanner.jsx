@@ -1,0 +1,13 @@
+import { useEffect,useRef,useState } from "react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { normalizeBarcode,validateGtin } from "../lib/barcode";
+export default function MobileBarcodeScanner({open,title="Scan Barcode",onClose,onDetected}){
+ const videoRef=useRef(null),controlsRef=useRef(null),detectedRef=useRef(onDetected);const[message,setMessage]=useState(""),[manual,setManual]=useState("");
+ useEffect(()=>{detectedRef.current=onDetected;},[onDetected]);
+ useEffect(()=>{if(!open)return;let cancelled=false;const reader=new BrowserMultiFormatReader();
+  (async()=>{try{setMessage("Starting rear camera...");const controls=await reader.decodeFromConstraints({audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}}},videoRef.current,(result)=>{if(!result||cancelled)return;const code=normalizeBarcode(result.getText());if(!code)return;controlsRef.current?.stop?.();detectedRef.current?.(code,{gtin:validateGtin(code)});});if(cancelled){controls?.stop?.();return;}controlsRef.current=controls;setMessage("Point the rear camera at the product barcode.");}catch(e){setMessage(`${e?.message||"Camera scan unavailable."} You can type the barcode below.`);}})();
+  return()=>{cancelled=true;try{controlsRef.current?.stop?.();}catch{}controlsRef.current=null;const stream=videoRef.current?.srcObject;if(stream?.getTracks)for(const t of stream.getTracks())t.stop();if(videoRef.current)videoRef.current.srcObject=null;};
+ },[open]);
+ if(!open)return null;const useManual=()=>{const code=normalizeBarcode(manual);if(!code){setMessage("Enter a barcode first.");return;}detectedRef.current?.(code,{gtin:validateGtin(code),manual:true});};
+ return <div className="mobile-barcode-backdrop"><section className="mobile-barcode-modal" role="dialog" aria-modal="true"><div className="mobile-barcode-header"><div><h3>{title}</h3><p className="muted-text">Uses this device camera only. No paid scanning service is used.</p></div><button type="button" className="secondary-button" onClick={onClose}>×</button></div><div className="mobile-barcode-video-shell"><video ref={videoRef} autoPlay muted playsInline/><div className="mobile-barcode-guide"/></div><div className="purchase-message">{message}</div><div className="mobile-barcode-manual"><input inputMode="numeric" value={manual} onChange={e=>setManual(e.target.value)} placeholder="Or type barcode"/><button type="button" className="secondary-button" onClick={useManual}>Use Barcode</button></div><div className="button-row" style={{marginTop:12}}><button type="button" className="secondary-button" onClick={onClose}>Cancel</button></div></section></div>;
+}

@@ -33,11 +33,11 @@ function inferOcrSizeMl(item) {
     .filter(Boolean)
     .join(" ");
   const matches = [...String(text).matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
-  if (!matches.length) return 750;
+  if (!matches.length) return 0;
 
   const [, rawValue, rawUnit] = matches[matches.length - 1];
   const value = Number(rawValue);
-  if (!Number.isFinite(value) || value <= 0) return 750;
+  if (!Number.isFinite(value) || value <= 0) return 0;
   const unit = rawUnit.toLowerCase();
   if (unit === "cl") return Math.round(value * 10);
   if (unit === "l") return Math.round(value * 1000);
@@ -953,26 +953,6 @@ export default function AutomationHub() {
     navigate(`/products/new?${params.toString()}`);
   }
 
-  function bulkCreateUnmatchedProducts() {
-    if (!result) return;
-
-    sessionStorage.setItem(
-      REVIEW_KEY,
-      JSON.stringify({
-        result,
-        matches,
-        resolution,
-        supplierId,
-        confirmedSupplier,
-        ingestionId,
-        sourceFileName,
-        charges,
-      }),
-    );
-
-    navigate("/products/bulk-import?ocr=1");
-  }
-
   function reviewDraftSnapshot(stage = "OCR_REVIEW", purchaseDraft = null) {
     return {
       version: 1,
@@ -1156,119 +1136,27 @@ export default function AutomationHub() {
     reconciliationDifference == null || Math.abs(reconciliationDifference) <= 1;
 
   async function sendDraft() {
-    if (!result || !confirmedSupplier) {
-      setMessage("Confirm the supplier first.");
-      return;
-    }
-    if (!ingestionId) {
-      setMessage("Original invoice evidence is not stored. Receive Stock is blocked.");
-      return;
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(result.invoiceDate || ""))) {
-      setMessage("Review and enter a valid Invoice Date before Receive Stock.");
-      return;
-    }
-
-    if (unresolved) {
-      setMessage(`${unresolved} invoice line(s) still need product/quantity confirmation.`);
-      return;
-    }
-
-    if (!reconciliationMatches) {
-      setFinanceWarning({
-        calculated: reviewedInvoiceTotal,
-        printed: printedInvoiceTotal,
-        difference: Math.abs(reconciliationDifference),
-      });
-      setMessage("");
-      window.requestAnimationFrame(() =>
-        document.getElementById("invoice-financial-summary")?.scrollIntoView({behavior:"smooth",block:"center"})
-      );
+    if (!result || !ingestionId) {
+      setMessage("Complete OCR first so the stored invoice can open in Purchase Receiving Workspace.");
       return;
     }
 
     setBusy(true);
     try {
-      const { data: liveProducts, error: liveProductsError } =
-        await supabase.rpc("get_products");
-      if (liveProductsError) throw liveProductsError;
-
-      const liveProductById = new Map(
-        (liveProducts || []).map((product) => [product.id, product]),
-      );
-      const lines = [];
-
-      for (let index = 0; index < result.items.length; index += 1) {
-        const item = result.items[index];
-        const row = resolution[index];
-        const product = liveProductById.get(row.productId);
-
-        if (!product) {
-          throw new Error(
-            `Product Master verification failed on OCR line ${index + 1}. Do not create duplicates; refresh Product Master and review this invoice again.`,
-          );
-        }
-
-        await saveAlias(index, product.id);
-
-        lines.push({
-          description: item.description,
-          productId: product.id,
-          caseCount: Number(row.caseCount || 0),
-          unitsPerCase: Number(row.unitsPerCase || product.units_per_case || 1),
-          looseBottles: Number(row.looseBottles || 0),
-          quantity: Number(row.quantity || 0),
-          purchasePrice: Number(row.purchasePrice || 0),
-          batchNumber: String(item.batchNumber || ""),
-          expiryDate: String(item.expiryDate || ""),
-        });
-      }
-
-      const invoiceReference =
-        String(result.invoiceNumber || "").trim() ||
-        autoInvoiceReference({
-          invoiceDate: result.invoiceDate,
-          ingestionId,
-          sourceFileName,
-        });
-
-      const purchaseDraft = {
-        supplierId: confirmedSupplier.id,
-        supplierName: confirmedSupplier.supplier_name,
-        invoiceNumber: invoiceReference,
-        invoiceNumberSource: result.invoiceNumber ? "OCR" : "AUTO",
-        invoiceDate: result.invoiceDate,
-        items: lines,
-        charges,
-        financialSummary: {
-          subtotal: result.subtotal ?? null,
-          totalTax: result.totalTax ?? null,
-          total: result.total ?? null,
-          amountDue: result.amountDue ?? null,
-          reviewedProductValue,
-          reviewedInvoiceTotal,
-          difference: reconciliationDifference,
-          reconciliationStatus: reconciliationMatches ? "MATCH" : "REVIEW",
-          financialAdjustments: result.financialAdjustments || null,
-        },
-        sourceFile: sourceFileName || file?.name || "OCR invoice",
-        ingestionId: ingestionId || null,
-        createdAt: new Date().toISOString(),
-      };
-
       const persisted = await persistReviewDraft({
         silent: true,
-        stage: "RECEIVE_STOCK",
-        purchaseDraft,
-        ready: true,
+        stage: "OCR_REVIEW",
+        purchaseDraft: null,
+        ready: false,
       });
-      if (!persisted.ok) throw persisted.error;
+      if (!persisted?.ok) {
+        throw persisted?.error || new Error("Unable to save the server OCR review draft.");
+      }
 
-      sessionStorage.setItem("wineshop_ocr_purchase_draft", JSON.stringify(purchaseDraft));
       sessionStorage.removeItem(REVIEW_KEY);
-      navigate("/purchasing/receive");
+      navigate(`/purchasing/receive?ingestion=${ingestionId}`);
     } catch (error) {
-      raiseSystemError(error, "Unable to prepare Receive Stock");
+      raiseSystemError(error, "Unable to open Purchase Receiving Workspace");
     } finally {
       setBusy(false);
     }
@@ -1529,21 +1417,6 @@ export default function AutomationHub() {
                 ? `${unresolved} line(s) need confirmation`
                 : "All lines confirmed"}
             </strong>
-          </div>
-
-          <div className="button-row" style={{ marginBottom: 12 }}>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={bulkCreateUnmatchedProducts}
-              disabled={
-                !(result.items || []).some(
-                  (_, index) => !resolution[index]?.productId,
-                )
-              }
-            >
-              Bulk Create Unmatched Products
-            </button>
           </div>
 
           <div className="data-table-wrapper">
@@ -1884,11 +1757,9 @@ export default function AutomationHub() {
           <button
             className="primary-button"
             onClick={sendDraft}
-            disabled={busy || unresolved > 0}
+            disabled={busy}
           >
-            {unresolved
-              ? `Resolve ${unresolved} Line(s) First`
-              : "Send Confirmed Draft to Receive Stock"}
+            Open Purchase Receiving Workspace
           </button>
         </section>
       ) : null}

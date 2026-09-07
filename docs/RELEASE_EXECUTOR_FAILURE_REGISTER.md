@@ -1310,3 +1310,87 @@ Permanent UX fix:
 - The browser cannot submit arbitrary image URLs; it can select only a
   server-cached candidate ID.
 - Barcode/Product Master identity remains immutable during image correction.
+
+### 2026-09-07 — V5_11 AutomationHub sendDraft boundary mismatch
+
+Marker: `V5_11_AUTOMATIONHUB_SENDDRAFT_BOUNDARY_20260907`
+
+Observed:
+- V5_11 reached Step 4/11.
+- Product/image/mobile changes were still uncommitted.
+- The AutomationHub transformer searched for `\n  return <` after
+  `async function sendDraft()`, but current V5 uses `return (` and has
+  `const supplierDefaults = useMemo(...)` directly after sendDraft.
+- The executor stopped before commit/push/deploy and restored only its owned files.
+- V5 remained at the pre-run SHA.
+
+Root cause:
+The patch used an assumed JSX return boundary instead of the exact current V5
+function boundary.
+
+Resolution / permanent prevention:
+- V5_11B reads the current V5 AutomationHub structure.
+- sendDraft is bounded by `async function sendDraft()` and the following
+  `const supplierDefaults = useMemo(...)`.
+- The receiving CTA is replaced by its exact current JSX block.
+- The replacement does not reference the analyze-local `duplicateStatus`.
+- Server review draft persistence is verified before navigating to the unified
+  Purchase Receiving Workspace.
+
+### 2026-09-07 — V5_11B duplicateStatus postcondition false positive
+
+Marker: `V5_11B_DUPLICATESTATUS_SCOPE_ASSERT_FALSE_POSITIVE_20260907`
+
+Observed:
+- V5_11B reached Step 4/11.
+- The corrected sendDraft transformer itself no longer referenced duplicateStatus.
+- A whole-file assertion `s.includes("duplicateStatus ===")` still failed because
+  current AutomationHub legitimately uses duplicateStatus inside the OCR analyze()
+  workflow.
+- The executor stopped before commit/push/deploy and restored only its owned files.
+- V5 remained at the pre-run SHA.
+
+Root cause:
+A safety assertion was applied to the entire AutomationHub source instead of only
+the transformed sendDraft function.
+
+Resolution / permanent prevention:
+- V5_11C scopes the duplicateStatus assertion to the transformed sendDraft block.
+- Legitimate duplicateStatus logic elsewhere in OCR analysis is preserved.
+- V5_11C also removes the exact Bulk Create Unmatched Products JSX button together
+  with its obsolete OCR bulk-create function, preventing a later undefined-symbol
+  lint/build failure.
+
+### 2026-09-07 — V5_11C image localization + popup scroll regression
+
+Marker: `V5_11C_IMAGE_LOCALIZATION_AND_SCROLL_REGRESSION_20260907`
+
+Observed:
+- V5_11C completed implementation phases through Step 7/11.
+- Automated regression reached 46 tests: 44 PASS, 2 FAIL.
+- Failing tests:
+  1. `India and Global localization`
+  2. `popup scrolls`
+- The executor stopped before commit/push/deploy and restored only its owned files.
+- V5 remained at the pre-run SHA.
+
+Root causes:
+1. The Edge transformer inserted a regex literal through a JavaScript template
+   literal using `\s`. The template-literal cooking removed the intended
+   backslashes, so the generated Global query cleanup did not contain the exact
+   whitespace regex expected by the regression test.
+2. ProductForm contained the new `.product-image-chooser-scroll` wrapper, but the
+   final consolidation CSS block did not yet define that class.
+
+Resolution / permanent prevention in V5_11D:
+- Global query cleanup uses ordinary string operations
+  (`endsWith(" india")` + `slice(0, -6)`) instead of a nested regex literal.
+- Edge postconditions validate the generated Global suffix-removal code.
+- Popup CSS explicitly defines the scroll container, modal flex layout and
+  India/Global scope controls.
+- The regression test validates the string-based Global cleanup and scroll CSS.
+
+### 2026-09-07 — V5_10C India/Global source-regex test false negative
+Marker: `V5_10C_GOOGLE_LOCALIZATION_TEST_FALSE_NEGATIVE_20260907`
+Observed: 35/36 tests passed; implementation contained valid Global normalization, but the source-regex test double-escaped the regex literal. Executor restored owned files before commit/push/deploy; V5 remained dd3be262cf738f6998d0c7e77d8ecbf30c88fc96.
+Permanent prevention: source assertions for regex literals use direct string inclusion/semantic assertions. V5_11 absorbs the valid implementation and corrected test.

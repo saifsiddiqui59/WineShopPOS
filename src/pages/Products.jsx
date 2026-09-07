@@ -36,6 +36,8 @@ export default function Products() {
     [products],
   );
 
+  const missingBarcodeCount = useMemo(() => visibleProducts.filter((product)=>product.active!==false&&!product.barcode).length,[visibleProducts]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return visibleProducts.filter((p) => {
@@ -123,7 +125,7 @@ export default function Products() {
           {[
             ["ALL", "All"],
             ["WITH", "With Barcode"],
-            ["WITHOUT", "Without Barcode"],
+            ["WITHOUT", `Barcode Setup (${missingBarcodeCount})`],
           ].map(([value, label]) => (
             <button
               key={value}

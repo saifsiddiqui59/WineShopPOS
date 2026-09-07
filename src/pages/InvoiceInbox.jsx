@@ -7,7 +7,6 @@ import { getInvoiceReadUrl } from "../lib/invoiceClient";
 import { formatDateIN, formatDateTimeIN } from "../lib/dateFormat";
 
 const REVIEW_KEY="wineshop_ocr_review_state";
-const PURCHASE_DRAFT_KEY="wineshop_ocr_purchase_draft";
 const STATUS_OPTIONS=["ALL","NEEDS_REVIEW","READY_TO_RECEIVE","POSSIBLE_DUPLICATE","DUPLICATE","RECEIVED","OCR_FAILED","FAILED","CANCELLED"];
 const STATUS_META={
   ALL:{label:"All Invoices",tone:"neutral"},
@@ -90,11 +89,7 @@ export default function InvoiceInbox(){
 
     const draft=row.review_draft||null;
     if(draft?.stage==="RECEIVE_STOCK"&&draft?.purchaseDraft){
-      sessionStorage.setItem(PURCHASE_DRAFT_KEY,JSON.stringify({
-        ...draft.purchaseDraft,
-        ingestionId:row.id,
-      }));
-      navigate("/purchasing/receive");
+      navigate(`/purchasing/receive?ingestion=${row.id}`);
       return;
     }
 

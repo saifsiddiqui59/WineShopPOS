@@ -1,0 +1,13 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const edge=fs.readFileSync("supabase/functions/product-enrichment/index.ts","utf8");
+const client=fs.readFileSync("src/lib/productEnrichmentClient.js","utf8");
+const form=fs.readFileSync("src/components/ProductForm.jsx","utf8");
+const css=fs.readFileSync("src/index.css","utf8");
+test("one Try Another Image button opens chooser",()=>{assert.match(form,/Try Another Image/);assert.match(form,/openImageChooser/);assert.doesNotMatch(form,/>Choose Image</);});
+test("chooser is 20 per page and exposes scope",()=>{assert.match(form,/imageChoicePageSize = 20/);assert.match(form,/Refresh \/ Next 20/);assert.match(form,/switchImageChoiceScope\("INDIA"\)/);assert.match(form,/switchImageChoiceScope\("GLOBAL"\)/);assert.match(client,/choiceScope/);});
+test("server caches 100 and scope",()=>{assert.ok(edge.includes("usable.slice(0, 100)"));assert.ok(edge.includes("v: 5"));assert.ok(edge.includes("scope,"));});
+test("India and Global localization",()=>{assert.ok(edge.includes('url.searchParams.set("gl", "in")'));assert.ok(edge.includes('url.searchParams.set("google_domain", "google.co.in")'));assert.ok(edge.includes('url.searchParams.set("google_domain", "google.com")'));assert.ok(edge.includes('.toLowerCase().endsWith(" india")'));assert.ok(edge.includes("text.slice(0, -6).trim()"));});
+test("free-only guard remains",()=>{assert.ok(edge.includes("SERPAPI_ALLOW_PAID"));assert.ok(edge.includes("plan_monthly_price"));});
+test("popup scrolls",()=>{assert.match(css,/product-image-chooser-scroll/);assert.match(css,/overflow-y:auto/);assert.match(css,/product-image-scope-toggle/);});

@@ -77,7 +77,7 @@ test("browser client has all image choice actions", () => {
 
 test("Edit Product has Try Another and thumbnail chooser popup", () => {
   assert.match(form, /Try Another Image/);
-  assert.match(form, /Choose Image/);
+  assert.doesNotMatch(form, />Choose Image</);
   assert.match(form, /Choose Product Image/);
   assert.match(form, /product-image-choice-grid/);
   assert.match(form, /Previously used/);
