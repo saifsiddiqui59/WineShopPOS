@@ -1394,3 +1394,47 @@ Resolution / permanent prevention in V5_11D:
 Marker: `V5_10C_GOOGLE_LOCALIZATION_TEST_FALSE_NEGATIVE_20260907`
 Observed: 35/36 tests passed; implementation contained valid Global normalization, but the source-regex test double-escaped the regex literal. Executor restored owned files before commit/push/deploy; V5 remained dd3be262cf738f6998d0c7e77d8ecbf30c88fc96.
 Permanent prevention: source assertions for regex literals use direct string inclusion/semantic assertions. V5_11 absorbs the valid implementation and corrected test.
+
+### 2026-09-07 — V5 non-mobile human UAT gaps
+
+Marker: `V5_NON_MOBILE_UAT_GAPS_20260907`
+
+Human UAT exposed non-mobile gaps: preview badge could disappear, OCR non-2xx errors were generic, OCR table lacked Sr No/Size/column controls/sticky heading, unmatched lines hid the suggested product name and automatic candidate image preview, impossible Price/Bottle >= MRP could still be confirmed, ambiguous dates lacked a quick candidate picker, and the Edit Product image chooser did not identify the product being searched.
+
+V5_12B fixes these UAT gaps and also repairs the mobile barcode camera scanner. Mobile product-photo capture is left unchanged because it already passed UAT.
+
+### 2026-09-07 — V5_12 ProductForm template interpolation failure
+
+Marker: `V5_12_PRODUCTFORM_TEMPLATE_INTERPOLATION_FAILURE_20260907`
+
+Observed:
+- V5_12 reached Step 4/8.
+- The ProductForm patch generator embedded JSX template expressions such as
+  `${form.brand}` inside the executor's own JavaScript template literal.
+- The patch generator evaluated `form` while running under Node and failed with
+  `ReferenceError: form is not defined`.
+- The executor stopped before commit/push/deploy and restored only V5_12-owned files.
+
+Prevention in V5_12B:
+- Product identity JSX uses ordinary expression concatenation rather than nested
+  `${...}` template interpolation inside the patch generator.
+- The generated ProductForm source is validated by lint/build before commit.
+
+### 2026-09-07 — Mobile barcode camera did not decode during human UAT
+
+Marker: `V5_MOBILE_BARCODE_CAMERA_UAT_FAILED_20260907`
+
+Observed:
+- Product photo capture from the mobile camera works.
+- Mobile camera barcode scanning did not successfully decode/return a barcode.
+- The existing scanner used one ZXing `decodeFromConstraints` path only.
+
+Resolution in V5_12B:
+- Prefer the browser-native BarcodeDetector API on supported mobile browsers.
+- Automatically fall back to ZXing BrowserMultiFormatReader when native scanning
+  is unavailable or has not decoded after a short interval.
+- Explicitly request the rear/environment camera.
+- Enumerate available cameras and allow Switch Camera when multiple cameras exist.
+- Expose torch control when the selected camera reports torch capability.
+- Preserve typed/manual barcode fallback and GTIN validation.
+- No paid scanning service is introduced.

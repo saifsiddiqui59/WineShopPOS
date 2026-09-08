@@ -8,9 +8,13 @@ import SupplierEditor from "../components/SupplierEditor";
 import { storeManualInvoice } from "../lib/invoiceClient";
 import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
 import ProductEnrichmentPanel from "../components/ProductEnrichmentPanel";
-import { inferBrandFromProductName } from "../lib/productInference";
+import { inferBrandFromProductName, normalizeBeerOcrText } from "../lib/productInference";
+import { productImageUrl } from "../lib/productImages";
+import OcrProductImagePreview from "../components/OcrProductImagePreview";
 
 const STRONG_MATCH = 0.90;
+const OCR_COLUMN_OPTIONS = [["image","Image"],["size","Size (ml)"],["batch","Batch / Lot"],["mrp","MRP"],["product","Product Resolution"],["status","Status"],["rates","Rate / Price"],["amounts","Line Amounts"],["gap","Gap"]];
+const COMMON_CASE_PACKS = [6,12,18,24,30,36,48];
 const REVIEW_KEY = "wineshop_ocr_review_state";
 const CREATED_KEY = "wineshop_ocr_created_product";
 const BULK_CREATED_KEY = "wineshop_ocr_bulk_created_products";
@@ -43,6 +47,42 @@ function inferOcrSizeMl(item) {
   if (unit === "l") return Math.round(value * 1000);
   return Math.round(value);
 }
+
+function suggestedProductName(item) {
+  const raw=normalizeBeerOcrText(item?.description||item?.productName||"").trim();
+  if(!raw)return "Unnamed OCR product";
+  const letters=raw.replace(/[^A-Za-z]/g,"");
+  if(letters&&raw===raw.toUpperCase())return raw.toLowerCase().replace(/\b[a-z]/g,(ch)=>ch.toUpperCase());
+  return raw;
+}
+
+function extractDateCandidates(rawValue) {
+  const rows=[],seen=new Set();
+  for(const match of String(rawValue||"").matchAll(/\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})\b/g)){
+    const d=Number(match[1]),m=Number(match[2]),y=Number(match[3]);
+    if(d<1||d>31||m<1||m>12)continue;
+    const iso=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    if(seen.has(iso))continue;seen.add(iso);rows.push({iso,label:`${String(d).padStart(2,"0")}-${String(m).padStart(2,"0")}-${y}`});
+  }
+  return rows.slice(0,6);
+}
+
+function linePriceSanity(item,row){
+  const mrp=Math.max(0,Number(item?.mrp||0)),pricePerBottle=Math.max(0,Number(row?.purchasePrice||0)),units=Math.max(1,Number(row?.unitsPerCase||1)),caseRate=pricePerBottle*units,impossible=mrp>0&&pricePerBottle>=mrp;
+  let minimumPack=null,suggestedPack=null;
+  if(impossible&&caseRate>0){minimumPack=Math.max(1,Math.ceil(caseRate/mrp));suggestedPack=COMMON_CASE_PACKS.find((pack)=>pack>=minimumPack)||minimumPack;}
+  return{mrp,pricePerBottle,caseRate,impossible,minimumPack,suggestedPack};
+}
+
+async function edgeFunctionErrorDetails(error){
+  const response=error?.context,status=Number(response?.status||error?.status||0)||0;let body="";
+  try{if(response?.clone)body=await response.clone().text();}catch{}
+  let readable=String(body||error?.message||"Unknown OCR function error").replace(/\s+/g," ").trim().slice(0,500);
+  try{const parsed=JSON.parse(body);readable=parsed?.message||parsed?.error||parsed?.details||readable;}catch{}
+  return{status,readable:String(readable).slice(0,500)};
+}
+
+function sleep(ms){return new Promise((resolve)=>window.setTimeout(resolve,ms));}
 
 function supplierScore(ocrName, supplierName) {
   const a = normalize(ocrName);
@@ -289,6 +329,7 @@ export default function AutomationHub() {
   const [charges, setCharges] = useState(emptyCharges());
   const [financeWarning, setFinanceWarning] = useState(null);
   const [analysisTiming, setAnalysisTiming] = useState(null);
+  const [ocrColumns, setOcrColumns] = useState(() => Object.fromEntries(OCR_COLUMN_OPTIONS.map(([key]) => [key, true])));
 
   const [supplierId, setSupplierId] = useState("");
   const [confirmedSupplier, setConfirmedSupplier] = useState(null);
@@ -303,6 +344,9 @@ export default function AutomationHub() {
     () => products.filter((product) => product.active),
     [products],
   );
+
+  const invoiceDateCandidates = useMemo(() => extractDateCandidates(result?.invoiceDateRaw), [result?.invoiceDateRaw]);
+  const hiddenColumnClass = useMemo(() => Object.entries(ocrColumns).filter(([,visible])=>!visible).map(([key])=>`hide-col-${key}`).join(" "), [ocrColumns]);
 
   const supplierMatches = useMemo(() => {
     if (!result?.supplierName) return [];
@@ -463,6 +507,8 @@ export default function AutomationHub() {
             productId: strong ? best.product_id : "",
             status: strong ? "STRONG_MATCH" : "NEEDS_PRODUCT",
             source: strong ? best.match_source : null,
+            suggestedProductName: suggestedProductName(item),
+            sizeMl: inferOcrSizeMl(item),
             ...interpretQuantity(item, product),
           },
         };
@@ -478,6 +524,19 @@ export default function AutomationHub() {
 
     setMatches(nextMatches);
     setResolution(nextResolution);
+  }
+
+  async function invokeOcrWithRetry(contentBase64,contentType){
+    for(let attempt=1;attempt<=2;attempt+=1){
+      const {data,error}=await supabase.functions.invoke("ocr-invoice",{body:{contentBase64,contentType}});
+      if(!error&&data?.ok)return data;
+      if(!error&&!data?.ok)throw new Error(data?.message||"OCR failed");
+      const details=await edgeFunctionErrorDetails(error);
+      const transient=details.status===0||[429,500,502,503,504].includes(details.status);
+      if(attempt===1&&transient){setMessage(`OCR service returned ${details.status||"a transient error"}. Original invoice is safely stored. Retrying once…`);await sleep(900);continue;}
+      throw new Error(`OCR Edge Function failed${details.status?` (HTTP ${details.status})`:""}: ${details.readable}. Original invoice is safely stored; no inventory was changed. Use Analyze Invoice again to retry.`);
+    }
+    throw new Error("OCR failed after retry.");
   }
 
   async function analyze() {
@@ -575,15 +634,8 @@ export default function AutomationHub() {
       setIngestionId(nextIngestionId);
 
       stageStarted = performance.now();
-      const { data, error } = await supabase.functions.invoke("ocr-invoice", {
-        body: {
-          contentBase64,
-          contentType: file.type || "application/octet-stream",
-        },
-      });
+      const data = await invokeOcrWithRetry(contentBase64, file.type || "application/octet-stream");
       timing.ocrMs = Math.round(performance.now() - stageStarted);
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.message || "OCR failed");
 
       setResult(data.invoice);
       setCharges(chargesFromInvoice(data.invoice));
@@ -809,6 +861,9 @@ export default function AutomationHub() {
       return;
     }
 
+    const sanity=linePriceSanity(result?.items?.[index]||{},row);
+    if(sanity.impossible){setMessage(`Line ${index+1} is blocked: Price/Bottle ₹${sanity.pricePerBottle.toFixed(2)} is not below MRP ₹${sanity.mrp.toFixed(2)}. Review Bottles/Case or Rate/Case. Suggested pack for review: ${sanity.suggestedPack||"check invoice"}.`);return;}
+
     const integerFields = [
       Number(row.caseCount || 0),
       Number(row.unitsPerCase || 0),
@@ -870,11 +925,11 @@ export default function AutomationHub() {
     const params = new URLSearchParams({
       ocr: "1",
       ocrLineIndex: String(index),
-      name: String(item?.description || ""),
+      name: suggestedProductName(item),
       brand: inferBrandFromProductName(item?.description || ""),
       category: inferCandidateCategory(null, item),
       purchasePrice: String(row.purchasePrice || item?.unitPrice || 0),
-      sizeMl: String(inferOcrSizeMl(item)),
+      sizeMl: String(row.sizeMl || inferOcrSizeMl(item) || ""),
       mrp: String(Math.max(0, Number(item?.mrp || 0))),
       sellingPrice: String(Number(item?.mrp || 0) > 0 ? Number(item.mrp) + 15 : 0),
       unitsPerCase: String(row.unitsPerCase || 12),
@@ -920,7 +975,7 @@ export default function AutomationHub() {
       result,matches,resolution,supplierId,confirmedSupplier,ingestionId,sourceFileName,charges,
     }));
 
-    const selectedName = String(candidate?.title || item?.description || "");
+    const selectedName = String(candidate?.title || suggestedProductName(item));
     const selectedBrand = String(
       candidate?.brand || inferBrandFromProductName(item?.description || ""),
     );
@@ -985,7 +1040,8 @@ export default function AutomationHub() {
           row?.productId &&
           row?.status === "CONFIRMED" &&
           Number.isInteger(Number(row?.quantity || 0)) &&
-          Number(row?.quantity || 0) > 0
+          Number(row?.quantity || 0) > 0 &&
+          !linePriceSanity(result.items[index], row).impossible
         );
       }),
     );
@@ -1055,7 +1111,8 @@ export default function AutomationHub() {
         (_, index) =>
           !resolution[index]?.productId ||
           resolution[index]?.status !== "CONFIRMED" ||
-          Number(resolution[index]?.quantity || 0) <= 0,
+          Number(resolution[index]?.quantity || 0) <= 0 ||
+          linePriceSanity(result.items[index], resolution[index] || {}).impossible,
       ).length,
     [result, resolution],
   );
@@ -1273,7 +1330,15 @@ export default function AutomationHub() {
           </div>
           {result.invoiceDateReviewRequired ? (
             <div className="purchase-message">
-              Invoice date needs review. Azure raw value: {result.invoiceDateRaw || "not resolved"}. Confirm the physical invoice date before receiving stock.
+              <div>Invoice date needs review. Azure raw value: {result.invoiceDateRaw || "not resolved"}. Confirm the physical invoice date before receiving stock.</div>
+              {invoiceDateCandidates.length ? (
+                <div className="button-row" style={{marginTop:8}}>
+                  <span className="muted-text">Detected date candidates:</span>
+                  {invoiceDateCandidates.map((candidate)=>(
+                    <button key={candidate.iso} type="button" className="secondary-button" onClick={()=>setResult((current)=>({...current,invoiceDate:candidate.iso,invoiceDateReviewRequired:false,invoiceDateSource:"HUMAN_REVIEW_FROM_OCR_CANDIDATE"}))}>Use {candidate.label}</button>
+                  ))}
+                </div>
+              ):null}
             </div>
           ) : null}
           <p className="muted-text">
@@ -1419,11 +1484,22 @@ export default function AutomationHub() {
             </strong>
           </div>
 
-          <div className="data-table-wrapper">
-            <table className="data-table">
+          <details className="ocr-column-selector">
+            <summary>Columns</summary>
+            <div className="ocr-column-selector-grid">
+              {OCR_COLUMN_OPTIONS.map(([key,label])=>(
+                <label key={key}><input type="checkbox" checked={ocrColumns[key]!==false} onChange={(event)=>setOcrColumns((current)=>({...current,[key]:event.target.checked}))}/>{label}</label>
+              ))}
+            </div>
+          </details>
+          <div className="data-table-wrapper ocr-review-table-shell">
+            <table className={`data-table ocr-review-table ${hiddenColumnClass}`}>
               <thead>
                 <tr>
+                  <th>Sr No</th>
+                  <th>Image</th>
                   <th>OCR Description</th>
+                  <th>Size (ml)</th>
                   <th>Batch / Lot</th>
                   <th>MRP</th>
                   <th>Product Resolution</th>
@@ -1475,9 +1551,19 @@ export default function AutomationHub() {
                           : 0),
                     ),
                   );
+                  const selectedProduct=activeProducts.find((product)=>product.id===row.productId);
+                  const selectedProductImage=selectedProduct?.imageUrl||productImageUrl(selectedProduct?.imagePath||selectedProduct?.image_path||"");
+                  const resolvedSizeMl=Number(row.sizeMl||inferOcrSizeMl(item)||0);
+                  const priceSanity=linePriceSanity(item,row);
 
                   return (
-                    <tr key={index}>
+                    <tr key={index} className={priceSanity.impossible?"ocr-line-impossible":""}>
+                      <td className="ocr-sr-no"><strong>{index+1}</strong></td>
+                      <td className="ocr-image-cell">
+                        {selectedProductImage?(<img className="ocr-product-thumb" src={selectedProductImage} alt={selectedProduct?.name||"Product Master image"}/>):(
+                          <OcrProductImagePreview shopId={profile?.shop_id} item={{...item,description:suggestedProductName(item)}} sizeMl={resolvedSizeMl||null} delayMs={Math.min(index,12)*450}/>
+                        )}
+                      </td>
                       <td>
                         <strong>{item.description || "Unnamed OCR line"}</strong>
                         <div className="muted-text">
@@ -1489,6 +1575,7 @@ export default function AutomationHub() {
                         </div>
                       </td>
 
+                      <td><strong>{resolvedSizeMl>0?`${resolvedSizeMl} ml`:"Review"}</strong></td>
                       <td><strong>{item.batchNumber || "—"}</strong></td>
                       <td>{Number(item.mrp || 0) > 0 ? `₹${Number(item.mrp).toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
 
@@ -1509,23 +1596,13 @@ export default function AutomationHub() {
                           </div>
                         ) : (
                           <div>
+                            <div className="ocr-suggested-product-name"><small>Suggested Product Name</small><strong>{suggestedProductName(item)}</strong></div>
                             <div className="muted-text">
                               <strong>No reliable Product Master match.</strong>
-                              {best
-                                ? ` Closest score ${Math.round(bestScore * 100)}% was not selected.`
-                                : ""}
+                              {best ? ` Closest score ${Math.round(bestScore * 100)}% was not selected.` : ""}
                             </div>
-                            <div style={{ margin: "8px 0" }}>
-                              <ProductEnrichmentPanel
-                                shopId={profile?.shop_id}
-                                item={item}
-                                sizeMl={inferOcrSizeMl(item)}
-                                disabled={busy}
-                                onUseCandidate={(candidate) =>
-                                  createProductFromCandidate(index, candidate)
-                                }
-                                onCreateFallback={() => createProduct(index)}
-                              />
+                            <div style={{margin:"8px 0"}}>
+                              <ProductEnrichmentPanel shopId={profile?.shop_id} item={{...item,description:suggestedProductName(item)}} sizeMl={resolvedSizeMl||null} disabled={busy} onUseCandidate={(candidate)=>createProductFromCandidate(index,candidate)} onCreateFallback={()=>createProduct(index)}/>
                             </div>
                           </div>
                         )}
@@ -1633,15 +1710,8 @@ export default function AutomationHub() {
                       </td>
 
                       <td>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.000001"
-                          value={row.purchasePrice ?? 0}
-                          onChange={(event) =>
-                            updateBottlePrice(index, event.target.value)
-                          }
-                        />
+                        <input type="number" min="0" step="0.000001" value={row.purchasePrice ?? 0} onChange={(event)=>updateBottlePrice(index,event.target.value)} aria-invalid={priceSanity.impossible?"true":"false"}/>
+                        {priceSanity.impossible?(<div className="ocr-price-impossible"><strong>BLOCKED · Cost ≥ MRP</strong><span>₹{priceSanity.pricePerBottle.toFixed(2)} / bottle vs MRP ₹{priceSanity.mrp.toFixed(2)}</span><span>Review Bottles/Case or Rate/Case.{priceSanity.suggestedPack?` Suggested pack: ${priceSanity.suggestedPack}.`:""}</span></div>):null}
                       </td>
 
                       <td>
@@ -1678,7 +1748,7 @@ export default function AutomationHub() {
                             className="primary-button"
                             onClick={() => confirmLine(index)}
                             disabled={
-                              !row.productId || Number(row.quantity || 0) <= 0
+                              !row.productId || Number(row.quantity || 0) <= 0 || priceSanity.impossible
                             }
                           >
                             Confirm Line
@@ -1703,7 +1773,7 @@ export default function AutomationHub() {
               </tbody>
               <tfoot>
                 <tr style={{ background: "var(--ws-surface-muted)" }}>
-                  <td>
+                  <td colSpan="4">
                     <strong>INVOICE TOTALS</strong>
                     <div className="muted-text">
                       {(result.items || []).length} line(s)

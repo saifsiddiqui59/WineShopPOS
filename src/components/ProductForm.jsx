@@ -443,8 +443,15 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
             <div className="product-image-chooser-header">
               <div>
                 <h3 id="product-image-chooser-title">Choose Product Image</h3>
+                <div className="product-image-chooser-product-name">
+                  <strong>{form.name || initialValue?.name || "Unnamed Product"}</strong>
+                  <span className="muted-text">
+                    {form.brand ? form.brand + " · " : ""}
+                    {Number(form.sizeMl || 0) > 0 ? String(Number(form.sizeMl)) + " ml" : "Size not set"}
+                  </span>
+                </div>
                 <p className="muted-text">
-                  Pick the closest bottle/can image. This flow never changes the barcode.
+                  Pick the closest bottle/can image for this Product Master item. This flow never changes the barcode.
                 </p>
               </div>
               <button
