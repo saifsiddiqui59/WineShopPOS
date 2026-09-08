@@ -213,6 +213,31 @@ module or Admin Hardware.</p>
 <h3 id="quick-products">Quick Products</h3>
 <p>Quick Products is collapsible. Open it only when you want to tap common products.
 Typing in product search still shows Search Results directly.</p>
+<h3 id="v5-16-use-phone-as-scanner">V5_16 Use Phone as Scanner</h3>
+<p>Current scanner controls in POS are grouped under <strong>Scan Product</strong>:</p>
+<ul>
+<li><strong>Barcode Scanner</strong> — physical USB/Bluetooth barcode machine; no button needed.</li>
+<li><strong>This Device Camera</strong> — camera on the device currently showing POS.</li>
+<li><strong>Use Phone</strong> — separate phone sends barcodes to this PC.</li>
+</ul>
+<p>To use a separate phone:</p>
+<ol>
+<li>PC: open <strong>Use Phone</strong> and select <strong>Connect Phone</strong>.</li>
+<li>PC displays a QR.</li>
+<li>Separate phone: scan the QR and open the WineShopPOS link.</li>
+<li>Wait until the phone says <strong>Connected to PC</strong>.</li>
+<li>Tap <strong>Start Camera</strong>.</li>
+<li>Scan the product.</li>
+<li>The phone waits for PC acknowledgement and shows whether the PC added the
+product or rejected the barcode.</li>
+<li>The camera starts again only after the PC acknowledges the previous scan.</li>
+</ol>
+<p>If the phone says that the PC did not confirm receipt, do not scan another item.
+Use <strong>Retry Sending Last Barcode</strong>. Retrying the same scan does not intentionally
+add a second item because the same event ID is reused.</p>
+<p>The QR is valid for 10 minutes. <strong>New QR</strong> or <strong>Disconnect</strong> ends use of the old
+PC listener.</p>
+<p>Dark mode should show the scanner instructions/statuses with high contrast.</p>
 <h3 id="phone-as-barcode-scanner">Phone as Barcode Scanner</h3>
 <p>On the PC:</p>
 <ol>
@@ -272,6 +297,20 @@ receipt remain on the authenticated PC.</p>
 <li>active/inactive status.</li>
 </ul>
 <p>Editing product details does not directly rewrite inventory.</p>
+<h3 id="product-image-while-adding-a-product">Product Image while adding a product</h3>
+<p>When Add Product already has a product name (for example from Invoice OCR),
+WineShopPOS automatically starts a Product Image preview. You do not need to click
+Find Product Image just to see the first suggestion.</p>
+<p>You can still:</p>
+<ul>
+<li>review/find a different product-image match,</li>
+<li>upload JPEG/PNG/WebP,</li>
+<li>use Open Camera.</li>
+</ul>
+<p>When you save a new product without choosing/uploading an image, WineShopPOS runs
+the same automatic Product Image workflow used from the Products page. The image
+operation finishes before Add Product returns to Invoice OCR / Products.</p>
+<p>Product Image processing does not change the physical barcode.</p>
 <h3 id="barcode-labels">Barcode Labels</h3>
 <ol>
 <li>Open Products → Barcode Labels.</li>

@@ -73,11 +73,13 @@ test("purchase receiving shares the size and pack suggestion rules", () => {
   assert.match(purchases, /Auto-suggested/);
 });
 
-test("POS has same-device camera, phone-to-PC panel and physical scanner", () => {
+test("POS preserves all scanner paths under the current scanner-tab contract", () => {
   assert.match(pos, /MobileBarcodeScanner/);
-  assert.match(pos, /Camera Scan on This Device/);
   assert.match(pos, /PhoneToPcScannerPanel/);
-  assert.match(pos, /Physical USB\/keyboard barcode scanners continue/);
+  assert.match(pos, /Barcode Scanner/);
+  assert.match(pos, /This Device Camera/);
+  assert.match(pos, /Use Phone/);
+  assert.match(pos, /role="tablist"/);
   assert.match(pos, /useScanner/);
   assert.match(pos, /lastScan/);
   assert.match(pos, /processBarcode/);
@@ -85,7 +87,7 @@ test("POS has same-device camera, phone-to-PC panel and physical scanner", () =>
 
 test("continuity doc is sufficient for a new chat", () => {
   assert.match(currentState, /START HERE IN A NEW CHAT/);
-  assert.match(currentState, /618fb0d9198b94af0eb1095d2bac491c91b9c268/);
+  assert.match(currentState, /d58098f4eecfc5c85729d4ac41f9c789bcf6e8ef/);
   assert.match(currentState, /juhcypzoacauzmtzqnwd/);
   assert.match(currentState, /RELEASE_EXECUTOR_FAILURE_REGISTER/);
   assert.match(currentState, /Remaining manual UAT/);

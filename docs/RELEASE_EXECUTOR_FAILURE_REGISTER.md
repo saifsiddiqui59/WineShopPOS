@@ -1609,3 +1609,155 @@ Resolution in V5_14B:
 - retain the 10-minute expiry and Web Crypto requirements;
 - keep the documentation regression test so future wording cannot accidentally
   weaken or hide the temporary-credential contract.
+
+### 2026-09-08 — V5_16C malformed NODE_LEGACY_TEST heredoc
+
+Marker: `V5_16C_MALFORMED_NODE_HEREDOC_TERMINATOR_20260908`
+
+Observed:
+- V5_16C reached step 7 before running the full regression suite.
+- Node failed immediately with:
+  `SyntaxError: Invalid or unexpected token`
+- The generated executor contained a malformed heredoc boundary:
+  a malformed NODE_LEGACY_TEST terminator containing an extra quote
+  followed by a duplicated legacy Node patch body.
+- Because that line was not an exact shell heredoc terminator, Node received the
+  stray terminator text as JavaScript.
+- The executor stopped before commit/push/deploy and restored only V5_16C-owned
+  files.
+- GitHub V5 remained at
+  `d58098f4eecfc5c85729d4ac41f9c789bcf6e8ef`.
+
+Resolution in V5_16D:
+- rebuild from the last structurally valid V5_16B executor, not from V5_16C;
+- replace the historical scanner test as one semantic block;
+- verify every quoted heredoc has exactly one opening and one exact closing line;
+- reject any suspicious `HEREDOC_NAME'` pseudo-terminator before giving the
+  executor to the user.
+
+### 2026-09-08 — V5_16B legacy scanner test still asserted removed USB help copy
+
+Marker: `V5_16B_LEGACY_USB_HELP_TEXT_ASSERTION_STALE_20260908`
+
+Observed:
+- V5_16B reached the full root Node regression suite.
+- 91 tests ran: 90 PASS, 1 FAIL.
+- The stale same-device label assertion had already been updated successfully.
+- The same historical V5_13E test then required obsolete copy:
+  `Physical USB/keyboard barcode scanners continue`.
+- V5_16 intentionally replaced the old scanner help copy with the scanner-tab
+  semantic contract: Barcode Scanner / This Device Camera / Use Phone.
+- New V5_16 tests for USB scanner preservation, same-device camera preservation,
+  HashRouter phone pairing, acknowledgement retry/dedupe and dark-mode scanner UI
+  had already passed.
+
+Resolution in V5_16D:
+- replace the whole old scanner test block instead of patching old wording one
+  assertion at a time.
+
+### 2026-09-08 — V5_16 legacy continuity test expected obsolete scanner label
+
+Marker: `V5_16_LEGACY_SCANNER_LABEL_TEST_STALE_20260908`
+
+Observed:
+- V5_16 reached the full root Node regression suite.
+- 91 tests ran: 90 PASS, 1 FAIL.
+- The combined V5_16 scanner UX intentionally renamed the same-device camera tab
+  to `This Device Camera`.
+- Older `tests/v5_13E_continuity_uat.test.mjs` still required the obsolete source
+  phrase `Camera Scan on This Device`.
+- All new V5_16 scanner tests passed, including HashRouter pairing, acknowledgement
+  retry/dedupe, clear scanner tabs, USB preservation, camera preservation and
+  dark-mode readability.
+- The executor stopped before commit/push/deploy and restored only V5_16-owned
+  files.
+- GitHub V5 remained at
+  `d58098f4eecfc5c85729d4ac41f9c789bcf6e8ef`.
+
+Resolution in V5_16B:
+- update only the stale legacy scanner-label assertion from
+  `Camera Scan on This Device` to `This Device Camera`;
+- preserve the legacy requirements for MobileBarcodeScanner,
+  PhoneToPcScannerPanel, USB/keyboard scanner, useScanner, lastScan and
+  processBarcode;
+- rerun the complete regression/docs/build/deploy workflow.
+
+### 2026-09-08 — V5_15 Product Image documentation regex false negative
+
+Marker: `V5_15_IMAGE_DOC_MULTILINE_REGEX_FALSE_NEGATIVE_20260908`
+
+Observed:
+- V5_15 reached the full root Node regression suite.
+- 83 tests ran: 81 PASS, 2 FAIL.
+- Product Image documentation correctly stated that Add Product calls the same
+  `autoFindProductImage({ replace:false })` workflow used by the Products page.
+- The test used `/same.*Products page/i`, where `.` did not match the newline
+  between those phrases.
+- This was a stale source-text test contract, not an implementation failure.
+- V5_15 stopped before commit/push/deploy and restored only owned files.
+
+Resolution in V5_16:
+- use a whitespace/newline-tolerant documentation assertion;
+- retain the exact Product Image workflow requirement.
+
+### 2026-09-08 — V5_15 continuity test expected an obsolete V5 SHA
+
+Marker: `V5_15_CONTINUITY_TEST_SHA_STALE_20260908`
+
+Observed:
+- the second V5_15 failure was the older
+  `tests/v5_13E_continuity_uat.test.mjs`;
+- that test still required parent SHA
+  `618fb0d9198b94af0eb1095d2bac491c91b9c268`;
+- current V5 before the combined repair is
+  `d58098f4eecfc5c85729d4ac41f9c789bcf6e8ef`;
+- the current-state document was correctly updated to the newer V5 baseline.
+
+Resolution in V5_16:
+- update only the stale continuity SHA assertion to the current parent;
+- keep the environment/failure-register/UAT continuity requirements intact.
+
+### 2026-09-08 — Phone-as-scanner QR used BrowserRouter-style URL in a HashRouter app
+
+Marker: `V5_14C_PHONE_SCANNER_HASHROUTER_DEEPLINK_FAILURE_20260908`
+
+Human UAT:
+- separate-phone barcode-machine workflow did not work reliably;
+- the scanner flow was confusing;
+- dark-mode instructions were difficult to read;
+- scanner sections/tabs were not visually clear.
+
+Source inspection found a concrete routing defect:
+- WineShopPOS uses React Router `HashRouter`;
+- the PC generated a pairing URL like `/phone-scanner?...`;
+- the phone scanner read `window.location.search`;
+- in a HashRouter application the correct route/query belongs after `#/`;
+- therefore the QR/deep-link could miss the React route and/or pairing parameters.
+
+Resolution in V5_16:
+- generate `#/phone-scanner?...` QR/deep links;
+- read pairing query values through React Router `useSearchParams`;
+- add safe barcode delivery retry with PC acknowledgement and duplicate-event
+  acknowledgement replay;
+- show PC result back on the phone;
+- replace confusing scanner collapsibles with one clear scanner-method tab panel;
+- add high-contrast dark-mode scanner help/status styling;
+- preserve physical USB/keyboard scanner and same-device camera scanner;
+- no paid scanning service or new backend resource.
+
+### 2026-09-08 — Add Product image did not auto-load like Product Master
+
+Marker: `V5_14C_ADD_PRODUCT_IMAGE_AUTOLOAD_UAT_GAP_20260908`
+
+Observed:
+- OCR -> Add Product showed a Product Image panel with `No image`;
+- the user had to click Product Image lookup manually;
+- Products page already had automatic Product Image processing.
+
+Resolution in V5_16:
+- auto-load a non-mutating Product Image preview from current product identity;
+- after product creation, when no explicit image was chosen/uploaded, call the
+  same `autoFindProductImage({ replace:false })` path used by Products page;
+- wait for the image operation and refresh Product Master before navigation;
+- barcode remains unchanged;
+- no new provider, paid service, database object or Edge Function.

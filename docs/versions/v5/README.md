@@ -79,3 +79,16 @@ Current phone-to-PC scanner contract:
 
 Current V5 continuation authority remains:
 `docs/versions/v5/V5_CURRENT_STATE_AND_CONTINUATION.md`
+
+## V5_16_COMBINED_IMAGE_PHONE_SCANNER
+
+Latest combined Product Image + scanner behavior:
+- unsaved Product Image preview auto-loads;
+- saved new products reuse the same automatic Product Image workflow as Products;
+- no new paid service;
+- phone-to-PC scanner repair is implemented; human retest remains required.
+
+See:
+- `features/PRODUCT_IMAGE_AUTO_ENRICHMENT.md`
+- `releases/V5_16_COMBINED_IMAGE_PHONE_SCANNER_2026-09-08.md`
+- `V5_CURRENT_STATE_AND_CONTINUATION.md`

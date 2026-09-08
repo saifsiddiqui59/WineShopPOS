@@ -384,3 +384,30 @@ html[data-theme="dark"] .access-chip.allowed { color:#66d3a9; background:#10352a
 .invoice-status-badge.warning { background:#fff4e8; border-color:#f0cfaa; color:#8a4d0f; }
 .invoice-status-badge.error { background:#fff0ef; border-color:#efc4c0; color:#a12b23; }
 .invoice-status-badge.muted { background:#f1f1f2; border-color:#dedfe2; color:#666870; }
+
+/* V5_16_DARK_MODULE_TAB_READABILITY_20260908 */
+html[data-theme="dark"] .module-tabs {
+  gap: 6px;
+  padding: 5px 0 8px;
+  border-bottom-color: #3b424d;
+}
+
+html[data-theme="dark"] .module-tab {
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px 8px 0 0;
+  color: #cdd3dd;
+}
+
+html[data-theme="dark"] .module-tab:hover {
+  background: #20242b;
+  color: #fff;
+}
+
+html[data-theme="dark"] .module-tab.active {
+  background: #2a2029;
+  color: #ffd9e7;
+  border-color: #694057;
+  border-bottom-color: #d66a95;
+}

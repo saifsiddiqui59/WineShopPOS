@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { normalizeBarcode } from "../lib/barcode";
 
 const PAIRING_TTL_MS = 10 * 60 * 1000;
-const HEARTBEAT_STALE_MS = 12000;
+const HEARTBEAT_STALE_MS = 15000;
 
 function randomToken(byteLength = 24) {
   const bytes = new Uint8Array(byteLength);
@@ -31,12 +31,25 @@ function createSession(shopId) {
 }
 
 function pairingUrl(pairing) {
-  const url = new URL("/phone-scanner", window.location.origin);
-  url.searchParams.set("session", pairing.sessionId);
-  url.searchParams.set("token", pairing.token);
-  url.searchParams.set("shop", pairing.shopId);
-  url.searchParams.set("expires", String(pairing.expiresAt));
+  const query = new URLSearchParams({
+    session: pairing.sessionId,
+    token: pairing.token,
+    shop: pairing.shopId,
+    expires: String(pairing.expiresAt),
+  });
+
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = `/phone-scanner?${query.toString()}`;
   return url.toString();
+}
+
+function statusCopy(status, connected) {
+  if (connected) return "PHONE CONNECTED";
+  if (status === "EXPIRED") return "PAIRING EXPIRED";
+  if (status === "CONNECTION_ERROR") return "CONNECTION ERROR";
+  if (status === "CONNECTING") return "CONNECTING…";
+  return "WAITING FOR PHONE";
 }
 
 export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
@@ -47,9 +60,8 @@ export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [copyMessage, setCopyMessage] = useState("");
 
-  const channelRef = useRef(null);
   const onBarcodeRef = useRef(onBarcode);
-  const receivedIdsRef = useRef(new Set());
+  const ackCacheRef = useRef(new Map());
 
   useEffect(() => {
     onBarcodeRef.current = onBarcode;
@@ -78,10 +90,7 @@ export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
         Math.ceil((pairing.expiresAt - Date.now()) / 1000),
       );
       setSecondsLeft(next);
-
-      if (next <= 0) {
-        setChannelStatus("EXPIRED");
-      }
+      if (next <= 0) setChannelStatus("EXPIRED");
     };
 
     update();
@@ -92,7 +101,7 @@ export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
   useEffect(() => {
     if (!pairing) return undefined;
 
-    receivedIdsRef.current = new Set();
+    ackCacheRef.current = new Map();
     setPhoneSeenAt(0);
     setLastScan(null);
     setChannelStatus("CONNECTING");
@@ -135,7 +144,7 @@ export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
           setChannelStatus("CONNECTED");
         }
       })
-      .on("broadcast", { event: "barcode" }, ({ payload }) => {
+      .on("broadcast", { event: "barcode" }, async ({ payload }) => {
         if (
           payload?.sessionId !== pairing.sessionId ||
           Date.now() >= pairing.expiresAt
@@ -144,39 +153,69 @@ export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
         }
 
         const eventId = String(payload?.eventId || "");
-        if (!eventId || receivedIdsRef.current.has(eventId)) return;
-
-        receivedIdsRef.current.add(eventId);
-        if (receivedIdsRef.current.size > 100) {
-          receivedIdsRef.current = new Set(
-            Array.from(receivedIdsRef.current).slice(-50),
-          );
-        }
-
         const barcode = normalizeBarcode(payload?.barcode);
-        if (!barcode) return;
+        if (!eventId || !barcode) return;
+
+        const priorAck = ackCacheRef.current.get(eventId);
+        if (priorAck) {
+          void channel.send({
+            type: "broadcast",
+            event: "barcode-ack",
+            payload: priorAck,
+          });
+          return;
+        }
 
         setPhoneSeenAt(Date.now());
         setChannelStatus("CONNECTED");
-        setLastScan({
-          barcode,
-          at: new Date().toISOString(),
-        });
 
-        onBarcodeRef.current?.(barcode, {
-          source: "PHONE_TO_PC",
+        let outcome = null;
+        try {
+          outcome = await Promise.resolve(
+            onBarcodeRef.current?.(barcode, {
+              source: "PHONE_TO_PC",
+              sessionId: pairing.sessionId,
+              eventId,
+            }),
+          );
+        } catch (error) {
+          outcome = {
+            ok: false,
+            status: "PC_ERROR",
+            message: error?.message || String(error),
+          };
+        }
+
+        const ackPayload = {
           sessionId: pairing.sessionId,
-        });
+          eventId,
+          barcode,
+          accepted: Boolean(outcome?.ok),
+          status: String(
+            outcome?.status ||
+              (outcome?.ok ? "ADDED_TO_CART" : "NOT_ADDED"),
+          ),
+          productName: outcome?.productName || null,
+          message:
+            outcome?.message ||
+            (outcome?.ok
+              ? "PC accepted the barcode."
+              : "PC received the barcode but did not add it."),
+          receivedAt: new Date().toISOString(),
+        };
+
+        ackCacheRef.current.set(eventId, ackPayload);
+        if (ackCacheRef.current.size > 100) {
+          const entries = Array.from(ackCacheRef.current.entries()).slice(-50);
+          ackCacheRef.current = new Map(entries);
+        }
+
+        setLastScan(ackPayload);
 
         void channel.send({
           type: "broadcast",
           event: "barcode-ack",
-          payload: {
-            sessionId: pairing.sessionId,
-            eventId,
-            barcode,
-            receivedAt: new Date().toISOString(),
-          },
+          payload: ackPayload,
         });
       })
       .subscribe((status) => {
@@ -197,10 +236,7 @@ export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
         }
       });
 
-    channelRef.current = channel;
-
     return () => {
-      channelRef.current = null;
       void supabase.removeChannel(channel);
     };
   }, [pairing]);
@@ -225,120 +261,138 @@ export default function PhoneToPcScannerPanel({ shopId, onBarcode }) {
 
   async function copyLink() {
     if (!url) return;
+
     try {
       await navigator.clipboard.writeText(url);
-      setCopyMessage("Pairing link copied.");
+      setCopyMessage("Phone scanner link copied.");
     } catch {
-      setCopyMessage("Could not copy automatically. Use the QR code instead.");
+      setCopyMessage("Could not copy automatically. Scan the QR instead.");
     }
   }
 
   return (
-    <details className="panel pos-v5h-customer-tools pos-phone-pc-tools">
-      <summary>
-        <span>
-          <strong>Phone as Barcode Scanner</strong>
-          <small>Use a separate phone as a wireless barcode gun for this PC bill</small>
-        </span>
-        <span className="pos-v5h-summary-action">Open</span>
-      </summary>
+    <div className="phone-pc-panel">
+      {!pairing ? (
+        <div className="phone-pc-start">
+          <div className="scanner-instruction-card">
+            <strong>Use a separate phone as the barcode gun</strong>
+            <span>
+              The phone only sends barcode numbers. Product lookup, stock checks
+              and billing stay on this PC.
+            </span>
+          </div>
 
-      <div className="pos-v5h-customer-body">
-        {!pairing ? (
-          <>
-            <p className="muted-text">
-              Connect a phone to this POS for 10 minutes. The phone sends only scanned
-              barcode numbers; billing and stock actions remain on this PC.
-            </p>
-            <button
-              type="button"
-              className="primary-button"
-              onClick={startPairing}
-            >
-              Connect Phone Scanner
-            </button>
-          </>
-        ) : (
-          <div className="phone-pc-pairing">
+          <button
+            type="button"
+            className="primary-button phone-pc-connect-button"
+            onClick={startPairing}
+          >
+            Connect Phone
+          </button>
+        </div>
+      ) : (
+        <div className="phone-pc-pairing">
+          <div className="phone-pc-qr-column">
+            <div className="phone-pc-step-badge">1</div>
+            <strong>Scan this QR with the separate phone</strong>
             <div className="phone-pc-qr">
               <QRCodeSVG
                 value={url}
-                size={190}
+                size={220}
                 marginSize={2}
                 level="M"
                 title="Phone scanner pairing QR code"
               />
             </div>
-
-            <div className="phone-pc-pairing-info">
-              <div className={`phone-pc-status ${connected ? "connected" : ""}`}>
-                <strong>
-                  {connected
-                    ? "PHONE CONNECTED"
-                    : channelStatus === "EXPIRED"
-                      ? "PAIRING EXPIRED"
-                      : channelStatus === "CONNECTION_ERROR"
-                        ? "REALTIME CONNECTION ERROR"
-                        : "WAITING FOR PHONE"}
-                </strong>
-                <span>
-                  {secondsLeft > 0
-                    ? `Pairing expires in ${Math.floor(secondsLeft / 60)}:${String(
-                        secondsLeft % 60,
-                      ).padStart(2, "0")}`
-                    : "Create a new pairing to continue."}
-                </span>
-              </div>
-
-              <ol className="phone-pc-steps">
-                <li>Open the camera app on your phone.</li>
-                <li>Scan this QR code and open the WineShopPOS scanner page.</li>
-                <li>Tap Start Scanning on the phone.</li>
-                <li>Each scanned barcode is added to this PC POS automatically.</li>
-              </ol>
-
-              {lastScan ? (
-                <div className="phone-pc-last-scan">
-                  <span>Last barcode received</span>
-                  <strong>{lastScan.barcode}</strong>
-                </div>
-              ) : null}
-
-              <div className="button-row">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={copyLink}
-                >
-                  Copy Pairing Link
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={startPairing}
-                >
-                  New Pairing
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={disconnect}
-                >
-                  Disconnect
-                </button>
-              </div>
-
-              {copyMessage ? <p className="muted-text">{copyMessage}</p> : null}
-
-              <p className="muted-text">
-                Security: the QR contains a random temporary pairing secret. The PC
-                ignores scans after expiry or disconnect. Do not share the QR outside
-                the counter.
-              </p>
-            </div>
+            <small>QR expires after 10 minutes.</small>
           </div>
-        )}
-      </div>
-    </details>
+
+          <div className="phone-pc-pairing-info">
+            <div
+              className={`phone-pc-status ${
+                connected ? "connected" : channelStatus.toLowerCase()
+              }`}
+            >
+              <strong>{statusCopy(channelStatus, connected)}</strong>
+              <span>
+                {secondsLeft > 0
+                  ? `Expires in ${Math.floor(secondsLeft / 60)}:${String(
+                      secondsLeft % 60,
+                    ).padStart(2, "0")}`
+                  : "Create a new pairing to continue."}
+              </span>
+            </div>
+
+            <div className="scanner-instruction-grid">
+              <div className="scanner-instruction-card">
+                <b>2</b>
+                <strong>Open the scanner link</strong>
+                <span>The phone page should show Connected to PC.</span>
+              </div>
+              <div className="scanner-instruction-card">
+                <b>3</b>
+                <strong>Tap Start Camera</strong>
+                <span>Scan bottles/cans exactly like a wireless barcode gun.</span>
+              </div>
+            </div>
+
+            {lastScan ? (
+              <div
+                className={`phone-pc-last-scan ${
+                  lastScan.accepted ? "accepted" : "rejected"
+                }`}
+              >
+                <span>Last scan from phone</span>
+                <strong>{lastScan.barcode}</strong>
+                <b>
+                  {lastScan.accepted
+                    ? `${lastScan.productName || "Product"} added on PC`
+                    : lastScan.status.replaceAll("_", " ")}
+                </b>
+              </div>
+            ) : (
+              <div className="phone-pc-last-scan">
+                <span>Last scan from phone</span>
+                <strong>Waiting…</strong>
+              </div>
+            )}
+
+            <div className="button-row">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={copyLink}
+              >
+                Copy Phone Link
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={startPairing}
+              >
+                New QR
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={disconnect}
+              >
+                Disconnect
+              </button>
+            </div>
+
+            {copyMessage ? (
+              <p className="scanner-readable-help">{copyMessage}</p>
+            ) : null}
+
+            <p className="scanner-readable-help">
+              Security: the QR contains a 192-bit temporary pairing secret.
+              Disconnect or New QR stops this PC from listening to the old
+              session. Do not share the QR outside the counter.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

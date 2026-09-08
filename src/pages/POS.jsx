@@ -33,6 +33,7 @@ export default function POS(){
   const[unknown,setUnknown]=useState("");
   const[busy,setBusy]=useState(false);
   const[mobileScannerOpen,setMobileScannerOpen]=useState(false);
+  const[scannerTab,setScannerTab]=useState("USB");
   const[autoPrint,setAutoPrint]=useState(false);
   const[shiftOpen,setShiftOpen]=useState(false);
   const[shiftLoading,setShiftLoading]=useState(true);
@@ -258,9 +259,30 @@ export default function POS(){
       errorBeep();
       setUnknown(normalized);
       setMessage(`PRODUCT NOT FOUND: ${normalized}`);
-      return;
+      return {
+        ok:false,
+        status:"PRODUCT_NOT_FOUND",
+        barcode:normalized,
+        message:`Product not found on PC: ${normalized}`,
+      };
     }
-    add(p);
+
+    const added=add(p);
+    return added
+      ? {
+          ok:true,
+          status:"ADDED_TO_CART",
+          barcode:normalized,
+          productName:p.name,
+          message:`${p.name} added to PC cart.`,
+        }
+      : {
+          ok:false,
+          status:"NOT_ADDED",
+          barcode:normalized,
+          productName:p.name,
+          message:`${p.name} was received by PC but could not be added to the cart.`,
+        };
   }
 
   useEffect(()=>{
@@ -662,35 +684,80 @@ export default function POS(){
           }}
         />
 
-        <details className="panel pos-v5h-customer-tools pos-mobile-scanner-tools">
-          <summary>
-            <span>
-              <strong>Camera Scan on This Device</strong>
-              <small>Use the camera attached to this phone, tablet or PC</small>
-            </span>
-            <span className="pos-v5h-summary-action">Open</span>
-          </summary>
-          <div className="pos-v5h-customer-body">
-            <div className="button-row">
-              <button
-                type="button"
-                className="primary-button"
-                onClick={()=>setMobileScannerOpen(true)}
-              >
-                Scan Product
-              </button>
+        <section className="panel pos-scanner-hub">
+          <div className="pos-scanner-hub-heading">
+            <div>
+              <strong>Scan Product</strong>
+              <span>Choose how you want to scan. The normal barcode scanner stays active all the time.</span>
             </div>
-            <p className="muted-text">
-              This scans with the camera on the device currently running WineShopPOS.
-              Physical USB/keyboard barcode scanners continue to work automatically.
-            </p>
+            <span className="pos-scanner-ready-dot">SCANNER READY</span>
           </div>
-        </details>
 
-        <PhoneToPcScannerPanel
-          shopId={profile?.shop_id}
-          onBarcode={(code) => processBarcode(code)}
-        />
+          <div className="pos-scanner-tabs" role="tablist" aria-label="Barcode scanning methods">
+            {[
+              ["USB","Barcode Scanner","USB / Bluetooth"],
+              ["CAMERA","This Device Camera","Camera on this device"],
+              ["PHONE","Use Phone","Phone → this PC"],
+            ].map(([value,label,help])=>(
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={scannerTab===value}
+                className={scannerTab===value?"pos-scanner-tab active":"pos-scanner-tab"}
+                onClick={()=>setScannerTab(value)}
+              >
+                <strong>{label}</strong>
+                <span>{help}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="pos-scanner-tabpanel" role="tabpanel">
+            {scannerTab==="USB"?(
+              <div className="pos-scanner-method">
+                <div className="scanner-method-icon">▥</div>
+                <div>
+                  <strong>Physical Barcode Scanner</strong>
+                  <p>
+                    No button needed. Scan with the USB/Bluetooth barcode machine and
+                    WineShopPOS adds the product automatically.
+                  </p>
+                  <small>
+                    The scanner remains active even when another tab is selected.
+                  </small>
+                </div>
+              </div>
+            ):null}
+
+            {scannerTab==="CAMERA"?(
+              <div className="pos-scanner-method">
+                <div className="scanner-method-icon">⌾</div>
+                <div>
+                  <strong>Camera on this device</strong>
+                  <p>
+                    Use the camera attached to the phone, tablet or PC that is currently
+                    showing this POS screen.
+                  </p>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={()=>setMobileScannerOpen(true)}
+                  >
+                    Start Camera Scan
+                  </button>
+                </div>
+              </div>
+            ):null}
+
+            {scannerTab==="PHONE"?(
+              <PhoneToPcScannerPanel
+                shopId={profile?.shop_id}
+                onBarcode={(code)=>processBarcode(code)}
+              />
+            ):null}
+          </div>
+        </section>
 
         <details className="panel pos-v5h-customer-tools">
           <summary>

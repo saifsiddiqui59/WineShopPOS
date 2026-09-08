@@ -20,7 +20,7 @@ Do **not** reset the project to old V3/V4 chapters.
 
 - Repository: `saifsiddiqui59/WineShopPOS`
 - Branch: `V5`
-- Current V5 baseline before V5_14: `618fb0d9198b94af0eb1095d2bac491c91b9c268`
+- Current V5 baseline before V5_16: `d58098f4eecfc5c85729d4ac41f9c789bcf6e8ef`
 - V5 QA preview: `https://wspv5qa3a5e8018.z29.web.core.windows.net/`
 - DEV Supabase: `WineshopPOS_DEV`
 - DEV project ref: `juhcypzoacauzmtzqnwd`
@@ -130,6 +130,47 @@ Security:
 Canonical feature document:
 `docs/versions/v5/features/POS_PHONE_TO_PC_BARCODE_SCANNER.md`
 
+## V5_16 Combined Product Image + Phone Scanner repair
+
+Human UAT showed OCR -> Add Product still displayed `No image` until a manual
+Product Image lookup was started.
+
+V5_16 changes the new-product flow:
+
+- Product Image preview auto-loads from existing product discovery as soon as
+  name/brand/size are available;
+- preview is non-mutating;
+- after Product Master creation, if no uploaded/confirmed image was supplied,
+  Add Product runs the exact same `autoFindProductImage({replace:false})` path
+  used by the Products page;
+- the image operation finishes before returning to OCR / Products;
+- Product Master is refreshed after image persistence;
+- barcode remains unchanged;
+- no new paid service/resource is added.
+
+### Open scanner UAT issue
+
+**Phone as Barcode Scanner repair implemented / HUMAN RETEST REQUIRED.**
+
+The latest human UAT reported that the phone-to-PC scanner was not working,
+the flow was confusing, dark-mode help text was difficult to read and scanner
+tabs/panels were not visually clear. V5_16 repairs the concrete HashRouter
+deep-link defect and adds acknowledged retry/dedupe behavior. Human retest is
+still required before marking the phone-scanner workflow passed.
+
+Canonical Product Image feature:
+`docs/versions/v5/features/PRODUCT_IMAGE_AUTO_ENRICHMENT.md`
+
+Phone scanner V5_16 repair:
+- QR uses HashRouter route `#/phone-scanner?...`;
+- phone reads query with React Router `useSearchParams`;
+- barcode send retries up to three times waiting for PC acknowledgement;
+- duplicate event IDs replay acknowledgement and do not add the product twice;
+- scanner UX is one clear tab panel: Barcode Scanner / This Device Camera / Use Phone;
+- dark-mode scanner and module tabs use high-contrast styling;
+- existing USB scanner and native/ZXing camera scanner are preserved;
+- no new paid service or backend resource.
+
 ## Safe executor workflow for every continuation
 
 Before mutation:
@@ -148,7 +189,7 @@ Never automatically use destructive cleanup:
 
 Stage only explicit owned paths.
 
-## Remaining manual UAT after V5_14 automation
+## Remaining manual UAT after V5_16 automation
 
 1. Subcategory: select predefined value, select Other / Custom, save/edit product.
 2. First-time OCR product: Product Image choice in same creation flow and return to invoice.

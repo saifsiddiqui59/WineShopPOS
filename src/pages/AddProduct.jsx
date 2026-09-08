@@ -8,7 +8,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 export default function AddProduct() {
-  const { addProduct } = useShop();
+  const { addProduct, refreshAll } = useShop();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -58,6 +58,7 @@ export default function AddProduct() {
     if (!result.ok) return result;
 
     let enrichmentWarning = "";
+    let imageFinalizedBySelection = false;
     const selection = form.enrichmentSelection;
 
     if (
@@ -72,23 +73,39 @@ export default function AddProduct() {
           candidateId: selection.candidateId || null,
           importImage: Boolean(selection.importImage),
         });
+
+        imageFinalizedBySelection = Boolean(selection.importImage);
+        if (imageFinalizedBySelection) await refreshAll();
       } catch (error) {
         enrichmentWarning =
           `Product was saved, but enrichment finalization did not complete: ${error?.message || String(error)}`;
       }
     }
 
-    if (fromOcr && !selection?.importImage && profile?.shop_id && result.productId) {
+    const hasExplicitImage = Boolean(form.imageFile || form.imagePath);
+
+    if (
+      !hasExplicitImage &&
+      !imageFinalizedBySelection &&
+      profile?.shop_id &&
+      result.productId
+    ) {
       try {
-        await autoFindProductImage({
+        const imageResult = await autoFindProductImage({
           shopId: profile.shop_id,
           productId: result.productId,
           replace: false,
         });
+
+        if (imageResult?.barcodeUnchanged !== true) {
+          throw new Error("Product Image barcode-safety verification failed.");
+        }
+
+        await refreshAll();
       } catch (error) {
         enrichmentWarning = enrichmentWarning
-          ? enrichmentWarning + " Product Image automatic lookup also did not complete."
-          : "Product was saved. Product Image automatic lookup did not complete; you can choose or upload an image later.";
+          ? enrichmentWarning + " Automatic Product Image lookup also did not complete."
+          : "Product was saved. Automatic Product Image lookup did not complete; use Products -> Edit -> Try Another Image or upload an image later.";
       }
     }
 
@@ -145,7 +162,7 @@ export default function AddProduct() {
         </div>
       ) : fromOcr && !barcode ? (
         <div className="verification-guidance verification-guidance--neutral" style={{ marginBottom: 12 }}>
-          OCR product details are prefilled. You may use Find Product before scanning; a physical barcode is still required to save.
+          OCR product details are prefilled. Product Image preview loads automatically from the product identity. A physical barcode is still required to save; after save the same Product Master automatic image workflow used on the Products page runs when no image was explicitly chosen.
         </div>
       ) : null}
 

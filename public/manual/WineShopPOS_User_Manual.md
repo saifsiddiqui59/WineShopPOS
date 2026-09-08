@@ -188,6 +188,36 @@ module or Admin Hardware.
 Quick Products is collapsible. Open it only when you want to tap common products.
 Typing in product search still shows Search Results directly.
 
+
+### V5_16 Use Phone as Scanner
+
+Current scanner controls in POS are grouped under **Scan Product**:
+
+- **Barcode Scanner** — physical USB/Bluetooth barcode machine; no button needed.
+- **This Device Camera** — camera on the device currently showing POS.
+- **Use Phone** — separate phone sends barcodes to this PC.
+
+To use a separate phone:
+
+1. PC: open **Use Phone** and select **Connect Phone**.
+2. PC displays a QR.
+3. Separate phone: scan the QR and open the WineShopPOS link.
+4. Wait until the phone says **Connected to PC**.
+5. Tap **Start Camera**.
+6. Scan the product.
+7. The phone waits for PC acknowledgement and shows whether the PC added the
+   product or rejected the barcode.
+8. The camera starts again only after the PC acknowledges the previous scan.
+
+If the phone says that the PC did not confirm receipt, do not scan another item.
+Use **Retry Sending Last Barcode**. Retrying the same scan does not intentionally
+add a second item because the same event ID is reused.
+
+The QR is valid for 10 minutes. **New QR** or **Disconnect** ends use of the old
+PC listener.
+
+Dark mode should show the scanner instructions/statuses with high contrast.
+
 ### Phone as Barcode Scanner
 
 On the PC:
@@ -255,6 +285,23 @@ Maintain:
 - active/inactive status.
 
 Editing product details does not directly rewrite inventory.
+
+### Product Image while adding a product
+
+When Add Product already has a product name (for example from Invoice OCR),
+WineShopPOS automatically starts a Product Image preview. You do not need to click
+Find Product Image just to see the first suggestion.
+
+You can still:
+- review/find a different product-image match,
+- upload JPEG/PNG/WebP,
+- use Open Camera.
+
+When you save a new product without choosing/uploading an image, WineShopPOS runs
+the same automatic Product Image workflow used from the Products page. The image
+operation finishes before Add Product returns to Invoice OCR / Products.
+
+Product Image processing does not change the physical barcode.
 
 ### Barcode Labels
 

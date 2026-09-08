@@ -149,3 +149,51 @@ Release:
 9. Generate a new pairing; old pairing remains ineffective.
 10. Verify USB scanner still works.
 11. Verify Camera Scan on This Device still works.
+
+## V5_16 functional repair — HashRouter + reliable acknowledgement
+
+Starting parent:
+`d58098f4eecfc5c85729d4ac41f9c789bcf6e8ef`
+
+Human UAT after V5_14C failed. Source inspection found the main functional defect:
+WineShopPOS uses React Router **HashRouter**, but the pairing QR was built as a
+normal path/query and the phone page read `window.location.search`.
+
+V5_16 changes the link contract to:
+
+`https://<v5-host>/#/phone-scanner?session=...&token=...&shop=...&expires=...`
+
+The phone route reads the query through React Router `useSearchParams`.
+
+### Delivery reliability
+
+- each phone scan receives a unique event ID;
+- phone attempts delivery up to three times while waiting for PC acknowledgement;
+- PC caches acknowledgement by event ID;
+- retry of the same event ID replays the acknowledgement instead of processing
+  the barcode twice;
+- phone shows PC added / rejected / no acknowledgement;
+- PC result includes Product Not Found or product-added outcome.
+
+### UX
+
+POS uses one scanner-method panel with real tabs:
+
+1. **Barcode Scanner** — physical USB/Bluetooth keyboard-style scanner;
+2. **This Device Camera** — camera on the device currently showing POS;
+3. **Use Phone** — separate phone acts as the wireless barcode gun.
+
+Dark-mode scanner instructions, statuses and module tabs use explicit high
+contrast.
+
+### Security / cost
+
+The existing 192-bit temporary secret and 10-minute expiry remain.
+The phone has no independent billing authority and no product/inventory DB access.
+
+**No new paid service** and no new backend/cloud resource are introduced.
+
+### Human UAT
+
+Repair is implemented, but **human retest is required** before marking this
+feature passed.

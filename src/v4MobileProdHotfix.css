@@ -100,3 +100,44 @@
     height: 40px !important;
   }
 }
+
+/* V5_16_SCANNER_MOBILE_LAYOUT_20260908 */
+@media (max-width: 720px) {
+  .pos-scanner-tabs {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pos-scanner-tab {
+    min-height: 56px;
+  }
+
+  .phone-pc-pairing,
+  .scanner-instruction-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .phone-pc-qr {
+    width: min(100%, 260px);
+    margin-inline: auto;
+  }
+
+  .phone-pc-qr svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .phone-scanner-page {
+    align-items: start;
+  }
+
+  .phone-scanner-card {
+    margin-top: 8px;
+    padding: 16px;
+  }
+
+  .mobile-barcode-modal {
+    width: calc(100vw - 18px) !important;
+    max-height: calc(100dvh - 18px) !important;
+    overflow-y: auto;
+  }
+}

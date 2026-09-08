@@ -6714,3 +6714,435 @@ html[data-theme="dark"] .product-enrichment-comparison > div {
     display: grid;
   }
 }
+
+/* V5_16_COMBINED_IMAGE_PHONE_SCANNER_20260908 */
+.product-image-preview--autoload {
+  min-width: 112px;
+  min-height: 112px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--ws-surface-muted, #f1f3f5);
+  color: var(--ws-text, #1f2937);
+}
+
+.product-image-preview--autoload > .ocr-auto-image-preview {
+  width: 100%;
+  min-height: 108px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ws-surface-muted, #f1f3f5);
+  color: var(--ws-text, #1f2937);
+}
+
+.product-image-preview--autoload .ocr-auto-image-preview img {
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+}
+
+.product-image-preview--autoload .ocr-auto-image-preview small,
+.product-image-preview--autoload .ocr-auto-image-preview span,
+.product-image-flow-copy,
+.product-image-autoload-help {
+  color: var(--ws-muted, #667085);
+}
+
+html[data-theme="dark"] .product-image-editor {
+  color: var(--ws-text, #f3f4f6);
+  border-color: var(--ws-border, #303542);
+  background: var(--ws-surface, #181b22);
+}
+
+html[data-theme="dark"] .product-image-editor .muted-text,
+html[data-theme="dark"] .product-image-preview--autoload .ocr-auto-image-preview small,
+html[data-theme="dark"] .product-image-preview--autoload .ocr-auto-image-preview span {
+  color: #cbd1dc;
+}
+
+html[data-theme="dark"] .product-image-preview--autoload,
+html[data-theme="dark"] .product-image-preview--autoload > .ocr-auto-image-preview {
+  background: #232733;
+  color: #f3f4f6;
+}
+
+/* V5_16_PHONE_SCANNER_REPAIR_20260908 */
+.pos-scanner-hub {
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.pos-scanner-hub-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pos-scanner-hub-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.pos-scanner-hub-heading > div > span,
+.pos-scanner-method p,
+.pos-scanner-method small,
+.scanner-readable-help,
+.phone-pc-qr-column small,
+.scanner-instruction-card span,
+.phone-scanner-help,
+.phone-scanner-lead {
+  color: #5f6878;
+  line-height: 1.55;
+}
+
+.pos-scanner-ready-dot {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid #a6e4c3;
+  background: #ecfdf3;
+  color: #067647;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .05em;
+}
+
+.pos-scanner-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--ws-border, #e4e7ec);
+  border-radius: 12px;
+  background: var(--ws-surface-muted, #f1f3f5);
+}
+
+.pos-scanner-tab {
+  min-width: 0;
+  min-height: 62px;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ws-text, #1f2937);
+  text-align: left;
+}
+
+.pos-scanner-tab span {
+  color: var(--ws-muted, #667085);
+  font-size: 11px;
+}
+
+.pos-scanner-tab.active {
+  border-color: rgba(142,36,77,.48);
+  background: var(--ws-surface, #fff);
+  box-shadow: 0 4px 14px rgba(16,24,40,.08);
+}
+
+.pos-scanner-tab.active strong {
+  color: #8e244d;
+}
+
+.pos-scanner-tabpanel {
+  margin-top: 12px;
+  min-height: 120px;
+  padding: 14px;
+  border: 1px solid var(--ws-border, #e4e7ec);
+  border-radius: 12px;
+  background: var(--ws-surface, #fff);
+}
+
+.pos-scanner-method {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 13px;
+  align-items: start;
+}
+
+.pos-scanner-method > div:last-child {
+  display: grid;
+  gap: 8px;
+}
+
+.pos-scanner-method p {
+  margin: 0;
+}
+
+.scanner-method-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--ws-border, #e4e7ec);
+  background: var(--ws-surface-muted, #f1f3f5);
+  font-size: 24px;
+}
+
+.phone-pc-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.phone-pc-start {
+  display: grid;
+  gap: 12px;
+}
+
+.phone-pc-connect-button {
+  width: fit-content;
+  min-width: 170px;
+}
+
+.phone-pc-pairing {
+  display: grid;
+  grid-template-columns: minmax(230px, 270px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.phone-pc-qr-column,
+.phone-pc-pairing-info {
+  display: grid;
+  gap: 11px;
+}
+
+.phone-pc-qr-column > strong {
+  line-height: 1.35;
+}
+
+.phone-pc-qr {
+  display: grid;
+  place-items: center;
+  width: fit-content;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+}
+
+.phone-pc-step-badge,
+.scanner-instruction-card b {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #8e244d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.scanner-instruction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scanner-instruction-card {
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border: 1px solid var(--ws-border, #e4e7ec);
+  border-radius: 10px;
+  background: var(--ws-surface-muted, #f1f3f5);
+}
+
+.phone-pc-status {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #f5d38a;
+  background: #fffaeb;
+  color: #7a2e0e;
+}
+
+.phone-pc-status.connected {
+  border-color: #75d7a4;
+  background: #ecfdf3;
+  color: #05603a;
+}
+
+.phone-pc-status.connection_error,
+.phone-pc-status.expired {
+  border-color: #f5aaa4;
+  background: #fef3f2;
+  color: #912018;
+}
+
+.phone-pc-status span {
+  font-size: 12px;
+}
+
+.phone-pc-last-scan {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--ws-border, #e4e7ec);
+  border-radius: 10px;
+  background: var(--ws-surface-muted, #f1f3f5);
+}
+
+.phone-pc-last-scan.accepted {
+  border-color: #75d7a4;
+}
+
+.phone-pc-last-scan.rejected {
+  border-color: #f5aaa4;
+}
+
+.phone-scanner-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  background: #0f1115;
+  color: #f8fafc;
+}
+
+.phone-scanner-card {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #39404b;
+  border-radius: 18px;
+  background: #171a20;
+  color: #f8fafc;
+  box-shadow: 0 18px 50px rgba(0,0,0,.30);
+}
+
+.phone-scanner-brand {
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid #6c4e5a;
+  border-radius: 999px;
+  color: #f0c9d7;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.phone-scanner-card h1 {
+  margin: 0;
+  color: #fff;
+}
+
+.phone-scanner-lead,
+.phone-scanner-help {
+  margin: 0;
+  color: #d6dbe4;
+}
+
+.phone-scanner-connection,
+.phone-scanner-result,
+.phone-scanner-alert {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  border: 1px solid #49515e;
+  border-radius: 12px;
+  background: #20242c;
+  color: #f8fafc;
+}
+
+.phone-scanner-connection.connected,
+.phone-scanner-result.success {
+  border-color: #2fa76f;
+  background: #14281f;
+}
+
+.phone-scanner-result.warning {
+  border-color: #d9a441;
+  background: #2c2517;
+}
+
+.phone-scanner-result.error,
+.phone-scanner-alert.error {
+  border-color: #db6b65;
+  background: #311b1b;
+}
+
+.phone-scanner-connection span,
+.phone-scanner-result span,
+.phone-scanner-alert span {
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.phone-scanner-start {
+  min-height: 54px;
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.phone-scanner-retry-send {
+  min-height: 46px;
+}
+
+html[data-theme="dark"] .pos-scanner-hub,
+html[data-theme="dark"] .pos-scanner-tabpanel {
+  background: #15181d;
+  border-color: #3d4552;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .pos-scanner-tabs {
+  background: #101318;
+  border-color: #3d4552;
+}
+
+html[data-theme="dark"] .pos-scanner-tab {
+  color: #eef2f7;
+}
+
+html[data-theme="dark"] .pos-scanner-tab span,
+html[data-theme="dark"] .pos-scanner-hub-heading > div > span,
+html[data-theme="dark"] .pos-scanner-method p,
+html[data-theme="dark"] .pos-scanner-method small,
+html[data-theme="dark"] .scanner-readable-help,
+html[data-theme="dark"] .phone-pc-qr-column small,
+html[data-theme="dark"] .scanner-instruction-card span {
+  color: #d0d6df;
+}
+
+html[data-theme="dark"] .pos-scanner-tab.active {
+  background: #28202a;
+  border-color: #b84a75;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .pos-scanner-tab.active strong {
+  color: #ffd6e5;
+}
+
+html[data-theme="dark"] .scanner-instruction-card,
+html[data-theme="dark"] .scanner-method-icon,
+html[data-theme="dark"] .phone-pc-last-scan {
+  background: #20242b;
+  border-color: #414956;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .mobile-barcode-modal {
+  background: #171a20;
+  color: #f8fafc;
+  border-color: #414956;
+}
+
+html[data-theme="dark"] .mobile-barcode-modal .muted-text,
+html[data-theme="dark"] .mobile-barcode-status span {
+  color: #d4dae4;
+}

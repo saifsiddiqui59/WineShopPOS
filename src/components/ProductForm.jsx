@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProductEnrichmentPanel from "./ProductEnrichmentPanel";
 import MobileBarcodeScanner from "./MobileBarcodeScanner";
+import OcrProductImagePreview from "./OcrProductImagePreview";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import {
@@ -418,14 +419,36 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
       </div>
 
       <div className="product-image-editor product-image-editor--auto">
-        <div className="product-image-preview">
-          {imagePreview ? <img src={imagePreview} alt="Product bottle or can preview" /> : <span>No image</span>}
+        <div className="product-image-preview product-image-preview--autoload">
+          {imagePreview ? (
+            <img src={imagePreview} alt="Product bottle or can preview" />
+          ) : !initialValue?.id && String(form.name || "").trim().length >= 3 ? (
+            <OcrProductImagePreview
+              shopId={profile?.shop_id}
+              item={{ description: form.name, brand: form.brand }}
+              sizeMl={Number(form.sizeMl || 0) || null}
+              delayMs={450}
+            />
+          ) : (
+            <span>Product Image will load automatically</span>
+          )}
         </div>
         <div>
           <strong>Product Image</strong>
-          <p className="muted-text">
-            Automatic image search uses the saved product name, brand and size only.
-            <strong> It never changes the barcode.</strong>
+          <p className="muted-text product-image-flow-copy">
+            {initialValue?.id ? (
+              <>
+                Automatic image search uses the saved product name, brand and size only.
+                <strong> It never changes the barcode.</strong>
+              </>
+            ) : (
+              <>
+                Product Image preview loads automatically from name, brand and size.
+                When you save without an uploaded/confirmed image, WineShopPOS runs the
+                <strong> same automatic Product Image workflow used on the Products page.</strong>
+                <strong> Barcode is never changed by image processing.</strong>
+              </>
+            )}
           </p>
 
           {initialValue?.id ? (
@@ -449,19 +472,23 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
                 packageType={form.lookupPackageType || ""}
                 barcode={form.barcode}
                 disabled={busy}
-                buttonLabel="Find Product Image"
+                buttonLabel="Review / Find Product Image"
                 importCandidateImage
                 onUseCandidate={applyImageEnrichmentSelection}
               />
-              <p className="muted-text">
-                Choose the Product Image before saving. The selected image is imported
-                immediately after Product Master creation; you do not need to leave this flow.
+              <p className="muted-text product-image-autoload-help">
+                The first Product Image preview appears automatically; no click is required.
+                Use Review / Find Product Image only when you want to inspect the product match,
+                or upload/take your own image. A securely confirmed image is imported after
+                Product Master creation.
               </p>
             </div>
           )}
 
           <p className="muted-text">
-            If the image is not right, click Try Another Image to open the image gallery, or upload your own JPEG, PNG or WebP (max 5 MB).
+            {initialValue?.id
+              ? "If the image is not right, click Try Another Image to open the image gallery, or upload your own JPEG, PNG or WebP (max 5 MB)."
+              : "If the final automatic image is not right after save, open the product from Products and use Try Another Image. You can also upload your own JPEG, PNG or WebP now (max 5 MB)."}
           </p>
           <div className="product-image-local-actions"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage}/><input ref={cameraImageInputRef} type="file" accept="image/*" capture="environment" onChange={chooseImage} style={{display:"none"}}/><button type="button" className="secondary-button" onClick={()=>cameraImageInputRef.current?.click()}>Open Camera</button></div>
           {imagePreview ? (
