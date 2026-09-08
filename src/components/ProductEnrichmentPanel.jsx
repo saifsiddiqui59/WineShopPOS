@@ -80,6 +80,8 @@ export default function ProductEnrichmentPanel({
   packageType = "",
   barcode = "",
   disabled = false,
+  buttonLabel = "Verify Product / Barcode",
+  importCandidateImage = false,
   onUseCandidate,
   onCreateFallback,
 }) {
@@ -250,7 +252,7 @@ export default function ProductEnrichmentPanel({
       confirmationCacheKey: confirmation?.confirmationCacheKey || null,
       candidateId: candidate?.candidateId || null,
       candidate,
-      importImage: false,
+      importImage: Boolean(importCandidateImage && candidate?.imagePreviewUrl),
       providerStatus: confirmation?.providerStatus || {},
     });
     setOpen(false);
@@ -280,7 +282,7 @@ export default function ProductEnrichmentPanel({
         disabled={disabled || busy}
         onClick={runDiscovery}
       >
-        Verify Product / Barcode
+        {buttonLabel}
       </button>
 
       {open ? (
@@ -414,7 +416,9 @@ export default function ProductEnrichmentPanel({
                   Image is handled separately. Barcode/product verification never changes the Product Master image.
                 </p>
                 <button type="button" className="primary-button" onClick={useConfirmedSelection}>
-                  Use This Product
+                  {importCandidateImage && displayCandidate?.imagePreviewUrl
+                    ? "Use This Product + Image"
+                    : "Use This Product"}
                 </button>
               </div>
             ) : null}

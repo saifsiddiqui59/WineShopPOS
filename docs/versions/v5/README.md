@@ -54,3 +54,19 @@ PROD remains untouched until explicit promotion.
 - PROD Invoice API and PROD invoice storage were not rebound.
 - V5 browser code fails closed when `VITE_INVOICE_API_URL` is missing instead of falling back to PROD.
 <!-- /V5_DEV_RUNTIME_COMPLETE_20260907 -->
+
+<!-- V5_13B_CONTINUITY_CURRENT_STATE_20260908 -->
+## Current continuation authority
+
+For any new ChatGPT/coding-agent conversation, start with:
+
+`docs/versions/v5/V5_CURRENT_STATE_AND_CONTINUATION.md`
+
+That file records current V5 runtime isolation, completed work, active UAT findings,
+shop-specific invoice inference rules, remaining manual UAT and the safe executor
+workflow. Do not restart from historical V3/V4 implementation chapters.
+
+Source-of-truth precedence remains:
+
+`CURRENT V5 SOURCE + CURRENT MIGRATIONS + VERIFIED V5 DEPLOYMENT > OLD DOCUMENTATION`
+<!-- /V5_13B_CONTINUITY_CURRENT_STATE_20260908 -->

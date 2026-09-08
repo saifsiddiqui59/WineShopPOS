@@ -1,4 +1,221 @@
-export function inferSizeMl(value){const m=[...String(value||"").matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];if(!m.length)return 0;const[,raw,u]=m[m.length-1],n=Number(raw);if(!Number.isFinite(n)||n<=0)return 0;if(u.toLowerCase()==="l")return Math.round(n*1000);if(u.toLowerCase()==="cl")return Math.round(n*10);return Math.round(n);}
-function packageType(value){const t=String(value||"").toLowerCase();if(/\b(can|cans|tin)\b/.test(t))return"CAN";if(/\b(bottle|bottles|glass|beer|lager|witbier|stout|ale)\b/.test(t))return"BOTTLE";return"UNKNOWN";}
-export function inferInvoiceUnitsPerCase(item={}){const explicit=Number(item?.unitsPerCaseHint||0);if(Number.isInteger(explicit)&&explicit>=1&&explicit<=100)return{value:explicit,source:"PRINTED_BOTTLE_TOTAL",strong:true};const text=`${item?.description||""} ${item?.packing||""}`,size=inferSizeMl(text),type=packageType(text);if(size===330&&type==="BOTTLE")return{value:24,source:"PRIOR_330ML_BOTTLE_24",strong:false};if(size===500&&type==="CAN")return{value:24,source:"PRIOR_500ML_CAN_24",strong:false};if(size===650&&type==="BOTTLE")return{value:12,source:"PRIOR_650ML_BOTTLE_12",strong:false};if(size===750&&type==="BOTTLE")return{value:12,source:"PRIOR_750ML_BOTTLE_12",strong:false};return null;}
-export function resolveInvoiceUnitsPerCase(item={},product=null){const hint=inferInvoiceUnitsPerCase(item),pv=Number(product?.unitsPerCase||0),valid=Number.isInteger(pv)&&pv>0&&pv<=100;if(hint?.strong){const conflict=valid&&pv!==hint.value;return{value:hint.value,source:hint.source,strong:true,invoiceValue:hint.value,suggestedValue:null,productValue:valid?pv:null,conflict,reviewRequired:conflict};}if(hint&&valid){const conflict=pv!==hint.value;return{value:pv,source:conflict?"PRODUCT_MASTER_VS_PACK_PRIOR":"PRODUCT_MASTER_CONFIRMED",strong:!conflict,invoiceValue:null,suggestedValue:hint.value,suggestionSource:hint.source,productValue:pv,conflict,reviewRequired:conflict};}if(valid)return{value:pv,source:"PRODUCT_MASTER",strong:true,invoiceValue:null,suggestedValue:hint?.value??null,suggestionSource:hint?.source??null,productValue:pv,conflict:false,reviewRequired:false};if(hint)return{value:hint.value,source:hint.source,strong:false,invoiceValue:null,suggestedValue:hint.value,suggestionSource:hint.source,productValue:null,conflict:false,reviewRequired:true};return{value:null,source:"UNKNOWN_REVIEW_REQUIRED",strong:false,invoiceValue:null,suggestedValue:null,suggestionSource:null,productValue:null,conflict:false,reviewRequired:true};}
+export function inferSizeMl(value) {
+  const matches = [...String(value || "").matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
+  if (!matches.length) return 0;
+  const [, raw, unit] = matches[matches.length - 1];
+  const valueNumber = Number(raw);
+  if (!Number.isFinite(valueNumber) || valueNumber <= 0) return 0;
+  const normalizedUnit = unit.toLowerCase();
+  if (normalizedUnit === "l") return Math.round(valueNumber * 1000);
+  if (normalizedUnit === "cl") return Math.round(valueNumber * 10);
+  return Math.round(valueNumber);
+}
+
+function packageType(value) {
+  const text = String(value || "").toLowerCase();
+  if (/\b(can|cans|tin)\b/.test(text)) return "CAN";
+  if (/\b(bottle|bottles|glass|beer|lager|witbier|stout|ale)\b/.test(text)) return "BOTTLE";
+  return "UNKNOWN";
+}
+
+function explicitItemSizeMl(item = {}) {
+  const direct = Number(
+    item?.sizeMl ??
+    item?.size_ml ??
+    item?.bottleSizeMl ??
+    item?.bottle_size_ml ??
+    0,
+  );
+  if (Number.isInteger(direct) && direct > 0) return direct;
+
+  return inferSizeMl(
+    [
+      item?.description,
+      item?.productName,
+      item?.packing,
+      item?.packSize,
+      item?.packageSize,
+      item?.size,
+      item?.unitText,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+}
+
+export function inferInvoiceSizeResolution(item = {}, unitsPerCaseOverride = null) {
+  const explicit = explicitItemSizeMl(item);
+  if (explicit > 0) {
+    return {
+      value: explicit,
+      source: "EXPLICIT_OCR_SIZE",
+      reviewRequired: false,
+    };
+  }
+
+  const text = [
+    item?.description,
+    item?.productName,
+    item?.packing,
+    item?.packSize,
+    item?.packageSize,
+    item?.unitText,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  // Shop business rule precedence when the invoice did not print a usable size:
+  // 1) CAN is treated as 500 ml.
+  // 2) Otherwise 24 bottles/case suggests 330 ml.
+  // 3) Otherwise 12 bottles/case suggests 650 ml.
+  const type = packageType(text);
+  if (type === "CAN") {
+    return {
+      value: 500,
+      source: "SHOP_RULE_CAN_500ML",
+      reviewRequired: true,
+    };
+  }
+
+  const pack = Number(
+    unitsPerCaseOverride ??
+    item?.unitsPerCaseHint ??
+    item?.units_per_case_hint ??
+    0,
+  );
+
+  if (pack === 24) {
+    return {
+      value: 330,
+      source: "SHOP_RULE_PACK24_330ML",
+      reviewRequired: true,
+    };
+  }
+
+  if (pack === 12) {
+    return {
+      value: 650,
+      source: "SHOP_RULE_PACK12_650ML",
+      reviewRequired: true,
+    };
+  }
+
+  return {
+    value: 0,
+    source: "UNKNOWN_SIZE_REVIEW_REQUIRED",
+    reviewRequired: true,
+  };
+}
+
+export function inferInvoiceSizeMl(item = {}, unitsPerCaseOverride = null) {
+  return inferInvoiceSizeResolution(item, unitsPerCaseOverride).value;
+}
+
+export function inferInvoiceUnitsPerCase(item = {}) {
+  const explicit = Number(item?.unitsPerCaseHint || 0);
+  if (Number.isInteger(explicit) && explicit >= 1 && explicit <= 100) {
+    return {
+      value: explicit,
+      source: "PRINTED_BOTTLE_TOTAL",
+      strong: true,
+    };
+  }
+
+  const text = `${item?.description || ""} ${item?.packing || ""}`;
+  const size = explicitItemSizeMl(item);
+  const type = packageType(text);
+
+  if (size === 330 && type === "BOTTLE") {
+    return { value: 24, source: "PRIOR_330ML_BOTTLE_24", strong: false };
+  }
+  if (size === 500 && type === "CAN") {
+    return { value: 24, source: "PRIOR_500ML_CAN_24", strong: false };
+  }
+  if (size === 650 && type === "BOTTLE") {
+    return { value: 12, source: "PRIOR_650ML_BOTTLE_12", strong: false };
+  }
+  if (size === 750 && type === "BOTTLE") {
+    return { value: 12, source: "PRIOR_750ML_BOTTLE_12", strong: false };
+  }
+
+  return null;
+}
+
+export function resolveInvoiceUnitsPerCase(item = {}, product = null) {
+  const hint = inferInvoiceUnitsPerCase(item);
+  const productValue = Number(product?.unitsPerCase || 0);
+  const validProductPack =
+    Number.isInteger(productValue) &&
+    productValue > 0 &&
+    productValue <= 100;
+
+  if (hint?.strong) {
+    const conflict = validProductPack && productValue !== hint.value;
+    return {
+      value: hint.value,
+      source: hint.source,
+      strong: true,
+      invoiceValue: hint.value,
+      suggestedValue: null,
+      productValue: validProductPack ? productValue : null,
+      conflict,
+      reviewRequired: conflict,
+    };
+  }
+
+  if (hint && validProductPack) {
+    const conflict = productValue !== hint.value;
+    return {
+      value: productValue,
+      source: conflict
+        ? "PRODUCT_MASTER_VS_PACK_PRIOR"
+        : "PRODUCT_MASTER_CONFIRMED",
+      strong: !conflict,
+      invoiceValue: null,
+      suggestedValue: hint.value,
+      suggestionSource: hint.source,
+      productValue,
+      conflict,
+      reviewRequired: conflict,
+    };
+  }
+
+  if (validProductPack) {
+    return {
+      value: productValue,
+      source: "PRODUCT_MASTER",
+      strong: true,
+      invoiceValue: null,
+      suggestedValue: hint?.value ?? null,
+      suggestionSource: hint?.source ?? null,
+      productValue,
+      conflict: false,
+      reviewRequired: false,
+    };
+  }
+
+  if (hint) {
+    return {
+      value: hint.value,
+      source: hint.source,
+      strong: false,
+      invoiceValue: null,
+      suggestedValue: hint.value,
+      suggestionSource: hint.source,
+      productValue: null,
+      conflict: false,
+      reviewRequired: true,
+    };
+  }
+
+  return {
+    value: null,
+    source: "UNKNOWN_REVIEW_REQUIRED",
+    strong: false,
+    invoiceValue: null,
+    suggestedValue: null,
+    suggestionSource: null,
+    productValue: null,
+    conflict: false,
+    reviewRequired: true,
+  };
+}

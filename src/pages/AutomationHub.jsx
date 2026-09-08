@@ -6,7 +6,10 @@ import { useAuth } from "../context/AuthContext";
 import { useGlobalError } from "../context/GlobalErrorContext";
 import SupplierEditor from "../components/SupplierEditor";
 import { storeManualInvoice } from "../lib/invoiceClient";
-import { resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import {
+  inferInvoiceSizeMl,
+  resolveInvoiceUnitsPerCase,
+} from "../lib/invoicePack";
 import ProductEnrichmentPanel from "../components/ProductEnrichmentPanel";
 import { inferBrandFromProductName, normalizeBeerOcrText } from "../lib/productInference";
 import { productImageUrl } from "../lib/productImages";
@@ -29,23 +32,8 @@ function normalize(value) {
     .replace(/\s+/g, " ");
 }
 
-function inferOcrSizeMl(item) {
-  const direct = Number(item?.sizeMl ?? item?.size_ml ?? item?.bottleSizeMl ?? item?.bottle_size_ml ?? 0);
-  if (Number.isInteger(direct) && direct > 0) return direct;
-
-  const text = [item?.description, item?.productName, item?.packSize, item?.packageSize, item?.size, item?.unitText]
-    .filter(Boolean)
-    .join(" ");
-  const matches = [...String(text).matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
-  if (!matches.length) return 0;
-
-  const [, rawValue, rawUnit] = matches[matches.length - 1];
-  const value = Number(rawValue);
-  if (!Number.isFinite(value) || value <= 0) return 0;
-  const unit = rawUnit.toLowerCase();
-  if (unit === "cl") return Math.round(value * 10);
-  if (unit === "l") return Math.round(value * 1000);
-  return Math.round(value);
+function inferOcrSizeMl(item, unitsPerCase = null) {
+  return inferInvoiceSizeMl(item, unitsPerCase);
 }
 
 function suggestedProductName(item) {
@@ -67,11 +55,100 @@ function extractDateCandidates(rawValue) {
   return rows.slice(0,6);
 }
 
-function linePriceSanity(item,row){
-  const mrp=Math.max(0,Number(item?.mrp||0)),pricePerBottle=Math.max(0,Number(row?.purchasePrice||0)),units=Math.max(1,Number(row?.unitsPerCase||1)),caseRate=pricePerBottle*units,impossible=mrp>0&&pricePerBottle>=mrp;
-  let minimumPack=null,suggestedPack=null;
-  if(impossible&&caseRate>0){minimumPack=Math.max(1,Math.ceil(caseRate/mrp));suggestedPack=COMMON_CASE_PACKS.find((pack)=>pack>=minimumPack)||minimumPack;}
-  return{mrp,pricePerBottle,caseRate,impossible,minimumPack,suggestedPack};
+function linePriceSanity(item, row) {
+  const mrp = Math.max(0, Number(item?.mrp || 0));
+  const pricePerBottle = Math.max(0, Number(row?.purchasePrice || 0));
+  const units = Math.max(1, Number(row?.unitsPerCase || 1));
+  const caseRate = pricePerBottle * units;
+  const impossible = mrp > 0 && pricePerBottle >= mrp;
+
+  let minimumPack = null;
+  let suggestedPack = null;
+
+  if (impossible && caseRate > 0) {
+    // Price must be BELOW MRP, not merely equal.
+    minimumPack = Math.max(1, Math.floor(caseRate / mrp) + 1);
+    suggestedPack =
+      COMMON_CASE_PACKS.find((pack) => pack >= minimumPack) ||
+      minimumPack;
+  }
+
+  return {
+    mrp,
+    pricePerBottle,
+    caseRate,
+    impossible,
+    minimumPack,
+    suggestedPack,
+  };
+}
+
+function applyAutoPackSuggestion(item, row) {
+  const sanity = linePriceSanity(item, row);
+  const currentPack = Math.max(1, Number(row?.unitsPerCase || 1));
+  const suggestedPack = Number(sanity.suggestedPack || 0);
+
+  const base = {
+    ...row,
+    sizeMl: Number(
+      row?.sizeMl ||
+      inferOcrSizeMl(item, currentPack) ||
+      0,
+    ),
+  };
+
+  if (
+    !sanity.impossible ||
+    !Number.isInteger(suggestedPack) ||
+    suggestedPack <= currentPack
+  ) {
+    return base;
+  }
+
+  const caseCount = Math.max(0, Number(row?.caseCount || 0));
+  const looseBottles = Math.max(0, Number(row?.looseBottles || 0));
+  if (!Number.isInteger(caseCount) || !Number.isInteger(looseBottles) || caseCount <= 0) {
+    return {
+      ...base,
+      packAutoWarning:
+        "Price/Bottle is not below MRP. Review Bottles/Case before confirming.",
+    };
+  }
+
+  const quantity = caseCount * suggestedPack + looseBottles;
+  const amount = Math.max(0, Number(item?.amount || 0));
+  const caseRate = Math.max(
+    0,
+    Number(item?.ratePerCase || row?.ocrUnitPrice || sanity.caseRate || 0),
+  );
+
+  const purchasePrice =
+    amount > 0 && quantity > 0
+      ? amount / quantity
+      : caseRate > 0
+        ? caseRate / suggestedPack
+        : Number(row?.purchasePrice || 0);
+
+  return {
+    ...base,
+    unitsPerCase: suggestedPack,
+    quantity,
+    purchasePrice: Number(
+      Number(purchasePrice || 0).toFixed(6),
+    ),
+    sizeMl: Number(
+      inferOcrSizeMl(item, suggestedPack) ||
+      base.sizeMl ||
+      0,
+    ),
+    unitsPerCaseSource: "PRICE_MRP_AUTO_SUGGESTED",
+    packReviewRequired: true,
+    packAutoSuggested: true,
+    packAutoPreviousUnits: currentPack,
+    packAutoSuggestedUnits: suggestedPack,
+    packAutoWarning:
+      `Auto-suggested ${suggestedPack} bottles/case because ${currentPack} made Price/Bottle reach/exceed MRP. Verify or change Bottles/Case before Confirm Line.`,
+  };
 }
 
 async function edgeFunctionErrorDetails(error){
@@ -519,7 +596,10 @@ export default function AutomationHub() {
     const nextResolution = {};
     for (const item of resolved) {
       nextMatches[item.index] = item.candidates;
-      nextResolution[item.index] = item.resolution;
+      nextResolution[item.index] = applyAutoPackSuggestion(
+        invoice.items?.[item.index] || {},
+        item.resolution,
+      );
     }
 
     setMatches(nextMatches);
@@ -784,28 +864,40 @@ export default function AutomationHub() {
       const row = {
         ...(current[index] || {}),
         [key]: Number(value || 0),
-        status:
-          current[index]?.productId
-            ? "SELECTED_NEEDS_CONFIRMATION"
-            : "NEEDS_PRODUCT",
+        status: current[index]?.productId
+          ? "SELECTED_NEEDS_CONFIRMATION"
+          : "NEEDS_PRODUCT",
       };
 
-      row.unitsPerCase = Math.max(1, Number(row.unitsPerCase || 1));
-      row.caseCount = Math.max(0, Number(row.caseCount || 0));
-      row.looseBottles = Math.max(0, Number(row.looseBottles || 0));
+      const caseCount = Math.max(0, Math.round(Number(row.caseCount || 0)));
+      const unitsPerCase = Math.max(1, Math.round(Number(row.unitsPerCase || 1)));
+      const looseBottles = Math.max(0, Math.round(Number(row.looseBottles || 0)));
+      row.caseCount = caseCount;
+      row.unitsPerCase = unitsPerCase;
+      row.looseBottles = looseBottles;
+      row.quantity = caseCount * unitsPerCase + looseBottles;
+
+      const amount = Math.max(
+        0,
+        Number(result?.items?.[index]?.amount || 0),
+      );
+      if (amount > 0 && row.quantity > 0) {
+        row.purchasePrice = Number(
+          (amount / row.quantity).toFixed(6),
+        );
+      }
 
       if (key === "unitsPerCase") {
         row.unitsPerCaseSource = "HUMAN_REVIEW";
-        row.packConflict = false;
-        row.packReviewRequired = false;
-        if (row.priceBasis === "CASE" || row.priceBasis === "TABLE_CASE") {
-          row.purchasePrice =
-            Number(row.ocrUnitPrice || 0) / row.unitsPerCase;
-        }
+        row.packAutoSuggested = false;
+        row.packAutoPreviousUnits = null;
+        row.packAutoSuggestedUnits = null;
+        row.packAutoWarning = "";
+        row.sizeMl = inferOcrSizeMl(
+          result?.items?.[index] || {},
+          unitsPerCase,
+        );
       }
-
-      row.quantity =
-        row.caseCount * row.unitsPerCase + row.looseBottles;
 
       return { ...current, [index]: row };
     });
@@ -1663,6 +1755,20 @@ export default function AutomationHub() {
                           }
                         />
                         <div className="muted-text">{row.unitsPerCaseSource || "Review"}</div>
+                        {row.packAutoSuggested || priceSanity.impossible ? (
+                          <div className="ocr-pack-auto-warning">
+                            <strong>
+                              {row.packAutoSuggested
+                                ? `Auto-suggested ${row.unitsPerCase} bottles/case`
+                                : "Pack review required"}
+                            </strong>
+                            <span>
+                              {row.packAutoWarning ||
+                                `Current pack makes Price/Bottle ₹${priceSanity.pricePerBottle.toFixed(2)} reach/exceed MRP ₹${priceSanity.mrp.toFixed(2)}. Suggested pack: ${priceSanity.suggestedPack || "review invoice"}.`}
+                            </span>
+                            <span>Verify or change Bottles/Case, then Confirm Line.</span>
+                          </div>
+                        ) : null}
                         {row.packConflict ? (
                           <div className="purchase-message">Pack conflict: invoice {row.invoiceUnitsPerCase} vs Product Master {row.productUnitsPerCase}</div>
                         ) : null}
@@ -1711,7 +1817,7 @@ export default function AutomationHub() {
 
                       <td>
                         <input type="number" min="0" step="0.000001" value={row.purchasePrice ?? 0} onChange={(event)=>updateBottlePrice(index,event.target.value)} aria-invalid={priceSanity.impossible?"true":"false"}/>
-                        {priceSanity.impossible?(<div className="ocr-price-impossible"><strong>BLOCKED · Cost ≥ MRP</strong><span>₹{priceSanity.pricePerBottle.toFixed(2)} / bottle vs MRP ₹{priceSanity.mrp.toFixed(2)}</span><span>Review Bottles/Case or Rate/Case.{priceSanity.suggestedPack?` Suggested pack: ${priceSanity.suggestedPack}.`:""}</span></div>):null}
+
                       </td>
 
                       <td>

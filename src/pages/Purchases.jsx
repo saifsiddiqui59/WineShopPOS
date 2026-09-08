@@ -5,7 +5,7 @@ import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import MobileBarcodeScanner from "../components/MobileBarcodeScanner";
 import { getInvoiceReadUrl } from "../lib/invoiceClient";
-import { inferSizeMl,resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
+import { inferInvoiceSizeMl,resolveInvoiceUnitsPerCase } from "../lib/invoicePack";
 import { inferBrandFromProductName,inferCategoryId,normalizeBeerOcrText } from "../lib/productInference";
 import { saveOfflinePurchaseDraft,loadOfflinePurchaseDraft,removeOfflinePurchaseDraft,countOfflinePurchaseDrafts } from "../lib/offlinePurchaseDraft";
 
@@ -17,7 +17,105 @@ const bottles=r=>Math.max(0,Math.round(Number(r.caseCount||0)))*Math.max(0,Math.
 const packDone=s=>["VERIFIED_EVIDENCE","CONFIRMED_AS_POSTED","CORRECTED","MANUAL_ENTRY"].includes(String(s||""));
 const status=r=>r.productId&&Number(r.unitsPerCase)>0&&Number(r.quantity)>0&&packDone(r.packResolution?.state)?"READY":"NEEDS_REVIEW";
 
-function rowFromOcr(item,index,product){const description=normalizeBeerOcrText(item?.description||`Invoice line ${index+1}`),sizeMl=Number(product?.sizeMl||inferSizeMl(`${item?.packing||""} ${description}`)||0),pack=resolveInvoiceUnitsPerCase(item,product),unitsPerCase=Number(pack.value||0),caseCount=Math.max(0,Math.round(Number(item?.caseCount??item?.quantity??0))),looseBottles=Math.max(0,Math.round(Number(item?.looseBottles||0))),quantity=unitsPerCase>0?caseCount*unitsPerCase+looseBottles:0,amount=Math.max(0,Number(item?.amount||0)),ratePerCase=Math.max(0,Number(item?.ratePerCase||item?.unitPrice||0)),purchasePrice=quantity>0&&amount>0?amount/quantity:ratePerCase>0&&unitsPerCase>0?ratePerCase/unitsPerCase:0,strong=Boolean(pack.strong&&!pack.reviewRequired);return{lineKey:id("ocr"),ocrIndex:index,sourceDescription:description,productId:product?.id||"",productName:product?.name||"",sizeMl,caseCount,unitsPerCase,looseBottles,quantity,ratePerCase:Number(ratePerCase.toFixed(6)),purchasePrice:Number(purchasePrice.toFixed(6)),mrp:Number(item?.mrp||product?.mrp||0),lineAmount:Number(amount.toFixed(2)),batchNumber:String(item?.batchNumber||""),expiryDate:String(item?.expiryDate||""),barcodeState:product?.barcode?"KNOWN":"ASSIGN_LATER",scannedBarcode:product?.barcode||"",matchSource:product?"AUTO_MATCH":"UNMATCHED",matchScore:product?1:0,packResolution:{state:strong?"VERIFIED_EVIDENCE":"NEEDS_REVIEW",source:pack.source,suggestedValue:pack.suggestedValue??pack.value??null,conflict:Boolean(pack.conflict),reason:strong?"Strong invoice/Product Master pack evidence.":"",updatedAt:strong?new Date().toISOString():null},packHistory:[],sourceItem:{packing:item?.packing||"",unitsPerCaseHint:item?.unitsPerCaseHint??null}};}
+function rowFromOcr(item,index,product){
+  const description=normalizeBeerOcrText(item?.description||`Invoice line ${index+1}`);
+  const initialPack=resolveInvoiceUnitsPerCase(item,product);
+  let unitsPerCase=Math.max(0,Number(initialPack.value||0));
+  const caseCount=Math.max(0,Math.round(Number(item?.caseCount??item?.quantity??0)));
+  const looseBottles=Math.max(0,Math.round(Number(item?.looseBottles||0)));
+  const amount=Math.max(0,Number(item?.amount||0));
+  const ratePerCase=Math.max(0,Number(item?.ratePerCase||item?.unitPrice||0));
+  const mrp=Math.max(0,Number(item?.mrp||product?.mrp||0));
+
+  let quantity=unitsPerCase>0?caseCount*unitsPerCase+looseBottles:0;
+  let purchasePrice=
+    quantity>0&&amount>0
+      ?amount/quantity
+      :ratePerCase>0&&unitsPerCase>0
+        ?ratePerCase/unitsPerCase
+        :0;
+
+  let packSource=initialPack.source;
+  let packReason=initialPack.strong&&!initialPack.reviewRequired
+    ?"Strong invoice/Product Master pack evidence."
+    :"";
+  let packAutoSuggested=false;
+
+  if(mrp>0&&purchasePrice>=mrp&&caseCount>0){
+    const effectiveCaseRate=
+      ratePerCase>0
+        ?ratePerCase
+        :amount>0
+          ?amount/caseCount
+          :purchasePrice*Math.max(1,unitsPerCase);
+    const minimum=Math.max(1,Math.floor(effectiveCaseRate/mrp)+1);
+    const common=[6,12,18,24,30,36,48];
+    const suggested=common.find((pack)=>pack>=minimum)||minimum;
+
+    if(Number.isInteger(suggested)&&suggested>Math.max(1,unitsPerCase)){
+      const previous=Math.max(1,unitsPerCase);
+      unitsPerCase=suggested;
+      quantity=caseCount*unitsPerCase+looseBottles;
+      purchasePrice=
+        amount>0&&quantity>0
+          ?amount/quantity
+          :effectiveCaseRate/unitsPerCase;
+      packSource="PRICE_MRP_AUTO_SUGGESTED";
+      packAutoSuggested=true;
+      packReason=`Auto-suggested ${suggested} bottles/case because ${previous} made Price/Bottle reach/exceed MRP. Verify or change the pack before receiving.`;
+    }
+  }
+
+  const sizeMl=Number(
+    product?.sizeMl||
+    inferInvoiceSizeMl(item,unitsPerCase)||
+    0
+  );
+
+  const strong=Boolean(
+    initialPack.strong &&
+    !initialPack.reviewRequired &&
+    !packAutoSuggested
+  );
+
+  return{
+    lineKey:id("ocr"),
+    ocrIndex:index,
+    sourceDescription:description,
+    productId:product?.id||"",
+    productName:product?.name||"",
+    sizeMl,
+    caseCount,
+    unitsPerCase,
+    looseBottles,
+    quantity,
+    ratePerCase:Number(ratePerCase.toFixed(6)),
+    purchasePrice:Number(Number(purchasePrice||0).toFixed(6)),
+    mrp,
+    lineAmount:Number(amount.toFixed(2)),
+    batchNumber:String(item?.batchNumber||""),
+    expiryDate:String(item?.expiryDate||""),
+    barcodeState:product?.barcode?"KNOWN":"ASSIGN_LATER",
+    scannedBarcode:product?.barcode||"",
+    matchSource:product?"AUTO_MATCH":"UNMATCHED",
+    matchScore:product?1:0,
+    packResolution:{
+      state:strong?"VERIFIED_EVIDENCE":"NEEDS_REVIEW",
+      source:packSource,
+      suggestedValue:packAutoSuggested
+        ?unitsPerCase
+        :(initialPack.suggestedValue??initialPack.value??null),
+      conflict:Boolean(initialPack.conflict),
+      reason:packReason,
+      updatedAt:strong?new Date().toISOString():null
+    },
+    packHistory:[],
+    sourceItem:{
+      packing:item?.packing||"",
+      unitsPerCaseHint:item?.unitsPerCaseHint??null
+    }
+  };
+}
 
 export default function Purchases(){
  const{products,suppliers,categories,purchases,receiveStock,refreshAll,updateProduct}=useShop();const{session}=useAuth();const navigate=useNavigate();const[params]=useSearchParams();const queryIngestion=params.get("ingestion")||"";const[ingestionId,setIngestionId]=useState(queryIngestion),[supplierName,setSupplierName]=useState(""),[supplierId,setSupplierId]=useState(""),[invoiceNumber,setInvoiceNumber]=useState(""),[invoiceDate,setInvoiceDate]=useState(""),[notes,setNotes]=useState(""),[items,setItems]=useState([]),[charges,setCharges]=useState(chargesFromInvoice()),[financialSummary,setFinancialSummary]=useState({}),[receiveKey]=useState(()=>id("receive")),[loaded,setLoaded]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[online,setOnline]=useState(()=>navigator.onLine),[sync,setSync]=useState(navigator.onLine?"ONLINE":"OFFLINE"),[offlineCount,setOfflineCount]=useState(0),[filter,setFilter]=useState("ALL"),[search,setSearch]=useState(""),[selected,setSelected]=useState(0),[scannerIndex,setScannerIndex]=useState(null),[createIndex,setCreateIndex]=useState(null),[createForm,setCreateForm]=useState(null);const timer=useRef(null);
@@ -30,7 +128,7 @@ export default function Purchases(){
  useEffect(()=>{if(!loaded)return;if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(async()=>{const p=snapshot();try{await saveOfflinePurchaseDraft(draftId,p);setOfflineCount(await countOfflinePurchaseDrafts());if(navigator.onLine&&ingestionId){setSync("SYNCING");await saveServer(p);await removeOfflinePurchaseDraft(draftId);setOfflineCount(await countOfflinePurchaseDrafts());setSync("SYNCED");}else if(!navigator.onLine)setSync("OFFLINE");}catch(e){setSync(navigator.onLine?"SYNC ERROR":"OFFLINE");setMessage(e?.message||"Draft autosave failed.");}},700);return()=>clearTimeout(timer.current);},[supplierName,supplierId,invoiceNumber,invoiceDate,notes,items,charges,financialSummary,loaded,ingestionId,draftId]);
  useEffect(()=>{let alive=true;(async()=>{setLoaded(false);let ingestion=null,serverDraft=null;if(queryIngestion){const{data,error}=await supabase.from("invoice_ingestions").select("id,review_draft,normalized_invoice,extracted_supplier_name,extracted_invoice_number,extracted_invoice_date,extracted_total,purchase_id").eq("id",queryIngestion).maybeSingle();if(!alive)return;if(error)throw error;ingestion=data;setIngestionId(data?.id||queryIngestion);serverDraft=data?.review_draft?.stage==="RECEIVE_STOCK"?data.review_draft.purchaseDraft:null;}let source=serverDraft;if(!source){const local=await loadOfflinePurchaseDraft(queryIngestion?`ingestion:${queryIngestion}`:draftId).catch(()=>null);if(!navigator.onLine&&local?.payload)source=local.payload;}if(!source){try{const d=JSON.parse(sessionStorage.getItem("wineshop_ocr_purchase_draft")||"null");if(d&&(!queryIngestion||String(d.ingestionId||"")===queryIngestion))source=d;}catch{}}
  if(source){setSupplierId(source.supplierId||"");setSupplierName(source.supplierName||"");setInvoiceNumber(source.invoiceNumber||"");setInvoiceDate(source.invoiceDate||"");setNotes(source.notes||"");setCharges({...chargesFromInvoice(),...(source.charges||{})});setFinancialSummary(source.financialSummary||{});setItems((source.items||[]).map((r,i)=>{const p=byId[r.productId];const x={lineKey:r.lineKey||id("draft"),sourceDescription:normalizeBeerOcrText(r.sourceDescription||r.description||p?.name||`Line ${i+1}`),productId:r.productId||"",productName:r.productName||p?.name||"",sizeMl:Number(r.sizeMl||p?.sizeMl||0),caseCount:Number(r.caseCount||0),unitsPerCase:Number(r.unitsPerCase||0),looseBottles:Number(r.looseBottles||0),quantity:Number(r.quantity||0),ratePerCase:Number(r.ratePerCase||0),purchasePrice:Number(r.purchasePrice||0),mrp:Number(r.mrp||p?.mrp||0),lineAmount:Number(r.lineAmount||0),batchNumber:r.batchNumber||"",expiryDate:r.expiryDate||"",barcodeState:r.barcodeState||(p?.barcode?"KNOWN":"ASSIGN_LATER"),scannedBarcode:r.scannedBarcode||p?.barcode||"",matchSource:r.matchSource||"DRAFT",matchScore:Number(r.matchScore||0),packResolution:r.packResolution||{state:"NEEDS_REVIEW",source:"RESTORED_DRAFT"},packHistory:r.packHistory||[],sourceItem:r.sourceItem||{}};const q=bottles(x);if(q>0)x.quantity=q;if(x.lineAmount>0&&x.quantity>0)x.purchasePrice=Number((x.lineAmount/x.quantity).toFixed(6));return x;}));setLoaded(true);return;}
- if(ingestion?.normalized_invoice){const inv=ingestion.normalized_invoice,sup=(suppliers||[]).find(s=>normalize(s.supplier_name)===normalize(inv.supplierName)||normalize(s.supplier_name)===normalize(ingestion.extracted_supplier_name)),sid=sup?.id||"",sname=sup?.supplier_name||inv.supplierName||ingestion.extracted_supplier_name||"";const rows=await Promise.all((inv.items||[]).map(async(item,i)=>{const sz=inferSizeMl(`${item?.packing||""} ${item?.description||""}`)||null,{data:c}=await supabase.rpc("resolve_product_master_text",{p_text:normalizeBeerOcrText(item?.description||""),p_size_ml:sz,p_supplier_id:sid||null,p_limit:5}),top=Array.isArray(c)?c[0]:null,p=top&&Number(top.score||0)>=.9?active.find(x=>x.id===top.product_id)||{id:top.product_id,name:top.product_name,barcode:top.barcode||"",sizeMl:Number(top.size_ml||0),brand:top.brand||"",mrp:Number(item?.mrp||0),unitsPerCase:0}:null,r=rowFromOcr(item,i,p);if(top&&p){r.matchSource=top.match_source||"PRODUCT_MASTER";r.matchScore=Number(top.score||0);}return r;}));setSupplierId(sid);setSupplierName(sname);setInvoiceNumber(inv.invoiceNumber||ingestion.extracted_invoice_number||"");setInvoiceDate(inv.invoiceDate||ingestion.extracted_invoice_date||"");setCharges(chargesFromInvoice(inv));setFinancialSummary({subtotal:inv.subtotal??null,total:inv.total??ingestion.extracted_total??null,amountDue:inv.amountDue??null});setItems(rows);}setLoaded(true);})().catch(e=>{if(alive){setMessage(e?.message||"Unable to load Purchase Receiving Workspace.");setLoaded(true);}});return()=>{alive=false};},[queryIngestion]);
+ if(ingestion?.normalized_invoice){const inv=ingestion.normalized_invoice,sup=(suppliers||[]).find(s=>normalize(s.supplier_name)===normalize(inv.supplierName)||normalize(s.supplier_name)===normalize(ingestion.extracted_supplier_name)),sid=sup?.id||"",sname=sup?.supplier_name||inv.supplierName||ingestion.extracted_supplier_name||"";const rows=await Promise.all((inv.items||[]).map(async(item,i)=>{const sz=inferInvoiceSizeMl(item,item?.unitsPerCaseHint)||null,{data:c}=await supabase.rpc("resolve_product_master_text",{p_text:normalizeBeerOcrText(item?.description||""),p_size_ml:sz,p_supplier_id:sid||null,p_limit:5}),top=Array.isArray(c)?c[0]:null,p=top&&Number(top.score||0)>=.9?active.find(x=>x.id===top.product_id)||{id:top.product_id,name:top.product_name,barcode:top.barcode||"",sizeMl:Number(top.size_ml||0),brand:top.brand||"",mrp:Number(item?.mrp||0),unitsPerCase:0}:null,r=rowFromOcr(item,i,p);if(top&&p){r.matchSource=top.match_source||"PRODUCT_MASTER";r.matchScore=Number(top.score||0);}return r;}));setSupplierId(sid);setSupplierName(sname);setInvoiceNumber(inv.invoiceNumber||ingestion.extracted_invoice_number||"");setInvoiceDate(inv.invoiceDate||ingestion.extracted_invoice_date||"");setCharges(chargesFromInvoice(inv));setFinancialSummary({subtotal:inv.subtotal??null,total:inv.total??ingestion.extracted_total??null,amountDue:inv.amountDue??null});setItems(rows);}setLoaded(true);})().catch(e=>{if(alive){setMessage(e?.message||"Unable to load Purchase Receiving Workspace.");setLoaded(true);}});return()=>{alive=false};},[queryIngestion]);
  function updateLine(i,k,v){setItems(cur=>cur.map((r,n)=>{if(n!==i)return r;const x={...r,[k]:v};if(["caseCount","unitsPerCase","looseBottles"].includes(k)){x.quantity=bottles(x);if(x.lineAmount>0&&x.quantity>0)x.purchasePrice=Number((x.lineAmount/x.quantity).toFixed(6));x.packResolution={...x.packResolution,state:"NEEDS_REVIEW",reason:"",updatedAt:new Date().toISOString()};}if(k==="ratePerCase"){x.purchasePrice=Number(x.unitsPerCase)>0?Number((Number(v||0)/Number(x.unitsPerCase)).toFixed(6)):0;if(Number(x.caseCount)>0)x.lineAmount=Number((Number(x.caseCount)*Number(v||0)).toFixed(2));}if(k==="lineAmount"&&Number(x.quantity)>0)x.purchasePrice=Number((Number(v||0)/Number(x.quantity)).toFixed(6));return x;}));}
  function chooseProduct(i,pid){const p=byId[pid];setItems(cur=>cur.map((r,n)=>{if(n!==i)return r;if(!p)return{...r,productId:"",productName:"",matchSource:"UNMATCHED"};const pack=resolveInvoiceUnitsPerCase({description:r.sourceDescription,packing:r.sourceItem?.packing||`${r.sizeMl||p.sizeMl||""} ml`},p),x={...r,productId:p.id,productName:p.name,sizeMl:Number(p.sizeMl||r.sizeMl||0),unitsPerCase:Number(pack.value||r.unitsPerCase||0),barcodeState:p.barcode?"KNOWN":"ASSIGN_LATER",scannedBarcode:p.barcode||r.scannedBarcode||"",matchSource:"USER_SELECTED",matchScore:1,packResolution:{state:pack.strong&&!pack.reviewRequired?"VERIFIED_EVIDENCE":"NEEDS_REVIEW",source:pack.source,suggestedValue:pack.suggestedValue??pack.value??null,conflict:Boolean(pack.conflict),reason:"",updatedAt:new Date().toISOString()}};x.quantity=bottles(x);if(x.lineAmount>0&&x.quantity>0)x.purchasePrice=Number((x.lineAmount/x.quantity).toFixed(6));return x;}));}
  function packDecision(i,state){const row=items[i];if(!row||Number(row.unitsPerCase)<=0||Number(row.quantity)<=0){setMessage("Enter a valid pack first.");return;}const reason=window.prompt(state==="CORRECTED"?"Correct Pack: what did you verify?":"Confirm as Posted: what did you verify?",state==="CORRECTED"?"Corrected after checking invoice/product.":"Verified against invoice/product.");if(reason===null||reason.trim().length<4)return;setItems(cur=>cur.map((r,n)=>n===i?{...r,packResolution:{...r.packResolution,state,reason:reason.trim(),updatedAt:new Date().toISOString()},packHistory:[...(r.packHistory||[]),{state,reason:reason.trim(),caseCount:Number(r.caseCount),unitsPerCase:Number(r.unitsPerCase),looseBottles:Number(r.looseBottles),quantity:Number(r.quantity),at:new Date().toISOString()}]}:r));}

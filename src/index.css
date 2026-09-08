@@ -6595,3 +6595,27 @@ html[data-theme="dark"] .product-enrichment-comparison > div {
   font-size:12px;
   opacity:.82;
 }
+
+/* V5_13B_CONTINUITY_PRODUCT_PURCHASE_POS_20260908 */
+.ocr-pack-auto-warning{
+  display:grid;
+  gap:3px;
+  margin-top:7px;
+  padding:7px 8px;
+  border:1px solid #d7a531;
+  border-radius:7px;
+  background:rgba(215,165,49,.10);
+  color:#ffd982;
+  font-size:11px;
+  line-height:1.35;
+}
+.ocr-pack-auto-warning strong{
+  color:#ffe8ac;
+}
+.product-image-presave-tools{
+  display:grid;
+  gap:8px;
+}
+.pos-mobile-scanner-tools{
+  margin-top:12px;
+}

@@ -8,6 +8,7 @@ import { findProductByBarcode, normalizeBarcode } from "../lib/barcode";
 import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPreference";
 import ProductThumb from "../components/ui/ProductThumb";
 import ShiftRequiredDialog from "../components/ui/ShiftRequiredDialog";
+import MobileBarcodeScanner from "../components/MobileBarcodeScanner";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -30,6 +31,7 @@ export default function POS(){
   const[message,setMessage]=useState("Scanner ready");
   const[unknown,setUnknown]=useState("");
   const[busy,setBusy]=useState(false);
+  const[mobileScannerOpen,setMobileScannerOpen]=useState(false);
   const[autoPrint,setAutoPrint]=useState(false);
   const[shiftOpen,setShiftOpen]=useState(false);
   const[shiftLoading,setShiftLoading]=useState(true);
@@ -535,6 +537,40 @@ export default function POS(){
             </button>
           })}
         </div>:<div className="panel pos-v5h-empty-products"><strong>No matching product</strong><span>Try another name, barcode, SKU or category.</span></div>}
+
+        <MobileBarcodeScanner
+          open={mobileScannerOpen}
+          title="Scan Product for Billing"
+          onClose={()=>setMobileScannerOpen(false)}
+          onDetected={(code)=>{
+            setMobileScannerOpen(false);
+            processBarcode(code);
+          }}
+        />
+
+        <details className="panel pos-v5h-customer-tools pos-mobile-scanner-tools">
+          <summary>
+            <span>
+              <strong>Mobile Barcode Scanner</strong>
+              <small>Use the phone camera to scan a product into the current bill</small>
+            </span>
+            <span className="pos-v5h-summary-action">Open</span>
+          </summary>
+          <div className="pos-v5h-customer-body">
+            <div className="button-row">
+              <button
+                type="button"
+                className="primary-button"
+                onClick={()=>setMobileScannerOpen(true)}
+              >
+                Scan Product
+              </button>
+            </div>
+            <p className="muted-text">
+              Physical USB/keyboard barcode scanners continue to work automatically.
+            </p>
+          </div>
+        </details>
 
         <details className="panel pos-v5h-customer-tools">
           <summary>

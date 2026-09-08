@@ -1,7 +1,10 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ProductForm from "../components/ProductForm";
 import { useShop } from "../context/ShopContext";
-import { finalizeProductEnrichment } from "../lib/productEnrichmentClient";
+import {
+  autoFindProductImage,
+  finalizeProductEnrichment,
+} from "../lib/productEnrichmentClient";
 import { useAuth } from "../context/AuthContext";
 
 export default function AddProduct() {
@@ -72,6 +75,20 @@ export default function AddProduct() {
       } catch (error) {
         enrichmentWarning =
           `Product was saved, but enrichment finalization did not complete: ${error?.message || String(error)}`;
+      }
+    }
+
+    if (fromOcr && !selection?.importImage && profile?.shop_id && result.productId) {
+      try {
+        await autoFindProductImage({
+          shopId: profile.shop_id,
+          productId: result.productId,
+          replace: false,
+        });
+      } catch (error) {
+        enrichmentWarning = enrichmentWarning
+          ? enrichmentWarning + " Product Image automatic lookup also did not complete."
+          : "Product was saved. Product Image automatic lookup did not complete; you can choose or upload an image later.";
       }
     }
 

@@ -58,6 +58,7 @@ function initialFormIdentity(value) {
 function normalizedProduct(form) {
   return {
     ...form,
+    subcategory: form.subcategory === "__CUSTOM__" ? "" : String(form.subcategory || ""),
     sizeMl: form.sizeMl === "" ? 0 : Number(form.sizeMl || 0),
     alcoholPercentage: form.alcoholPercentage === "" ? "" : Math.max(0, Number(form.alcoholPercentage || 0)),
     purchasePrice: Number(Number(form.purchasePrice || 0).toFixed(2)),
@@ -103,6 +104,7 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
 
       setForm({
         ...emptyProduct, ...initialValue,
+        subcategory: String(initialValue.subcategory || ""),
         purchasePrice: moneyText(initialValue.purchasePrice ?? 0),
         mrp: moneyText(incomingMrp),
         price: moneyText(effectivePrice),
@@ -138,11 +140,16 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
   }, [imageChooserOpen, imageChoiceApplying]);
 
   const subcategoryOptions = useMemo(() => {
-    const source = SUBCATEGORY_BY_CATEGORY[form.category];
-    const direct = Array.isArray(source) ? source : [];
-    const all = Object.values(SUBCATEGORY_BY_CATEGORY).flatMap((value) => Array.isArray(value) ? value : []);
-    return [...new Set([...direct, ...all])];
+    const source = SUBCATEGORY_BY_CATEGORY[String(form.category || "")];
+    return Array.isArray(source) ? [...source] : [];
   }, [form.category]);
+
+  const currentSubcategory = String(form.subcategory || "");
+  const subcategorySelectValue = subcategoryOptions.includes(currentSubcategory)
+    ? currentSubcategory
+    : currentSubcategory
+      ? "__CUSTOM__"
+      : "";
 
   const imageChoicePageSize = 20;
   const imageChoiceTotalPages = Math.max(
@@ -207,6 +214,32 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
         ? "Physical barcode applied. Manual Product Master details were kept."
         : "Physically confirmed product details applied. Review the form, then save.",
     );
+  }
+
+  function applyImageEnrichmentSelection(selection) {
+    const candidate = selection?.candidate || null;
+    const physicalBarcode = String(selection?.physicalBarcode || "").trim();
+
+    setForm((current) => ({
+      ...current,
+      barcode: physicalBarcode || current.barcode,
+      enrichmentSelection: {
+        ...selection,
+        importImage: Boolean(candidate?.imagePreviewUrl),
+      },
+    }));
+
+    if (candidate?.imagePreviewUrl) {
+      if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+      setImagePreview(candidate.imagePreviewUrl);
+      setMessage(
+        "Product Image selected. It will be securely imported after Product Master is created.",
+      );
+    } else {
+      setMessage(
+        "Product was verified, but this candidate has no Product Image. You can choose another product/image or upload your own.",
+      );
+    }
   }
 
   async function applyReturnedOnlineImage(result, successText) {
@@ -407,9 +440,24 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
               </button>
             </div>
           ) : (
-            <p className="muted-text">
-              Save this product first; then click its image icon in Product Master to find the image automatically.
-            </p>
+            <div className="product-image-presave-tools">
+              <ProductEnrichmentPanel
+                shopId={profile?.shop_id}
+                item={{ description: form.name, brand: form.brand }}
+                brand={form.brand}
+                sizeMl={Number(form.sizeMl || 0) || null}
+                packageType={form.lookupPackageType || ""}
+                barcode={form.barcode}
+                disabled={busy}
+                buttonLabel="Find Product Image"
+                importCandidateImage
+                onUseCandidate={applyImageEnrichmentSelection}
+              />
+              <p className="muted-text">
+                Choose the Product Image before saving. The selected image is imported
+                immediately after Product Master creation; you do not need to leave this flow.
+              </p>
+            </div>
           )}
 
           <p className="muted-text">
@@ -618,17 +666,28 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
 
         <label>
           Subcategory
-          <input
-            list="product-subcategory-options"
-            value={form.subcategory}
-            onChange={(e) => set("subcategory", e.target.value)}
-            placeholder="Type to search or enter a custom subcategory"
-            autoComplete="off"
-          />
-          <datalist id="product-subcategory-options">
-            {subcategoryOptions.map((option) => <option key={option} value={option} />)}
-          </datalist>
-          <small>Suggestions follow the category; custom values are allowed.</small>
+          <select
+            value={subcategorySelectValue}
+            onChange={(event) => {
+              const value = event.target.value;
+              set("subcategory", value === "__CUSTOM__" ? "__CUSTOM__" : value);
+            }}
+          >
+            <option value="">Select subcategory</option>
+            {subcategoryOptions.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+            <option value="__CUSTOM__">Other / Custom</option>
+          </select>
+          {subcategorySelectValue === "__CUSTOM__" ? (
+            <input
+              value={form.subcategory === "__CUSTOM__" ? "" : String(form.subcategory || "")}
+              onChange={(event) => set("subcategory", event.target.value)}
+              placeholder="Type custom subcategory"
+              autoComplete="off"
+            />
+          ) : null}
+          <small>Choose a category suggestion or use Other / Custom.</small>
         </label>
 
         <label>Size (ml)<input type="number" min="1" value={form.sizeMl} onChange={(e) => set("sizeMl", e.target.value)} required /></label>

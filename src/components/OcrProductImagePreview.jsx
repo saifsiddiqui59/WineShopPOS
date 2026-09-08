@@ -50,14 +50,14 @@ export default function OcrProductImagePreview({ shopId, item, sizeMl, delayMs =
       <div className="ocr-auto-image-preview">
         <img src={candidate.imagePreviewUrl} alt={candidate.title || query} referrerPolicy="no-referrer" />
         <small>{candidate.title || query}</small>
-        <span>Candidate preview · {Math.round(Number(candidate.score || 0) * 100)}%</span>
+        <span>Product Image suggestion · {Math.round(Number(candidate.score || 0) * 100)}%</span>
       </div>
     );
   }
 
   return (
     <div className="ocr-auto-image-preview ocr-auto-image-preview--empty">
-      <span>{state.status === "SEARCHING" ? "Finding image…" : "No candidate image"}</span>
+      <span>{state.status === "SEARCHING" ? "Finding Product Image…" : "Product Image not selected yet"}</span>
       <small>{query}</small>
     </div>
   );

@@ -1438,3 +1438,122 @@ Resolution in V5_12B:
 - Expose torch control when the selected camera reports torch capability.
 - Preserve typed/manual barcode fallback and GTIN validation.
 - No paid scanning service is introduced.
+
+### 2026-09-08 — V5_12B post-deploy human UAT gaps
+
+Marker: `V5_12B_POST_DEPLOY_UAT_GAPS_20260908`
+
+Human UAT on deployed V5_12B confirmed:
+- QA / DEV · V5 · NOT PROD badge is visible.
+- Suggested Product Name and Price/Bottle >= MRP protection are visible.
+- Product photo capture works.
+
+Remaining defects/gaps found by human UAT:
+1. Selecting Product subcategory can still raise the global application error
+   `Cannot read properties of undefined (reading 'length')`.
+2. OCR image placeholder says `No candidate image`; user-facing wording must be
+   Product Image language instead.
+3. First-time Product creation still tells the user to save first before online
+   image handling; image selection/preview must be available in the same new
+   Product flow and imported after Product Master creation.
+4. Shop pack/size defaults requested for missing explicit invoice size:
+   CAN -> 500 ml; otherwise 24 bottles/case -> 330 ml; otherwise
+   12 bottles/case -> 650 ml. Explicit printed/OCR size always wins.
+5. When pack interpretation makes Price/Bottle >= MRP, the likely pack should be
+   auto-applied as a reviewable suggestion and the warning belongs under
+   Bottles/Case, not under Price/Bottle.
+6. POS Billing needs an explicit mobile camera Scan Product action in a
+   collapsible panel, while preserving the existing USB/keyboard scanner flow.
+7. V5 continuity documentation must be strong enough for a new chat to recover
+   current implementation state from Git, without relying on conversation memory.
+
+V5_13D addresses these gaps. No new paid service is introduced.
+
+### 2026-09-08 — V5_13 Price/Bottle warning move patch missed actual JSX
+
+Marker: `V5_13_PRICE_WARNING_MOVE_PATCH_MISSED_20260908`
+
+Observed:
+- V5_13 reached the automated Node test stage.
+- The implementation patch added the new reviewable Bottles/Case warning, but its
+  removal regex did not match the actual compact JSX for the old
+  `ocr-price-impossible` Price/Bottle warning.
+- `tests/v5_13_continuity_uat.test.mjs` correctly failed because the old warning
+  was still present in `AutomationHub.jsx`.
+- The executor stopped before commit/push/deploy and restored only V5_13-owned
+  files.
+- GitHub V5 therefore remained at
+  `59a800d043050e8566adb7a38377c537e221bd7f`.
+
+Permanent prevention in V5_13B:
+- remove the old warning using an exact semantic regex anchored on
+  `className="ocr-price-impossible"`;
+- require the removal patch to match, otherwise fail immediately;
+- assert the old class is absent before the full test suite;
+- keep the hard Price/Bottle >= MRP confirmation block while presenting the
+  human guidance under Bottles/Case.
+
+### 2026-09-08 — V5_13B legacy V5_12 test contract became stale
+
+Marker: `V5_13B_LEGACY_TEST_CONTRACT_STALE_20260908`
+
+Observed:
+- V5_13B reached the full automated regression suite.
+- 68 tests ran: 66 PASS, 2 FAIL.
+- Both failures were in the older `tests/v5NonMobileUatFixes.test.mjs`.
+- Failure 1 still expected the old phrase `Candidate preview`, while V5_13B
+  intentionally changed user-facing wording to `Product Image suggestion`.
+- Failure 2 still expected the old Price/Bottle banner
+  `BLOCKED · Cost ≥ MRP`, while V5_13B intentionally moved human guidance under
+  Bottles/Case and preserved the hard confirmation guard through
+  `priceSanity.impossible`.
+- V5_13B stopped before commit/push/deploy and restored only its owned files.
+- GitHub V5 remained at
+  `59a800d043050e8566adb7a38377c537e221bd7f`.
+
+Resolution in V5_13C:
+- update the legacy V5_12 regression contract to the new Product Image wording;
+- verify image discovery remains preview-only;
+- verify the MRP safety logic remains a hard confirmation guard;
+- verify the old Price/Bottle warning class is absent;
+- verify the new Bottles/Case auto-suggestion warning is present.
+
+### 2026-09-08 — V5_13D preflight found stale staged index from prior failed executor
+
+Marker: `V5_13D_PREFLIGHT_STALE_INDEX_FROM_FAILED_EXECUTOR_20260908`
+
+Observed:
+- V5_13C reached `git add` and then failed at `git diff --cached --check`.
+- Cleanup restored owned working-tree files but did not clear the staged index.
+- V5_13D therefore saw only the exact prior executor-owned paths as `MM` / `AD`
+  and stopped before mutation.
+- GitHub V5 remained unchanged.
+
+Resolution / permanent prevention in V5_13E:
+- recover only when the worktree itself exactly matches HEAD;
+- recover only when every staged path belongs to the exact known V5_13C allowlist;
+- clear only those index entries; do not modify file contents;
+- future pre-commit cleanup also unstages only current executor-owned paths before
+  restoring their backups.
+
+### 2026-09-08 — V5_13C staged diff failed on trailing whitespace
+
+Marker: `V5_13C_GIT_DIFF_CHECK_TRAILING_WHITESPACE_20260908`
+
+Observed:
+- V5_13C passed the documentation system check.
+- V5_13C passed environment isolation, user-manual sync and Vite production build.
+- All V5_13C dist markers passed.
+- Step 6 stopped at `git diff --cached --check` because
+  `src/pages/AutomationHub.jsx` contained trailing whitespace at the generated
+  line around 1820.
+- The executor stopped before commit/push/deploy and restored only its owned files.
+- GitHub V5 remained at
+  `59a800d043050e8566adb7a38377c537e221bd7f`.
+
+Resolution in V5_13D:
+- normalize trailing spaces/tabs only in the V5_13-owned AutomationHub file after
+  the deterministic source patch;
+- fail immediately if any trailing spaces/tabs remain in AutomationHub;
+- keep `git diff --cached --check` as the final staging gate;
+- do not normalize or touch unrelated files.
