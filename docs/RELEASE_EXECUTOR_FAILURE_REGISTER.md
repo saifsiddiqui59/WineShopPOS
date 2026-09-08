@@ -1761,3 +1761,34 @@ Resolution in V5_16:
 - wait for the image operation and refresh Product Master before navigation;
 - barcode remains unchanged;
 - no new provider, paid service, database object or Edge Function.
+
+### 2026-09-08 — V5_16D mobile camera opens but does not identify barcode reliably
+
+Marker: `V5_16D_MOBILE_CAMERA_BARCODE_RECOGNITION_UAT_FAILED_20260908`
+
+Human UAT:
+- mobile camera scanner opens;
+- camera feed is visible;
+- real product barcode is not being identified reliably.
+
+Source-level findings in the V5_16D scanner:
+- native BarcodeDetector was allowed 6.5 seconds before switching;
+- ZXing first used `decodeFromVideoDevice`, which does not request the same
+  high-resolution rear-camera constraints used by the native path;
+- the high-resolution `decodeFromConstraints` path ran only when the first ZXing
+  startup threw, not when it successfully opened a low-quality stream but failed
+  to decode;
+- native -> ZXing fallback could lose the selected rear-camera identity because
+  React state used for activeDeviceId may not yet have updated;
+- no center-region native second pass, autofocus tuning or automatic optical zoom
+  assist was applied.
+
+Resolution in V5_17:
+- make high-resolution rear-camera `decodeFromConstraints` the primary ZXing path;
+- keep `decodeFromVideoDevice` only as compatibility fallback;
+- native detector also scans an enlarged center-region canvas;
+- switch from native to ZXing sooner when no result;
+- request continuous focus where the browser exposes it;
+- apply a conservative automatic zoom assist where optical zoom is supported;
+- keep manual Zoom + / Zoom - controls, torch, camera switching and typed barcode;
+- no paid scanning service or new cloud/backend resource.

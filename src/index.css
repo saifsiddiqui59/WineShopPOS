@@ -7146,3 +7146,100 @@ html[data-theme="dark"] .mobile-barcode-modal .muted-text,
 html[data-theme="dark"] .mobile-barcode-status span {
   color: #d4dae4;
 }
+
+/* V5_17_MOBILE_CAMERA_BARCODE_RECOGNITION_20260908 */
+.mobile-barcode-video-shell-v17 {
+  position: relative;
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #050607;
+}
+
+.mobile-barcode-video-shell-v17 video {
+  width: 100%;
+  height: min(56vh, 430px);
+  min-height: 300px;
+  object-fit: contain;
+  background: #050607;
+}
+
+.mobile-barcode-guide-v17 {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(84%, 560px);
+  height: min(34%, 170px);
+  transform: translate(-50%, -50%);
+  border: 3px solid rgba(255,255,255,.94);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 999px rgba(0,0,0,.18),
+    0 0 0 1px rgba(0,0,0,.35);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mobile-barcode-scan-line {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: 50%;
+  height: 2px;
+  background: #ff4f91;
+  box-shadow: 0 0 9px rgba(255,79,145,.8);
+  animation: v5-barcode-scan-line 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes v5-barcode-scan-line {
+  from { transform: translateY(-42px); }
+  to { transform: translateY(42px); }
+}
+
+.mobile-barcode-tip {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #d7dce3;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #1f2937;
+}
+
+.mobile-barcode-tip span {
+  color: #596273;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+html[data-theme="dark"] .mobile-barcode-tip {
+  border-color: #48515e;
+  background: #20252d;
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .mobile-barcode-tip span {
+  color: #d5dbe5;
+}
+
+@media (max-width: 560px) {
+  .mobile-barcode-video-shell-v17,
+  .mobile-barcode-video-shell-v17 video {
+    min-height: 260px;
+    height: min(52vh, 390px);
+  }
+
+  .mobile-barcode-guide-v17 {
+    width: 88%;
+    height: 31%;
+  }
+
+  .mobile-barcode-modal .button-row {
+    gap: 7px;
+  }
+
+  .mobile-barcode-modal .button-row > button {
+    flex: 1 1 auto;
+    min-width: 92px;
+  }
+}

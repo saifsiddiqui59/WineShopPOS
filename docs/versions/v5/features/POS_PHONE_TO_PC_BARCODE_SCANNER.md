@@ -197,3 +197,24 @@ The phone has no independent billing authority and no product/inventory DB acces
 
 Repair is implemented, but **human retest is required** before marking this
 feature passed.
+
+## V5_17 mobile camera recognition repair
+
+Human retest after V5_16D reported that the camera opened but did not identify a
+real product barcode reliably.
+
+V5_17 keeps the same phone-to-PC pairing/acknowledgement architecture and repairs
+the shared `MobileBarcodeScanner` recognition layer:
+
+- primary ZXing capture is high-resolution rear-camera `decodeFromConstraints`;
+- native BarcodeDetector uses full frame plus center-region second pass;
+- native fallback changes to ZXing after about 3.2 seconds when no code is found;
+- continuous focus and conservative optical zoom assist are requested when the
+  browser/camera supports them;
+- user gets Zoom + / Zoom -, Torch, Switch Camera and Retry Scanner where available;
+- no paid barcode recognition provider is used.
+
+This repair applies both to **This Device Camera** and the separate-phone scanner
+because both use the same `MobileBarcodeScanner` component.
+
+**Human retest remains required.**

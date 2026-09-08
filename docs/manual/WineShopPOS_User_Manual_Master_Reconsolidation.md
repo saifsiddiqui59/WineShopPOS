@@ -1233,3 +1233,21 @@ Edit Product → **Try Another Image** opens the India/Global gallery. **Open Ca
 Use Invoice OCR, then open **Purchase Receiving Workspace**. Review product match/create, Cases, Bottles/Case, Loose, Final Bottles, Rate/Case, Price/Bottle, MRP and financial reconciliation. Use **Confirm as Posted** or **Correct Pack** line-by-line. Barcode may be Known, Scan Now or Assign Later and does not block receiving. Inline-created products begin with zero stock. **Approve & Receive Stock** is online-only. Offline draft edits are encrypted locally and show OFFLINE/SYNCING/SYNCED state. Products → **Barcode Setup (N)** shows products still missing barcode.
 
 `ml`, `cl` and `l` are liquid measurement units. Unknown size is review-required; WineShopPOS does not silently invent 750 ml.
+
+### V5.17 Mobile Camera Barcode Recognition
+
+If **This Device Camera** or **Use Phone** opens the camera but does not read the
+barcode:
+
+1. keep the complete barcode inside the white rectangle;
+2. hold the phone roughly 10–20 cm from the bottle/can;
+3. move slightly farther away if the image looks blurry;
+4. avoid strong glare on glossy labels;
+5. use **Torch On** in low light when available;
+6. use **Zoom +** once if the barcode remains too small;
+7. use **Switch Camera** if the wrong camera was selected;
+8. select **Retry Scanner** after changing distance/light.
+
+WineShopPOS first tries the device's native barcode detector when available and
+then automatically switches to the high-resolution compatibility scanner.
+Manual barcode entry remains available as a fallback.

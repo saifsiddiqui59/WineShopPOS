@@ -204,3 +204,25 @@ Stage only explicit owned paths.
 10. Cross-shop negative access for invoice/product/image/purchase data.
 
 V5 is not considered fully closed until the applicable human UAT passes.
+
+## V5_17 — Mobile camera barcode recognition repair
+
+Starting parent:
+`d7beca07986fe48c7dbc79be937e594b49ae5b46`
+
+Human UAT after V5_16D:
+- phone/mobile camera opens;
+- barcode recognition still failed on a real product barcode.
+
+V5_17 repairs the shared camera recognition component:
+- high-resolution rear-camera ZXing is primary;
+- native BarcodeDetector gets a center-ROI second pass;
+- native -> ZXing switch reduced to 3.2s;
+- continuous autofocus + conservative zoom assist when supported;
+- manual Zoom + / Zoom -, Torch, camera switching and typed barcode preserved;
+- no paid service/resource.
+
+Phone -> PC HashRouter pairing and ACK/dedupe logic from V5_16 remain unchanged.
+Physical USB/Bluetooth scanner path remains unchanged.
+
+Manual UAT remains mandatory before marking mobile scanning passed.
