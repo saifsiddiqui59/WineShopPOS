@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeBarcode, scannerSequenceLooksValid } from "../lib/barcode";
 
 const ScannerContext = createContext(null);
@@ -96,6 +96,39 @@ export function ScannerProvider({ children }) {
   function errorBeep() {
     tone(settings.errorFrequency, 180, 0.1);
   }
+
+  const injectScan = useCallback((rawBarcode, meta = {}) => {
+    const chars = normalizeBarcode(rawBarcode);
+    if (!chars) return false;
+
+    const active = document.activeElement;
+    const directCapture = active?.dataset?.scannerCapture === "barcode";
+
+    if (directCapture && active?.isConnected && "value" in active) {
+      const setter = Object.getOwnPropertyDescriptor(
+        Object.getPrototypeOf(active),
+        "value",
+      )?.set;
+
+      if (setter) setter.call(active, chars);
+      else active.value = chars;
+
+      active.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    setLastScan({
+      id: crypto.randomUUID(),
+      barcode: chars,
+      at: new Date().toISOString(),
+      averageGapMs: 0,
+      length: chars.length,
+      source: meta.source || "INJECTED",
+      eventId: meta.eventId || null,
+    });
+
+    requestAnimationFrame(() => active?.focus?.());
+    return true;
+  }, []);
 
   useEffect(() => {
     function reset() {
@@ -201,8 +234,15 @@ export function ScannerProvider({ children }) {
   }, [lastScan?.id]);
 
   const value = useMemo(
-    () => ({ settings, saveSettings, lastScan, successBeep, errorBeep }),
-    [settings, lastScan]
+    () => ({
+      settings,
+      saveSettings,
+      lastScan,
+      successBeep,
+      errorBeep,
+      injectScan,
+    }),
+    [settings, lastScan, injectScan]
   );
 
   return <ScannerContext.Provider value={value}>{children}</ScannerContext.Provider>;

@@ -54,6 +54,7 @@ export const MODULE_TABS = {
     { path: "/operations/approvals", label: "Approvals", roles: ["ADMIN", "MANAGER"] },
     { path: "/operations/customers", label: "Customer & Credit", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
     { path: "/operations/offline", label: "Offline Queue", roles: ["ADMIN", "MANAGER", "CASHIER"] },
+    { path: "/operations/phone-scanner", label: "Phone Scanner", roles: ["ADMIN", "MANAGER", "CASHIER"] },
   ],
   owner: [
     { path: "/owner", label: "Overview", roles: ["ADMIN"], tier: "PRO" },

@@ -226,3 +226,61 @@ Phone -> PC HashRouter pairing and ACK/dedupe logic from V5_16 remain unchanged.
 Physical USB/Bluetooth scanner path remains unchanged.
 
 Manual UAT remains mandatory before marking mobile scanning passed.
+
+## V5_19 — current continuation checkpoint
+
+Starting parent:
+`41755f157e330cd0eb3cb8667ee6ea063389d25c`
+
+V5_19 is a combined QA change with three scopes.
+
+### 1. Mobile barcode decoder
+
+- dedicated ZXing `BrowserMultiFormatOneDReader`;
+- enlarged center ROI;
+- wide + tight + high-contrast + inverted + rotated passes;
+- `BrowserMultiFormatReader` fallback;
+- native BarcodeDetector preserved;
+- environment-facing camera requested first;
+- manual zoom/torch/camera switch/typed barcode preserved;
+- no forced automatic zoom;
+- no paid recognition provider.
+
+### 2. Global separate-phone scanner
+
+The current V5_19 design supersedes the historical 10-minute POS-owned pairing
+contract for QA.
+
+- pairing setup: `Operations -> Phone Scanner`;
+- authenticated Layout mounts `GlobalPhoneScannerHost`;
+- 192-bit pairing token + random session id;
+- PC pairing persists until Disconnect/Replace;
+- phone pairing persists until Forget This PC;
+- phone events enter `ScannerContext.injectScan()`;
+- retry + acknowledgement + event-id dedupe remain;
+- dedupe cache is bounded;
+- phone has no product/customer/inventory table access and no billing authority;
+- physical USB/Bluetooth scanner remains unchanged;
+- POS This Device Camera remains unchanged.
+
+### 3. Add Product simplification
+
+- duplicate top Product verification action removed;
+- one `Find Product / Image` action remains;
+- existing `OcrProductImagePreview` automatic preview preserved;
+- existing secure `importCandidateImage` flow preserved;
+- existing post-save `autoFindProductImage({ replace:false })` preserved;
+- barcode capture attribute remains exactly once;
+- barcode is not modified by image processing.
+
+### V5_19 first-executor recovery
+
+The first V5_19 executor stopped before commit because an older continuity test
+still required `PhoneToPcScannerPanel` in POS. V5_19D updates the semantic legacy
+contracts for the intentional global-scanner architecture, fixes the nested-route test contract, and scopes the direct-table mutation guard to Supabase while preserving the
+underlying scanner, Product Image, purchase, OCR and environment safety gates.
+
+Manual real-device UAT remains mandatory.
+
+Source-of-truth precedence remains:
+`CURRENT V5 SOURCE + CURRENT MIGRATIONS + VERIFIED V5 DEPLOYMENT > OLD DOCUMENTATION`.

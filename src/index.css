@@ -7243,3 +7243,71 @@ html[data-theme="dark"] .mobile-barcode-tip span {
     min-width: 92px;
   }
 }
+
+/* V5_19_MOBILE_1D_ROI_DECODER_20260908 */
+.mobile-barcode-video-shell-v19 {
+  position: relative;
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #050607;
+}
+
+.mobile-barcode-video-shell-v19 video {
+  width: 100%;
+  height: min(58vh, 440px);
+  min-height: 300px;
+  object-fit: contain;
+  background: #050607;
+}
+
+.mobile-barcode-guide-v19 {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(92%, 620px);
+  height: min(40%, 185px);
+  transform: translate(-50%, -50%);
+  border: 3px solid rgba(255,255,255,.96);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 999px rgba(0,0,0,.16),
+    0 0 0 1px rgba(0,0,0,.35);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mobile-barcode-camera-meta {
+  display: block;
+  margin-top: 4px;
+  color: #697386;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+html[data-theme="dark"] .mobile-barcode-camera-meta {
+  color: #cbd5e1;
+}
+
+@media (max-width: 560px) {
+  .mobile-barcode-video-shell-v19,
+  .mobile-barcode-video-shell-v19 video {
+    min-height: 280px;
+    height: min(54vh, 410px);
+  }
+
+  .mobile-barcode-guide-v19 {
+    width: 94%;
+    height: 38%;
+  }
+}
+
+/* V5_19_GLOBAL_PHONE_SCANNER_20260908 */
+.global-phone-setup { display:grid; gap:16px; }
+.global-phone-grid { display:grid; grid-template-columns:250px minmax(0,1fr); gap:18px; align-items:start; }
+.global-phone-copy { display:grid; gap:10px; }
+html[data-theme="dark"] .global-phone-setup,
+html[data-theme="dark"] .global-phone-copy { color:#f3f4f6; }
+html[data-theme="dark"] .global-phone-copy p,
+html[data-theme="dark"] .global-phone-setup p { color:#d1d5db; }
+@media (max-width:720px){ .global-phone-grid{grid-template-columns:1fr;} }

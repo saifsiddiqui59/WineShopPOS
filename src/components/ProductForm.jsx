@@ -199,24 +199,6 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     setForm((current) => ({...current,imageFile:null,removeImage:Boolean(current.imagePath)}));
   }
 
-  function applyEnrichmentSelection(selection) {
-    const candidate = selection?.candidate || null;
-    setForm((current) => ({
-      ...current,
-      barcode: String(selection?.physicalBarcode || current.barcode || ""),
-      name: candidate?.title || current.name,
-      brand: candidate?.brand || current.brand,
-      sizeMl: Number(candidate?.sizeMl || 0) > 0 ? Number(candidate.sizeMl) : current.sizeMl,
-      lookupPackageType: candidate?.packageType || current.lookupPackageType,
-      enrichmentSelection: selection || null,
-    }));
-    setMessage(
-      selection?.outcome === "MANUAL"
-        ? "Physical barcode applied. Manual Product Master details were kept."
-        : "Physically confirmed product details applied. Review the form, then save.",
-    );
-  }
-
   function applyImageEnrichmentSelection(selection) {
     const candidate = selection?.candidate || null;
     const physicalBarcode = String(selection?.physicalBarcode || "").trim();
@@ -370,7 +352,7 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     <form className="panel" onSubmit={submit}>
       {/* PRODUCT_MASTER_REAL_CATALOGUE_20260831 */}
       <div className="purchase-message" style={{ marginBottom: 14 }}>
-        SKU is generated automatically. Barcode is required when saving, but Find Product can run before a barcode is known.
+        SKU is generated automatically. Barcode is required when saving, but Find Product / Image can run before a barcode is known.
         Physical barcode confirmation is separate from internet barcode suggestions. For spreadsheet onboarding, use{" "}
         <a href="#/products/bulk-import">Bulk Product Import</a>.
       </div>
@@ -391,18 +373,6 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
             </select>
             <small>Used for search/verification only; Product Master has no package-type column yet.</small>
           </label>
-        </div>
-        <div className="button-row" style={{ marginTop: 10 }}>
-          <ProductEnrichmentPanel
-            shopId={profile?.shop_id}
-            item={{ description: form.name, brand: form.brand }}
-            brand={form.brand}
-            sizeMl={Number(form.sizeMl || 0) || null}
-            packageType={form.lookupPackageType || ""}
-            barcode={form.barcode}
-            disabled={busy}
-            onUseCandidate={applyEnrichmentSelection}
-          />
         </div>
         {form.enrichmentSelection ? (
           <div className="purchase-message success" style={{ marginTop: 10 }}>
@@ -472,13 +442,13 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
                 packageType={form.lookupPackageType || ""}
                 barcode={form.barcode}
                 disabled={busy}
-                buttonLabel="Review / Find Product Image"
+                buttonLabel="Find Product / Image"
                 importCandidateImage
                 onUseCandidate={applyImageEnrichmentSelection}
               />
               <p className="muted-text product-image-autoload-help">
                 The first Product Image preview appears automatically; no click is required.
-                Use Review / Find Product Image only when you want to inspect the product match,
+                Use Find Product / Image only when you want to inspect the product match,
                 or upload/take your own image. A securely confirmed image is imported after
                 Product Master creation.
               </p>

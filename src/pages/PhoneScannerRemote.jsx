@@ -1,403 +1,138 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import MobileBarcodeScanner from "../components/MobileBarcodeScanner";
 import { supabase } from "../lib/supabase";
 import { normalizeBarcode } from "../lib/barcode";
 
+const PHONE_KEY = "wsp_saved_pc_scanner_pairing_v1";
 const SEND_ATTEMPTS = 3;
-const ACK_TIMEOUT_MS = 1300;
+const ACK_TIMEOUT_MS = 1600;
 
-function validPairingPart(value, minLength, maxLength) {
-  const text = String(value || "");
-  return (
-    text.length >= minLength &&
-    text.length <= maxLength &&
-    /^[A-Za-z0-9-]+$/.test(text)
-  );
+function readSaved() {
+  try { return JSON.parse(localStorage.getItem(PHONE_KEY) || "null"); } catch { return null; }
 }
 
 export default function PhoneScannerRemote() {
   const [params] = useSearchParams();
+  const pairing = useMemo(() => {
+    const fromUrl = { sessionId: params.get("session") || "", token: params.get("token") || "", shopId: params.get("shop") || "" };
+    if (fromUrl.sessionId && fromUrl.token && fromUrl.shopId) {
+      localStorage.setItem(PHONE_KEY, JSON.stringify(fromUrl));
+      return fromUrl;
+    }
+    return readSaved();
+  }, [params]);
 
-  const sessionId = params.get("session") || "";
-  const token = params.get("token") || "";
-  const shopId = params.get("shop") || "";
-  const expiresAt = Number(params.get("expires") || 0);
-
-  const valid =
-    validPairingPart(sessionId, 16, 80) &&
-    validPairingPart(token, 40, 80) &&
-    validPairingPart(shopId, 20, 80) &&
-    Number.isFinite(expiresAt) &&
-    expiresAt > Date.now();
-
-  const topic = valid
-    ? `pos-phone:${shopId}:${sessionId}:${token}`
-    : "";
-
-  const [channelStatus, setChannelStatus] = useState(
-    valid ? "CONNECTING" : "INVALID",
-  );
+  const [status, setStatus] = useState(pairing ? "CONNECTING" : "INVALID");
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [scannerKey, setScannerKey] = useState(0);
-  const [lastBarcode, setLastBarcode] = useState("");
-  const [lastAck, setLastAck] = useState(null);
-  const [sendState, setSendState] = useState("IDLE");
-  const [secondsLeft, setSecondsLeft] = useState(
-    valid ? Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)) : 0,
-  );
-
+  const [autoScan, setAutoScan] = useState(() => localStorage.getItem("wsp_phone_auto_scan") !== "0");
+  const [lastResult, setLastResult] = useState(null);
   const channelRef = useRef(null);
-  const restartTimerRef = useRef(null);
-  const ackWaitersRef = useRef(new Map());
-  const pendingRef = useRef(null);
+  const waitersRef = useRef(new Map());
+
+  const valid = Boolean(pairing?.sessionId && pairing?.token && pairing?.shopId);
+  const topic = valid ? `global-phone:${pairing.shopId}:${pairing.sessionId}:${pairing.token}` : "";
 
   useEffect(() => {
     if (!valid) return undefined;
-
-    const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.ceil((expiresAt - Date.now()) / 1000),
-      );
-      setSecondsLeft(remaining);
-
-      if (remaining <= 0) {
-        setChannelStatus("EXPIRED");
-        setScannerOpen(false);
-      }
-    };
-
-    tick();
-    const timer = window.setInterval(tick, 1000);
-    return () => window.clearInterval(timer);
-  }, [valid, expiresAt]);
-
-  useEffect(() => {
-    if (!valid || !topic) return undefined;
-
     const channel = supabase
-      .channel(topic, {
-        config: {
-          broadcast: {
-            ack: false,
-            self: false,
-          },
-        },
-      })
+      .channel(topic, { config: { broadcast: { ack: false, self: false } } })
       .on("broadcast", { event: "pc-ready" }, ({ payload }) => {
-        if (
-          payload?.sessionId === sessionId &&
-          Date.now() < expiresAt
-        ) {
-          setChannelStatus("CONNECTED");
-        }
+        if (payload?.sessionId !== pairing.sessionId) return;
+        setStatus("CONNECTED");
+        if (autoScan) setScannerOpen(true);
       })
       .on("broadcast", { event: "barcode-ack" }, ({ payload }) => {
-        if (
-          payload?.sessionId !== sessionId ||
-          !payload?.eventId
-        ) {
-          return;
-        }
-
-        const eventId = String(payload.eventId);
-        const waiter = ackWaitersRef.current.get(eventId);
+        const waiter = waitersRef.current.get(String(payload?.eventId || ""));
         if (waiter) waiter(payload);
-
-        setLastAck(payload);
-        setChannelStatus("CONNECTED");
+        setLastResult(payload || null);
+        setStatus("CONNECTED");
       })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          setChannelStatus("WAITING_FOR_PC");
-          void channel.send({
-            type: "broadcast",
-            event: "phone-ready",
-            payload: {
-              sessionId,
-              at: new Date().toISOString(),
-            },
-          });
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setChannelStatus("CONNECTION_ERROR");
-        } else if (status === "CLOSED") {
-          setChannelStatus("DISCONNECTED");
-        }
+      .subscribe((s) => {
+        if (s === "SUBSCRIBED") {
+          setStatus("WAITING_FOR_PC");
+          void channel.send({ type: "broadcast", event: "phone-ready", payload: { sessionId: pairing.sessionId, at: new Date().toISOString() } });
+        } else if (s === "CHANNEL_ERROR" || s === "TIMED_OUT") setStatus("CONNECTION_ERROR");
       });
-
     channelRef.current = channel;
-
-    const heartbeat = window.setInterval(() => {
-      if (Date.now() >= expiresAt) return;
-      void channel.send({
-        type: "broadcast",
-        event: "phone-heartbeat",
-        payload: {
-          sessionId,
-          at: new Date().toISOString(),
-        },
-      });
-    }, 4000);
-
+    const ping = window.setInterval(() => {
+      void channel.send({ type: "broadcast", event: "phone-ready", payload: { sessionId: pairing.sessionId, at: new Date().toISOString() } });
+    }, 5000);
     return () => {
-      window.clearInterval(heartbeat);
-      for (const waiter of ackWaitersRef.current.values()) {
-        waiter(null);
-      }
-      ackWaitersRef.current.clear();
+      window.clearInterval(ping);
       channelRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [valid, topic, sessionId, expiresAt]);
+  }, [valid, topic, pairing?.sessionId, autoScan]);
 
-  useEffect(
-    () => () => {
-      if (restartTimerRef.current) {
-        window.clearTimeout(restartTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  function waitForAck(eventId, timeoutMs = ACK_TIMEOUT_MS) {
+  function waitAck(eventId) {
     return new Promise((resolve) => {
-      let finished = false;
-
+      let done = false;
       const finish = (value) => {
-        if (finished) return;
-        finished = true;
+        if (done) return;
+        done = true;
         window.clearTimeout(timer);
-        ackWaitersRef.current.delete(eventId);
+        waitersRef.current.delete(eventId);
         resolve(value);
       };
-
-      const timer = window.setTimeout(
-        () => finish(null),
-        timeoutMs,
-      );
-
-      ackWaitersRef.current.set(eventId, finish);
+      const timer = window.setTimeout(() => finish(null), ACK_TIMEOUT_MS);
+      waitersRef.current.set(eventId, finish);
     });
   }
 
-  async function transmit(event) {
-    if (!channelRef.current) return null;
-
-    for (let attempt = 1; attempt <= SEND_ATTEMPTS; attempt += 1) {
-      setSendState(`SENDING_${attempt}`);
-
-      const ackPromise = waitForAck(event.eventId);
-
-      try {
-        await channelRef.current.send({
-          type: "broadcast",
-          event: "barcode",
-          payload: event,
-        });
-      } catch {}
-
-      const ack = await ackPromise;
-      if (ack) return ack;
+  async function sendBarcode(raw) {
+    const barcode = normalizeBarcode(raw);
+    if (!barcode || !channelRef.current || status !== "CONNECTED") {
+      setScannerOpen(false);
+      setLastResult({ accepted: false, message: "PC is not connected." });
+      return;
     }
-
-    return null;
-  }
-
-  function restartCameraAfterAck() {
+    const eventId = crypto.randomUUID();
+    const payload = { sessionId: pairing.sessionId, eventId, barcode, sentAt: new Date().toISOString() };
+    let ack = null;
+    for (let i = 0; i < SEND_ATTEMPTS && !ack; i += 1) {
+      const waiting = waitAck(eventId);
+      try { await channelRef.current.send({ type: "broadcast", event: "barcode", payload }); } catch {}
+      ack = await waiting;
+    }
+    setLastResult(ack || { accepted: false, barcode, message: "PC did not confirm the scan." });
     setScannerOpen(false);
-    restartTimerRef.current = window.setTimeout(() => {
-      if (
-        Date.now() < expiresAt &&
-        channelStatus === "CONNECTED"
-      ) {
-        setScannerKey((value) => value + 1);
-        setScannerOpen(true);
-      }
-    }, 650);
+    if (ack?.accepted && autoScan) window.setTimeout(() => setScannerOpen(true), 500);
   }
 
-  async function sendEvent(event) {
-    pendingRef.current = event;
-    setLastBarcode(event.barcode);
-    setLastAck(null);
-
-    const ack = await transmit(event);
-
-    if (!ack) {
-      setSendState("NO_PC_ACK");
-      setScannerOpen(false);
-      return;
-    }
-
-    pendingRef.current = null;
-    setLastAck(ack);
-    setSendState(ack.accepted ? "PC_ADDED" : "PC_REJECTED");
-
-    try {
-      navigator.vibrate?.(
-        ack.accepted ? 90 : [80, 70, 80],
-      );
-    } catch {}
-
-    restartCameraAfterAck();
-  }
-
-  async function sendBarcode(rawBarcode) {
-    const barcode = normalizeBarcode(rawBarcode);
-
-    if (
-      !barcode ||
-      !channelRef.current ||
-      channelStatus !== "CONNECTED" ||
-      Date.now() >= expiresAt
-    ) {
-      setScannerOpen(false);
-      setSendState("NOT_CONNECTED");
-      return;
-    }
-
-    const eventId =
-      typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-    await sendEvent({
-      sessionId,
-      eventId,
-      barcode,
-      sentAt: new Date().toISOString(),
-    });
-  }
-
-  async function retryLastBarcode() {
-    if (!pendingRef.current || channelStatus !== "CONNECTED") return;
-    await sendEvent(pendingRef.current);
+  function forget() {
+    localStorage.removeItem(PHONE_KEY);
+    setScannerOpen(false);
+    window.location.hash = "#/phone-scanner";
   }
 
   if (!valid) {
-    return (
-      <main className="phone-scanner-page">
-        <section className="phone-scanner-card">
-          <div className="phone-scanner-brand">WineShopPOS</div>
-          <h1>Phone Scanner</h1>
-          <div className="phone-scanner-alert error">
-            <strong>QR expired or invalid</strong>
-            <span>Go back to the PC and create a new QR.</span>
-          </div>
-        </section>
-      </main>
-    );
+    return <main className="phone-scanner-page"><section className="phone-scanner-card">
+      <h1>Phone Barcode Scanner</h1>
+      <div className="phone-scanner-alert error"><strong>No saved PC connection</strong><span>Open Operations → Phone Scanner on the PC and scan the QR once.</span></div>
+    </section></main>;
   }
 
-  const connected =
-    secondsLeft > 0 &&
-    channelStatus === "CONNECTED";
-
-  return (
-    <main className="phone-scanner-page">
-      <section className="phone-scanner-card">
-        <div className="phone-scanner-brand">WineShopPOS</div>
-        <h1>Use Phone as Scanner</h1>
-        <p className="phone-scanner-lead">
-          Scan here. The product is added to the bill on the paired PC.
-        </p>
-
-        <div
-          className={`phone-scanner-connection ${
-            connected ? "connected" : "waiting"
-          }`}
-        >
-          <strong>
-            {connected
-              ? "✓ Connected to PC"
-              : channelStatus === "CONNECTION_ERROR"
-                ? "Connection problem"
-                : channelStatus === "EXPIRED"
-                  ? "Pairing expired"
-                  : "Connecting to PC…"}
-          </strong>
-          <span>
-            {secondsLeft > 0
-              ? `QR expires in ${Math.floor(secondsLeft / 60)}:${String(
-                  secondsLeft % 60,
-                ).padStart(2, "0")}`
-              : "Create a new QR on the PC."}
-          </span>
-        </div>
-
-        {lastBarcode ? (
-          <div
-            className={`phone-scanner-result ${
-              lastAck?.accepted
-                ? "success"
-                : sendState === "NO_PC_ACK"
-                  ? "warning"
-                  : lastAck
-                    ? "error"
-                    : ""
-            }`}
-          >
-            <span>Last barcode</span>
-            <strong>{lastBarcode}</strong>
-
-            {sendState === "NO_PC_ACK" ? (
-              <b>PC did not confirm receipt. Do not scan the next item yet.</b>
-            ) : lastAck?.accepted ? (
-              <b>
-                ✓ {lastAck.productName || "Product"} added on PC
-              </b>
-            ) : lastAck ? (
-              <b>
-                {lastAck.status?.replaceAll("_", " ") || "Not added on PC"}
-              </b>
-            ) : (
-              <b>Sending to PC…</b>
-            )}
-          </div>
-        ) : (
-          <div className="phone-scanner-result">
-            <span>Ready</span>
-            <strong>No barcode scanned yet</strong>
-          </div>
-        )}
-
-        <button
-          type="button"
-          className="primary-button phone-scanner-start"
-          disabled={!connected || sendState.startsWith("SENDING_")}
-          onClick={() => {
-            setScannerKey((value) => value + 1);
-            setScannerOpen(true);
-          }}
-        >
-          Start Camera
-        </button>
-
-        {sendState === "NO_PC_ACK" && pendingRef.current ? (
-          <button
-            type="button"
-            className="secondary-button phone-scanner-retry-send"
-            onClick={() => void retryLastBarcode()}
-          >
-            Retry Sending Last Barcode
-          </button>
-        ) : null}
-
-        <p className="phone-scanner-help">
-          {connected
-            ? "Keep this page open. After the PC confirms a scan, the camera starts again automatically."
-            : "Keep the PC POS open on the Use Phone tab. Start Camera becomes available when the PC connection is confirmed."}
-        </p>
-
-        <MobileBarcodeScanner
-          key={scannerKey}
-          open={scannerOpen}
-          title="Scan Product for PC"
-          onClose={() => setScannerOpen(false)}
-          onDetected={(code) => void sendBarcode(code)}
-        />
-      </section>
-    </main>
-  );
+  return <main className="phone-scanner-page"><section className="phone-scanner-card">
+    <div className="phone-scanner-brand">WineShopPOS</div>
+    <h1>Barcode Scanner for PC</h1>
+    <div className={`phone-scanner-connection ${status === "CONNECTED" ? "connected" : "waiting"}`}>
+      <strong>{status === "CONNECTED" ? "✓ Connected to PC" : status.replaceAll("_", " ")}</strong>
+      <span>Connection stays saved on this phone until Forget This PC.</span>
+    </div>
+    {lastResult ? <div className={`phone-scanner-result ${lastResult.accepted ? "success" : "warning"}`}>
+      <strong>{lastResult.barcode || "Last scan"}</strong><span>{lastResult.message || lastResult.status || ""}</span>
+    </div> : null}
+    <div className="button-row">
+      <button type="button" className="primary-button phone-scanner-start" disabled={status !== "CONNECTED"} onClick={() => setScannerOpen(true)}>Scan Barcode</button>
+      <button type="button" className="secondary-button" onClick={() => {
+        const next = !autoScan;
+        setAutoScan(next);
+        localStorage.setItem("wsp_phone_auto_scan", next ? "1" : "0");
+        if (next && status === "CONNECTED") setScannerOpen(true);
+      }}>Auto Scan: {autoScan ? "ON" : "OFF"}</button>
+    </div>
+    <button type="button" className="secondary-button" onClick={forget}>Forget This PC</button>
+    <MobileBarcodeScanner open={scannerOpen} title="Scan Barcode for PC" onClose={() => setScannerOpen(false)} onDetected={(code) => void sendBarcode(code)}/>
+  </section></main>;
 }

@@ -1792,3 +1792,125 @@ Resolution in V5_17:
 - apply a conservative automatic zoom assist where optical zoom is supported;
 - keep manual Zoom + / Zoom - controls, torch, camera switching and typed barcode;
 - no paid scanning service or new cloud/backend resource.
+
+### 2026-09-08 — V5_17 mobile camera still did not recognise real barcode
+
+Marker: `V5_17_MOBILE_CAMERA_STILL_NOT_RECOGNISING_REAL_BARCODE_20260908`
+
+Human UAT after V5_17:
+- camera opens;
+- barcode target is visible;
+- real mobile barcode recognition still fails.
+
+Additional source diagnosis:
+- the scanner still depended mainly on continuous whole-video decoding;
+- product barcodes are overwhelmingly 1D (EAN/UPC/Code128/ITF), but the main ZXing
+  reader was MultiFormat rather than the dedicated MultiFormatOneD reader;
+- no ZXing center-ROI canvas decode loop existed;
+- no grayscale/high-contrast ROI pass existed;
+- before camera permission, device labels can be blank; picking an arbitrary
+  enumerated device ID can select the wrong lens when native BarcodeDetector is
+  unavailable.
+
+Resolution in V5_19B:
+- open the camera directly with `facingMode: environment` unless the user explicitly
+  selected a camera;
+- after permission, prefer an actually labelled rear/back camera if the first
+  stream is not rear-facing;
+- run dedicated `BrowserMultiFormatOneDReader` against an enlarged center ROI;
+- run normal + high-contrast + occasional rotated ROI passes;
+- keep `BrowserMultiFormatReader` as secondary fallback for non-1D formats;
+- keep native BarcodeDetector as another independent signal;
+- do not auto-zoom by default; manual zoom remains available;
+- no paid scanning provider or new backend/cloud resource.
+
+### 2026-09-08 — V5_19 global scanner change collided with older continuity contracts
+
+Marker: `V5_19_GLOBAL_PHONE_SCANNER_LEGACY_CONTRACT_COLLISION_20260908`
+
+Observed in the first V5_19 executor:
+- V5_19 intentionally moved separate-phone pairing out of POS and into
+  Operations -> Phone Scanner with a global authenticated Layout host.
+- `tests/v5_13E_continuity_uat.test.mjs` still required
+  `PhoneToPcScannerPanel` inside `POS.jsx`.
+- The test therefore failed after the intentional architecture change.
+- The executor stopped before commit/push/deploy and restored only V5_19-owned
+  files. GitHub V5 remained at
+  `41755f157e330cd0eb3cb8667ee6ea063389d25c`.
+
+Full pre-retry review also found:
+- older V5_14/V5_16 phone-scanner tests still required the POS-owned panel and
+  10-minute pairing contract;
+- the V5_17 scanner regression test still required the superseded native->ZXing
+  timing/auto-zoom implementation rather than the new dedicated 1D ROI decoder;
+- the first V5_19 ProductForm patch would have added a duplicate
+  `data-scanner-capture="barcode"` attribute even though current V5 already has it;
+- the first V5_19 ProductForm patch replaced the proven OcrProductImagePreview
+  flow with a second discovery path that previewed a URL without preserving the
+  existing secure candidate-selection contract;
+- the first executor wrote the same new scanner-test file twice, so the second
+  heredoc silently replaced the first scanner-specific contract.
+
+Resolution in V5_19B:
+- update only the legacy contracts whose architecture is intentionally superseded;
+- preserve USB/Bluetooth scanning, same-device camera scanning, POS processBarcode,
+  OcrProductImagePreview, secure candidate import and post-save AUTO_IMAGE;
+- add stable ScannerContext software injection for the global phone scanner;
+- keep 192-bit Web Crypto pairing entropy while making the V5_19 pairing lifetime
+  persistent until explicit Disconnect/Replace/Forget;
+- bound remote event-dedupe memory;
+- use one dedicated V5_19 test file plus updated semantic legacy tests;
+- assert exactly one barcode scanner-capture attribute and exactly one remaining
+  ProductEnrichmentPanel in Add Product;
+- retain full regression/docs/lint/build/environment/PROD-isolation gates.
+
+### 2026-09-08 — V5_19B nested Operations route test false negative
+
+Marker: `V5_19B_NESTED_OPERATIONS_ROUTE_TEST_FALSE_NEGATIVE_20260908`
+
+Observed during the V5_19B retry:
+- `App.jsx` correctly added `<Route path="phone-scanner" .../>` as a child of
+  `<Route path="operations" ...>`, which resolves to `/operations/phone-scanner`;
+- the updated test incorrectly searched the raw `App.jsx` source for the literal
+  text `operations/phone-scanner`;
+- React Router nested routes do not contain that combined literal in source;
+- `src/config/navigation.js` does contain the full navigable path
+  `/operations/phone-scanner`;
+- the executor stopped before commit/push/deploy and restored only V5_19-owned
+  paths.
+
+Resolution in V5_19C:
+- test the authenticated parent route `path="operations"`;
+- test the nested child route `path="phone-scanner"` with `PhoneScannerSetup`;
+- separately test the navigation contract contains the full
+  `/operations/phone-scanner` URL;
+- make the same correction in both the dedicated V5_19 test and the updated
+  legacy phone-scanner contract;
+- do not weaken scanner, security, Product Image, environment, build or PROD
+  isolation gates.
+
+### 2026-09-08 — V5_19C business-table mutation test false positive
+
+Marker: `V5_19C_ARRAY_FROM_FALSE_POSITIVE_20260908`
+
+Observed during the V5_19C retry:
+- 102 of 103 automated tests passed;
+- the only failure was the V5_19 global-phone safety test;
+- the test used `\.from\(` to prohibit direct Supabase table access;
+- `GlobalPhoneScannerHost.jsx` legitimately contains `Array.from(...)` while
+  converting 24 Web Crypto random bytes into the persistent pairing token;
+- `Array.from(...)` was therefore falsely detected as a Supabase `.from(...)`
+  business-table call;
+- the host itself uses Supabase Realtime `channel(...)` / `removeChannel(...)`
+  and does not perform direct product, sale, purchase, inventory or customer
+  table mutations;
+- the executor stopped before commit/push/deploy and restored only V5_19-owned
+  paths.
+
+Resolution in V5_19D:
+- scope the direct-table prohibition specifically to `supabase.from(...)`;
+- continue prohibiting insert/upsert/update, completeSale and receiveStock from
+  the global phone host and phone remote surface;
+- preserve all existing Realtime-only, shop-isolation, scanner-injection,
+  Product Image, environment, documentation, build and PROD-isolation gates;
+- do not weaken any functional scanner test.

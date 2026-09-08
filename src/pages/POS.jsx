@@ -9,7 +9,6 @@ import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPre
 import ProductThumb from "../components/ui/ProductThumb";
 import ShiftRequiredDialog from "../components/ui/ShiftRequiredDialog";
 import MobileBarcodeScanner from "../components/MobileBarcodeScanner";
-import PhoneToPcScannerPanel from "../components/PhoneToPcScannerPanel";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -697,7 +696,6 @@ export default function POS(){
             {[
               ["USB","Barcode Scanner","USB / Bluetooth"],
               ["CAMERA","This Device Camera","Camera on this device"],
-              ["PHONE","Use Phone","Phone → this PC"],
             ].map(([value,label,help])=>(
               <button
                 key={value}
@@ -748,13 +746,6 @@ export default function POS(){
                   </button>
                 </div>
               </div>
-            ):null}
-
-            {scannerTab==="PHONE"?(
-              <PhoneToPcScannerPanel
-                shopId={profile?.shop_id}
-                onBarcode={(code)=>processBarcode(code)}
-              />
             ):null}
           </div>
         </section>

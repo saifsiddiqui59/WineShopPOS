@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import {
+  BrowserMultiFormatOneDReader,
+  BrowserMultiFormatReader,
+} from "@zxing/browser";
 import { normalizeBarcode, validateGtin } from "../lib/barcode";
 
 const NATIVE_FORMATS = [
@@ -12,26 +15,29 @@ const NATIVE_FORMATS = [
   "itf",
 ];
 
-const NATIVE_TO_ZXING_MS = 3200;
-const SCAN_INTERVAL_MS = 120;
-const AUTO_ZOOM_TARGET = 1.25;
+const FRAME_INTERVAL_MS = 150;
+const MULTI_FORMAT_EVERY = 6;
+const CONTRAST_EVERY = 2;
+const ROTATE_EVERY = 5;
 
-function preferredCamera(devices) {
+function labelledRearCamera(devices) {
   const list = Array.isArray(devices) ? devices : [];
   return (
     list.find((device) =>
-      /back|rear|environment|world/i.test(String(device?.label || "")),
-    ) ||
-    list[list.length - 1] ||
-    null
+      /back|rear|environment|world|wide/i.test(String(device?.label || "")),
+    ) || null
   );
+}
+
+function looksFrontFacing(label) {
+  return /front|user|facetime|selfie/i.test(String(label || ""));
 }
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function zxingConstraints(deviceId = "") {
+function cameraConstraints(deviceId = "") {
   return {
     audio: false,
     video: deviceId
@@ -50,6 +56,119 @@ function zxingConstraints(deviceId = "") {
   };
 }
 
+function drawRoi(video, canvas, widthRatio, heightRatio, targetWidth) {
+  if (!video?.videoWidth || !video?.videoHeight) {
+    return false;
+  }
+
+  const sourceWidth = Math.max(
+    100,
+    Math.floor(video.videoWidth * widthRatio),
+  );
+  const sourceHeight = Math.max(
+    80,
+    Math.floor(video.videoHeight * heightRatio),
+  );
+
+  const sx = Math.floor((video.videoWidth - sourceWidth) / 2);
+  const sy = Math.floor((video.videoHeight - sourceHeight) / 2);
+
+  const finalWidth = Math.max(800, Math.min(targetWidth, sourceWidth * 2));
+  const scale = finalWidth / sourceWidth;
+  const finalHeight = Math.max(220, Math.round(sourceHeight * scale));
+
+  canvas.width = finalWidth;
+  canvas.height = finalHeight;
+
+  const context = canvas.getContext("2d", {
+    alpha: false,
+    willReadFrequently: true,
+  });
+
+  if (!context) return false;
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+
+  context.drawImage(
+    video,
+    sx,
+    sy,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    finalWidth,
+    finalHeight,
+  );
+
+  return true;
+}
+
+function makeHighContrast(sourceCanvas, targetCanvas, invert = false) {
+  targetCanvas.width = sourceCanvas.width;
+  targetCanvas.height = sourceCanvas.height;
+
+  const target = targetCanvas.getContext("2d", {
+    alpha: false,
+    willReadFrequently: true,
+  });
+
+  if (!target) return false;
+
+  target.drawImage(sourceCanvas, 0, 0);
+
+  const image = target.getImageData(
+    0,
+    0,
+    targetCanvas.width,
+    targetCanvas.height,
+  );
+
+  const data = image.data;
+  const contrast = 1.7;
+  const intercept = 128 * (1 - contrast);
+
+  for (let i = 0; i < data.length; i += 4) {
+    const gray =
+      data[i] * 0.299 +
+      data[i + 1] * 0.587 +
+      data[i + 2] * 0.114;
+
+    let value = gray * contrast + intercept;
+    value = clamp(value, 0, 255);
+
+    if (invert) value = 255 - value;
+
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+    data[i + 3] = 255;
+  }
+
+  target.putImageData(image, 0, 0);
+  return true;
+}
+
+function rotateCanvas90(sourceCanvas, targetCanvas) {
+  targetCanvas.width = sourceCanvas.height;
+  targetCanvas.height = sourceCanvas.width;
+
+  const context = targetCanvas.getContext("2d", {
+    alpha: false,
+  });
+
+  if (!context) return false;
+
+  context.save();
+  context.translate(targetCanvas.width, 0);
+  context.rotate(Math.PI / 2);
+  context.drawImage(sourceCanvas, 0, 0);
+  context.restore();
+
+  return true;
+}
+
 export default function MobileBarcodeScanner({
   open,
   title = "Scan Barcode",
@@ -57,11 +176,9 @@ export default function MobileBarcodeScanner({
   onDetected,
 }) {
   const videoRef = useRef(null);
-  const controlsRef = useRef(null);
   const streamRef = useRef(null);
   const detectedRef = useRef(onDetected);
-  const nativeTimerRef = useRef(null);
-  const scanLoopRef = useRef(null);
+  const scanTimerRef = useRef(null);
   const zoomRangeRef = useRef(null);
 
   const [message, setMessage] = useState("");
@@ -69,6 +186,8 @@ export default function MobileBarcodeScanner({
   const [devices, setDevices] = useState([]);
   const [requestedDeviceId, setRequestedDeviceId] = useState("");
   const [activeDeviceId, setActiveDeviceId] = useState("");
+  const [activeCameraLabel, setActiveCameraLabel] = useState("");
+  const [cameraResolution, setCameraResolution] = useState("");
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [zoomSupported, setZoomSupported] = useState(false);
@@ -85,30 +204,24 @@ export default function MobileBarcodeScanner({
 
     let cancelled = false;
     let accepted = false;
-    let actualDeviceId = requestedDeviceId || "";
-    const reader = new BrowserMultiFormatReader();
-    const roiCanvas = document.createElement("canvas");
+    let frame = 0;
 
-    function stopNativeLoop() {
-      if (scanLoopRef.current) {
-        window.clearTimeout(scanLoopRef.current);
-        scanLoopRef.current = null;
+    const oneDReader = new BrowserMultiFormatOneDReader();
+    const multiReader = new BrowserMultiFormatReader();
+
+    const roiWide = document.createElement("canvas");
+    const roiTight = document.createElement("canvas");
+    const roiContrast = document.createElement("canvas");
+    const roiInvert = document.createElement("canvas");
+    const roiRotated = document.createElement("canvas");
+
+    let nativeDetector = null;
+
+    function stopScanner() {
+      if (scanTimerRef.current) {
+        window.clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = null;
       }
-
-      if (nativeTimerRef.current) {
-        window.clearTimeout(nativeTimerRef.current);
-        nativeTimerRef.current = null;
-      }
-    }
-
-    function stopStream() {
-      stopNativeLoop();
-
-      try {
-        controlsRef.current?.stop?.();
-      } catch {}
-
-      controlsRef.current = null;
 
       const stream =
         streamRef.current ||
@@ -142,24 +255,38 @@ export default function MobileBarcodeScanner({
       if (!code) return;
 
       accepted = true;
-      stopStream();
+      stopScanner();
 
       const gtin = validateGtin(code);
 
       setMessage(
         gtin.recognized && !gtin.valid
-          ? `Barcode ${code} scanned, but its GTIN check digit looks unusual. Review before saving.`
-          : `Barcode ${code} scanned.`,
+          ? `Barcode ${code} recognised, but its GTIN check digit looks unusual. Review before saving.`
+          : `Barcode ${code} recognised.`,
       );
 
       try {
-        navigator.vibrate?.(80);
+        navigator.vibrate?.([70, 30, 70]);
       } catch {}
 
       detectedRef.current?.(code, {
         gtin,
         source,
       });
+    }
+
+    function decodeCanvas(reader, canvas, source) {
+      try {
+        const result = reader.decodeFromCanvas(canvas);
+        const text = result?.getText?.();
+
+        if (text) {
+          acceptCode(text, source);
+          return true;
+        }
+      } catch {}
+
+      return false;
     }
 
     async function refreshDevices() {
@@ -169,24 +296,32 @@ export default function MobileBarcodeScanner({
 
         if (!cancelled) {
           setDevices(list || []);
-          return list || [];
         }
-      } catch {}
 
-      return [];
+        return list || [];
+      } catch {
+        return [];
+      }
     }
 
-    async function tuneTrack(stream, autoZoom = true) {
+    async function tuneTrack(stream) {
       const track = stream?.getVideoTracks?.()?.[0];
       if (!track) return;
 
       const settings = track.getSettings?.() || {};
+      const capabilities = track.getCapabilities?.() || {};
+
       if (settings.deviceId) {
-        actualDeviceId = settings.deviceId;
         setActiveDeviceId(settings.deviceId);
       }
 
-      const capabilities = track.getCapabilities?.() || {};
+      setActiveCameraLabel(track.label || "");
+      setCameraResolution(
+        settings.width && settings.height
+          ? `${settings.width}×${settings.height}`
+          : "",
+      );
+
       setTorchSupported(Boolean(capabilities.torch));
 
       if (
@@ -201,6 +336,7 @@ export default function MobileBarcodeScanner({
       }
 
       const zoom = capabilities.zoom;
+
       if (
         zoom &&
         Number.isFinite(Number(zoom.min)) &&
@@ -210,179 +346,77 @@ export default function MobileBarcodeScanner({
         const min = Number(zoom.min);
         const max = Number(zoom.max);
         const step =
-          Number.isFinite(Number(zoom.step)) && Number(zoom.step) > 0
+          Number.isFinite(Number(zoom.step)) &&
+          Number(zoom.step) > 0
             ? Number(zoom.step)
             : 0.1;
 
         zoomRangeRef.current = { min, max, step };
         setZoomSupported(true);
 
-        const current =
+        setZoomValue(
           Number.isFinite(Number(settings.zoom))
             ? Number(settings.zoom)
-            : min;
-
-        setZoomValue(current);
-
-        if (autoZoom && max >= AUTO_ZOOM_TARGET && current < AUTO_ZOOM_TARGET) {
-          const target = clamp(AUTO_ZOOM_TARGET, min, max);
-
-          try {
-            await track.applyConstraints({
-              advanced: [{ zoom: target }],
-            });
-            setZoomValue(target);
-          } catch {}
-        }
+            : min,
+        );
       } else {
         zoomRangeRef.current = null;
         setZoomSupported(false);
       }
     }
 
-    async function startZxing(deviceId = "") {
-      if (cancelled || accepted) return;
-
-      setScannerMode("ZXING");
-      setMessage(
-        "High-resolution scanner active. Hold the phone about 10–20 cm away and make the barcode fill the box.",
-      );
-
-      try {
-        const controls = await reader.decodeFromConstraints(
-          zxingConstraints(deviceId),
-          videoRef.current,
-          (result) => {
-            if (result) {
-              acceptCode(result.getText(), "ZXING_HIGH_RES");
-            }
-          },
+    async function openCamera(deviceId = "") {
+      const stream =
+        await navigator.mediaDevices.getUserMedia(
+          cameraConstraints(deviceId),
         );
 
-        if (cancelled || accepted) {
-          controls?.stop?.();
-          return;
-        }
+      if (cancelled || accepted) {
+        stream.getTracks().forEach((track) => track.stop());
+        return null;
+      }
 
-        controlsRef.current = controls;
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+      videoRef.current.setAttribute("playsinline", "");
+      await videoRef.current.play();
+      await tuneTrack(stream);
 
-        const stream = videoRef.current?.srcObject;
-        streamRef.current = stream || null;
+      return stream;
+    }
 
-        await tuneTrack(stream, true);
-        await refreshDevices();
+    async function ensureRearCamera(initialStream) {
+      if (requestedDeviceId) return initialStream;
 
-        window.setTimeout(() => {
-          if (!cancelled && !accepted) {
-            setMessage(
-              "Still scanning… keep the entire barcode sharp inside the box. Try Zoom +, Torch, Switch Camera, or move slightly farther away.",
-            );
-          }
-        }, 5000);
-      } catch (highResError) {
-        if (cancelled || accepted) return;
+      const list = await refreshDevices();
+      const rear = labelledRearCamera(list);
+      const track = initialStream?.getVideoTracks?.()?.[0];
+      const currentId = track?.getSettings?.()?.deviceId || "";
+      const currentLabel = track?.label || "";
 
+      if (
+        rear?.deviceId &&
+        rear.deviceId !== currentId &&
+        looksFrontFacing(currentLabel)
+      ) {
         try {
-          const controls = await reader.decodeFromVideoDevice(
-            deviceId || undefined,
-            videoRef.current,
-            (result) => {
-              if (result) {
-                acceptCode(result.getText(), "ZXING_DEVICE_FALLBACK");
-              }
-            },
-          );
+          initialStream
+            ?.getTracks?.()
+            ?.forEach((currentTrack) => currentTrack.stop());
 
-          if (cancelled || accepted) {
-            controls?.stop?.();
-            return;
-          }
+          streamRef.current = null;
 
-          controlsRef.current = controls;
-
-          const stream = videoRef.current?.srcObject;
-          streamRef.current = stream || null;
-
-          await tuneTrack(stream, false);
-          await refreshDevices();
-
-          setMessage(
-            "Compatibility scanner active. Keep the barcode centered, flat and steady.",
-          );
-        } catch (fallbackError) {
-          setMessage(
-            `${fallbackError?.message || highResError?.message || "Camera barcode scanning is unavailable."} You can still type the barcode below.`,
-          );
-        }
+          const rearStream = await openCamera(rear.deviceId);
+          setRequestedDeviceId(rear.deviceId);
+          return rearStream;
+        } catch {}
       }
+
+      return initialStream;
     }
 
-    async function detectNativeFrame(detector) {
-      const video = videoRef.current;
-
-      if (
-        !video ||
-        video.readyState < 2 ||
-        !video.videoWidth ||
-        !video.videoHeight
-      ) {
-        return [];
-      }
-
-      try {
-        const full = await detector.detect(video);
-        if (Array.isArray(full) && full.some((item) => item?.rawValue)) {
-          return full;
-        }
-      } catch {}
-
-      try {
-        const cropWidth = Math.floor(video.videoWidth * 0.9);
-        const cropHeight = Math.floor(video.videoHeight * 0.5);
-        const sx = Math.floor((video.videoWidth - cropWidth) / 2);
-        const sy = Math.floor((video.videoHeight - cropHeight) / 2);
-
-        const targetWidth = Math.min(1600, Math.max(900, cropWidth));
-        const scale = targetWidth / cropWidth;
-
-        roiCanvas.width = targetWidth;
-        roiCanvas.height = Math.max(300, Math.round(cropHeight * scale));
-
-        const context = roiCanvas.getContext("2d", {
-          alpha: false,
-          willReadFrequently: false,
-        });
-
-        if (!context) return [];
-
-        context.drawImage(
-          video,
-          sx,
-          sy,
-          cropWidth,
-          cropHeight,
-          0,
-          0,
-          roiCanvas.width,
-          roiCanvas.height,
-        );
-
-        const cropped = await detector.detect(roiCanvas);
-        return Array.isArray(cropped) ? cropped : [];
-      } catch {
-        return [];
-      }
-    }
-
-    async function startNativeDetector() {
-      if (
-        cancelled ||
-        accepted ||
-        !("BarcodeDetector" in window) ||
-        !navigator.mediaDevices?.getUserMedia
-      ) {
-        return false;
-      }
+    async function createNativeDetector() {
+      if (!("BarcodeDetector" in window)) return null;
 
       let formats = NATIVE_FORMATS;
 
@@ -397,94 +431,165 @@ export default function MobileBarcodeScanner({
         }
       } catch {}
 
-      if (!formats.length) return false;
-
-      const videoConstraints = requestedDeviceId
-        ? {
-            deviceId: { exact: requestedDeviceId },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30, min: 15 },
-          }
-        : {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30, min: 15 },
-          };
+      if (!formats.length) return null;
 
       try {
-        const stream =
-          await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: videoConstraints,
-          });
+        return new window.BarcodeDetector({ formats });
+      } catch {
+        return null;
+      }
+    }
 
-        if (cancelled || accepted) {
-          stream.getTracks().forEach((track) => track.stop());
-          return true;
-        }
+    async function scanFrame() {
+      if (
+        cancelled ||
+        accepted ||
+        !videoRef.current
+      ) {
+        return;
+      }
 
-        streamRef.current = stream;
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "");
-        await videoRef.current.play();
+      const video = videoRef.current;
 
-        await tuneTrack(stream, true);
-        await refreshDevices();
-
-        const detector = new window.BarcodeDetector({
-          formats,
-        });
-
-        setScannerMode("NATIVE");
-        setMessage(
-          "Scanning… keep one barcode inside the box. Autofocus and close-up assist are active when supported.",
+      if (
+        video.readyState < 2 ||
+        !video.videoWidth ||
+        !video.videoHeight
+      ) {
+        scanTimerRef.current = window.setTimeout(
+          scanFrame,
+          FRAME_INTERVAL_MS,
         );
+        return;
+      }
 
-        const detect = async () => {
-          if (cancelled || accepted) return;
+      frame += 1;
 
-          const results = await detectNativeFrame(detector);
-          const first = results?.find((item) => item?.rawValue);
+      if (nativeDetector && frame % 2 === 1) {
+        try {
+          const nativeResults =
+            await nativeDetector.detect(video);
 
-          if (first?.rawValue) {
-            acceptCode(first.rawValue, "NATIVE_BARCODE_DETECTOR");
+          const nativeCode =
+            nativeResults?.find((item) => item?.rawValue)?.rawValue;
+
+          if (nativeCode) {
+            acceptCode(
+              nativeCode,
+              "NATIVE_BARCODE_DETECTOR",
+            );
             return;
           }
+        } catch {}
+      }
 
-          if (!cancelled && !accepted) {
-            scanLoopRef.current = window.setTimeout(
-              detect,
-              SCAN_INTERVAL_MS,
-            );
-          }
-        };
+      const wideReady = drawRoi(
+        video,
+        roiWide,
+        0.94,
+        0.46,
+        1280,
+      );
 
-        void detect();
+      if (
+        wideReady &&
+        decodeCanvas(
+          oneDReader,
+          roiWide,
+          "ZXING_1D_ROI_WIDE",
+        )
+      ) {
+        return;
+      }
 
-        nativeTimerRef.current = window.setTimeout(
-          async () => {
-            if (cancelled || accepted) return;
-
-            const fallbackDeviceId =
-              actualDeviceId || requestedDeviceId || "";
-
-            stopStream();
-
-            setMessage(
-              "Switching to high-resolution compatibility scanner…",
-            );
-
-            await startZxing(fallbackDeviceId);
-          },
-          NATIVE_TO_ZXING_MS,
+      if (frame % 2 === 0) {
+        const tightReady = drawRoi(
+          video,
+          roiTight,
+          0.78,
+          0.34,
+          1280,
         );
 
-        return true;
-      } catch {
-        stopStream();
-        return false;
+        if (
+          tightReady &&
+          decodeCanvas(
+            oneDReader,
+            roiTight,
+            "ZXING_1D_ROI_TIGHT",
+          )
+        ) {
+          return;
+        }
+      }
+
+      if (
+        wideReady &&
+        frame % CONTRAST_EVERY === 0 &&
+        makeHighContrast(
+          roiWide,
+          roiContrast,
+          false,
+        ) &&
+        decodeCanvas(
+          oneDReader,
+          roiContrast,
+          "ZXING_1D_HIGH_CONTRAST",
+        )
+      ) {
+        return;
+      }
+
+      if (
+        wideReady &&
+        frame % 4 === 0 &&
+        makeHighContrast(
+          roiWide,
+          roiInvert,
+          true,
+        ) &&
+        decodeCanvas(
+          oneDReader,
+          roiInvert,
+          "ZXING_1D_INVERTED",
+        )
+      ) {
+        return;
+      }
+
+      if (
+        wideReady &&
+        frame % ROTATE_EVERY === 0 &&
+        rotateCanvas90(
+          roiWide,
+          roiRotated,
+        ) &&
+        decodeCanvas(
+          oneDReader,
+          roiRotated,
+          "ZXING_1D_ROTATED",
+        )
+      ) {
+        return;
+      }
+
+      if (
+        wideReady &&
+        frame % MULTI_FORMAT_EVERY === 0 &&
+        decodeCanvas(
+          multiReader,
+          roiWide,
+          "ZXING_MULTI_FORMAT_ROI",
+        )
+      ) {
+        return;
+      }
+
+      if (!cancelled && !accepted) {
+        scanTimerRef.current = window.setTimeout(
+          scanFrame,
+          FRAME_INTERVAL_MS,
+        );
       }
     }
 
@@ -505,19 +610,34 @@ export default function MobileBarcodeScanner({
         return;
       }
 
-      const list = await refreshDevices();
-      let preferredDeviceId = requestedDeviceId;
+      try {
+        setScannerMode("STARTING");
+        setMessage("Opening rear camera…");
 
-      if (!preferredDeviceId && list.length) {
-        preferredDeviceId =
-          preferredCamera(list)?.deviceId || "";
-      }
+        let stream = await openCamera(
+          requestedDeviceId || "",
+        );
 
-      const nativeStarted =
-        await startNativeDetector();
+        stream = await ensureRearCamera(stream);
 
-      if (!nativeStarted && !cancelled && !accepted) {
-        await startZxing(preferredDeviceId);
+        if (!stream || cancelled || accepted) return;
+
+        await refreshDevices();
+        nativeDetector = await createNativeDetector();
+
+        setScannerMode("ONE_D_ROI");
+        setMessage(
+          "1D product-barcode scanner active. Keep the complete barcode inside the rectangle and hold steady.",
+        );
+
+        void scanFrame();
+      } catch (error) {
+        if (cancelled || accepted) return;
+
+        setScannerMode("ERROR");
+        setMessage(
+          `${error?.message || "Could not open barcode camera."} You can still type the barcode below.`,
+        );
       }
     }
 
@@ -525,7 +645,7 @@ export default function MobileBarcodeScanner({
 
     return () => {
       cancelled = true;
-      stopStream();
+      stopScanner();
     };
   }, [
     open,
@@ -569,6 +689,7 @@ export default function MobileBarcodeScanner({
       devices[(currentIndex + 1) % devices.length];
 
     setRequestedDeviceId(next?.deviceId || "");
+
     setMessage(
       `Switching to ${next?.label || "another camera"}…`,
     );
@@ -599,7 +720,7 @@ export default function MobileBarcodeScanner({
       setZoomValue(next);
 
       setMessage(
-        `Camera zoom ${next.toFixed(1)}×. Keep the full barcode inside the box.`,
+        `Camera zoom ${next.toFixed(1)}×. Keep the full barcode inside the rectangle.`,
       );
     } catch (error) {
       setMessage(
@@ -650,8 +771,8 @@ export default function MobileBarcodeScanner({
           <div>
             <h3>{title}</h3>
             <p className="muted-text">
-              Rear camera · high resolution · autofocus/zoom assist when supported ·
-              native detector + ZXing fallback · no paid scanning service.
+              Dedicated 1D product-barcode decoder · rear camera preferred ·
+              local ZXing/native processing · no paid scanning service.
             </p>
           </div>
 
@@ -665,7 +786,7 @@ export default function MobileBarcodeScanner({
           </button>
         </div>
 
-        <div className="mobile-barcode-video-shell mobile-barcode-video-shell-v17">
+        <div className="mobile-barcode-video-shell mobile-barcode-video-shell-v19">
           <video
             ref={videoRef}
             autoPlay
@@ -674,7 +795,7 @@ export default function MobileBarcodeScanner({
           />
 
           <div
-            className="mobile-barcode-guide mobile-barcode-guide-v17"
+            className="mobile-barcode-guide mobile-barcode-guide-v19"
             aria-hidden="true"
           >
             <span className="mobile-barcode-scan-line" />
@@ -683,20 +804,35 @@ export default function MobileBarcodeScanner({
 
         <div className="mobile-barcode-status">
           <strong>
-            {scannerMode === "NATIVE"
-              ? "Fast phone detector"
-              : scannerMode === "ZXING"
-                ? "High-resolution scanner"
-                : "Camera"}
+            {scannerMode === "ONE_D_ROI"
+              ? "1D Product Barcode Scanner"
+              : scannerMode === "STARTING"
+                ? "Opening camera"
+                : scannerMode === "ERROR"
+                  ? "Camera error"
+                  : "Camera"}
           </strong>
+
           <span>{message}</span>
+
+          <small className="mobile-barcode-camera-meta">
+            {[
+              activeCameraLabel || "Rear camera preferred",
+              cameraResolution || null,
+              zoomSupported
+                ? `Zoom ${zoomValue.toFixed(1)}×`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </small>
         </div>
 
         <div className="mobile-barcode-tip">
-          <strong>For bottle/can barcodes</strong>
+          <strong>Best way to scan bottle/can barcode</strong>
           <span>
-            Hold the phone 10–20 cm away, avoid glare, and let the complete barcode
-            fill the rectangle. Moving slightly farther away often focuses better.
+            Keep all black bars and the numbers visible inside the rectangle.
+            Hold 10–20 cm away. If blurry, move slightly farther away before using Zoom +.
           </span>
         </div>
 

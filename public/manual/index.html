@@ -1047,6 +1047,46 @@ barcode:</p>
 <p>WineShopPOS first tries the device&#39;s native barcode detector when available and
 then automatically switches to the high-resolution compatibility scanner.
 Manual barcode entry remains available as a fallback.</p>
+<h3 id="v5-19-mobile-barcode-recognition">V5.19 Mobile Barcode Recognition</h3>
+<p>The camera scanner is optimized for common 1D product barcodes such as EAN/UPC.</p>
+<p>For best results:</p>
+<ol>
+<li>keep the complete bars and printed numbers inside the rectangle;</li>
+<li>hold the phone about 10–20 cm away;</li>
+<li>keep the bottle/can still for 2–3 seconds;</li>
+<li>if blurry, move slightly farther away before using Zoom +;</li>
+<li>use Torch in poor light or on glossy labels;</li>
+<li>use Switch Camera if the wrong lens is active;</li>
+<li>typed barcode remains available for damaged/curved labels.</li>
+</ol>
+<p>The scanner performs multiple local center-region decode passes. No paid barcode
+recognition service is used.</p>
+<h3 id="global-phone-barcode-scanner">Global Phone Barcode Scanner</h3>
+<p>PC:</p>
+<ol>
+<li>Open Operations -&gt; Phone Scanner.</li>
+<li>Select Connect Phone.</li>
+<li>Scan the QR once.</li>
+<li>Keep using the paired phone while the WineShopPOS authenticated app is open.</li>
+<li>Use Replace / Reconnect Phone to rotate the pairing.</li>
+<li>Use Disconnect Phone to invalidate the current PC listener.</li>
+</ol>
+<p>Phone:</p>
+<ul>
+<li>Auto Scan ON reopens the scanner after an acknowledged scan.</li>
+<li>Auto Scan OFF lets you press Scan Barcode for each item.</li>
+<li>Forget This PC removes the saved phone pairing.</li>
+</ul>
+<p>The current V5.19 pairing persists until explicit disconnect/replacement/forget;
+it no longer uses the historical 10-minute timeout. Treat the QR as a possession
+credential and do not share it.</p>
+<p>The phone scanner sends barcode events only. Product, stock, shift, receiving and
+sale authority remains on the authenticated WineShopPOS PC/browser.</p>
+<h3 id="add-product-product-image">Add Product Product Image</h3>
+<p>The Add Product page keeps one <code>Find Product / Image</code> action.
+Product Image preview still loads automatically before save when a candidate is
+available. Secure image selection/import and the post-save automatic Product
+Image workflow remain unchanged. Image processing never changes barcode.</p>
 </article>
     </div>
   </main>

@@ -10,6 +10,7 @@ import AnimatedBrand from "./AnimatedBrand";
 import SpiritualImageTile from "./SpiritualImageTile";
 import { watchThemePreference } from "../lib/theme";
 import { MAIN_MODULES } from "../config/navigation";
+import GlobalPhoneScannerHost from "./GlobalPhoneScannerHost";
 
 const COLLAPSE_KEY = "wineshop_sidebar_collapsed_v1";
 
@@ -68,7 +69,7 @@ export default function Layout() {
     mobileOpen ? "mobile-sidebar-open" : "",
   ].filter(Boolean).join(" ");
 
-  return <div className={shellClass}>
+  return <div className={shellClass}><GlobalPhoneScannerHost/>
     <aside className="sidebar" aria-label="Application navigation">
       <AnimatedBrand collapsed={compactSidebar}/>
       <nav className="nav-menu" aria-label="Main navigation">

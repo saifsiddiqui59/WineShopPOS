@@ -218,3 +218,35 @@ This repair applies both to **This Device Camera** and the separate-phone scanne
 because both use the same `MobileBarcodeScanner` component.
 
 **Human retest remains required.**
+
+## V5_19 current contract — global persistent phone scanner
+
+This section supersedes the earlier V5_14/V5_16 **10-minute pairing lifetime**
+and POS-owned `PhoneToPcScannerPanel` contract for the current V5 QA design.
+The earlier sections remain historical implementation records.
+
+Current PC flow:
+`Operations -> Phone Scanner -> Connect Phone`
+
+Current architecture:
+- `GlobalPhoneScannerHost` is mounted in the authenticated Layout;
+- `ScannerContext.injectScan()` receives acknowledged phone barcode events;
+- POS keeps physical USB/Bluetooth and This Device Camera paths;
+- POS no longer owns the phone-pairing UI;
+- the public phone route remains HashRouter-safe;
+- Supabase Realtime Broadcast remains the only transport;
+- event-id retry/dedupe remains;
+- pairing secret remains 192-bit Web Crypto entropy;
+- pairing persists until explicit Disconnect/Replace/Forget;
+- dedupe cache is bounded for long-running POS sessions;
+- no database mutation or billing authority is exposed to the phone.
+
+Security note:
+the QR/token remains a possession credential and must not be shared. Persistence
+is an intentional V5_19 QA requirement; Disconnect/Replace rotates the PC
+listener and Forget This PC removes the phone-side saved pairing.
+
+The shared mobile camera now uses a dedicated 1D ROI decoder with MultiFormat and
+native fallbacks. No new paid service or backend/cloud resource is introduced.
+
+**Human retest is required before V5 closure.**

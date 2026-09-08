@@ -1251,3 +1251,48 @@ barcode:
 WineShopPOS first tries the device's native barcode detector when available and
 then automatically switches to the high-resolution compatibility scanner.
 Manual barcode entry remains available as a fallback.
+
+### V5.19 Mobile Barcode Recognition
+
+The camera scanner is optimized for common 1D product barcodes such as EAN/UPC.
+
+For best results:
+1. keep the complete bars and printed numbers inside the rectangle;
+2. hold the phone about 10–20 cm away;
+3. keep the bottle/can still for 2–3 seconds;
+4. if blurry, move slightly farther away before using Zoom +;
+5. use Torch in poor light or on glossy labels;
+6. use Switch Camera if the wrong lens is active;
+7. typed barcode remains available for damaged/curved labels.
+
+The scanner performs multiple local center-region decode passes. No paid barcode
+recognition service is used.
+
+### Global Phone Barcode Scanner
+
+PC:
+1. Open Operations -> Phone Scanner.
+2. Select Connect Phone.
+3. Scan the QR once.
+4. Keep using the paired phone while the WineShopPOS authenticated app is open.
+5. Use Replace / Reconnect Phone to rotate the pairing.
+6. Use Disconnect Phone to invalidate the current PC listener.
+
+Phone:
+- Auto Scan ON reopens the scanner after an acknowledged scan.
+- Auto Scan OFF lets you press Scan Barcode for each item.
+- Forget This PC removes the saved phone pairing.
+
+The current V5.19 pairing persists until explicit disconnect/replacement/forget;
+it no longer uses the historical 10-minute timeout. Treat the QR as a possession
+credential and do not share it.
+
+The phone scanner sends barcode events only. Product, stock, shift, receiving and
+sale authority remains on the authenticated WineShopPOS PC/browser.
+
+### Add Product Product Image
+
+The Add Product page keeps one `Find Product / Image` action.
+Product Image preview still loads automatically before save when a candidate is
+available. Secure image selection/import and the post-save automatic Product
+Image workflow remain unchanged. Image processing never changes barcode.

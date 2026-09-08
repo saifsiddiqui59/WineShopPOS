@@ -60,6 +60,7 @@ import Audit from "./pages/Audit";
 import Account from "./pages/Account";
 import ProductCleanup from "./pages/ProductCleanup";
 import PhoneScannerRemote from "./pages/PhoneScannerRemote";
+import PhoneScannerSetup from "./pages/PhoneScannerSetup";
 
 function module(title, subtitle, tabs) {
   return <ModuleLayout title={title} subtitle={subtitle} tabs={tabs}/>;
@@ -125,6 +126,7 @@ export default function App() {
           <Route index element={<Navigate to="shifts" replace/>}/>
           <Route path="shifts" element={<Shifts/>}/>
           <Route path="offline" element={<OfflineQueue/>}/>
+          <Route path="phone-scanner" element={<PhoneScannerSetup/>}/>
           <Route element={<RequireRole roles={["ADMIN","MANAGER"]}/>}> 
             <Route path="expenses" element={<Expenses/>}/>
             <Route path="approvals" element={<Approvals/>}/>
