@@ -9,6 +9,7 @@ import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPre
 import ProductThumb from "../components/ui/ProductThumb";
 import ShiftRequiredDialog from "../components/ui/ShiftRequiredDialog";
 import MobileBarcodeScanner from "../components/MobileBarcodeScanner";
+import PhoneToPcScannerPanel from "../components/PhoneToPcScannerPanel";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -495,52 +496,165 @@ export default function POS(){
           <div className="pos-v5h-status-line" role="status">{message}</div>
         </div>
 
-        {!search.trim()?<div className="pos-v5h-category-strip">
-          {categoryOptions.map((category)=>(
-            <button
-              type="button"
-              key={category}
-              className={categoryFilter===category?"pos-v5h-category active":"pos-v5h-category"}
-              onClick={()=>{setCategoryFilter(category);setSearch("");searchInputRef.current?.focus();}}
-            >
-              {category==="ALL"?"All Products":category}
-            </button>
-          ))}
-        </div>:null}
-
-        <div className="pos-v5h-catalog-header">
-          <div><strong>{search.trim()?"Search Results":categoryFilter==="ALL"?"Quick Products":categoryFilter}</strong><span>{displayProducts.length} shown</span></div>
-          {search?<button type="button" className="text-button" onClick={()=>{setSearch("");searchInputRef.current?.focus();}}>Clear search</button>:null}
-        </div>
-
-        {displayProducts.length?<div className="pos-v5h-product-grid">
-          {displayProducts.map((product)=>{
-            const stock=getStock(product.id);
-            const inCart=qty(product.id);
-            return <button
-              type="button"
-              key={product.id}
-              className={`pos-v5h-product-tile${stock<=0?" sold-out":""}`}
-              disabled={stock<=0}
-              onClick={()=>{if(add(product)){setSearch("");searchInputRef.current?.focus();}}}
-            >
-              <div className="pos-v5h-product-top">
-                <ProductThumb product={product} size="md"/>
-                {inCart>0?<span className="pos-v5h-cart-badge">{inCart}</span>:null}
+        {search.trim() ? (
+          <>
+            <div className="pos-v5h-catalog-header">
+              <div>
+                <strong>Search Results</strong>
+                <span>{displayProducts.length} shown</span>
               </div>
-              <strong className="pos-v5h-product-name">{product.name}</strong>
-              <span className="pos-v5h-product-meta">{[product.brand,product.size].filter(Boolean).join(" · ")}</span>
-              <div className="pos-v5h-product-foot">
-                <strong>{money.format(product.price)}</strong>
-                <span className={stock<=product.minimumStock?"low":""}>{stock<=0?"Out of stock":`Stock ${stock}`}</span>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setSearch("");
+                  searchInputRef.current?.focus();
+                }}
+              >
+                Clear search
+              </button>
+            </div>
+
+            {displayProducts.length ? (
+              <div className="pos-v5h-product-grid">
+                {displayProducts.map((product) => {
+                  const stock = getStock(product.id);
+                  const inCart = qty(product.id);
+
+                  return (
+                    <button
+                      type="button"
+                      key={product.id}
+                      className={`pos-v5h-product-tile${stock <= 0 ? " sold-out" : ""}`}
+                      disabled={stock <= 0}
+                      onClick={() => {
+                        if (add(product)) {
+                          setSearch("");
+                          searchInputRef.current?.focus();
+                        }
+                      }}
+                    >
+                      <div className="pos-v5h-product-top">
+                        <ProductThumb product={product} size="md" />
+                        {inCart > 0 ? (
+                          <span className="pos-v5h-cart-badge">{inCart}</span>
+                        ) : null}
+                      </div>
+                      <strong className="pos-v5h-product-name">{product.name}</strong>
+                      <span className="pos-v5h-product-meta">
+                        {[product.brand, product.size].filter(Boolean).join(" · ")}
+                      </span>
+                      <div className="pos-v5h-product-foot">
+                        <strong>{money.format(product.price)}</strong>
+                        <span className={stock <= product.minimumStock ? "low" : ""}>
+                          {stock <= 0 ? "Out of stock" : `Stock ${stock}`}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            </button>
-          })}
-        </div>:<div className="panel pos-v5h-empty-products"><strong>No matching product</strong><span>Try another name, barcode, SKU or category.</span></div>}
+            ) : (
+              <div className="panel pos-v5h-empty-products">
+                <strong>No matching product</strong>
+                <span>Try another name, barcode, SKU or category.</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <details className="panel pos-v5h-customer-tools pos-quick-products-tools">
+            <summary>
+              <span>
+                <strong>Quick Products</strong>
+                <small>
+                  Tap common products instead of scanning · {quickProducts.length} shown
+                </small>
+              </span>
+              <span className="pos-v5h-summary-action">Open</span>
+            </summary>
+
+            <div className="pos-v5h-customer-body">
+              <div className="pos-v5h-category-strip">
+                {categoryOptions.map((category) => (
+                  <button
+                    type="button"
+                    key={category}
+                    className={
+                      categoryFilter === category
+                        ? "pos-v5h-category active"
+                        : "pos-v5h-category"
+                    }
+                    onClick={() => {
+                      setCategoryFilter(category);
+                      setSearch("");
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    {category === "ALL" ? "All Products" : category}
+                  </button>
+                ))}
+              </div>
+
+              <div className="pos-v5h-catalog-header">
+                <div>
+                  <strong>
+                    {categoryFilter === "ALL" ? "Quick Products" : categoryFilter}
+                  </strong>
+                  <span>{quickProducts.length} shown</span>
+                </div>
+              </div>
+
+              {quickProducts.length ? (
+                <div className="pos-v5h-product-grid">
+                  {quickProducts.map((product) => {
+                    const stock = getStock(product.id);
+                    const inCart = qty(product.id);
+
+                    return (
+                      <button
+                        type="button"
+                        key={product.id}
+                        className={`pos-v5h-product-tile${stock <= 0 ? " sold-out" : ""}`}
+                        disabled={stock <= 0}
+                        onClick={() => {
+                          if (add(product)) {
+                            setSearch("");
+                            searchInputRef.current?.focus();
+                          }
+                        }}
+                      >
+                        <div className="pos-v5h-product-top">
+                          <ProductThumb product={product} size="md" />
+                          {inCart > 0 ? (
+                            <span className="pos-v5h-cart-badge">{inCart}</span>
+                          ) : null}
+                        </div>
+                        <strong className="pos-v5h-product-name">{product.name}</strong>
+                        <span className="pos-v5h-product-meta">
+                          {[product.brand, product.size].filter(Boolean).join(" · ")}
+                        </span>
+                        <div className="pos-v5h-product-foot">
+                          <strong>{money.format(product.price)}</strong>
+                          <span className={stock <= product.minimumStock ? "low" : ""}>
+                            {stock <= 0 ? "Out of stock" : `Stock ${stock}`}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="pos-v5h-empty-products">
+                  <strong>No products in this category</strong>
+                </div>
+              )}
+            </div>
+          </details>
+        )}
 
         <MobileBarcodeScanner
           open={mobileScannerOpen}
-          title="Scan Product for Billing"
+          title="Camera Scan Product on This Device"
           onClose={()=>setMobileScannerOpen(false)}
           onDetected={(code)=>{
             setMobileScannerOpen(false);
@@ -551,8 +665,8 @@ export default function POS(){
         <details className="panel pos-v5h-customer-tools pos-mobile-scanner-tools">
           <summary>
             <span>
-              <strong>Mobile Barcode Scanner</strong>
-              <small>Use the phone camera to scan a product into the current bill</small>
+              <strong>Camera Scan on This Device</strong>
+              <small>Use the camera attached to this phone, tablet or PC</small>
             </span>
             <span className="pos-v5h-summary-action">Open</span>
           </summary>
@@ -567,10 +681,16 @@ export default function POS(){
               </button>
             </div>
             <p className="muted-text">
+              This scans with the camera on the device currently running WineShopPOS.
               Physical USB/keyboard barcode scanners continue to work automatically.
             </p>
           </div>
         </details>
+
+        <PhoneToPcScannerPanel
+          shopId={profile?.shop_id}
+          onBarcode={(code) => processBarcode(code)}
+        />
 
         <details className="panel pos-v5h-customer-tools">
           <summary>

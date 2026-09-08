@@ -6619,3 +6619,98 @@ html[data-theme="dark"] .product-enrichment-comparison > div {
 .pos-mobile-scanner-tools{
   margin-top:12px;
 }
+
+/* V5_14_PHONE_TO_PC_SCANNER_20260908 */
+.pos-quick-products-tools {
+  margin-top: 10px;
+}
+
+.pos-quick-products-tools > summary,
+.pos-phone-pc-tools > summary {
+  cursor: pointer;
+}
+
+.phone-pc-pairing {
+  display: grid;
+  grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.phone-pc-qr {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  width: fit-content;
+}
+
+.phone-pc-pairing-info {
+  display: grid;
+  gap: 12px;
+}
+
+.phone-pc-status {
+  display: inline-grid;
+  gap: 3px;
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.18);
+  font-size: 12px;
+}
+
+.phone-pc-status.connected {
+  border-color: rgba(34,197,94,.65);
+  background: rgba(34,197,94,.10);
+}
+
+.phone-pc-status span {
+  opacity: .78;
+}
+
+.phone-pc-steps {
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 5px;
+}
+
+.phone-pc-last-scan {
+  display: grid;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 1px solid rgba(79,138,255,.32);
+  border-radius: 9px;
+  background: rgba(79,138,255,.08);
+}
+
+.phone-scanner-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: var(--ws-page, #0b0d10);
+}
+
+.phone-scanner-card {
+  width: min(720px, 100%);
+}
+
+.phone-scanner-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+@media (max-width: 720px) {
+  .phone-pc-pairing {
+    grid-template-columns: 1fr;
+  }
+
+  .phone-scanner-heading {
+    display: grid;
+  }
+}

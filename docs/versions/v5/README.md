@@ -70,3 +70,12 @@ Source-of-truth precedence remains:
 
 `CURRENT V5 SOURCE + CURRENT MIGRATIONS + VERIFIED V5 DEPLOYMENT > OLD DOCUMENTATION`
 <!-- /V5_13B_CONTINUITY_CURRENT_STATE_20260908 -->
+
+
+## V5.14 POS scanner continuation
+
+Current phone-to-PC scanner contract:
+`docs/versions/v5/features/POS_PHONE_TO_PC_BARCODE_SCANNER.md`
+
+Current V5 continuation authority remains:
+`docs/versions/v5/V5_CURRENT_STATE_AND_CONTINUATION.md`

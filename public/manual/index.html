@@ -198,7 +198,42 @@ history.</p>
 <li>The scanned barcode is prefilled.</li>
 </ul>
 <h3 id="scanner-behavior">Scanner behavior</h3>
-<p>The scanner works globally on the POS page. Rapid scanner input ending with Enter is separated from normal human typing. If the scanner appears unreliable, open Scanner diagnostics from the POS module or Admin Hardware.</p>
+<p>WineShopPOS POS supports three clearly different scan methods:</p>
+<ol>
+<li><strong>Physical barcode scanner</strong> — a USB/Bluetooth keyboard-style barcode scanner
+works automatically on the POS page. Rapid scanner input ending with Enter is
+separated from normal human typing.</li>
+<li><strong>Camera Scan on This Device</strong> — uses the camera attached to the phone, tablet
+or PC currently running WineShopPOS.</li>
+<li><strong>Phone as Barcode Scanner</strong> — pairs a separate phone to the PC POS so the
+phone behaves like a wireless barcode gun.</li>
+</ol>
+<p>If the physical scanner appears unreliable, open Scanner diagnostics from the POS
+module or Admin Hardware.</p>
+<h3 id="quick-products">Quick Products</h3>
+<p>Quick Products is collapsible. Open it only when you want to tap common products.
+Typing in product search still shows Search Results directly.</p>
+<h3 id="phone-as-barcode-scanner">Phone as Barcode Scanner</h3>
+<p>On the PC:</p>
+<ol>
+<li>Open POS &amp; Billing -&gt; Billing.</li>
+<li>Expand <strong>Phone as Barcode Scanner</strong>.</li>
+<li>Select <strong>Connect Phone Scanner</strong>.</li>
+<li>A temporary QR code appears for 10 minutes.</li>
+</ol>
+<p>On the separate phone:</p>
+<ol>
+<li>Scan the QR with the phone camera app.</li>
+<li>Open the WineShopPOS scanner link.</li>
+<li>Select <strong>Start Scanning</strong>.</li>
+<li>Point the phone camera at a product barcode.</li>
+<li>The barcode is sent to the paired PC and the PC performs the normal product
+lookup/cart action.</li>
+<li>The phone scanner automatically starts again after a successful scan.</li>
+</ol>
+<p>The phone only sends barcode numbers. The sale, price, stock check, payment and
+receipt remain on the authenticated PC.</p>
+<p>Use <strong>Disconnect</strong> on the PC when finished. Do not share the temporary QR code.</p>
 <h2 id="5-sales-returns-voids">5. Sales / Returns / Voids</h2>
 <p>Open POS &amp; Billing → Sales to find invoices.</p>
 <p>For a return:</p>

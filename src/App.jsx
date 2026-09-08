@@ -59,6 +59,7 @@ import Settings from "./pages/Settings";
 import Audit from "./pages/Audit";
 import Account from "./pages/Account";
 import ProductCleanup from "./pages/ProductCleanup";
+import PhoneScannerRemote from "./pages/PhoneScannerRemote";
 
 function module(title, subtitle, tabs) {
   return <ModuleLayout title={title} subtitle={subtitle} tabs={tabs}/>;
@@ -68,6 +69,7 @@ export default function App() {
   return <><EnvironmentBadge/><Routes>
     <Route path="/login" element={<Login/>}/>
     <Route path="/update-password" element={<UpdatePassword/>}/>
+    <Route path="/phone-scanner" element={<PhoneScannerRemote/>}/>
 
     <Route element={<RequireAuth/>}>
       <Route element={<SaaSAccessBoundary/>}>

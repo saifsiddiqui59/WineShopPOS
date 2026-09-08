@@ -1557,3 +1557,55 @@ Resolution in V5_13D:
 - fail immediately if any trailing spaces/tabs remain in AutomationHub;
 - keep `git diff --cached --check` as the final staging gate;
 - do not normalize or touch unrelated files.
+
+### 2026-09-08 — V5_14B Realtime regression test failed on line-broken method chaining
+
+Marker: `V5_14B_REALTIME_TEST_DOT_CHAIN_LINEBREAK_FALSE_NEGATIVE_20260908`
+
+Observed:
+- V5_14B reached the full Node regression suite.
+- 76 tests ran: 75 PASS, 1 FAIL.
+- The failing test expected the literal source pattern `supabase.channel`.
+- The actual valid source intentionally formats the call across lines as:
+
+  `supabase`
+  `.channel(...)`
+
+- Therefore the implementation was present, but the source-text test regex was
+  too strict and produced a false negative.
+- The executor stopped before commit/push/deploy and restored only V5_14B-owned
+  files.
+- GitHub V5 remained at
+  `618fb0d9198b94af0eb1095d2bac491c91b9c268`.
+
+Resolution in V5_14C:
+- make the source-contract regex whitespace tolerant:
+  `supabase\\s*\\.channel`;
+- retain checks that both phone and PC use the existing Supabase Realtime
+  Broadcast path;
+- retain checks forbidding direct insert/upsert/update mutations in the remote
+  scanner components.
+
+### 2026-09-08 — V5_14 feature-document security wording test mismatch
+
+Marker: `V5_14_FEATURE_DOC_TEMPORARY_SECRET_TEST_WORDING_MISMATCH_20260908`
+
+Observed:
+- V5_14 created the phone-to-PC scanner implementation and its documentation.
+- The automated feature-document test expected the exact phrase
+  `temporary pairing secret`.
+- The feature document described the same control as
+  `192-bit random pairing secret` and separately documented the 10-minute
+  temporary pairing lifetime.
+- The behavior/security design was unchanged; this was a documentation-contract
+  wording mismatch.
+- The executor stopped before commit/push/deploy and restored only V5_14-owned files.
+- GitHub V5 remained at
+  `618fb0d9198b94af0eb1095d2bac491c91b9c268`.
+
+Resolution in V5_14B:
+- use the explicit phrase `192-bit random temporary pairing secret` in the
+  canonical feature/security document;
+- retain the 10-minute expiry and Web Crypto requirements;
+- keep the documentation regression test so future wording cannot accidentally
+  weaken or hide the temporary-credential contract.

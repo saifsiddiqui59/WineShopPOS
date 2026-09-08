@@ -170,7 +170,47 @@ If the barcode is unknown:
 
 ### Scanner behavior
 
-The scanner works globally on the POS page. Rapid scanner input ending with Enter is separated from normal human typing. If the scanner appears unreliable, open Scanner diagnostics from the POS module or Admin Hardware.
+WineShopPOS POS supports three clearly different scan methods:
+
+1. **Physical barcode scanner** — a USB/Bluetooth keyboard-style barcode scanner
+   works automatically on the POS page. Rapid scanner input ending with Enter is
+   separated from normal human typing.
+2. **Camera Scan on This Device** — uses the camera attached to the phone, tablet
+   or PC currently running WineShopPOS.
+3. **Phone as Barcode Scanner** — pairs a separate phone to the PC POS so the
+   phone behaves like a wireless barcode gun.
+
+If the physical scanner appears unreliable, open Scanner diagnostics from the POS
+module or Admin Hardware.
+
+### Quick Products
+
+Quick Products is collapsible. Open it only when you want to tap common products.
+Typing in product search still shows Search Results directly.
+
+### Phone as Barcode Scanner
+
+On the PC:
+
+1. Open POS & Billing -> Billing.
+2. Expand **Phone as Barcode Scanner**.
+3. Select **Connect Phone Scanner**.
+4. A temporary QR code appears for 10 minutes.
+
+On the separate phone:
+
+1. Scan the QR with the phone camera app.
+2. Open the WineShopPOS scanner link.
+3. Select **Start Scanning**.
+4. Point the phone camera at a product barcode.
+5. The barcode is sent to the paired PC and the PC performs the normal product
+   lookup/cart action.
+6. The phone scanner automatically starts again after a successful scan.
+
+The phone only sends barcode numbers. The sale, price, stock check, payment and
+receipt remain on the authenticated PC.
+
+Use **Disconnect** on the PC when finished. Do not share the temporary QR code.
 
 ## 5. Sales / Returns / Voids
 

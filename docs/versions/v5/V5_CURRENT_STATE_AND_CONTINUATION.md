@@ -20,7 +20,7 @@ Do **not** reset the project to old V3/V4 chapters.
 
 - Repository: `saifsiddiqui59/WineShopPOS`
 - Branch: `V5`
-- V5_13B starting parent: `59a800d043050e8566adb7a38377c537e221bd7f`
+- Current V5 baseline before V5_14: `618fb0d9198b94af0eb1095d2bac491c91b9c268`
 - V5 QA preview: `https://wspv5qa3a5e8018.z29.web.core.windows.net/`
 - DEV Supabase: `WineshopPOS_DEV`
 - DEV project ref: `juhcypzoacauzmtzqnwd`
@@ -96,8 +96,39 @@ Never hide the problem by capping Price/Bottle.
 ### POS Billing
 
 The existing USB/keyboard scanner path remains authoritative and unchanged.
-POS also exposes a collapsible **Mobile Barcode Scanner** panel, patterned after
-Customer & Offers, with **Scan Product** using the existing free mobile scanner.
+
+POS scanner wording is intentionally separated:
+
+- **Camera Scan on This Device** uses the camera attached to the current phone,
+  tablet or PC running WineShopPOS.
+- **Phone as Barcode Scanner** pairs a separate phone to the PC POS using a
+  temporary QR and existing Supabase Realtime Broadcast.
+- **Quick Products** is collapsible to reduce cashier-screen clutter.
+
+The separate phone has no billing authority. It sends barcode numbers only;
+the authenticated PC still runs the existing product lookup, shift, stock and
+cart logic.
+
+## V5_14 Phone -> PC scanner
+
+V5_14 adds a Barcode-to-PC style workflow without a new backend resource:
+
+PC:
+`Phone as Barcode Scanner -> Connect Phone Scanner -> QR`
+
+Phone:
+`scan QR -> Start Scanning -> barcode -> existing Supabase Realtime -> PC processBarcode()`
+
+Security:
+- 192-bit temporary pairing secret;
+- 10-minute expiry;
+- no product/customer/inventory data exposed by the phone page;
+- phone cannot complete a sale;
+- disconnect/new pairing stops the old PC listener;
+- no new paid service or automatic paid fallback.
+
+Canonical feature document:
+`docs/versions/v5/features/POS_PHONE_TO_PC_BARCODE_SCANNER.md`
 
 ## Safe executor workflow for every continuation
 
@@ -117,16 +148,18 @@ Never automatically use destructive cleanup:
 
 Stage only explicit owned paths.
 
-## Remaining manual UAT after V5_13D automation
+## Remaining manual UAT after V5_14 automation
 
 1. Subcategory: select predefined value, select Other / Custom, save/edit product.
 2. First-time OCR product: Product Image choice in same creation flow and return to invoice.
 3. Invoice 15983 end-to-end.
 4. Invoice 16845 end-to-end, including pack suggestions and financial totals.
 5. Mobile barcode scanner on a physical phone.
-6. POS mobile Scan Product and existing physical USB scanner.
-7. Offline draft -> reconnect -> SYNCING/SYNCED.
-8. Receive reconnect/idempotency: no duplicate stock.
-9. Cross-shop negative access for invoice/product/image/purchase data.
+6. Camera Scan on This Device and existing physical USB scanner.
+7. Phone as Barcode Scanner: QR pairing, known/unknown barcode, repeat scan,
+   disconnect and expired-session negative test.
+8. Offline draft -> reconnect -> SYNCING/SYNCED.
+9. Receive reconnect/idempotency: no duplicate stock.
+10. Cross-shop negative access for invoice/product/image/purchase data.
 
 V5 is not considered fully closed until the applicable human UAT passes.
