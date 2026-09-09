@@ -355,3 +355,24 @@ OCR learning is centralized in `src/lib/ocrLearningRules.js`. Contextual rules
 include numeric-size `MI/M1 -> ml` correction, so explicit OCR evidence such as
 `500 MI` resolves to 500 ml before CAN/24/12-pack fallback heuristics can run.
 <!-- /V5_23A_ATOMIC_PURCHASE_PRODUCT_CREATION_20260909 -->
+
+<!-- V5_24_CONNECTIVITY_DRAFT_STABILITY_20260909 -->
+## V5_24 — Connectivity + Purchase draft stability hotfix
+
+Scope is intentionally narrow and frontend-only.
+
+- Global ONLINE/OFFLINE display uses actual DEV Supabase reachability rather than trusting `navigator.onLine`.
+- Purchase Receiving uses the same backend reachability rule and no longer disables Approve & Receive Stock solely because the browser reports offline.
+- A meaningful local encrypted draft is still retained before a receive attempt.
+- Blank manual Receive Stock workspaces do not create local drafts.
+- Existing cleanup removes only decryptable, truly-empty `manual:` drafts; meaningful/ingestion/unknown rows are preserved.
+- ShopContext refresh no longer refuses server refresh solely because `navigator.onLine` is false.
+- V5_23 `receiveStock` -> `receive_purchase_v3`, OCR normalization, Product Master/barcode atomicity and purchase identity logic are unchanged.
+- No database migration, Function App code change or PROD mutation is part of V5_24.
+
+Human UAT after deployment:
+1. Header changes CHECKING -> ONLINE when DEV Supabase is reachable even if `navigator.onLine` is false.
+2. Opening/refreshing a blank manual Receive Stock page does not increase local draft count.
+3. Any remaining local draft count represents preserved meaningful/ingestion/unknown rows, not blindly deleted data.
+4. Resume invoice 16845 V5_23 atomic purchase UAT.
+<!-- /V5_24_CONNECTIVITY_DRAFT_STABILITY_20260909 -->

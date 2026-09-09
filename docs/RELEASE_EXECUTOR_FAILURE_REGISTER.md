@@ -2320,3 +2320,108 @@ Permanent prevention:
 - Any receive failure must roll back all such writes.
 - Client-side UI checks are not transaction proof; the server RPC repeats identity,
   size and barcode guards.
+
+### 2026-09-09 — V5_24B full regression still required the obsolete navigator-offline blocking message
+
+Marker: `V5_24B_STALE_FINAL_CONSOLIDATION_OFFLINE_CONTRACT_20260909`
+
+Observed:
+V5_24B completed its source patch and dedicated V5_24 regression, then the full
+suite failed in `tests/v5FinalConsolidation.test.mjs` because the historical
+"authoritative/offline draft" test still required:
+`Internet connection required to post inventory`.
+
+The executor stopped before commit and exact-owned rollback completed.
+
+Root cause:
+That assertion encoded the old behavior where Purchase Receiving trusted
+`navigator.onLine` and blocked inventory posting before attempting the real backend.
+V5_24 intentionally replaces that behavior with an actual backend reachability probe,
+so retaining the old message requirement contradicts the new approved contract.
+
+Resolution:
+V5_24C updates only this stale regression expectation. The replacement test still
+requires encrypted offline drafts and authoritative server drafts, and additionally
+requires:
+- `probeBackendConnectivity`;
+- the real-server-unreachable message;
+- absence of the obsolete browser-hint blocking message;
+- absence of the old `busy || !online || !ready` button gate.
+
+Permanent prevention:
+When an approved behavior intentionally changes, update legacy regression contracts
+in the same executor. Do not restore obsolete unsafe behavior merely to satisfy a
+historical string assertion.
+
+Outcome of failed V5_24B:
+- source commit/push: NONE;
+- DEV Supabase migration: NONE;
+- QA deployment: NONE;
+- PROD mutation: NONE;
+- exact-owned rollback: COMPLETE.
+
+### 2026-09-09 — First V5_24 executor self-triggered its navigator guard and left exact partial dirt
+
+Marker: `V5_24A_SELF_REFERENTIAL_NAVIGATOR_ASSERTION_AND_LATE_ROLLBACK_ARM_20260909`
+
+Observed:
+The first V5_24 executor reached its generated Purchase patcher and stopped with:
+`Purchases still contains navigator.onLine after V5_24 patch`.
+
+Root cause 1 — semantic false positive:
+The patch had removed executable `navigator.onLine` usage from Purchase Receiving,
+but the newly generated receive function itself contained the explanatory comment:
+`Actual Supabase reachability is authoritative. navigator.onLine is not.`
+The broad source-string assertion matched its own comment.
+
+Root cause 2 — cleanup flag armed too late:
+The executor set its rollback flag only after the entire generated patcher returned.
+Steps 1-3 had already written:
+- `src/lib/connectivity.js`
+- `src/lib/offlinePurchaseDraft.js`
+- `src/components/OfflineStatus.jsx`
+When the patcher failed, the rollback flag was still false, so those exact earlier
+writes remained locally even though no commit, push, cloud deploy or DB mutation occurred.
+
+V5_24B resolution:
+- removes the self-triggering comment token;
+- recovers only the three known failed-run artifacts, and only when their SHA-256
+  exactly matches the failed executor output;
+- refuses to overwrite any unexpected local change;
+- arms exact-owned rollback before the first new filesystem mutation, after backups exist.
+
+Permanent prevention:
+- source assertions must not be able to match explanatory comments introduced by the same patch;
+- executor rollback state must be armed immediately before the first mutation, never
+  after a multi-step patcher completes;
+- failed-run recovery may remove/restore only exact executor-owned artifacts whose
+  identity is proven, while unrelated dirt remains untouched.
+
+### 2026-09-09 — V5_24 false-offline authority + blank Purchase draft accumulation
+
+Marker: `V5_24_FALSE_OFFLINE_AND_EMPTY_PURCHASE_DRAFTS_20260909`
+
+Observed during V5_23 human UAT:
+- V5 DEV Invoice API was reachable with HTTP 200;
+- DEV Supabase was reachable and returned HTTP 401 to an unauthenticated curl, proving the host/network path was alive;
+- the browser UI still showed OFFLINE and Purchase Receiving blocked posting;
+- repeatedly opening an empty manual Receive Stock workspace accumulated local encrypted drafts (observed count reached 41).
+
+Root cause:
+- global OfflineStatus and Purchase Receiving treated `navigator.onLine` as authoritative;
+- Purchase autosave persisted a local draft even when the workspace contained no supplier, invoice, notes, financial values or items.
+
+V5_24 resolution:
+- `navigator.onLine` is only a wake-up hint for the patched UI surfaces;
+- a lightweight Supabase HTTP reachability probe decides ONLINE/OFFLINE;
+- HTTP responses including 401/403/404/405 mean the backend is reachable;
+- Purchase Receive is not disabled solely by a browser network hint;
+- a real backend probe runs before posting;
+- blank manual purchase drafts are not persisted;
+- cleanup removes only decryptable, truly-empty `manual:` drafts;
+- meaningful drafts, ingestion drafts and undecryptable rows are preserved;
+- ShopContext refresh tries the real server instead of refusing solely because `navigator.onLine` is false;
+- `receiveStock` / `receive_purchase_v3` business logic is unchanged.
+
+Permanent prevention:
+Do not use `navigator.onLine` as the final authority for inventory-affecting online/offline decisions. It may be used as a hint to trigger a probe. Business writes must rely on actual backend calls and atomic/idempotent server contracts.

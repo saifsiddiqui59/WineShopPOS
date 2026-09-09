@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { probeBackendConnectivity } from "../lib/connectivity";
 import { useAuth } from "./AuthContext";
 import { useSaaS } from "./SaaSContext";
 import { listOfflineSales, queueOfflineSale, removeOfflineSale, setOfflineSaleStatus } from "../lib/offlineQueue";
@@ -136,11 +137,6 @@ export function ShopProvider({ children }) {
 
   const refreshAll = useCallback(async () => {
     if (!canUseShop) return { ok: false, message: "Shop session is not active." };
-    if (!navigator.onLine) {
-      const c = readCache();
-      if (c) { setProducts(c.products || []); setInventory(c.inventory || {}); setSales(c.sales || []); setPurchases(c.purchases || []); setCategories(c.categories || []); setSuppliers(c.suppliers || []); }
-      return { ok: Boolean(c), offline: true, message: c ? "Using cached offline data." : "No cached shop data." };
-    }
     setLoadingData(true); setDataError("");
     try {
       const [categoriesResult, suppliersResult, productsResult, inventoryResult, productImagesResult] = await Promise.all([
@@ -202,7 +198,8 @@ export function ShopProvider({ children }) {
     } catch (error) {
       const message = error?.message || String(error); setDataError(message);
       const c = readCache();
-      if (!navigator.onLine && c) return { ok: true, offline: true, message: "Using cached shop data." };
+      const connectivity=await probeBackendConnectivity({timeoutMs:2500});
+      if (!connectivity.reachable && c) return { ok: true, offline: true, message: "Using cached offline data." };
       return { ok: false, message };
     } finally { setLoadingData(false); }
   }, [canUseShop, profile?.role, profile?.user_id]);
@@ -215,11 +212,6 @@ export function ShopProvider({ children }) {
       setStockSyncStatus(isDemo ? "DEMO" : "IDLE");
       return undefined;
     }
-    if (!navigator.onLine) {
-      setStockSyncStatus("OFFLINE");
-      return undefined;
-    }
-
     setStockSyncStatus("CONNECTING");
     const channel = supabase
       .channel(`wsp-inventory-${profile.shop_id}-${user.id}`)
