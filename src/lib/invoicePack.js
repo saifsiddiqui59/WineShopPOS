@@ -1,5 +1,8 @@
+import { normalizeOcrEvidenceText } from "./ocrLearningRules.js";
+
 export function inferSizeMl(value) {
-  const matches = [...String(value || "").matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
+  const learned = normalizeOcrEvidenceText(value, { context: "SIZE" });
+  const matches = [...String(learned || "").matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)];
   if (!matches.length) return 0;
   const [, raw, unit] = matches[matches.length - 1];
   const valueNumber = Number(raw);
@@ -11,7 +14,7 @@ export function inferSizeMl(value) {
 }
 
 function packageType(value) {
-  const text = String(value || "").toLowerCase();
+  const text = normalizeOcrEvidenceText(value, { context: "PRODUCT" }).toLowerCase();
   if (/\b(can|cans|tin)\b/.test(text)) return "CAN";
   if (/\b(bottle|bottles|glass|beer|lager|witbier|stout|ale)\b/.test(text)) return "BOTTLE";
   return "UNKNOWN";
@@ -63,10 +66,9 @@ export function inferInvoiceSizeResolution(item = {}, unitsPerCaseOverride = nul
     .filter(Boolean)
     .join(" ");
 
-  // Shop business rule precedence when the invoice did not print a usable size:
-  // 1) CAN is treated as 500 ml.
-  // 2) Otherwise 24 bottles/case suggests 330 ml.
-  // 3) Otherwise 12 bottles/case suggests 650 ml.
+  // Shop fallback applies ONLY after explicit/learned OCR size was not found.
+  // Explicit 500 MI -> learned 500 ml -> EXPLICIT_OCR_SIZE and can never be
+  // overwritten by the pack-24 330 ml heuristic.
   const type = packageType(text);
   if (type === "CAN") {
     return {

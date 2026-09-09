@@ -33,6 +33,23 @@ function distinctiveTokens(value){
     .filter((token)=>!/^\d{1,3}$/.test(token));
 }
 
+function hasProductReference(row){
+  return Boolean(row?.productId || row?.pendingProduct);
+}
+
+function productIdentityKey(row){
+  if(row?.productId)return `id:${row.productId}`;
+  const pending=row?.pendingProduct;
+  if(!pending)return "";
+  return [
+    "pending",
+    norm(pending.productName||row.productName||row.sourceDescription),
+    norm(pending.brand),
+    String(Math.round(num(pending.sizeMl||row.sizeMl))),
+    norm(pending.barcode||row.scannedBarcode),
+  ].join(":");
+}
+
 export function explicitPackageType(value){
   const text=norm(value);
   const can=/\bcan\b|\bcans\b/.test(text);
@@ -45,8 +62,8 @@ export function explicitPackageType(value){
 export function purchaseIdentityIssues(row,product){
   const issues=[];
 
-  if(!row?.productId||!product){
-    issues.push("Product Master selection required.");
+  if(!hasProductReference(row)||!product){
+    issues.push("Product Master selection or prepared new product is required.");
     return issues;
   }
 
@@ -54,8 +71,9 @@ export function purchaseIdentityIssues(row,product){
   const productSize=num(product.sizeMl);
 
   if(invoiceSize>0&&productSize>0&&Math.abs(invoiceSize-productSize)>5){
+    const targetLabel=product?.pending?"Prepared Product":"Product Master";
     issues.push(
-      `Size mismatch: invoice ${Math.round(invoiceSize)} ml ≠ Product Master ${Math.round(productSize)} ml.`,
+      `Size mismatch: invoice ${Math.round(invoiceSize)} ml ≠ ${targetLabel} ${Math.round(productSize)} ml.`,
     );
   }
 
@@ -64,7 +82,7 @@ export function purchaseIdentityIssues(row,product){
 
   if(scanned&&master&&scanned!==master){
     issues.push(
-      `Barcode mismatch: scanned ${scanned} ≠ Product Master ${master}.`,
+      `Barcode mismatch: scanned ${scanned} ≠ Product ${master}.`,
     );
   }
 
@@ -77,7 +95,7 @@ export function purchaseIdentityIssues(row,product){
 
   if(invoicePackage&&productPackage&&invoicePackage!==productPackage){
     issues.push(
-      `Package mismatch: invoice says ${invoicePackage.toLowerCase()} but Product Master says ${productPackage.toLowerCase()}.`,
+      `Package mismatch: invoice says ${invoicePackage.toLowerCase()} but Product says ${productPackage.toLowerCase()}.`,
     );
   }
 
@@ -89,7 +107,7 @@ export function purchaseIdentityIssues(row,product){
     const overlap=invoiceTokens.some((token)=>productSet.has(token));
     if(!overlap){
       issues.push(
-        `Product identity mismatch: invoice "${String(row.sourceDescription||"").trim()}" does not share a distinctive name/brand token with Product Master "${String(product.name||"").trim()}".`,
+        `Product identity mismatch: invoice "${String(row.sourceDescription||"").trim()}" does not share a distinctive name/brand token with Product "${String(product.name||"").trim()}".`,
       );
     }
   }
@@ -98,10 +116,11 @@ export function purchaseIdentityIssues(row,product){
 }
 
 export function duplicateLineSignature(row){
-  if(!row?.productId)return "";
+  const identity=productIdentityKey(row);
+  if(!identity)return "";
 
   return [
-    String(row.productId),
+    identity,
     norm(row.sourceDescription),
     String(Math.round(num(row.invoiceSizeMl))),
     intKey(row.caseCount),
@@ -145,8 +164,8 @@ export function purchaseLineReviewReasons(
 ){
   const reasons=[];
 
-  if(!row?.productId||!product){
-    reasons.push("Select the correct Product Master.");
+  if(!hasProductReference(row)||!product){
+    reasons.push("Select an existing Product Master or prepare a new product.");
   }
 
   const cases=num(row?.caseCount);

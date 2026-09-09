@@ -1324,3 +1324,27 @@ Image workflow remain unchanged. Image processing never changes barcode.
 - Align the complete 1D barcode inside the guide.
 - Pinch with two fingers to zoom when the camera supports optical zoom.
 - Switch Camera and Torch remain available.
+
+<!-- V5_23A_PURCHASE_PREPARE_PRODUCT_USER_GUIDE_20260909 -->
+## Purchase Receiving — Prepare New Product safely
+
+When a supplier invoice contains a product that is not in Product Master:
+
+1. In Purchase Receiving choose **Prepare Product**.
+2. Verify Product Name, Size, Bottles/Case, MRP and optional barcode.
+3. Choose **Use on This Purchase**.
+4. The row now shows a pending product. **Nothing has been created in Product Master yet.**
+5. Complete pack, identity and financial checks.
+6. Choose **Approve & Receive Stock**.
+
+Only a successful receive creates the prepared Product Master and posts stock. If
+Receive Stock fails, is cancelled, or is never submitted, the prepared product and
+pending barcode are not committed to Product Master.
+
+If an existing Product Master has no barcode, a scanned barcode is also kept pending
+until the same successful receive.
+
+This safety rule applies to products originating from Purchase/OCR. The normal
+Product Master **Add Product** screen remains available for deliberate master-data
+administration outside a purchase.
+<!-- /V5_23A_PURCHASE_PREPARE_PRODUCT_USER_GUIDE_20260909 -->

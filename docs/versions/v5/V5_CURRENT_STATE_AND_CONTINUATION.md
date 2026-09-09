@@ -328,3 +328,30 @@ DEV `receive_purchase_v2` now supports repeated Product Master purchase lines an
 independently blocks hard size/barcode identity mismatches.
 
 V5_22 remains DEV/QA only until human UAT passes on invoice 16845.
+
+<!-- V5_23A_ATOMIC_PURCHASE_PRODUCT_CREATION_20260909 -->
+## V5_23A — Atomic purchase Product creation + OCR learning
+
+Purchase/OCR no longer creates a Product Master while the invoice is only being
+reviewed. Unmatched rows are prepared as `pendingProduct` draft data. Existing
+Product Masters may still be selected normally.
+
+At `Approve & Receive Stock`, `receive_purchase_v3` is the single database
+commit boundary for:
+- supplier resolution/creation when needed by Purchase Receiving;
+- pending Product Master creation;
+- missing existing Product Master barcode assignment from verified scan;
+- purchase header/items;
+- inventory increase;
+- stock movements;
+- landed-cost finalization and audit.
+
+Any exception rolls back the transaction, so a failed/cancelled/unsubmitted purchase
+does not create the prepared Product Master and does not assign its pending barcode.
+
+Normal Add Product/Product Master administration outside purchasing is unchanged.
+
+OCR learning is centralized in `src/lib/ocrLearningRules.js`. Contextual rules
+include numeric-size `MI/M1 -> ml` correction, so explicit OCR evidence such as
+`500 MI` resolves to 500 ml before CAN/24/12-pack fallback heuristics can run.
+<!-- /V5_23A_ATOMIC_PURCHASE_PRODUCT_CREATION_20260909 -->

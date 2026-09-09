@@ -2104,3 +2104,219 @@ Financial reconciliation and pack resolution are not product-identity proof.
 Every future Purchase Receiving flow must preserve invoice evidence separately from
 Product Master attributes and must distinguish repeated commercial lines from
 duplicate OCR evidence.
+
+### 2026-09-09 — V5_23F dirty-tree preservation check misparsed a quoted filename
+
+Marker: `V5_23F_QUOTED_PORCELAIN_PATH_FALSE_DISAPPEARANCE_20260909`
+
+Observed:
+V5_23F completed the dedicated regression, full regression suite, documentation,
+environment guard, lint and Vite build, then stopped at exact changed-set safety with:
+`FAILED: Pre-existing unrelated dirty path disappeared: "V5_01_DEV_OCR_PREFLIGHT (1).sh"`
+
+Root cause:
+The executor saved human-readable `git status --porcelain=v1` output and later
+used `cut -c4-` as though the remainder were always a raw path. Git quotes some
+filenames in porcelain text. The stored value therefore included literal quote
+characters, and the later path-specific `git status -- "$p"` looked for a
+different filename.
+
+Outcome:
+The unrelated file was not deleted. The executor's exact-owned rollback completed
+before commit. No V5 commit/push, DEV Supabase migration, QA Azure deployment or
+PROD mutation occurred.
+
+Resolution:
+V5_23G captures dirty paths with NUL-delimited Git plumbing:
+- `git diff --name-only -z`
+- `git ls-files --others --exclude-standard -z`
+and verifies them with `read -d ''` plus `git status -- "$p"`.
+
+Permanent prevention:
+Never derive filesystem paths from quoted/human Git status text. Use NUL-delimited
+path output whenever filenames may contain whitespace, quotes, parentheses,
+backslashes or leading dashes.
+
+### 2026-09-09 — V5_23E dedicated regression referenced purchaseIdentityIssues without importing it
+
+Marker: `V5_23E_MISSING_TEST_IMPORT_20260909`
+
+Observed:
+V5_23E passed static post-patch checks and entered the dedicated V5_23 regression
+suite. Eight of nine tests passed; the new existing-Product-Master size mismatch
+test failed with:
+`ReferenceError: purchaseIdentityIssues is not defined`.
+
+Root cause:
+The test body intentionally called `purchaseIdentityIssues(...)`, but the generated
+test import list contained only `duplicateLineSignature` and
+`purchaseLineStatus`.
+
+Outcome:
+The failure was test-harness-only. The executor stopped before commit and restored
+all exact-owned files. No V5 commit/push, DEV Supabase migration, QA deployment or
+PROD mutation occurred.
+
+Resolution:
+V5_23F imports `purchaseIdentityIssues` explicitly and statically verifies that
+every purchase-identity symbol used by the dedicated regression is present in its
+import list.
+
+Permanent prevention:
+When adding a regression assertion that calls a newly referenced exported helper,
+validate the generated test's named imports before executing the suite.
+
+### 2026-09-09 — V5_23D dynamic Product Master label static-grep false negative
+
+Marker: `V5_23D_DYNAMIC_LABEL_STATIC_GREP_FALSE_NEGATIVE_20260909`
+
+Observed:
+V5_23D reached static post-patch validation and stopped with:
+`FAILED: Existing Product Master identity wording missing.`
+
+Root cause:
+The generated identity code intentionally used:
+`const targetLabel=product?.pending?"Prepared Product":"Product Master";`
+and then interpolated `${targetLabel}` in the size-mismatch message.
+The executor incorrectly grepped for a literal source fragment containing
+`Product Master ${Math.round(productSize)} ml`, which cannot exist when the
+label is dynamic.
+
+Outcome:
+The executor stopped before commit and exact-owned rollback completed.
+No V5 commit/push, DEV Supabase migration, QA Azure deployment or PROD mutation
+occurred.
+
+Resolution:
+V5_23E validates both semantic source contracts directly:
+- the dynamic Existing Product Master / Prepared Product label selector; and
+- the size-mismatch template using that selector.
+
+Permanent prevention:
+Do not assert a runtime-expanded template string as though its expanded wording
+must exist literally in source. Validate the selector and interpolation contract,
+then rely on behavior tests for the rendered message.
+
+### 2026-09-09 — V5_23C reached full suite: 100/103, three legacy/wording assertions failed
+
+Marker: `V5_23C_STALE_REGRESSION_EXPECTATIONS_20260909`
+
+Observed:
+V5_23C successfully applied its owned working-tree patch and the dedicated V5_23
+tests passed, then the full Node suite reported 100 pass / 3 fail.
+
+The three failures were:
+1. `v5FinalConsolidation` expected the literal `lagar|larger` inside
+   `productInference.js`, while the correction had intentionally moved to the
+   centralized OCR learning registry.
+2. The same legacy consolidation test still required the historical unsafe UI
+   text `Create Product (Stock 0)`, which directly contradicts V5_23's atomic
+   purchase-product contract.
+3. The purchase-identity behavior still blocked a 500 ml invoice line against a
+   330 ml existing product, but its message had been shortened from
+   `Product Master` to `Product`, breaking the durable assertion wording.
+
+Outcome:
+The executor stopped before commit and restored all exact-owned files.
+No V5 commit/push, DEV migration, QA deployment or PROD mutation occurred.
+
+Resolution:
+- Keep centralized OCR learning and add a compatibility beer-category fallback
+  that explicitly recognizes `lagar|larger`.
+- Update the obsolete receiving-controls test to require `Prepare Product`
+  and reject `Create Product (Stock 0)`.
+- Preserve the clear `Product Master` label for existing-product size conflicts;
+  pending products use `Prepared Product`.
+
+Permanent prevention:
+When a deliberate safety architecture replaces an old behavior, update the
+regression contract rather than reintroducing unsafe UI solely to satisfy a stale
+string assertion.
+
+### 2026-09-09 — V5_23B patcher used matchAll with non-global RegExp
+
+Marker: `V5_23B_NON_GLOBAL_REGEX_PATCHER_FAILURE_20260909`
+
+Observed:
+V5_23B reached the in-memory source patcher and stopped with:
+`TypeError: String.prototype.matchAll called with a non-global RegExp argument`.
+
+Root cause:
+The helper `replaceRegexOnce()` called `String.prototype.matchAll(regex)` directly.
+Several intentional patch patterns are non-global regexes because the helper itself
+is responsible for asserting exactly one match. JavaScript requires a global RegExp
+for `matchAll()`.
+
+Outcome:
+The executor failed before commit. Its exact-owned-file rollback completed successfully.
+No V5 commit/push, DEV Supabase migration, QA Azure deployment or PROD mutation occurred.
+
+Resolution:
+V5_23C constructs a global probe RegExp only for counting matches, while preserving
+the original regex for the single replacement.
+
+Permanent prevention:
+All executor patch helpers that count regex matches must accept both global and
+non-global RegExp inputs. The helper is self-tested during executor generation.
+
+### 2026-09-09 — V5_23A invoicePack preflight escaped-regex false negative
+
+Marker: `V5_23A_INVOICEPACK_REGEX_ESCAPE_PREFLIGHT_FALSE_NEGATIVE_20260909`
+
+Observed:
+V5_23A stopped during preflight with:
+`FAILED: Current invoice-size parser anchor not found.`
+
+Verified current source:
+`src/lib/invoicePack.js` does contain the expected `inferSizeMl` parser and
+`matchAll(/(\d+(?:\.\d+)?)\s*(ml|cl|l)\b/gi)`.
+
+Root cause:
+The executor used a fixed-string grep whose shell literal contained doubled
+backslashes. It therefore searched for source bytes containing two backslashes
+instead of the one backslash present in JavaScript regex syntax.
+
+Outcome:
+The failure occurred before `PATCHED=1`. No application source, migration,
+Git commit/push, DEV Supabase, QA Azure deployment or PROD resource was changed.
+
+Permanent prevention:
+- Do not validate JavaScript regex literals with escape-sensitive fixed-string grep.
+- Prefer semantic source checks for function presence + durable tokens/behavior.
+- Keep preflight checks formatting/escaping tolerant while preserving strict
+  post-patch behavioral tests.
+
+Safe continuation:
+Current V5 remote/local base remains the fetched V5 SHA. A corrected full source
+executor may run because V5_23A made no owned mutation.
+
+### 2026-09-09 — Purchase/OCR Product Master pre-commit leak
+
+Marker: `V5_23_PURCHASE_PRODUCT_PRECOMMIT_LEAK_20260909`
+
+Observed in current V5 source:
+- Purchase Receiving's inline Create Product called `bulk_create_products` before the
+  user approved/received the purchase.
+- A scanned barcode could update an existing Product Master with no barcode before
+  the purchase receipt.
+- OCR review could navigate unmatched rows to `/products/new`, creating Product
+  Master independently of the later receive.
+
+Risk:
+A cancelled/failed/unsubmitted purchase could leave Product Master/barcode state that
+did not correspond to a committed supplier receipt.
+
+Resolution:
+V5_23A makes purchase-originated product creation and missing-barcode assignment
+draft-only until the atomic `receive_purchase_v3` transaction succeeds. OCR review
+no longer creates/navigates to Add Product for unmatched invoice lines; it hands them
+to Purchase Receiving for preparation. Normal Product Master administration outside
+purchasing is unchanged.
+
+Permanent prevention:
+- Purchase review/preparation may store candidate data only.
+- Purchase-originated Product INSERT/barcode UPDATE must occur inside the same DB
+  transaction as purchase header/items, inventory and stock movements.
+- Any receive failure must roll back all such writes.
+- Client-side UI checks are not transaction proof; the server RPC repeats identity,
+  size and barcode guards.

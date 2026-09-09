@@ -10,8 +10,7 @@ import {
   inferInvoiceSizeMl,
   resolveInvoiceUnitsPerCase,
 } from "../lib/invoicePack";
-import ProductEnrichmentPanel from "../components/ProductEnrichmentPanel";
-import { inferBrandFromProductName, normalizeBeerOcrText } from "../lib/productInference";
+import { normalizeBeerOcrText } from "../lib/productInference";
 import { productImageUrl } from "../lib/productImages";
 import OcrProductImagePreview from "../components/OcrProductImagePreview";
 
@@ -949,7 +948,7 @@ export default function AutomationHub() {
   async function confirmLine(index) {
     const row = resolution[index];
     if (!row?.productId) {
-      setMessage("Select Existing Product or Create New Product first.");
+      setMessage("Select an existing Product Master, or continue to Purchase Receiving to prepare a new product without creating it yet.");
       return;
     }
 
@@ -1021,110 +1020,6 @@ export default function AutomationHub() {
     navigate(
       `/products/${row.productId}/edit?ocr=1&ocrLineIndex=${index}`,
     );
-  }
-
-  function createProduct(index) {
-    const item = result?.items?.[index];
-    const row = resolution[index] || {};
-
-    sessionStorage.setItem(
-      REVIEW_KEY,
-      JSON.stringify({
-        result,
-        matches,
-        resolution,
-        supplierId,
-        confirmedSupplier,
-        ingestionId,
-        sourceFileName,
-        charges,
-      }),
-    );
-
-    const params = new URLSearchParams({
-      ocr: "1",
-      ocrLineIndex: String(index),
-      name: suggestedProductName(item),
-      brand: inferBrandFromProductName(item?.description || ""),
-      category: inferCandidateCategory(null, item),
-      purchasePrice: String(row.purchasePrice || item?.unitPrice || 0),
-      sizeMl: String(row.sizeMl || inferOcrSizeMl(item) || ""),
-      mrp: String(Math.max(0, Number(item?.mrp || 0))),
-      sellingPrice: String(Number(item?.mrp || 0) > 0 ? Number(item.mrp) + 15 : 0),
-      unitsPerCase: String(row.unitsPerCase || 12),
-    });
-
-    navigate(`/products/new?${params.toString()}`);
-  }
-
-  function inferCandidateCategory(candidate, item) {
-    const text = normalize(`${candidate?.title || ""} ${candidate?.category || ""} ${item?.description || ""}`);
-    const rules = [
-      ["beer","Beer"],["whisky","Whisky"],["whiskey","Whisky"],["wine","Wine"],
-      ["vodka","Vodka"],["rum","Rum"],["gin","Gin"],["brandy","Brandy"],
-      ["tequila","Tequila"],["liqueur","Liqueur"],["cider","Cider"],["champagne","Champagne"],
-    ];
-    return rules.find(([token]) => text.includes(token))?.[1] || "Other";
-  }
-
-  function createProductFromCandidate(index, selection) {
-    const item = result?.items?.[index];
-    const row = resolution[index] || {};
-    const candidate = selection?.candidate || null;
-    const physicalBarcode = String(selection?.physicalBarcode || "").trim();
-
-    if (!physicalBarcode) {
-      setMessage("Scan the physical bottle/can barcode before creating the Product Master record.");
-      return;
-    }
-
-    const existing = activeProducts.find(
-      (product) => String(product.barcode || "").trim() === physicalBarcode,
-    );
-
-    if (existing) {
-      chooseProduct(index, existing.id);
-      setMessage(
-        `Physical barcode ${physicalBarcode} already exists in Product Master as ${existing.name}. Existing Product Master was linked instead of creating a duplicate.`,
-      );
-      return;
-    }
-
-    sessionStorage.setItem(REVIEW_KEY, JSON.stringify({
-      result,matches,resolution,supplierId,confirmedSupplier,ingestionId,sourceFileName,charges,
-    }));
-
-    const selectedName = String(candidate?.title || suggestedProductName(item));
-    const selectedBrand = String(
-      candidate?.brand || inferBrandFromProductName(item?.description || ""),
-    );
-    const selectedSize =
-      Number(candidate?.sizeMl || 0) > 0
-        ? Number(candidate.sizeMl)
-        : inferOcrSizeMl(item);
-
-    const params = new URLSearchParams({
-      ocr:"1",
-      ocrLineIndex:String(index),
-      enriched:"1",
-      barcode:physicalBarcode,
-      name:selectedName,
-      brand:selectedBrand,
-      category:inferCandidateCategory(candidate,item),
-      purchasePrice:String(row.purchasePrice || item?.unitPrice || 0),
-      sizeMl:Number(selectedSize || 0) > 0 ? String(selectedSize) : "",
-      packageType:String(candidate?.packageType || ""),
-      mrp:String(Math.max(0,Number(item?.mrp || 0))),
-      sellingPrice:String(Number(item?.mrp || 0)>0?Number(item.mrp)+15:0),
-      unitsPerCase:String(row.unitsPerCase || 12),
-      enrichmentSources:String((candidate?.providers || []).join(",")),
-      enrichmentOutcome:String(selection?.outcome || "UNVERIFIED"),
-      enrichmentCacheKey:String(selection?.confirmationCacheKey || ""),
-      enrichmentCandidateId:String(selection?.candidateId || ""),
-      enrichmentImportImage:selection?.importImage ? "1" : "0",
-    });
-
-    navigate(`/products/new?${params.toString()}`);
   }
 
   function reviewDraftSnapshot(stage = "OCR_REVIEW", purchaseDraft = null) {
@@ -1721,7 +1616,13 @@ export default function AutomationHub() {
                               {best ? ` Closest score ${Math.round(bestScore * 100)}% was not selected.` : ""}
                             </div>
                             <div style={{margin:"8px 0"}}>
-                              <ProductEnrichmentPanel shopId={profile?.shop_id} item={{...item,description:suggestedProductName(item)}} sizeMl={resolvedSizeMl||null} disabled={busy} onUseCandidate={(candidate)=>createProductFromCandidate(index,candidate)} onCreateFallback={()=>createProduct(index)}/>
+                              <div className="verification-guidance verification-guidance--neutral">
+                                <strong>New product is not created during OCR review.</strong>{" "}
+                                Continue to Purchase Receiving to prepare its name, size, pack and barcode. Product Master changes happen only if Receive Stock succeeds.
+                              </div>
+                              <button type="button" className="secondary-button" onClick={sendDraft} disabled={busy}>
+                                Prepare in Purchase Receiving
+                              </button>
                             </div>
                           </div>
                         )}
@@ -1752,7 +1653,7 @@ export default function AutomationHub() {
                               ? "Learned alias match — confirm line"
                               : row.status === "STRONG_MATCH"
                                 ? "Reliable Product Master match — confirm line"
-                                : "Unmatched — search catalogue, select existing, or create"}
+                                : "Unmatched — select existing or prepare new product in receiving"}
                       </td>
 
                       <td>
@@ -1902,9 +1803,9 @@ export default function AutomationHub() {
                           <button
                             type="button"
                             className="secondary-button"
-                            onClick={() => createProduct(index)}
+                            onClick={sendDraft}
                           >
-                            Create New Product
+                            Prepare New Product in Receiving
                           </button>
                         )}
                       </td>

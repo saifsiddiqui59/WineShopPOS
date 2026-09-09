@@ -422,20 +422,52 @@ export function ShopProvider({ children }) {
     await refreshAll();return{ok:conflicts===0,synced,conflicts,message:`Synced ${synced}; conflicts ${conflicts}.`};
   }
 
-  async function ensureSupplier(name){const n=String(name||"").trim();if(!n)throw new Error("Supplier name is required.");const existing=suppliers.find((s)=>s.supplier_name.toLowerCase()===n.toLowerCase());if(existing)return existing.id;const{data,error}=await supabase.from("suppliers").insert({shop_id:profile.shop_id,supplier_name:n,active:true}).select("id,supplier_name,active").single();if(error)throw error;setSuppliers((s)=>[...s,data]);return data.id;}
   async function receiveStock({supplierName,invoiceNumber,invoiceDate,items,notes="",charges={}}){
     try{
-      if(!items?.length)return{ok:false,message:"Add at least one resolved product."};
-      const ids=items.map((i)=>i.productId).filter(Boolean);
-      if(ids.length!==items.length)return{ok:false,message:"Every purchase line must be linked to a product."};
+      const supplier=String(supplierName||"").trim();
+      if(!supplier)return{ok:false,message:"Supplier name is required."};
+      if(!items?.length)return{ok:false,message:"Add at least one resolved or prepared product."};
+
       for(const row of items){
-        const product=products.find((candidate)=>candidate.id===row.productId);
+        const hasExisting=Boolean(row.productId);
+        const hasPending=Boolean(row.pendingProduct);
+        if(hasExisting===hasPending){
+          return{ok:false,message:"Every purchase line must have exactly one existing Product Master or one prepared new product."};
+        }
+
+        const product=hasExisting
+          ?products.find((candidate)=>candidate.id===row.productId)
+          :{
+             id:`PENDING:${row.lineKey||crypto.randomUUID()}`,
+             name:String(row.pendingProduct?.productName||row.productName||row.sourceDescription||"Pending Product"),
+             brand:String(row.pendingProduct?.brand||""),
+             sizeMl:Number(row.pendingProduct?.sizeMl||row.sizeMl||0),
+             barcode:String(row.pendingProduct?.barcode||row.scannedBarcode||""),
+             subcategory:String(row.pendingProduct?.subcategory||""),
+             packageType:String(row.pendingProduct?.packageType||""),
+             mrp:Number(row.pendingProduct?.mrp||row.mrp||0),
+             unitsPerCase:Number(row.pendingProduct?.unitsPerCase||row.unitsPerCase||0),
+             pending:true
+           };
+
         const issues=purchaseIdentityIssues(row,product);
         if(issues.length)return{ok:false,message:`Purchase identity check failed: ${issues[0]}`};
       }
-      const supplierId=await ensureSupplier(supplierName);
+
       const payload=items.map((i)=>({
-        product_id:i.productId,
+        product_id:i.productId||null,
+        pending_product:i.pendingProduct?{
+          product_name:String(i.pendingProduct.productName||i.productName||i.sourceDescription||"").trim(),
+          brand:String(i.pendingProduct.brand||"").trim()||null,
+          category_id:i.pendingProduct.categoryId||null,
+          subcategory:String(i.pendingProduct.subcategory||"").trim()||null,
+          size_ml:Number(i.pendingProduct.sizeMl||i.sizeMl||0),
+          barcode:String(i.pendingProduct.barcode||i.scannedBarcode||"").trim()||null,
+          mrp:Number(i.pendingProduct.mrp||i.mrp||0),
+          selling_price:Number(i.pendingProduct.sellingPrice||0),
+          minimum_stock:Number(i.pendingProduct.minimumStock??5),
+          units_per_case:Number(i.pendingProduct.unitsPerCase||i.unitsPerCase||1)
+        }:null,
         source_description:String(i.sourceDescription||"").trim()||null,
         invoice_size_ml:Number(i.invoiceSizeMl||0)||null,
         scanned_barcode:String(i.scannedBarcode||"").trim()||null,
@@ -450,18 +482,22 @@ export function ShopProvider({ children }) {
         batch_number:String(i.batchNumber||"").trim()||null,
         expiry_date:String(i.expiryDate||"").trim()||null
       }));
+
       for(const i of payload){
         const finalQty=i.case_count*i.units_per_case+i.loose_bottles;
         if(!Number.isInteger(i.quantity)||i.quantity<=0||finalQty!==i.quantity)
           return{ok:false,message:"Final bottle quantity must equal Cases × Bottles/Case + Loose Bottles."};
       }
+
       const requestedInvoiceRef=String(invoiceNumber||"").trim();
       const effectiveInvoiceRef=requestedInvoiceRef||`AUTO-${String(invoiceDate||new Date().toISOString().slice(0,10)).replaceAll("-","")}-${crypto.randomUUID().slice(0,8).toUpperCase()}`;
-      const{data,error}=await supabase.rpc("receive_purchase_v2",{
-        p_supplier_id:supplierId,
+
+      const{data,error}=await supabase.rpc("receive_purchase_v3",{
+        p_supplier_name:supplier,
         p_invoice_number:effectiveInvoiceRef,
         p_invoice_date:invoiceDate||new Date().toISOString().slice(0,10),
-        p_items:payload,p_notes:notes||null,
+        p_items:payload,
+        p_notes:notes||null,
         p_freight_amount:Number(charges.freightAmount||0),
         p_transport_amount:Number(charges.transportAmount||0),
         p_handling_amount:Number(charges.handlingAmount||0),
@@ -471,14 +507,23 @@ export function ShopProvider({ children }) {
         p_miscellaneous_amount:Number(charges.miscellaneousAmount||0),
         p_rounding_adjustment:Number(charges.roundingAdjustment||0)
       });
+
       if(error){
         const missing=error.code==="PGRST202"||error.code==="42883"||
-          /receive_purchase_v2|could not find the function|does not exist/i.test(error.message||"");
-        if(missing)return{ok:false,message:"V2 inventory-cost database migration is not active yet. No inventory was posted."};
+          /receive_purchase_v3|could not find the function|does not exist/i.test(error.message||"");
+        if(missing)return{ok:false,message:"Atomic Purchase V3 database migration is not active yet. No Product Master, barcode, purchase or inventory change was committed."};
         throw error;
       }
+
       await refreshAll();
-      return{ok:true,purchaseId:data,invoiceReference:effectiveInvoiceRef,message:requestedInvoiceRef?"Stock received with landed cost and receipt-lot traceability.":`Stock received. WineShopPOS assigned reference ${effectiveInvoiceRef}.`};
+      return{
+        ok:true,
+        purchaseId:data,
+        invoiceReference:effectiveInvoiceRef,
+        message:requestedInvoiceRef
+          ?"Stock received atomically. Prepared products/barcodes were committed with the receipt."
+          :`Stock received atomically. WineShopPOS assigned reference ${effectiveInvoiceRef}.`
+      };
     }catch(e){return{ok:false,message:e.message||String(e)}}
   }
   async function adjustStock({productId,adjustmentType,quantityChange,reason,notes=""}){try{const{data,error}=await supabase.rpc("adjust_stock",{p_product_id:productId,p_adjustment_type:adjustmentType,p_quantity_change:Number(quantityChange),p_reason:String(reason||"").trim(),p_notes:notes||null});if(error)throw error;await refreshAll();return{ok:true,quantity:data,message:"Stock adjusted."}}catch(e){return{ok:false,message:e.message||String(e)}}}
