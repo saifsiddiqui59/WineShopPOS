@@ -2021,3 +2021,86 @@ V5_21 resolution:
   `Opening camera…`.
 
 No backend, Function App, Edge Function, database or PROD behavior is changed.
+
+### 2026-09-09 — V5_22 wrong hardcoded base gate
+
+Marker: `V5_22_WRONG_HARDCODED_BASE_GATE_20260909`
+
+Stage:
+V5_22 preflight before any patch-owned mutation.
+
+Symptom:
+The executor fetched V5 and correctly printed the same local/remote SHA
+`fc004d5dee2288a08d470236887fd96104fd7ab2`, but then failed because the generated
+script contained a different hardcoded expected SHA.
+
+Root cause:
+The release executor used a stale/incorrect copied SHA instead of deriving its
+release base from the exact `origin/V5` snapshot fetched during the run.
+
+Repository/data outcome:
+- failure happened before `PATCHED=1`;
+- no V5_22 source file was modified;
+- no commit/push occurred;
+- DEV Supabase was not migrated;
+- QA Azure Storage was not deployed;
+- PROD was not changed.
+
+Resolution:
+V5_22B derives `RELEASE_BASE` from freshly fetched `origin/V5`, requires local V5
+to equal that exact remote snapshot, and still relies on exact source anchors /
+semantic assertions before mutation.
+
+Permanent prevention:
+Do not copy a prior-turn SHA into a new V5 mutation executor. Fetch the target branch,
+derive the release base from that fetched ref, require local==remote, then let
+current-source anchors and semantic postconditions decide whether mutation is safe.
+
+Safe continuation point:
+`fc004d5dee2288a08d470236887fd96104fd7ab2`.
+
+### 2026-09-09 — V5_21 Purchase Receiving identity/repeated-line UAT defect
+
+Marker: `V5_21_PURCHASE_IDENTITY_AND_REPEAT_LINE_UAT_20260909`
+
+Human UAT evidence:
+- Real Kapil Alcotech invoice 16845 contains legitimate repeated commercial lines
+  for the same Product Master family at different MRP/rate/pack values.
+- Purchase Receiving showed `Needs Review (0)`, `Ready (15)` and financial
+  reconciliation MATCH, but final Receive remained blocked.
+- Current frontend and `ShopContext.receiveStock` reject any repeated Product Master
+  ID, regardless of whether the invoice rows are commercially distinct.
+- Current `receive_purchase_v2` also rejects repeated product IDs.
+- More seriously, the real invoice contains Hoegaarden Belgian Witbier 500 ml and
+  330 ml lines, while UAT showed a 500 ml invoice row capable of being mapped to the
+  330 ml Product Master and still reaching READY.
+
+Root causes:
+1. `rowFromOcr` overwrote invoice size evidence with Product Master size.
+2. Row READY status checked product selected + pack + quantity, but not product identity.
+3. Physical barcode scan could overwrite an already-known Product Master barcode
+   instead of treating a mismatch as an identity conflict.
+4. Duplicate safety was implemented as repeated `productId` rejection rather than
+   duplicate invoice-line evidence detection.
+5. `receive_purchase_v2` updated batch/expiry by `purchase_id + product_id`, which
+   is ambiguous when the same Product Master legitimately occurs on multiple lines.
+
+Resolution in V5_22:
+- preserve `invoiceSizeMl` separately from Product Master `sizeMl`;
+- block READY on hard size mismatch, explicit bottle/can mismatch, cautious product
+  name mismatch, scanned-barcode mismatch, invalid quantity identity, unresolved
+  pack, or Price/Bottle >= MRP;
+- suspicious exact repeated OCR lines require explicit `Keep Separate` human review;
+- repeated Product Master lines with different MRP/rate/amount/pack/batch are allowed;
+- known Product Master barcode is never overwritten by a conflicting physical scan;
+- client receive validation repeats identity checks;
+- DEV `receive_purchase_v2` processes every purchase line individually, preserving
+  batch/expiry per purchase item while safely accumulating inventory for repeated
+  Product Master IDs;
+- server independently blocks invoice-size and scanned-barcode identity mismatches.
+
+Permanent prevention:
+Financial reconciliation and pack resolution are not product-identity proof.
+Every future Purchase Receiving flow must preserve invoice evidence separately from
+Product Master attributes and must distinguish repeated commercial lines from
+duplicate OCR evidence.

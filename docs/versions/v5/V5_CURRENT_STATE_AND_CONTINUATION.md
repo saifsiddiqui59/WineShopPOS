@@ -311,3 +311,20 @@ asynchronous enhancements. A 7-second watchdog exposes Retry instead of an
 indefinite opening state.
 
 Frontend-only V5 QA change; no Function App/Edge Function/schema/PROD mutation.
+
+## V5_22 Purchase identity / repeated commercial lines — 2026-09-09
+
+Human UAT on real Kapil Alcotech invoice 16845 proved two separate requirements:
+
+1. Financial reconciliation + pack validation do not prove Product Master identity.
+   Invoice-size evidence is now preserved separately; a 500 ml invoice row cannot
+   become READY against a 330 ml Product Master.
+2. Repeated Product Master IDs are not inherently duplicates. Different
+   MRP/rate/amount/pack/batch rows remain separate legitimate purchase lines.
+   Only identical-looking rows enter a human `Keep Separate` review.
+
+Physical barcode mismatch never overwrites a known Product Master barcode.
+DEV `receive_purchase_v2` now supports repeated Product Master purchase lines and
+independently blocks hard size/barcode identity mismatches.
+
+V5_22 remains DEV/QA only until human UAT passes on invoice 16845.

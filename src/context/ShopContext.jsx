@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 import { useSaaS } from "./SaaSContext";
 import { listOfflineSales, queueOfflineSale, removeOfflineSale, setOfflineSaleStatus } from "../lib/offlineQueue";
 import { productImageUrl, removeProductImage, uploadProductImage } from "../lib/productImages";
+import { purchaseIdentityIssues } from "../lib/purchaseIdentity";
 
 const ShopContext = createContext(null);
 const DATA_CACHE_KEY = "wineshop_cloud_cache_v3";
@@ -427,15 +428,25 @@ export function ShopProvider({ children }) {
       if(!items?.length)return{ok:false,message:"Add at least one resolved product."};
       const ids=items.map((i)=>i.productId).filter(Boolean);
       if(ids.length!==items.length)return{ok:false,message:"Every purchase line must be linked to a product."};
-      if(new Set(ids).size!==ids.length)return{ok:false,message:"Combine duplicate product lines before receiving stock."};
+      for(const row of items){
+        const product=products.find((candidate)=>candidate.id===row.productId);
+        const issues=purchaseIdentityIssues(row,product);
+        if(issues.length)return{ok:false,message:`Purchase identity check failed: ${issues[0]}`};
+      }
       const supplierId=await ensureSupplier(supplierName);
       const payload=items.map((i)=>({
         product_id:i.productId,
+        source_description:String(i.sourceDescription||"").trim()||null,
+        invoice_size_ml:Number(i.invoiceSizeMl||0)||null,
+        scanned_barcode:String(i.scannedBarcode||"").trim()||null,
         case_count:Number(i.caseCount||0),
         units_per_case:Number(i.unitsPerCase||1),
         loose_bottles:Number(i.looseBottles||0),
         quantity:Number(i.quantity),
+        rate_per_case:Number(i.ratePerCase||0),
         purchase_price:Number(i.purchasePrice),
+        mrp:Number(i.mrp||0),
+        line_amount:Number(i.lineAmount||0),
         batch_number:String(i.batchNumber||"").trim()||null,
         expiry_date:String(i.expiryDate||"").trim()||null
       }));
