@@ -118,3 +118,26 @@ after a real Product Master ID exists.
 - no new Azure resource;
 - **No new paid service**;
 - existing free-only image provider-plan/quota guard remains authoritative.
+
+## V5_20C_PRE_SAVE_PRODUCT_IMAGE_20260909
+
+Add Product now uses the free-only internet Product Image chooser before a barcode
+or Product Master row exists.
+
+Search identity:
+- Product Name
+- Brand
+- Size
+- package context
+- India/Global scope
+
+Barcode is not part of the pre-save image-search request.
+
+The chosen candidate is not linked to a database row immediately. WineShopPOS
+keeps the opaque choice-cache key and candidate id in the form. After Product
+Master creation, the DEV Edge Function validates the saved product identity,
+copies that exact candidate into managed product-image storage, calls
+`set_product_image`, then proves barcode/name/brand/size did not change.
+
+If that exact candidate cannot be safely applied, a different automatic image is
+not silently substituted.

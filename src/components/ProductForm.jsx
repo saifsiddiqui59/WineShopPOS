@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProductEnrichmentPanel from "./ProductEnrichmentPanel";
 import MobileBarcodeScanner from "./MobileBarcodeScanner";
-import OcrProductImagePreview from "./OcrProductImagePreview";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import {
   applyProductImageChoice,
+  getPreSaveProductImageChoices,
   getProductImageChoices,
 } from "../lib/productEnrichmentClient";
 import { productImageUrl } from "../lib/productImages";
@@ -37,6 +37,7 @@ const emptyProduct = {
   price: "0.00", minimumStock: 5, unitsPerCase: 12,
   lookupPackageType: "", enrichmentSelection: null,
   imagePath: "", imageUrl: "", imageFile: null, removeImage: false,
+  preSaveImageSelection: null,
 };
 
 function moneyText(value) {
@@ -88,6 +89,7 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
   const [barcodeCameraOpen, setBarcodeCameraOpen] = useState(false);
   const cameraImageInputRef = useRef(null);
   const initializedIdentityRef = useRef(null);
+  const imageChoiceRequestRef = useRef(0);
   const [sellingPriceTouched, setSellingPriceTouched] = useState(false);
 
   useEffect(() => {
@@ -119,6 +121,9 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
       setSellingPriceTouched(false);
       setImagePreview("");
     }
+    setImageChoices([]);
+    setImageChoiceCacheKey("");
+    setImageChoicePage(0);
   }, [initialValue]);
 
   useEffect(() => {
@@ -189,40 +194,70 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
 
     if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
     setImagePreview(URL.createObjectURL(file));
-    setForm((current) => ({...current,imageFile:file,removeImage:false}));
+    imageChoiceRequestRef.current += 1;
+    setForm((current) => ({
+      ...current,
+      imageFile:file,
+      removeImage:false,
+      preSaveImageSelection:null,
+    }));
     setMessage("");
   }
 
   function clearImage() {
     if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
     setImagePreview("");
-    setForm((current) => ({...current,imageFile:null,removeImage:Boolean(current.imagePath)}));
+    setForm((current) => ({
+      ...current,
+      imageFile:null,
+      removeImage:Boolean(current.imagePath),
+      preSaveImageSelection:null,
+    }));
   }
 
-  function applyImageEnrichmentSelection(selection) {
-    const candidate = selection?.candidate || null;
+  function applyVerificationSelection(selection) {
     const physicalBarcode = String(selection?.physicalBarcode || "").trim();
-
     setForm((current) => ({
       ...current,
       barcode: physicalBarcode || current.barcode,
       enrichmentSelection: {
         ...selection,
-        importImage: Boolean(candidate?.imagePreviewUrl),
+        importImage: false,
       },
     }));
+    setMessage(
+      physicalBarcode
+        ? `Physical barcode ${physicalBarcode} verified separately from Product Image.`
+        : "Product identity reviewed. Product Image selection remains separate.",
+    );
+  }
 
-    if (candidate?.imagePreviewUrl) {
-      if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-      setImagePreview(candidate.imagePreviewUrl);
-      setMessage(
-        "Product Image selected. It will be securely imported after Product Master is created.",
-      );
-    } else {
-      setMessage(
-        "Product was verified, but this candidate has no Product Image. You can choose another product/image or upload your own.",
-      );
-    }
+  function preSaveIdentityKey() {
+    return [
+      String(form.name || "").trim().toLowerCase(),
+      String(form.brand || "").trim().toLowerCase(),
+      Number(form.sizeMl || 0) || 0,
+      String(form.lookupPackageType || "").trim().toUpperCase(),
+      String(imageChoiceScope || "INDIA").toUpperCase(),
+    ].join("|");
+  }
+
+  function selectPreSaveImageChoice(choice, cacheKey, identityKey = preSaveIdentityKey()) {
+    if (!choice?.candidateId || !choice?.imagePreviewUrl || !cacheKey) return false;
+    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    setImagePreview(choice.imagePreviewUrl);
+    setForm((current) => ({
+      ...current,
+      imageFile: null,
+      removeImage: false,
+      preSaveImageSelection: {
+        choiceCacheKey: cacheKey,
+        candidateId: choice.candidateId,
+        imagePreviewUrl: choice.imagePreviewUrl,
+        identityKey,
+      },
+    }));
+    return true;
   }
 
   async function applyReturnedOnlineImage(result, successText) {
@@ -248,48 +283,89 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
     );
   }
 
-  async function loadImageChoices(scope) {
+  async function loadImageChoices(
+    scope,
+    { autoSelect = false, silent = false } = {},
+  ) {
     const productId = initialValue?.id;
     const normalizedScope = scope === "GLOBAL" ? "GLOBAL" : "INDIA";
+    const requestId = imageChoiceRequestRef.current + 1;
+    imageChoiceRequestRef.current = requestId;
 
-    if (!productId || !profile?.shop_id) {
-      setMessage("Save the product first, then choose an online image.");
-      return;
+    if (!profile?.shop_id) {
+      if (!silent) setMessage("Shop session is required for Product Image search.");
+      return null;
+    }
+
+    if (!productId && String(form.name || "").trim().length < 3) {
+      if (!silent) setMessage("Enter at least 3 characters of Product Name before image search.");
+      return null;
     }
 
     setImageChoiceScope(normalizedScope);
     setImageChoicePage(0);
     setImageChoiceBusy(true);
     setImageChoiceError("");
-    setMessage("");
+    if (!silent) setMessage("");
 
     try {
-      const result = await getProductImageChoices({
-        shopId: profile.shop_id,
-        productId,
-        choiceScope: normalizedScope,
-      });
+      const result = productId
+        ? await getProductImageChoices({
+            shopId: profile.shop_id,
+            productId,
+            choiceScope: normalizedScope,
+          })
+        : await getPreSaveProductImageChoices({
+            shopId: profile.shop_id,
+            query: String(form.name || "").trim(),
+            brand: String(form.brand || "").trim(),
+            sizeMl: Number(form.sizeMl || 0) || null,
+            packageType: form.lookupPackageType || "",
+            choiceScope: normalizedScope,
+          });
+
+      if (requestId !== imageChoiceRequestRef.current) return null;
 
       if (result?.barcodeUnchanged !== true) {
         throw new Error("Barcode safety verification failed.");
       }
 
-      setImageChoices(Array.isArray(result.choices) ? result.choices : []);
-      setImageChoiceCacheKey(String(result.choiceCacheKey || ""));
+      const choices = Array.isArray(result.choices) ? result.choices : [];
+      const cacheKey = String(result.choiceCacheKey || "");
+      setImageChoices(choices);
+      setImageChoiceCacheKey(cacheKey);
 
-      if (!result.choices?.length) {
+      if (!choices.length) {
         setImageChoiceError(
           "No " +
           (normalizedScope === "INDIA" ? "India" : "Global") +
           " image choices were found in the current free search results.",
         );
+      } else if (!productId && autoSelect && !form.imageFile) {
+        selectPreSaveImageChoice(
+          choices[0],
+          cacheKey,
+          [
+            String(form.name || "").trim().toLowerCase(),
+            String(form.brand || "").trim().toLowerCase(),
+            Number(form.sizeMl || 0) || 0,
+            String(form.lookupPackageType || "").trim().toUpperCase(),
+            normalizedScope,
+          ].join("|"),
+        );
       }
+
+      return { ...result, choices };
     } catch (error) {
+      if (requestId !== imageChoiceRequestRef.current) return null;
       setImageChoices([]);
       setImageChoiceCacheKey("");
       setImageChoiceError(error?.message || String(error));
+      return null;
     } finally {
-      setImageChoiceBusy(false);
+      if (requestId === imageChoiceRequestRef.current) {
+        setImageChoiceBusy(false);
+      }
     }
   }
 
@@ -306,7 +382,20 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
 
   async function chooseOnlineImage(candidateId) {
     const productId = initialValue?.id;
-    if (!productId || !profile?.shop_id || !imageChoiceCacheKey) return;
+    if (!profile?.shop_id || !imageChoiceCacheKey) return;
+
+    if (!productId) {
+      const choice = imageChoices.find(
+        (item) => String(item?.candidateId || "") === String(candidateId || ""),
+      );
+      if (selectPreSaveImageChoice(choice, imageChoiceCacheKey)) {
+        setImageChooserOpen(false);
+        setMessage(
+          "Product Image selected before save. This exact image will be attached after Product Master creation. Barcode is not used or changed by this image action.",
+        );
+      }
+      return;
+    }
 
     setImageChoiceApplying(candidateId);
     setImageChoiceError("");
@@ -327,6 +416,37 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
       setImageChoiceApplying("");
     }
   }
+
+  useEffect(() => {
+    if (
+      initialValue?.id ||
+      !profile?.shop_id ||
+      form.imageFile ||
+      String(form.name || "").trim().length < 3
+    ) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      void loadImageChoices("INDIA", {
+        autoSelect: true,
+        silent: true,
+      });
+    }, 550);
+
+    return () => {
+      window.clearTimeout(timer);
+      imageChoiceRequestRef.current += 1;
+    };
+  }, [
+    initialValue?.id,
+    profile?.shop_id,
+    form.name,
+    form.brand,
+    form.sizeMl,
+    form.lookupPackageType,
+    form.imageFile,
+  ]);
 
   async function run(handler, successMessage = "") {
     setBusy(true);
@@ -393,14 +513,13 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
           {imagePreview ? (
             <img src={imagePreview} alt="Product bottle or can preview" />
           ) : !initialValue?.id && String(form.name || "").trim().length >= 3 ? (
-            <OcrProductImagePreview
-              shopId={profile?.shop_id}
-              item={{ description: form.name, brand: form.brand }}
-              sizeMl={Number(form.sizeMl || 0) || null}
-              delayMs={450}
-            />
+            <span>
+              {imageChoiceBusy
+                ? "Searching Product Images…"
+                : "No Product Image selected yet"}
+            </span>
           ) : (
-            <span>Product Image will load automatically</span>
+            <span>Enter Product Name to search Product Images</span>
           )}
         </div>
         <div>
@@ -413,10 +532,10 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
               </>
             ) : (
               <>
-                Product Image preview loads automatically from name, brand and size.
-                When you save without an uploaded/confirmed image, WineShopPOS runs the
-                <strong> same automatic Product Image workflow used on the Products page.</strong>
-                <strong> Barcode is never changed by image processing.</strong>
+                Product Image search starts automatically from Product Name, Brand and Size before barcode.
+                Choose or try another image before save when needed.
+                <strong> The exact selected image is applied after Product Master creation.</strong>
+                <strong> Barcode is never used or changed by image processing.</strong>
               </>
             )}
           </p>
@@ -434,6 +553,27 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
             </div>
           ) : (
             <div className="product-image-presave-tools">
+              <div className="button-row" style={{ marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={busy || imageChoiceBusy || String(form.name || "").trim().length < 3}
+                  onClick={() => void openImageChooser()}
+                >
+                  {imageChoiceBusy
+                    ? "Searching Images..."
+                    : imagePreview
+                      ? "Try Another Image"
+                      : "Find Product Images"}
+                </button>
+              </div>
+              <p className="muted-text product-image-autoload-help">
+                WineShopPOS searches free internet image results automatically from
+                Product Name + Brand + Size before a barcode is required. The preview
+                you select is carried through Product creation and that exact cached
+                image is attached after save. Product Image processing never changes
+                the barcode.
+              </p>
               <ProductEnrichmentPanel
                 shopId={profile?.shop_id}
                 item={{ description: form.name, brand: form.brand }}
@@ -442,16 +582,9 @@ export default function ProductForm({ initialValue, onSubmit, submitLabel, onApp
                 packageType={form.lookupPackageType || ""}
                 barcode={form.barcode}
                 disabled={busy}
-                buttonLabel="Find Product / Image"
-                importCandidateImage
-                onUseCandidate={applyImageEnrichmentSelection}
+                buttonLabel="Verify Product / Barcode"
+                onUseCandidate={applyVerificationSelection}
               />
-              <p className="muted-text product-image-autoload-help">
-                The first Product Image preview appears automatically; no click is required.
-                Use Find Product / Image only when you want to inspect the product match,
-                or upload/take your own image. A securely confirmed image is imported after
-                Product Master creation.
-              </p>
             </div>
           )}
 

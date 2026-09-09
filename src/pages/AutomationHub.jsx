@@ -996,6 +996,33 @@ export default function AutomationHub() {
     }
   }
 
+  // V5_20C_OCR_EDIT_PRODUCT_RETURN_20260909
+  function editProduct(index) {
+    const row = resolution[index] || {};
+    if (!row.productId) {
+      setMessage("Select or create a Product Master item before editing it.");
+      return;
+    }
+
+    sessionStorage.setItem(
+      REVIEW_KEY,
+      JSON.stringify({
+        result,
+        matches,
+        resolution,
+        supplierId,
+        confirmedSupplier,
+        ingestionId,
+        sourceFileName,
+        charges,
+      }),
+    );
+
+    navigate(
+      `/products/${row.productId}/edit?ocr=1&ocrLineIndex=${index}`,
+    );
+  }
+
   function createProduct(index) {
     const item = result?.items?.[index];
     const row = resolution[index] || {};
@@ -1863,7 +1890,15 @@ export default function AutomationHub() {
                           <span>✓ Ready{row.aliasLearned ? " · learned" : ""}</span>
                         )}{" "}
 
-                        {!row.productId ? (
+                        {row.productId ? (
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => editProduct(index)}
+                          >
+                            Edit Product
+                          </button>
+                        ) : (
                           <button
                             type="button"
                             className="secondary-button"
@@ -1871,7 +1906,7 @@ export default function AutomationHub() {
                           >
                             Create New Product
                           </button>
-                        ) : null}
+                        )}
                       </td>
                     </tr>
                   );

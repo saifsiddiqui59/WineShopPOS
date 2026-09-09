@@ -1296,3 +1296,31 @@ The Add Product page keeps one `Find Product / Image` action.
 Product Image preview still loads automatically before save when a candidate is
 available. Secure image selection/import and the post-save automatic Product
 Image workflow remain unchanged. Image processing never changes barcode.
+
+### V5.20C Product Image and Scanner
+
+**Add Product**
+1. Enter Product Name. Brand and Size improve the result.
+2. WineShopPOS automatically searches Product Images before a barcode is required.
+3. The first safe preview may appear automatically.
+4. Use **Try Another Image** / **Find Product Images** to inspect the India or Global choices.
+5. Select the image you want.
+6. Scan/type the physical product barcode separately.
+7. Save Product. WineShopPOS attaches the exact selected image after Product Master creation and verifies that the barcode and product identity did not change.
+
+**OCR invoice review**
+- When an OCR line is already linked to Product Master, use **Edit Product** if its Product Master details/image need correction.
+- Save or Cancel returns to the same OCR review.
+
+**Phone Scanner**
+- On the PC: Operations → Phone Scanner → Connect Phone.
+- On the phone: scan the QR once.
+- Camera opens once after connection and reopens after every acknowledged scan.
+- Use **Scan Barcode** whenever you manually close and want to reopen the camera.
+- Pairing stays saved until Disconnect Phone / Forget This PC.
+
+**Camera scanner**
+- The scanner opens full screen.
+- Align the complete 1D barcode inside the guide.
+- Pinch with two fingers to zoom when the camera supports optical zoom.
+- Switch Camera and Torch remain available.

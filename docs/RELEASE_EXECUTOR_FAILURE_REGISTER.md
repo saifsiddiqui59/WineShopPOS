@@ -1914,3 +1914,83 @@ Resolution in V5_19D:
 - preserve all existing Realtime-only, shop-isolation, scanner-injection,
   Product Image, environment, documentation, build and PROD-isolation gates;
 - do not weaken any functional scanner test.
+
+### 2026-09-09 — V5_20 stale mobile-scanner Retry assertion
+
+Marker: `V5_20_STALE_RETRY_TEST_20260909`
+
+Observed:
+- V5_20 reached the full regression suite.
+- A historical mobile scanner test expected the obsolete literal `>Retry<`.
+- The V5_20 scanner UX had intentionally moved away from that wording.
+- The executor stopped before commit/push/deploy and restored only V5_20-owned files.
+
+Prevention:
+- V5_20C updates the complete evolving scanner/image/phone semantic contract set together.
+- Tests verify behavior and safety markers rather than obsolete button wording.
+
+### 2026-09-09 — V5_20B stale Add Product image wording assertion
+
+Marker: `V5_20B_STALE_IMAGE_WORDING_TEST_20260909`
+
+Observed:
+- V5_20B again reached the full regression suite.
+- `v5CombinedImagePhoneScanner.test.mjs` still required the historical sentence
+  `first Product Image preview appears automatically`.
+- The current implementation had intentionally changed the wording.
+- The executor stopped before commit/push/deploy and restored only V5_20-owned files.
+
+Prevention:
+- V5_20C treats pre-save Product Image selection as a real functional contract:
+  internet image choices are available before barcode/save, the selected candidate
+  is carried through Product creation, and the server applies that exact cached
+  candidate after creation with barcode/Product Master identity verification.
+- Evolving tests are reconciled together in one executor.
+
+### 2026-09-09 — V5_20C Phone Realtime source test was formatting-sensitive
+
+Marker: `V5_20C_PHONE_REALTIME_WHITESPACE_TEST_FALSE_FAILURE_20260909`
+
+Observed:
+- V5_20C reached the full regression suite.
+- `tests/v5PhoneToPcScanner.test.mjs` expected literal `supabase.channel`.
+- The valid implementation is formatted as `supabase` followed by a newline and
+  `.channel(...)`.
+- The executor therefore failed on source formatting, not missing Realtime behavior.
+- It stopped before commit/push/DEV Edge deploy/QA deploy and restored only
+  V5_20C-owned files.
+
+Resolution in V5_20D:
+- Realtime assertions use `supabase\s*\.\s*channel`.
+- Direct-table guards use `supabase\s*\.\s*from\s*\(`.
+- Visible Auto Scan is removed in the same pass.
+- Phone camera opens once after connection and reopens after an accepted ACK.
+- The phone camera title is `Scan Barcode`.
+- Mobile scanner copy is reduced to one short status and one short bottle/can tip.
+- Technical camera metadata is removed.
+- Retry is shown only on camera error.
+- Duplicate bottom Cancel is removed.
+- Full-screen CSS is hardened using fixed/inset + 100vh/100dvh + object-fit cover.
+
+Permanent prevention:
+- Source-contract tests must validate semantics, not exact whitespace formatting.
+- Scanner human-UAT requirements and regression tests must be reconciled together.
+
+### 2026-09-09 — V5_20D AI evaluation path broken by documentation restructure
+
+Marker: `V5_20D_AI_EVALUATION_RESTRUCTURE_PATH_FAILURE_20260909`
+
+Observed:
+- V5_20D reached the complete release regression stage.
+- 69 of 73 tests passed.
+- All scanner, phone, Product Image, OCR Edit Product, USB scanner, Realtime ACK/dedupe and full-screen/pinch tests passed.
+- The only four failures were Owner AI quality-gate contract tests.
+- Active AI scripts/tests still referenced the deleted path `docs/ai/evaluation/`.
+- The canonical tracked assets now live under `docs/versions/v2/testing/ai/`.
+- The executor stopped before commit/push/DEV Edge deploy/QA deploy and restored its owned files.
+
+Resolution in V5_20E:
+- repoint the active AI gate runner, validator, live evaluator and contract test;
+- update the quality policy and evaluation lock internal paths;
+- keep every threshold and absolute blocker unchanged;
+- explicitly run golden-dataset validation and quality-gate tests before the full suite.

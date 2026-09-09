@@ -1306,6 +1306,231 @@ async function searchSerpImagesFree(identity: any, choiceScope = "INDIA") {
   };
 }
 
+// V5_20C_PRE_SAVE_INTERNET_IMAGE_CHOICES_20260909
+function buildPreSaveImageIdentity({
+  query,
+  brand,
+  sizeMl,
+  packageType,
+  choiceScope,
+}: any) {
+  const productName = String(query || "").trim();
+  if (productName.length < 3) {
+    throw new HttpError(400, "Product name must contain at least 3 characters before image search.");
+  }
+
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
+  const normalizedBrand = String(brand || "").trim();
+  const resolvedSize = Number(sizeMl || 0) || inferSizeMl(productName) || null;
+  const resolvedPackage =
+    normalizePackageType(packageType) || inferPackageType(productName) || null;
+  const packageLabel =
+    resolvedPackage === "CAN" ? "Can" :
+      resolvedPackage === "BOTTLE" ? "Bottle" : "";
+
+  const nameHasBrand =
+    normalizedBrand &&
+    normalizeText(productName).includes(normalizeText(normalizedBrand));
+
+  const base = [
+    productName,
+    normalizedBrand && !nameHasBrand ? normalizedBrand : "",
+    resolvedSize ? `${resolvedSize} ml` : "",
+    packageLabel,
+  ].filter(Boolean);
+
+  const queries = [
+    [...base, scope === "INDIA" ? "India" : ""].filter(Boolean).join(" "),
+    [
+      normalizedBrand,
+      productName,
+      resolvedSize ? `${resolvedSize} ml` : "",
+      scope === "INDIA" ? "India" : "",
+    ].filter(Boolean).join(" "),
+  ];
+
+  return {
+    expected: {
+      query: productName,
+      title: productName,
+      brand: normalizedBrand,
+      sizeMl: resolvedSize,
+      packageType: resolvedPackage,
+    },
+    queries: [...new Set(queries.map((value) => value.trim()).filter(Boolean))].slice(0, 2),
+    raw: {
+      productName,
+      brand: normalizedBrand,
+      aliases: [],
+    },
+    canonical: {
+      productName,
+      brand: normalizedBrand,
+      brandCorrectedForSearchOnly: false,
+      brandEvidence: null,
+    },
+    shopProducts: [],
+    choiceScope: scope,
+  };
+}
+
+async function preSaveImageChoiceCacheKeyFor(identity: any, choiceScope = "INDIA") {
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
+
+  return sha256(JSON.stringify({
+    v: 6,
+    mode: "PRE_SAVE_IMAGE_CHOICES",
+    scope,
+    q: normalizeText(identity?.expected?.query || ""),
+    brand: normalizeText(identity?.expected?.brand || ""),
+    sizeMl: Number(identity?.expected?.sizeMl || 0) || null,
+    packageType: normalizePackageType(identity?.expected?.packageType),
+  }));
+}
+
+async function storePreSaveImageChoiceCache({
+  admin,
+  shopId,
+  cacheKey,
+  identity,
+  provider,
+  candidates,
+  userId,
+  choiceScope,
+}: any) {
+  const usable = Array.isArray(candidates) ? candidates : [];
+  const ttlMs = usable.length
+    ? 24 * 60 * 60 * 1000
+    : 30 * 60 * 1000;
+
+  const response = {
+    ok: true,
+    mode: "PRE_SAVE_IMAGE_CHOICES",
+    strategyVersion: 6,
+    choiceScope,
+    searchIdentity: {
+      productName: String(identity?.expected?.query || "").trim(),
+      brand: String(identity?.expected?.brand || "").trim(),
+      sizeMl: Number(identity?.expected?.sizeMl || 0) || null,
+      packageType: normalizePackageType(identity?.expected?.packageType) || null,
+    },
+    providerAccount: provider?.account || null,
+    providerAttempts: provider?.attempts || [],
+    candidates: usable.slice(0, 100),
+    createdAt: new Date().toISOString(),
+    positiveCache: usable.length > 0,
+  };
+
+  const { error } = await admin
+    .from("product_enrichment_cache")
+    .upsert({
+      shop_id: shopId,
+      cache_key: cacheKey,
+      query_text: String(identity?.queries?.[0] || identity?.expected?.query || "pre-save image choices"),
+      query_size_ml: Number(identity?.expected?.sizeMl || 0) || null,
+      query_barcode: null,
+      response,
+      providers: ["SERPAPI_GOOGLE_IMAGES"],
+      hit_count: 0,
+      expires_at: new Date(Date.now() + ttlMs).toISOString(),
+      created_by: userId,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: "shop_id,cache_key",
+    });
+
+  if (error) throw error;
+  return response;
+}
+
+async function getPreSaveProductImageChoices({
+  admin,
+  user,
+  membership,
+  shopId,
+  query,
+  brand,
+  sizeMl,
+  packageType,
+  choiceScope,
+}: any) {
+  if (!["ADMIN", "MANAGER"].includes(String(membership?.role || "").toUpperCase())) {
+    throw new HttpError(403, "Manager or Admin access is required");
+  }
+
+  const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
+    ? "GLOBAL"
+    : "INDIA";
+  const identity = buildPreSaveImageIdentity({
+    query,
+    brand,
+    sizeMl,
+    packageType,
+    choiceScope: scope,
+  });
+  const cacheKey = await preSaveImageChoiceCacheKeyFor(identity, scope);
+
+  const cached = await getCached(admin, shopId, cacheKey, true);
+  let response = cached?.response;
+  let cacheHit = false;
+
+  if (response?.mode === "PRE_SAVE_IMAGE_CHOICES") {
+    cacheHit = true;
+    await admin
+      .from("product_enrichment_cache")
+      .update({
+        hit_count: Number(cached?.hit_count || 0) + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", cached.id);
+  } else {
+    const provider = await searchSerpImagesFree(identity, scope);
+    response = await storePreSaveImageChoiceCache({
+      admin,
+      shopId,
+      cacheKey,
+      identity,
+      provider,
+      candidates: provider.candidates || [],
+      userId: user.id,
+      choiceScope: scope,
+    });
+  }
+
+  const choices = (response?.candidates || [])
+    .slice(0, 100)
+    .map((candidate: any) => publicImageChoice(candidate, {
+      currentCandidateId: null,
+      usedCandidateIds: [],
+    }));
+
+  return {
+    ok: true,
+    action: "PRE_SAVE_IMAGE_CHOICES",
+    strategyVersion: 6,
+    choiceScope: scope,
+    choiceCacheKey: cacheKey,
+    cacheHit,
+    cachePolicy: choices.length
+      ? "24_HOURS_POSITIVE"
+      : "30_MINUTES_EMPTY",
+    maxProviderSearchesWhenFresh: 2,
+    freeOnly: true,
+    paidAllowed: false,
+    choices,
+    searchIdentity: response?.searchIdentity || null,
+    providerAccount: response?.providerAccount || null,
+    providerAttempts: cacheHit ? [] : response?.providerAttempts || [],
+    barcodeBefore: null,
+    barcodeAfter: null,
+    barcodeUnchanged: true,
+  };
+}
+
 async function imageChoiceCacheKeyFor(product: any, identity: any, choiceScope = "INDIA") {
   const scope = String(choiceScope || "INDIA").toUpperCase() === "GLOBAL"
     ? "GLOBAL"
@@ -1599,7 +1824,7 @@ async function applyCachedImageChoice({
   }
 
   const mode = String(selectionMode || "CHOOSER").toUpperCase();
-  if (!["CHOOSER", "TRY_ANOTHER"].includes(mode)) {
+  if (!["CHOOSER", "TRY_ANOTHER", "PRE_SAVE"].includes(mode)) {
     throw new HttpError(400, "Unsupported image selection mode");
   }
 
@@ -1610,14 +1835,22 @@ async function applyCachedImageChoice({
   const cached = await getCached(admin, shopId, String(choiceCacheKey), true);
   const choiceSet = cached?.response;
 
+  const expectedChoiceMode =
+    mode === "PRE_SAVE"
+      ? "PRE_SAVE_IMAGE_CHOICES"
+      : "IMAGE_CHOICES";
+
   if (
     !choiceSet ||
-    choiceSet.mode !== "IMAGE_CHOICES" ||
-    String(choiceSet.productId || "") !== String(productId)
+    choiceSet.mode !== expectedChoiceMode ||
+    (
+      mode !== "PRE_SAVE" &&
+      String(choiceSet.productId || "") !== String(productId)
+    )
   ) {
     throw new HttpError(
       410,
-      "Image choices expired. Open Choose Image again to refresh the list.",
+      "Image choices expired. Open the image chooser again to refresh the list.",
     );
   }
 
@@ -1639,13 +1872,39 @@ async function applyCachedImageChoice({
   if (productError) throw productError;
   if (!product) throw new HttpError(404, "Product not found in current shop");
 
+  if (mode === "PRE_SAVE") {
+    const expected = choiceSet?.searchIdentity || {};
+    const expectedName = normalizeText(expected.productName || "");
+    const expectedBrand = normalizeText(expected.brand || "");
+    const expectedSize = Number(expected.sizeMl || 0) || null;
+    const actualName = normalizeText(product.product_name || "");
+    const actualBrand = normalizeText(product.brand || "");
+    const actualSize = Number(product.size_ml || 0) || null;
+
+    const nameMatches = Boolean(expectedName) && actualName === expectedName;
+    const brandMatches = !expectedBrand || actualBrand === expectedBrand;
+    const sizeMatches = !expectedSize || actualSize === expectedSize;
+
+    if (!nameMatches || !brandMatches || !sizeMatches) {
+      throw new HttpError(
+        409,
+        "Saved Product Master identity no longer matches the pre-save image search. Reopen Product Image and choose again.",
+      );
+    }
+  }
+
   const barcodeBefore = String(product.barcode || "");
   const oldPath = product.image_path || null;
 
   const image = await downloadSafeImage(candidate.originalImageUrl);
+  const imageVariant =
+    mode === "TRY_ANOTHER"
+      ? "try-another"
+      : mode === "PRE_SAVE"
+        ? "pre-save-selected"
+        : "chosen";
   const newPath =
-    `${shopId}/${productId}/${Date.now()}-` +
-    `${mode === "TRY_ANOTHER" ? "try-another" : "chosen"}-image.${image.ext}`;
+    `${shopId}/${productId}/${Date.now()}-${imageVariant}-image.${image.ext}`;
 
   const { error: uploadError } = await admin.storage
     .from(IMAGE_BUCKET)
@@ -1709,7 +1968,9 @@ async function applyCachedImageChoice({
   const auditAction =
     mode === "TRY_ANOTHER"
       ? "PRODUCT_IMAGE_TRY_ANOTHER"
-      : "PRODUCT_IMAGE_SELECTED_FROM_CHOOSER";
+      : mode === "PRE_SAVE"
+        ? "PRODUCT_IMAGE_PRE_SAVE_SELECTED"
+        : "PRODUCT_IMAGE_SELECTED_FROM_CHOOSER";
 
   const { error: auditError } = await admin.from("audit_logs").insert({
     shop_id: shopId,
@@ -1724,8 +1985,9 @@ async function applyCachedImageChoice({
       image_only: true,
       strategy_version: 4,
       selection_mode: mode,
-      chosen_by_user: mode === "CHOOSER",
+      chosen_by_user: mode === "CHOOSER" || mode === "PRE_SAVE",
       try_another: mode === "TRY_ANOTHER",
+      pre_save_selection: mode === "PRE_SAVE",
       free_only: true,
       paid_provider_allowed: false,
       choice_cache_key: choiceCacheKey,
@@ -1768,7 +2030,9 @@ async function applyCachedImageChoice({
     action:
       mode === "TRY_ANOTHER"
         ? "TRY_ANOTHER_IMAGE"
-        : "APPLY_IMAGE_CHOICE",
+        : mode === "PRE_SAVE"
+          ? "APPLY_PRE_SAVE_IMAGE_CHOICE"
+          : "APPLY_IMAGE_CHOICE",
     strategyVersion: 4,
     productId,
     imagePath: newPath,
@@ -1787,7 +2051,9 @@ async function applyCachedImageChoice({
     note:
       mode === "TRY_ANOTHER"
         ? "Next unused image candidate applied. Barcode and Product Master identity unchanged."
-        : "Selected image applied. Barcode and Product Master identity unchanged.",
+        : mode === "PRE_SAVE"
+          ? "Exact pre-save image choice applied after Product Master creation. Barcode and Product Master identity unchanged."
+          : "Selected image applied. Barcode and Product Master identity unchanged.",
   };
 }
 
@@ -2308,7 +2574,31 @@ Deno.serve(async (req) => {
 
     let response: any;
 
-    if (action === "IMAGE_CHOICES") {
+    if (action === "PRE_SAVE_IMAGE_CHOICES") {
+      response = await getPreSaveProductImageChoices({
+        admin,
+        user,
+        membership,
+        shopId,
+        query: String(body?.query || "").trim(),
+        brand: String(body?.brand || "").trim(),
+        sizeMl: Number(body?.sizeMl || 0) || null,
+        packageType: body?.packageType || null,
+        choiceScope: String(body?.choiceScope || "INDIA"),
+      });
+    } else if (action === "APPLY_PRE_SAVE_IMAGE_CHOICE") {
+      response = await applyCachedImageChoice({
+        caller,
+        admin,
+        user,
+        membership,
+        shopId,
+        productId: String(body?.productId || ""),
+        choiceCacheKey: String(body?.choiceCacheKey || ""),
+        candidateId: String(body?.candidateId || ""),
+        selectionMode: "PRE_SAVE",
+      });
+    } else if (action === "IMAGE_CHOICES") {
       response = await getProductImageChoices({
         admin,
         user,

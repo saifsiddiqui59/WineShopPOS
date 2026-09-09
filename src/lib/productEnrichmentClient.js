@@ -70,6 +70,47 @@ export function getProductImageChoices(
   );
 }
 
+export function getPreSaveProductImageChoices(
+  {
+    shopId,
+    query,
+    brand = "",
+    sizeMl = null,
+    packageType = "",
+    choiceScope = "INDIA",
+  },
+  options,
+) {
+  return invoke(
+    {
+      action: "PRE_SAVE_IMAGE_CHOICES",
+      shopId,
+      query,
+      brand,
+      sizeMl,
+      packageType,
+      choiceScope,
+    },
+    options,
+  );
+}
+
+export function applyPreSaveProductImageChoice(
+  { shopId, productId, choiceCacheKey, candidateId },
+  options,
+) {
+  return invoke(
+    {
+      action: "APPLY_PRE_SAVE_IMAGE_CHOICE",
+      shopId,
+      productId,
+      choiceCacheKey,
+      candidateId,
+    },
+    options,
+  );
+}
+
 export function applyProductImageChoice(
   { shopId, productId, choiceCacheKey, candidateId },
   options,

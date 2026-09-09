@@ -7311,3 +7311,145 @@ html[data-theme="dark"] .global-phone-copy { color:#f3f4f6; }
 html[data-theme="dark"] .global-phone-copy p,
 html[data-theme="dark"] .global-phone-setup p { color:#d1d5db; }
 @media (max-width:720px){ .global-phone-grid{grid-template-columns:1fr;} }
+
+/* V5_20D_MINIMAL_FULLSCREEN_PINCH_SCANNER_20260909 */
+:root {
+  --wsp-v5-20d-scanner-fullscreen: 1;
+}
+
+.mobile-barcode-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 5000 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: #000 !important;
+  overflow: hidden !important;
+}
+
+.mobile-barcode-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.mobile-barcode-header {
+  flex: 0 0 auto;
+  min-height: 54px;
+  padding:
+    calc(8px + env(safe-area-inset-top))
+    calc(12px + env(safe-area-inset-right))
+    8px
+    calc(12px + env(safe-area-inset-left)) !important;
+  background: rgba(0,0,0,.78) !important;
+  color: #fff !important;
+}
+
+.mobile-barcode-header h3 {
+  margin: 0 !important;
+  font-size: 1rem !important;
+}
+
+.mobile-barcode-video-shell-v19 {
+  position: relative !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  background: #000 !important;
+  touch-action: none;
+}
+
+.mobile-barcode-video-shell-v19 video {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  object-fit: cover !important;
+  background: #000 !important;
+}
+
+.mobile-barcode-status--minimal,
+.mobile-barcode-tip--minimal,
+.mobile-barcode-modal > .button-row,
+.mobile-barcode-manual {
+  flex: 0 0 auto;
+}
+
+.mobile-barcode-status--minimal {
+  padding: 6px 12px !important;
+  text-align: center;
+}
+
+.mobile-barcode-tip--minimal {
+  padding: 4px 12px 8px !important;
+  text-align: center;
+  font-size: .82rem;
+}
+
+.phone-scanner-simple {
+  gap: 12px;
+}
+
+.phone-scanner-simple h1,
+.phone-scanner-simple h2 {
+  margin: 0;
+}
+
+.phone-scanner-minimal-actions {
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 8px;
+}
+
+.phone-scanner-simple .phone-scanner-start {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1rem;
+}
+
+@media (max-width: 720px) {
+  .mobile-barcode-status--minimal {
+    position: absolute !important;
+    z-index: 8 !important;
+    top: calc(58px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100vw - 28px);
+    padding: 6px 10px !important;
+    border-radius: 999px;
+    background: rgba(0,0,0,.58);
+    color: #fff;
+    pointer-events: none;
+  }
+
+  .mobile-barcode-tip--minimal {
+    position: absolute !important;
+    z-index: 8 !important;
+    left: 50%;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100vw - 24px);
+    padding: 6px 10px !important;
+    border-radius: 999px;
+    background: rgba(0,0,0,.58);
+    color: #fff;
+    pointer-events: none;
+  }
+}

@@ -6,7 +6,7 @@ if (!resultsPath) {
   process.exit(2);
 }
 
-const policyPath = policyPathArg || "docs/ai/evaluation/quality-gates-v1.json";
+const policyPath = policyPathArg || "docs/versions/v2/testing/ai/quality-gates-v1.json";
 const results = JSON.parse(fs.readFileSync(resultsPath, "utf8"));
 const policy = JSON.parse(fs.readFileSync(policyPath, "utf8"));
 

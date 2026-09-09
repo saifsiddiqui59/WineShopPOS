@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import ProductForm from "../components/ProductForm";
 import { useShop } from "../context/ShopContext";
 import {
+  applyPreSaveProductImageChoice,
   autoFindProductImage,
   finalizeProductEnrichment,
 } from "../lib/productEnrichmentClient";
@@ -59,7 +60,11 @@ export default function AddProduct() {
 
     let enrichmentWarning = "";
     let imageFinalizedBySelection = false;
+    let preSaveImageFinalized = false;
+    let preSaveImageFailed = false;
     const selection = form.enrichmentSelection;
+    const preSaveImageSelection = form.preSaveImageSelection || null;
+    const hasExplicitImage = Boolean(form.imageFile || form.imagePath);
 
     if (
       selection?.confirmationCacheKey &&
@@ -71,10 +76,16 @@ export default function AddProduct() {
           productId: result.productId,
           confirmationCacheKey: selection.confirmationCacheKey,
           candidateId: selection.candidateId || null,
-          importImage: Boolean(selection.importImage),
+          importImage:
+            Boolean(selection.importImage) &&
+            !hasExplicitImage &&
+            !preSaveImageSelection,
         });
 
-        imageFinalizedBySelection = Boolean(selection.importImage);
+        imageFinalizedBySelection =
+          Boolean(selection.importImage) &&
+          !hasExplicitImage &&
+          !preSaveImageSelection;
         if (imageFinalizedBySelection) await refreshAll();
       } catch (error) {
         enrichmentWarning =
@@ -82,11 +93,44 @@ export default function AddProduct() {
       }
     }
 
-    const hasExplicitImage = Boolean(form.imageFile || form.imagePath);
+    if (
+      !hasExplicitImage &&
+      preSaveImageSelection?.choiceCacheKey &&
+      preSaveImageSelection?.candidateId &&
+      profile?.shop_id &&
+      result.productId
+    ) {
+      try {
+        const selectedImageResult = await applyPreSaveProductImageChoice({
+          shopId: profile.shop_id,
+          productId: result.productId,
+          choiceCacheKey: preSaveImageSelection.choiceCacheKey,
+          candidateId: preSaveImageSelection.candidateId,
+        });
+
+        if (
+          selectedImageResult?.barcodeUnchanged !== true ||
+          selectedImageResult?.productIdentityUnchanged !== true
+        ) {
+          throw new Error("Exact pre-save Product Image safety verification failed.");
+        }
+
+        preSaveImageFinalized = true;
+        await refreshAll();
+      } catch (error) {
+        preSaveImageFailed = true;
+        enrichmentWarning = enrichmentWarning
+          ? enrichmentWarning + ` Exact pre-save Product Image was not attached: ${error?.message || String(error)}`
+          : `Product was saved, but the exact Product Image selected before save was not attached: ${error?.message || String(error)}. No different automatic image was substituted.`;
+      }
+    }
 
     if (
       !hasExplicitImage &&
       !imageFinalizedBySelection &&
+      !preSaveImageFinalized &&
+      !preSaveImageSelection &&
+      !preSaveImageFailed &&
       profile?.shop_id &&
       result.productId
     ) {
@@ -162,7 +206,7 @@ export default function AddProduct() {
         </div>
       ) : fromOcr && !barcode ? (
         <div className="verification-guidance verification-guidance--neutral" style={{ marginBottom: 12 }}>
-          OCR product details are prefilled. Product Image preview loads automatically from the product identity. A physical barcode is still required to save; after save the same Product Master automatic image workflow used on the Products page runs when no image was explicitly chosen.
+          OCR product details are prefilled. Product Image search runs from Product Name + Brand + Size before barcode. Select or try another image, then scan the physical barcode separately. The exact selected image is attached only after Product Master creation.
         </div>
       ) : null}
 

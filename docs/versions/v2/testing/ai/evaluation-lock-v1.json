@@ -1,8 +1,8 @@
 {
   "lock_version": "2026-09-01-v1",
   "dataset_version": "golden-owner-assistant-v1",
-  "dataset_path": "docs/ai/evaluation/golden-owner-assistant-v1.jsonl",
-  "gate_policy_path": "docs/ai/evaluation/quality-gates-v1.json",
+  "dataset_path": "docs/versions/v2/testing/ai/golden-owner-assistant-v1.jsonl",
+  "gate_policy_path": "docs/versions/v2/testing/ai/quality-gates-v1.json",
   "foundry_resource": "wineshoppos-ai-in-1a61d5885c",
   "foundry_project": "wineshoppos-ai",
   "agent_name": "WineShopPOS-Owner-Agent",

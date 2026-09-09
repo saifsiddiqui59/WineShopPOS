@@ -5,8 +5,8 @@ import { TOOL_DEFINITIONS } from "../../azure-functions/ai-owner-assistant/src/a
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../..");
-const datasetPath = path.join(root, "docs/ai/evaluation/golden-owner-assistant-v1.jsonl");
-const policyPath = path.join(root, "docs/ai/evaluation/quality-gates-v1.json");
+const datasetPath = path.join(root, "docs/versions/v2/testing/ai/golden-owner-assistant-v1.jsonl");
+const policyPath = path.join(root, "docs/versions/v2/testing/ai/quality-gates-v1.json");
 
 const toolNames = new Set(TOOL_DEFINITIONS.map((t) => t.name));
 const requiredKeys = [
@@ -52,7 +52,7 @@ for (const [i,row] of rows.entries()) {
 }
 
 const policy = JSON.parse(fs.readFileSync(policyPath, "utf8"));
-if (policy.dataset !== "docs/ai/evaluation/golden-owner-assistant-v1.jsonl") {
+if (policy.dataset !== "docs/versions/v2/testing/ai/golden-owner-assistant-v1.jsonl") {
   errors.push("quality policy dataset path mismatch");
 }
 

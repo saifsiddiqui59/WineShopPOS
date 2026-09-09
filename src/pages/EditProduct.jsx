@@ -1,4 +1,4 @@
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ProductForm from "../components/ProductForm";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
@@ -12,13 +12,16 @@ const moneyNumber = (value) => {
 
 export default function EditProduct() {
   const { id } = useParams();
+  const [params] = useSearchParams();
   const { products, updateProduct, loadingData } = useShop();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const product = products.find((item) => item.id === id);
+  const fromOcr = params.get("ocr") === "1";
+  const returnPath = fromOcr ? "/purchasing/ocr" : "/products";
 
   if (loadingData && !product) return <div className="panel">Loading...</div>;
-  if (!product) return <Navigate to="/products" replace />;
+  if (!product) return <Navigate to={returnPath} replace />;
 
   async function saveAndClose(form) {
     const result = await updateProduct(id, form);
@@ -64,12 +67,12 @@ export default function EditProduct() {
           ok: false,
           message:
             `Product details were saved, but enrichment finalization failed: ` +
-            `${enrichmentError?.message || String(enrichmentError)}. Retry Find Product if you still want the external image/evidence finalization.`,
+            `${enrichmentError?.message || String(enrichmentError)}. Retry Verify Product / Barcode if you still want external evidence finalization.`,
         };
       }
     }
 
-    navigate("/products");
+    navigate(returnPath);
     return result;
   }
 
@@ -78,14 +81,18 @@ export default function EditProduct() {
       <div className="page-heading">
         <div>
           <h2>Edit Product</h2>
-          <p>Stock is not changed by editing or enriching product details</p>
+          <p>
+            {fromOcr
+              ? "Edit this Product Master item, then Save or Cancel to return to the same OCR invoice review."
+              : "Stock is not changed by editing or enriching product details"}
+          </p>
         </div>
       </div>
       <ProductForm
         initialValue={product}
         onSubmit={saveAndClose}
-        onCancel={() => navigate("/products")}
-        submitLabel="Save & Close"
+        onCancel={() => navigate(returnPath)}
+        submitLabel={fromOcr ? "Save & Return to OCR" : "Save & Close"}
       />
     </div>
   );

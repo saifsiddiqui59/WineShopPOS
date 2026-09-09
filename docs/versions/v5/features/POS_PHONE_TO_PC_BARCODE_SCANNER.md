@@ -250,3 +250,21 @@ The shared mobile camera now uses a dedicated 1D ROI decoder with MultiFormat an
 native fallbacks. No new paid service or backend/cloud resource is introduced.
 
 **Human retest is required before V5 closure.**
+
+## V5_20C_SIMPLE_FULLSCREEN_PHONE_SCANNER_20260909
+
+The V5_19 persistent global phone architecture remains authoritative.
+
+V5_20D finalizes scanner UX:
+- phone page title is simply **Phone Scanner**;
+- visible Auto Scan toggle is removed;
+- camera opens once after connection and reopens after an acknowledged scan;
+- **Scan Barcode** remains as the manual reopen action;
+- **Forget This PC** clears the saved phone pairing;
+- PC setup remains **Phone Scanner** with QR, Replace Phone and Disconnect Phone;
+- Realtime event-id retry/ACK and ScannerContext injection are unchanged;
+- mobile camera scanner is fixed full-screen with 100vh/100dvh fallback;
+- two-finger pinch replaces Zoom +/- when camera zoom is supported;
+- Retry is visible only on camera error;
+- technical camera metadata, repeated headings and duplicate bottom Cancel are removed;
+- the dedicated local 1D ROI decoder remains unchanged.

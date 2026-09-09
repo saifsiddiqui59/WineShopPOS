@@ -6,7 +6,7 @@ from statistics import mean
 from typing import Any, Callable
 from azure.ai.evaluation import GroundednessEvaluator, IntentResolutionEvaluator, RelevanceEvaluator, TaskAdherenceEvaluator
 
-DATASET_PATH = Path(os.getenv("AI_EVAL_DATASET", "docs/ai/evaluation/golden-owner-assistant-v1.jsonl"))
+DATASET_PATH = Path(os.getenv("AI_EVAL_DATASET", "docs/versions/v2/testing/ai/golden-owner-assistant-v1.jsonl"))
 OUTPUT_PATH = Path(os.getenv("AI_EVAL_OUTPUT", "artifacts/ai-11/evaluation-results.json"))
 AGENT_CONFIG_PATH = Path("azure-functions/ai-owner-assistant/src/agentConfig.js")
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")

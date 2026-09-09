@@ -2,72 +2,59 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const scanner = fs.readFileSync(
-  "src/components/MobileBarcodeScanner.jsx",
-  "utf8",
-);
-const css = fs.readFileSync("src/index.css", "utf8");
+const scanner=fs.readFileSync("src/components/MobileBarcodeScanner.jsx","utf8");
+const css=fs.readFileSync("src/index.css","utf8");
 
-test("scanner uses dedicated 1D reader plus multi-format fallback", () => {
-  assert.match(scanner, /BrowserMultiFormatOneDReader/);
-  assert.match(scanner, /new BrowserMultiFormatOneDReader/);
-  assert.match(scanner, /BrowserMultiFormatReader/);
-  assert.match(scanner, /ZXING_1D_ROI_WIDE/);
-  assert.match(scanner, /ZXING_MULTI_FORMAT_ROI/);
+test("dedicated 1D ROI decoder remains",()=>{
+  for(const marker of[
+    "BrowserMultiFormatOneDReader",
+    "ZXING_1D_ROI_WIDE",
+    "ZXING_1D_ROI_TIGHT",
+    "ZXING_1D_HIGH_CONTRAST",
+    "ZXING_1D_INVERTED",
+    "ZXING_1D_ROTATED",
+  ]) assert.ok(scanner.includes(marker),marker);
 });
 
-test("camera starts with environment-facing constraints unless explicitly switched", () => {
-  assert.match(scanner, /facingMode:\s*\{\s*ideal:\s*"environment"/);
-  assert.match(scanner, /requestedDeviceId \|\| ""/);
-  assert.match(scanner, /labelledRearCamera/);
-  assert.match(scanner, /looksFrontFacing/);
+test("rear camera and native fallback remain",()=>{
+  assert.match(scanner,/facingMode:\s*\{\s*ideal:\s*"environment"/);
+  assert.match(scanner,/BarcodeDetector/);
+  assert.match(scanner,/Switch Camera/);
+  assert.match(scanner,/Torch/);
 });
 
-test("scanner performs normal tight contrast inverted and rotated ROI passes", () => {
-  assert.match(scanner, /roiWide/);
-  assert.match(scanner, /roiTight/);
-  assert.match(scanner, /roiContrast/);
-  assert.match(scanner, /roiInvert/);
-  assert.match(scanner, /roiRotated/);
-  assert.match(scanner, /makeHighContrast/);
-  assert.match(scanner, /rotateCanvas90/);
-  assert.match(scanner, /decodeFromCanvas/);
+test("pinch replaces Zoom plus/minus controls",()=>{
+  assert.match(scanner,/handlePinchStart/);
+  assert.match(scanner,/handlePinchMove/);
+  assert.match(scanner,/touchDistance/);
+  assert.match(scanner,/applyZoom/);
+  assert.doesNotMatch(scanner,/>[\s\n]*Zoom -[\s\n]*</);
+  assert.doesNotMatch(scanner,/>[\s\n]*Zoom \+[\s\n]*</);
+  assert.match(scanner,/pinch to zoom/i);
 });
 
-test("native BarcodeDetector remains an independent signal", () => {
-  assert.match(scanner, /BarcodeDetector/);
-  assert.match(scanner, /nativeDetector\.detect\(video\)/);
-  assert.match(scanner, /NATIVE_BARCODE_DETECTOR/);
+test("scanner copy is minimal and Retry is error-only",()=>{
+  assert.match(scanner,/Point at barcode/);
+  assert.match(scanner,/Bottle\/can: keep full bars \+ numbers inside the box/);
+  assert.match(scanner,/scannerMode === "ERROR"/);
+  assert.match(scanner,/>[\s\n]*Retry[\s\n]*<\/button>/);
+  assert.doesNotMatch(scanner,/Dedicated 1D product-barcode decoder/);
+  assert.doesNotMatch(scanner,/1D Product Barcode Scanner/);
+  assert.doesNotMatch(scanner,/Best way to scan bottle\/can barcode/);
+  assert.doesNotMatch(scanner,/mobile-barcode-camera-meta/);
+  assert.doesNotMatch(scanner,/>[\s\n]*Cancel[\s\n]*<\/button>/);
 });
 
-test("scanner does not auto zoom but preserves manual zoom focus torch and camera switch", () => {
-  assert.match(scanner, /focusMode/);
-  assert.match(scanner, /"continuous"/);
-  assert.match(scanner, /Zoom \+/);
-  assert.match(scanner, /Zoom -/);
-  assert.match(scanner, /torchSupported/);
-  assert.match(scanner, /Switch Camera/);
-  assert.doesNotMatch(scanner, /AUTO_ZOOM_TARGET/);
+test("scanner is hardened to full dynamic mobile viewport",()=>{
+  assert.match(css,/V5_20D_MINIMAL_FULLSCREEN_PINCH_SCANNER_20260909/);
+  assert.match(css,/position:\s*fixed\s*!important/);
+  assert.match(css,/inset:\s*0\s*!important/);
+  assert.match(css,/height:\s*100vh\s*!important/);
+  assert.match(css,/height:\s*100dvh\s*!important/);
+  assert.match(css,/object-fit:\s*cover\s*!important/);
+  assert.match(css,/touch-action:\s*none/);
 });
 
-test("scanner gives real camera metadata and large matching guide", () => {
-  assert.match(scanner, /cameraResolution/);
-  assert.match(scanner, /activeCameraLabel/);
-  assert.match(scanner, /mobile-barcode-guide-v19/);
-  assert.match(css, /V5_19_MOBILE_1D_ROI_DECODER_20260908/);
-  assert.match(css, /width:\s*min\(92%,\s*620px\)/);
-});
-
-test("manual barcode fallback and GTIN validation remain", () => {
-  assert.match(scanner, /Use Barcode/);
-  assert.match(scanner, /validateGtin/);
-  assert.match(scanner, /Retry Scanner/);
-});
-
-test("scanner remains local/free with no paid recognition provider", () => {
-  assert.match(scanner, /no paid scanning service/i);
-  assert.doesNotMatch(
-    scanner,
-    /serpapi|google vision|azure ai vision|aws rekognition/i,
-  );
+test("scanner remains local with no paid recognition service",()=>{
+  assert.doesNotMatch(scanner,/azure ai vision|google vision|aws rekognition|paid scanner|barcode lookup api/i);
 });

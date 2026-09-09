@@ -6,7 +6,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const runner = path.resolve("scripts/ai-evaluation/apply-quality-gates.mjs");
-const policy = path.resolve("docs/ai/evaluation/quality-gates-v1.json");
+const policy = path.resolve("docs/versions/v2/testing/ai/quality-gates-v1.json");
 
 function run(metrics) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(),"wsp-ai-gate-"));

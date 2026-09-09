@@ -180,6 +180,8 @@ export default function MobileBarcodeScanner({
   const detectedRef = useRef(onDetected);
   const scanTimerRef = useRef(null);
   const zoomRangeRef = useRef(null);
+  // V5_20D_MINIMAL_FULLSCREEN_PINCH_SCANNER_20260909
+  const pinchRef = useRef({ distance: 0, zoom: 1 });
 
   const [message, setMessage] = useState("");
   const [manual, setManual] = useState("");
@@ -695,38 +697,73 @@ export default function MobileBarcodeScanner({
     );
   }
 
-  async function adjustZoom(direction) {
-    const track =
-      streamRef.current?.getVideoTracks?.()?.[0];
-
+  async function applyZoom(nextZoom, quiet = false) {
+    const track = streamRef.current?.getVideoTracks?.()?.[0];
     const range = zoomRangeRef.current;
 
     if (!track || !range) {
-      setMessage("Optical zoom is not available on this camera.");
-      return;
+      if (!quiet) setMessage("Pinch zoom is not available on this camera.");
+      return false;
     }
 
-    const next = clamp(
-      zoomValue + direction * Math.max(range.step, 0.2),
-      range.min,
-      range.max,
-    );
+    const next = clamp(Number(nextZoom), range.min, range.max);
 
     try {
       await track.applyConstraints({
         advanced: [{ zoom: next }],
       });
-
       setZoomValue(next);
-
-      setMessage(
-        `Camera zoom ${next.toFixed(1)}×. Keep the full barcode inside the rectangle.`,
-      );
+      pinchRef.current.zoom = next;
+      if (!quiet) {
+        setMessage(
+          `Camera zoom ${next.toFixed(1)}×. Keep the complete barcode inside the rectangle.`,
+        );
+      }
+      return true;
     } catch (error) {
-      setMessage(
-        error?.message || "Could not change camera zoom.",
-      );
+      if (!quiet) {
+        setMessage(error?.message || "Could not change camera zoom.");
+      }
+      return false;
     }
+  }
+
+  function touchDistance(touches) {
+    if (!touches || touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  function handlePinchStart(event) {
+    if (event.touches?.length !== 2 || !zoomRangeRef.current) return;
+    pinchRef.current = {
+      distance: touchDistance(event.touches),
+      zoom: zoomValue,
+    };
+  }
+
+  function handlePinchMove(event) {
+    if (event.touches?.length !== 2 || !zoomRangeRef.current) return;
+    const distance = touchDistance(event.touches);
+    if (!distance || !pinchRef.current.distance) return;
+    event.preventDefault();
+
+    const ratio = distance / pinchRef.current.distance;
+    const range = zoomRangeRef.current;
+    const next = clamp(
+      pinchRef.current.zoom * ratio,
+      range.min,
+      range.max,
+    );
+    void applyZoom(next, true);
+  }
+
+  function handlePinchEnd() {
+    pinchRef.current = {
+      distance: 0,
+      zoom: zoomValue,
+    };
   }
 
   async function toggleTorch() {
@@ -768,13 +805,7 @@ export default function MobileBarcodeScanner({
         aria-label={title}
       >
         <div className="mobile-barcode-header">
-          <div>
-            <h3>{title}</h3>
-            <p className="muted-text">
-              Dedicated 1D product-barcode decoder · rear camera preferred ·
-              local ZXing/native processing · no paid scanning service.
-            </p>
-          </div>
+          <h3>{title}</h3>
 
           <button
             type="button"
@@ -786,7 +817,13 @@ export default function MobileBarcodeScanner({
           </button>
         </div>
 
-        <div className="mobile-barcode-video-shell mobile-barcode-video-shell-v19">
+        <div
+          className="mobile-barcode-video-shell mobile-barcode-video-shell-v19"
+          onTouchStart={handlePinchStart}
+          onTouchMove={handlePinchMove}
+          onTouchEnd={handlePinchEnd}
+          onTouchCancel={handlePinchEnd}
+        >
           <video
             ref={videoRef}
             autoPlay
@@ -802,37 +839,20 @@ export default function MobileBarcodeScanner({
           </div>
         </div>
 
-        <div className="mobile-barcode-status">
-          <strong>
-            {scannerMode === "ONE_D_ROI"
-              ? "1D Product Barcode Scanner"
+        <div className="mobile-barcode-status mobile-barcode-status--minimal">
+          <span>
+            {scannerMode === "ERROR"
+              ? message || "Camera unavailable"
               : scannerMode === "STARTING"
-                ? "Opening camera"
-                : scannerMode === "ERROR"
-                  ? "Camera error"
-                  : "Camera"}
-          </strong>
-
-          <span>{message}</span>
-
-          <small className="mobile-barcode-camera-meta">
-            {[
-              activeCameraLabel || "Rear camera preferred",
-              cameraResolution || null,
-              zoomSupported
-                ? `Zoom ${zoomValue.toFixed(1)}×`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </small>
+                ? "Opening camera…"
+                : "Point at barcode"}
+          </span>
         </div>
 
-        <div className="mobile-barcode-tip">
-          <strong>Best way to scan bottle/can barcode</strong>
+        <div className="mobile-barcode-tip mobile-barcode-tip--minimal">
           <span>
-            Keep all black bars and the numbers visible inside the rectangle.
-            Hold 10–20 cm away. If blurry, move slightly farther away before using Zoom +.
+            Bottle/can: keep full bars + numbers inside the box
+            {zoomSupported ? " · pinch to zoom" : ""}
           </span>
         </div>
 
@@ -847,26 +867,6 @@ export default function MobileBarcodeScanner({
             </button>
           ) : null}
 
-          {zoomSupported ? (
-            <>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void adjustZoom(-1)}
-              >
-                Zoom -
-              </button>
-
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void adjustZoom(1)}
-              >
-                Zoom +
-              </button>
-            </>
-          ) : null}
-
           {torchSupported ? (
             <button
               type="button"
@@ -877,15 +877,17 @@ export default function MobileBarcodeScanner({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() =>
-              setRestartToken((current) => current + 1)
-            }
-          >
-            Retry Scanner
-          </button>
+          {scannerMode === "ERROR" ? (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() =>
+                setRestartToken((current) => current + 1)
+              }
+            >
+              Retry
+            </button>
+          ) : null}
         </div>
 
         <div className="mobile-barcode-manual">
@@ -905,19 +907,6 @@ export default function MobileBarcodeScanner({
             onClick={useManual}
           >
             Use Barcode
-          </button>
-        </div>
-
-        <div
-          className="button-row"
-          style={{ marginTop: 12 }}
-        >
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={onClose}
-          >
-            Cancel
           </button>
         </div>
       </section>

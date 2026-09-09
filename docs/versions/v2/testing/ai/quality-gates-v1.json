@@ -1,6 +1,6 @@
 {
   "policy_version": "2026-09-01-v1",
-  "dataset": "docs/ai/evaluation/golden-owner-assistant-v1.jsonl",
+  "dataset": "docs/versions/v2/testing/ai/golden-owner-assistant-v1.jsonl",
   "production_model": {
     "deployment": "gpt-5-mini",
     "version": "2025-08-07",

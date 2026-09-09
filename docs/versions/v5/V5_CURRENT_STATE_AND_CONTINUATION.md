@@ -284,3 +284,18 @@ Manual real-device UAT remains mandatory.
 
 Source-of-truth precedence remains:
 `CURRENT V5 SOURCE + CURRENT MIGRATIONS + VERIFIED V5 DEPLOYMENT > OLD DOCUMENTATION`.
+
+## V5_20C_PRE_SAVE_IMAGE_OCR_SCANNER_20260909
+
+Starting parent: `bd7a1fa8f5a26ccfe9b1fa12cec291b87d8d2449`.
+
+Current V5 QA contract:
+- Add Product internet Product Image search works before barcode/save using name + brand + size.
+- The exact selected pre-save image is applied only after Product Master creation and is identity/barcode verified.
+- Saved Product image India/Global chooser remains.
+- OCR linked lines expose Edit Product; Save/Cancel return to the invoice review.
+- Mobile scanner keeps the V5_19 1D ROI decoder but is full-screen and uses pinch zoom instead of Zoom +/-.
+- Phone Scanner UI is simplified while persistent global Realtime pairing/ACK/dedupe remains.
+- USB/Bluetooth keyboard-wedge scanner remains unchanged.
+- DEV Edge + V5 QA frontend are the only deployment targets.
+- PROD remains unchanged.
