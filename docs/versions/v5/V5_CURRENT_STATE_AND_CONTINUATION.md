@@ -376,3 +376,34 @@ Human UAT after deployment:
 3. Any remaining local draft count represents preserved meaningful/ingestion/unknown rows, not blindly deleted data.
 4. Resume invoice 16845 V5_23 atomic purchase UAT.
 <!-- /V5_24_CONNECTIVITY_DRAFT_STABILITY_20260909 -->
+
+<!-- V5_25_PURCHASE_PHONE_SCANNER_AND_LAYOUT_20260909 -->
+## V5_25 — Purchase Receiving phone barcode routing + full-width workspace
+
+Human UAT exposed a scanner-source UX gap in Purchase Receiving.
+
+Current contract:
+- `Camera This Device` explicitly opens the camera on the laptop/phone/tablet
+  where the WineShopPOS browser is running.
+- `Scan with Phone` arms the selected receiving row for the persistent phone
+  paired under Operations -> Phone Scanner.
+- While `Prepare New Product` is open, a `PHONE_REMOTE` barcode automatically
+  fills the Barcode draft field.
+- USB/keyboard-wedge barcode capture remains available through the same
+  ScannerContext; the Prepare barcode input has scanner-capture semantics.
+- The global phone transport, ACK/dedupe, pairing secret and phone authority model
+  are unchanged.
+- Selected Line sidebar is removed; Purchase Receiving uses the full table width.
+- Prepared Product/barcode is still draft-only until `receive_purchase_v3`
+  succeeds atomically.
+- V5_24 backend connectivity and blank-draft behavior remain unchanged.
+- No migration, Function/Edge change or PROD mutation.
+
+Human UAT:
+1. Open Prepare Product and scan from paired phone -> Barcode field fills.
+2. Use Scan with Phone on an existing no-barcode Product -> pending assignment only.
+3. Existing known barcode + different phone scan -> mismatch remains blocked.
+4. Camera This Device opens only when explicitly selected.
+5. USB scanner remains functional.
+6. No Selected Line sidebar; table occupies full receiving workspace.
+<!-- /V5_25_PURCHASE_PHONE_SCANNER_AND_LAYOUT_20260909 -->

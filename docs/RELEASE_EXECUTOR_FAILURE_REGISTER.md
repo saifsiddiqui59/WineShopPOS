@@ -2425,3 +2425,73 @@ V5_24 resolution:
 
 Permanent prevention:
 Do not use `navigator.onLine` as the final authority for inventory-affecting online/offline decisions. It may be used as a hint to trigger a probe. Business writes must rely on actual backend calls and atomic/idempotent server contracts.
+
+### 2026-09-09 — V5_25A dedicated scanner regression asserted the wrong protected source token
+
+Marker: `V5_25A_SCANNERCONTEXT_TEST_TOKEN_FALSE_NEGATIVE_20260909`
+
+Observed:
+V5_25A reached the dedicated `v5_25_purchase_phone_scanner_layout.test.mjs`
+suite and failed before commit. The failing assertion expected:
+`data?.scannerCapture === "barcode"`
+inside `ScannerContext.jsx`.
+
+Actual protected current V5 source uses:
+`active?.dataset?.scannerCapture === "barcode"`
+and
+`snapshot?.element?.dataset?.scannerCapture === "barcode"`.
+
+Root cause:
+The executor's new regression test invented the wrong property token
+(`data`) instead of asserting the real existing `dataset` contract.
+Application source was not the cause.
+
+Outcome:
+- source commit/push: NONE;
+- V5 QA deployment: NONE;
+- DB migration: NONE;
+- Function/Edge mutation: NONE;
+- PROD mutation: NONE;
+- exact V5_25-owned rollback: COMPLETE.
+
+V5_25B resolution:
+- verify the actual protected ScannerContext contract during preflight;
+- assert the literal current `dataset?.scannerCapture === "barcode"` behavior;
+- do not modify ScannerContext, phone transport, atomic purchase or OCR logic.
+
+Permanent prevention:
+Tests for protected unchanged files must be derived from the exact current source,
+not from a guessed property spelling or nearby conceptual name. Prefer a literal
+semantic token check when regex escaping adds no value.
+
+### 2026-09-09 — Purchase Receiving local-camera ambiguity, paired-phone barcode routing gap and Selected Line width loss
+
+Marker: `V5_25_PURCHASE_PHONE_SCANNER_ROUTING_AND_SELECTED_LINE_20260909`
+
+Human UAT after V5_24 reported three connected Purchase Receiving UX defects:
+1. `Scan Now` opened the camera on the device currently running WineShopPOS, which
+   was the laptop in this test. The wording did not distinguish this-device camera
+   from the already-paired separate phone scanner.
+2. The persistent separate-phone scanner transport was working globally through
+   `GlobalPhoneScannerHost -> ScannerContext.injectScan()`, but Purchase Receiving
+   did not consume `ScannerContext.lastScan`. Therefore a PHONE_REMOTE scan could
+   not automatically populate the Prepare New Product barcode draft.
+3. The Selected Line sidebar duplicated information already visible in the table and
+   consumed horizontal space needed by the receiving grid.
+
+V5_25 resolution:
+- leaves the global phone scanner transport untouched;
+- Purchase Receiving consumes only `PHONE_REMOTE` lastScan events for explicit
+  purchase barcode routing;
+- row action is split into `Camera This Device` and `Scan with Phone`;
+- Prepare New Product automatically accepts a paired-phone barcode while its modal is open;
+- Prepare barcode input also uses `data-scanner-capture="barcode"` for existing
+  USB/keyboard-wedge behavior;
+- barcode remains draft-only and still follows V5_23 atomic commit rules;
+- Selected Line sidebar is removed and the receiving table uses full workspace width.
+
+Permanent prevention:
+Scanner UI must always name the physical scanner source. Never use an ambiguous
+generic action when both local-camera and persistent remote-phone transports exist.
+Pages that need remote-phone scans must explicitly consume/reroute PHONE_REMOTE
+scanner events; changing the transport itself is unnecessary.
