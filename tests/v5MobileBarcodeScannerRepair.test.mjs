@@ -58,3 +58,26 @@ test("scanner is hardened to full dynamic mobile viewport",()=>{
 test("scanner remains local with no paid recognition service",()=>{
   assert.doesNotMatch(scanner,/azure ai vision|google vision|aws rekognition|paid scanner|barcode lookup api/i);
 });
+
+test("V5_21 starts ZXing before optional camera enhancements",()=>{
+  assert.match(scanner,/CAMERA_REQUEST_WATCHDOG_MS = 7000/);
+  assert.match(scanner,/void videoRef\.current\.play\(\)\.catch\(\(\) => \{\}\)/);
+  assert.match(scanner,/void tuneTrack\(stream\)/);
+  assert.doesNotMatch(scanner,/await videoRef\.current\.play\(\)/);
+  assert.doesNotMatch(scanner,/await tuneTrack\(stream\)/);
+  assert.doesNotMatch(scanner,/setRequestedDeviceId\(rear\.deviceId\)/);
+
+  const activeAt=scanner.indexOf('setScannerMode("ONE_D_ROI");');
+  const scanAt=scanner.indexOf("void scanFrame();",activeAt);
+  const enhanceAt=scanner.indexOf("await ensureRearCamera(stream);",activeAt);
+  assert.ok(activeAt>0);
+  assert.ok(scanAt>activeAt);
+  assert.ok(enhanceAt>scanAt);
+});
+
+test("V5_21 exposes Retry instead of indefinite Opening camera",()=>{
+  assert.match(scanner,/Camera is taking too long to open/);
+  assert.match(scanner,/Camera permission is blocked/);
+  assert.match(scanner,/Camera is busy in another app or browser tab/);
+  assert.match(scanner,/scannerMode === "ERROR"/);
+});

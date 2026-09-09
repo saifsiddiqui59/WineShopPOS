@@ -1994,3 +1994,30 @@ Resolution in V5_20E:
 - update the quality policy and evaluation lock internal paths;
 - keep every threshold and absolute blocker unchanged;
 - explicitly run golden-dataset validation and quality-gate tests before the full suite.
+
+### 2026-09-09 — V5_20E real-device scanner stuck on Opening camera
+
+Marker: `V5_20E_CAMERA_STUCK_OPENING_REAL_DEVICE_20260909`
+
+Human UAT:
+- simplified scanner UI rendered;
+- scanner remained on `Opening camera…`;
+- user could not scan a real barcode.
+
+Root cause found in current V5 source:
+The scan loop and active state started only after a serial chain of optional camera
+setup work finished: video.play, focus/zoom tuning, rear-camera refinement, device
+enumeration and native BarcodeDetector initialization.
+
+V5_21 resolution:
+- MediaStream attachment is the only hard startup requirement;
+- video.play() is best-effort/non-blocking;
+- track tuning is best-effort/non-blocking;
+- local ZXing scanFrame starts immediately after getUserMedia returns;
+- rear-camera refinement, device enumeration and native detector setup cannot block;
+- automatic rear-camera refinement no longer writes requestedDeviceId and therefore
+  cannot cause an unnecessary second scanner effect restart;
+- 7-second camera request watchdog exposes ERROR + Retry instead of indefinite
+  `Opening camera…`.
+
+No backend, Function App, Edge Function, database or PROD behavior is changed.

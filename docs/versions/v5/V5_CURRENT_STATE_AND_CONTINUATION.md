@@ -299,3 +299,15 @@ Current V5 QA contract:
 - USB/Bluetooth keyboard-wedge scanner remains unchanged.
 - DEV Edge + V5 QA frontend are the only deployment targets.
 - PROD remains unchanged.
+
+## V5_21 real-device scanner startup checkpoint — 2026-09-09
+
+Human UAT after V5_20E found the simplified camera could remain indefinitely at
+`Opening camera…`.
+
+V5_21 starts local ZXing immediately after MediaStream attachment. Camera tuning,
+rear-camera refinement, enumeration and native BarcodeDetector setup are optional
+asynchronous enhancements. A 7-second watchdog exposes Retry instead of an
+indefinite opening state.
+
+Frontend-only V5 QA change; no Function App/Edge Function/schema/PROD mutation.

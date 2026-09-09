@@ -19,6 +19,7 @@ const FRAME_INTERVAL_MS = 150;
 const MULTI_FORMAT_EVERY = 6;
 const CONTRAST_EVERY = 2;
 const ROTATE_EVERY = 5;
+const CAMERA_REQUEST_WATCHDOG_MS = 7000;
 
 function labelledRearCamera(devices) {
   const list = Array.isArray(devices) ? devices : [];
@@ -381,8 +382,11 @@ export default function MobileBarcodeScanner({
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
       videoRef.current.setAttribute("playsinline", "");
-      await videoRef.current.play();
-      await tuneTrack(stream);
+
+      // Do not block decoder startup on autoplay/focus/zoom support.
+      // scanFrame already waits until video.readyState/video dimensions are usable.
+      void videoRef.current.play().catch(() => {});
+      void tuneTrack(stream);
 
       return stream;
     }
@@ -409,7 +413,6 @@ export default function MobileBarcodeScanner({
           streamRef.current = null;
 
           const rearStream = await openCamera(rear.deviceId);
-          setRequestedDeviceId(rear.deviceId);
           return rearStream;
         } catch {}
       }
@@ -599,6 +602,7 @@ export default function MobileBarcodeScanner({
       setMessage("");
 
       if (!window.isSecureContext) {
+        setScannerMode("ERROR");
         setMessage(
           "Barcode camera requires HTTPS. Open the V5 preview using https:// and try again.",
         );
@@ -606,40 +610,76 @@ export default function MobileBarcodeScanner({
       }
 
       if (!navigator.mediaDevices?.getUserMedia) {
+        setScannerMode("ERROR");
         setMessage(
           "This browser does not expose camera access. You can still type the barcode below.",
         );
         return;
       }
 
-      try {
-        setScannerMode("STARTING");
-        setMessage("Opening rear camera…");
+      setScannerMode("STARTING");
+      setMessage("Opening rear camera…");
 
-        let stream = await openCamera(
+      const watchdog = window.setTimeout(() => {
+        if (cancelled || accepted) return;
+        setScannerMode("ERROR");
+        setMessage(
+          "Camera is taking too long to open. Check camera permission, then tap Retry.",
+        );
+      }, CAMERA_REQUEST_WATCHDOG_MS);
+
+      try {
+        const stream = await openCamera(
           requestedDeviceId || "",
         );
 
-        stream = await ensureRearCamera(stream);
+        window.clearTimeout(watchdog);
 
         if (!stream || cancelled || accepted) return;
 
-        await refreshDevices();
-        nativeDetector = await createNativeDetector();
-
+        // Critical path ends here: start local decoding immediately.
         setScannerMode("ONE_D_ROI");
-        setMessage(
-          "1D product-barcode scanner active. Keep the complete barcode inside the rectangle and hold steady.",
-        );
-
+        setMessage("Point at barcode");
         void scanFrame();
+
+        // Optional enhancements must never block ZXing startup.
+        void (async () => {
+          try {
+            await ensureRearCamera(stream);
+          } catch {}
+
+          if (cancelled || accepted) return;
+
+          try {
+            await refreshDevices();
+          } catch {}
+
+          if (cancelled || accepted) return;
+
+          try {
+            nativeDetector = await createNativeDetector();
+          } catch {
+            nativeDetector = null;
+          }
+        })();
       } catch (error) {
+        window.clearTimeout(watchdog);
+
         if (cancelled || accepted) return;
 
         setScannerMode("ERROR");
-        setMessage(
-          `${error?.message || "Could not open barcode camera."} You can still type the barcode below.`,
-        );
+
+        const name = String(error?.name || "");
+        const detail =
+          name === "NotAllowedError"
+            ? "Camera permission is blocked. Allow camera access for this site, then tap Retry."
+            : name === "NotFoundError"
+              ? "No camera was found on this device."
+              : name === "NotReadableError"
+                ? "Camera is busy in another app or browser tab. Close it there, then tap Retry."
+                : error?.message || "Could not open barcode camera.";
+
+        setMessage(`${detail} You can still type the barcode below.`);
       }
     }
 
