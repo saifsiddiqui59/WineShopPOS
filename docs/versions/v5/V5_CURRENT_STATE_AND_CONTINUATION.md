@@ -554,3 +554,27 @@ Manual UAT:
    local-cleanup warning may appear.
 7. Do not change Correct Pack UX until this sync UAT is confirmed.
 <!-- /V5_28B_SYNC_ERROR_SEMANTICS_RECOVERY_20260910 -->
+
+<!-- V5_29_INVENTORY_VERIFICATION_CONFIRM_PACK_20260910 -->
+## V5_29 — Inventory phone search, simplified receipt, one Confirm Pack
+
+Implemented in V5 QA only:
+- Inventory search accepts the existing paired-phone `PHONE_REMOTE` scan automatically;
+  focused search also uses the existing USB/Bluetooth keyboard-wedge scanner path.
+- Inventory desktop layout gives Current Stock the larger share and Stock Adjustment the
+  smaller share, collapsing to one column on smaller screens.
+- Completed Purchase Verification shows a clear success state and Posted Purchase Lines
+  as the normal receipt view; OCR/correction/landed-cost evidence is opened explicitly
+  through Audit / Correction Tools.
+- Original Invoice is no longer repeated around the completed page; advanced audit tools
+  retain one explicit access.
+- Receiving uses one Confirm Pack action. The review draft keeps the presented pack
+  baseline so unchanged confirmation records `CONFIRMED_AS_POSTED` and a changed pack
+  records `CORRECTED`.
+
+Protected and unchanged: V5_28B sync, automatic Product Image, global scanner transport,
+receive_purchase_v3/FIFO, V5_27 500ml rule, Supabase schema/data/RPC/migrations, Functions,
+Edge Functions and PROD.
+
+Manual browser/UAT verification remains required.
+<!-- /V5_29_INVENTORY_VERIFICATION_CONFIRM_PACK_20260910 -->

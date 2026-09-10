@@ -114,8 +114,11 @@ test("normal completed UX hides correction tables but preserves explicit audit a
   const engine=readFileSync(new URL("../src/components/PurchaseVerificationEngine.jsx",import.meta.url),"utf8");
   const purchases=readFileSync(new URL("../src/pages/Purchases.jsx",import.meta.url),"utf8");
   assert.match(details,/Open Audit \/ Correction Tools/);
-  assert.match(details,/\(!packResolved \|\| showAuditTools\)/);
+  assert.match(details,/\{showAuditTools \? <>/);
   assert.match(engine,/openAuditTools/);
+  assert.match(engine,/Purchase complete/);
+  assert.match(engine,/You can close this page/);
+  assert.doesNotMatch(engine,/onClick=\{viewOriginal\}/);
   assert.match(purchases,/function stagePendingProduct/);
   assert.match(purchases,/>Edit New Product Details<\/button>/);
   assert.doesNotMatch(purchases,/>Prepare Product<\/button>/);

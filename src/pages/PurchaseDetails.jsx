@@ -150,10 +150,9 @@ export default function PurchaseDetails() {
     <div className="page-heading">
       <div>
         <h2>Purchase Verification</h2>
-        <p>Compare the original supplier invoice, OCR evidence and the exact stock receipt posted to WineShopPOS.</p>
+        <p>Review the posted stock receipt. Audit evidence opens only when it is actually needed.</p>
       </div>
       <div className="button-row">
-        {ingestion ? <button type="button" className="primary-button" onClick={viewOriginal}>View Original Invoice</button> : null}
         <button type="button" className="secondary-button" onClick={() => navigate("/purchasing/invoices")}>Invoice Inbox</button>
       </div>
     </div>
@@ -168,7 +167,6 @@ export default function PurchaseDetails() {
       ocrPackAudit={ocrPackAudit}
       corrections={corrections}
       packState={packState}
-      viewOriginal={viewOriginal}
       openAuditTools={() => setShowAuditTools(true)}
     />
 
@@ -199,16 +197,19 @@ export default function PurchaseDetails() {
           <h3>Receipt Audit & Corrections</h3>
           <p className="muted-text">Normal completed purchases need no action here. Open these tools only to inspect retained OCR evidence or correct a genuinely wrong posted receipt.</p>
         </div>
-        <button type="button" className="secondary-button" onClick={() => setShowAuditTools((value) => !value)}>
-          {showAuditTools ? "Hide Audit / Correction Tools" : "Open Audit / Correction Tools"}
-        </button>
+        <div className="button-row">
+          <button type="button" className="secondary-button" onClick={() => setShowAuditTools((value) => !value)}>
+            {showAuditTools ? "Hide Audit / Correction Tools" : "Open Audit / Correction Tools"}
+          </button>
+          {showAuditTools && ingestion ? <button type="button" className="secondary-button" onClick={viewOriginal}>View Original Invoice</button> : null}
+        </div>
       </div>
       {packResolved && !showAuditTools ? <div className="verification-guidance verification-guidance--ok">
         <strong>No correction required.</strong> Posted Purchase Lines above are the completed stock receipt. OCR evidence and correction tools are retained for audit only.
       </div> : null}
     </section>
 
-    {(!packResolved || showAuditTools) ? <>
+    {showAuditTools ? <>
     {ocrPackAudit.rows.length ? <section id="ocr-evidence" className="panel verification-target" style={{ marginTop: 16 }}>
       <h3>OCR Evidence Used for Physical Cross-check</h3>
       <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Old OCR is not rewritten after a stock correction.</p>

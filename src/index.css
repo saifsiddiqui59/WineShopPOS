@@ -7453,3 +7453,17 @@ html[data-theme="dark"] .global-phone-setup p { color:#d1d5db; }
     pointer-events: none;
   }
 }
+
+/* V5_29_INVENTORY_PRODUCT_LIST_SPACE */
+.inventory-stock-layout {
+  grid-template-columns: minmax(0, 3.2fr) minmax(280px, 0.8fr);
+  align-items: start;
+}
+.inventory-stock-layout > * {
+  min-width: 0;
+}
+@media (max-width: 1080px) {
+  .inventory-stock-layout {
+    grid-template-columns: 1fr !important;
+  }
+}

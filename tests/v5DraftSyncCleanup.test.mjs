@@ -53,7 +53,10 @@ test("V5_27 500 ml rule and atomic purchase posting remain protected", () => {
   assert.match(shop, /receive_purchase_v3/);
 });
 
-test("Correct Pack automation remains outside V5_28B", () => {
-  assert.match(purchases, /Confirm as Posted/);
-  assert.match(purchases, /Correct Pack/);
+test("V5_29 one-button pack confirmation preserves V5_28B sync protection", () => {
+  assert.match(purchases, /function confirmPack/);
+  assert.match(purchases, /packDiffersFromBaseline/);
+  assert.match(purchases, />Confirm Pack<\/button>/);
+  assert.doesNotMatch(purchases, />Confirm as Posted<\/button>/);
+  assert.doesNotMatch(purchases, />Correct Pack<\/button>/);
 });

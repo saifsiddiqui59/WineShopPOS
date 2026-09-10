@@ -1,7 +1,8 @@
 import SortableTable from "../components/ui/SortableTable";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
+import { useScanner } from "../context/ScannerContext";
 import ProductThumb from "../components/ui/ProductThumb";
 
 const money = new Intl.NumberFormat("en-IN", {
@@ -12,12 +13,24 @@ const money = new Intl.NumberFormat("en-IN", {
 
 export default function Inventory() {
   const { products, getStock, adjustStock, loadingData } = useShop();
+  const { lastScan, successBeep } = useScanner();
   const [selectedId, setSelectedId] = useState("");
   const [quantityChange, setQuantityChange] = useState(-1);
   const [adjustmentType, setAdjustmentType] = useState("STOCK_CORRECTION");
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
+  const handledPhoneScanId = useRef("");
+
+  useEffect(() => {
+    if (!lastScan?.id || lastScan.source !== "PHONE_REMOTE") return;
+    if (handledPhoneScanId.current === lastScan.id) return;
+    const barcode = String(lastScan.barcode || "").trim();
+    if (!barcode) return;
+    handledPhoneScanId.current = lastScan.id;
+    setSearch(barcode);
+    successBeep();
+  }, [lastScan?.id]);
 
   const active = products.filter((p) => p.active);
   const filteredActive = useMemo(() => {
@@ -56,16 +69,21 @@ export default function Inventory() {
         <div><h2>Inventory & Product Stock</h2><p>Product Master defines the SKU; Inventory holds live quantity · value {money.format(inventoryValue)}</p></div><Link className="secondary-button" to="/products">Open Product Master</Link>
       </div>
 
-      <div className="settings-grid">
+      <div className="settings-grid inventory-stock-layout">
         <section className="panel">
           <h3>Current Stock</h3>
           <input
             className="inventory-search-input"
+            data-scanner-capture="barcode"
+            autoComplete="off"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search product, brand, barcode or SKU"
-            style={{ width: "100%", maxWidth: 460, marginBottom: 12 }}
+            placeholder="Search or scan product, brand, barcode or SKU"
+            style={{ width: "100%", maxWidth: 560, marginBottom: 6 }}
           />
+          <small className="muted-text" style={{ display: "block", marginBottom: 12 }}>
+            Paired phone scans automatically search Inventory. USB/Bluetooth works when this field is focused.
+          </small>
           <div className="data-table-wrapper">
             {loadingData ? <p>Loading...</p> : (
               <SortableTable className="data-table" resizeKey="inventory-current-stock-v1">
