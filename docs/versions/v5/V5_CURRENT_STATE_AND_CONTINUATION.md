@@ -2,7 +2,7 @@
 
 **START HERE IN A NEW CHAT.**
 
-Status: **ACTIVE DEV / QA — HUMAN UAT IN PROGRESS**
+Status: **PROD PROMOTION CANDIDATE — V5_29 QA runtime qualified; PROD NOT YET UPDATED**
 
 ## Authority
 
@@ -578,3 +578,27 @@ Edge Functions and PROD.
 
 Manual browser/UAT verification remains required.
 <!-- /V5_29_INVENTORY_VERIFICATION_CONFIRM_PACK_20260910 -->
+
+
+<!-- V5_30_PROD_DOC_TREE_RECONCILIATION_20260910 -->
+## V5_30 — production documentation reconciliation
+
+This is a documentation-only successor to the runtime-qualified V5_29 candidate.
+
+Runtime-qualified V5_29 source/QA candidate:
+`92d68ceac8fb5cef00e82d0a8eef7035edd8513d`
+
+V5_30 does not change application source, migrations, Functions, Edge Functions,
+Supabase data, Azure runtime or the already-qualified QA artifact. Its purpose is
+to make the repository documentation system point to V5 before controlled
+promotion to `main`.
+
+Important status distinction:
+- V5 is the current repository generation after this documentation successor;
+- V5 has NOT been declared deployed to PROD by this document;
+- the final PROD deployment SHA/frontend hash and whole-version retrospective
+  must be recorded only after production verification succeeds.
+
+The promotion executor must re-derive live PROD migration/service/frontend
+deltas and must not blindly apply every V5-named migration.
+<!-- /V5_30_PROD_DOC_TREE_RECONCILIATION_20260910 -->

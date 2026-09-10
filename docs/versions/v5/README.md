@@ -1,94 +1,76 @@
 # WineShopPOS V5
 
-Status: ACTIVE DEV / QA
+Status: **PROD PROMOTION CANDIDATE — QA QUALIFIED; PROD NOT YET DECLARED V5**
 
-## Inherited PROD baseline
+V5 extends the existing WineShopPOS production application. It is not a rewrite.
 
-V5 was created directly from current PROD/main.
+## Lineage
 
-Inherited main SHA:
+Inherited PROD/main SHA at V5 creation:
 
 `770d8db9674151aebe249976a82d042cd57cfed1`
 
-V5 starts with the complete current PROD application source, including all
-promoted V4 functionality, PROD hotfixes, Purchase Verification and the current
-working PROD OCR source.
+Runtime-qualified V5_29 candidate:
 
-## Environment isolation
+`92d68ceac8fb5cef00e82d0a8eef7035edd8513d`
 
-V5 MUST NOT connect to PROD Supabase.
+A later V5_30 Git SHA is documentation-only and must not be confused with a
+separately runtime-qualified application artifact.
 
-DEV / QA Supabase:
+## Current environments
 
-- Project: WineshopPOS_DEV
-- Project ref: juhcypzoacauzmtzqnwd
-- URL: https://juhcypzoacauzmtzqnwd.supabase.co
+### V5 DEV / QA
 
-V5 must use a dedicated DEV Invoice API configured for this DEV Supabase project.
-The existing PROD Invoice API must not be rebound or modified for DEV.
+- branch/worktree: `V5`
+- Supabase project: `WineshopPOS_DEV`
+- Supabase ref: `juhcypzoacauzmtzqnwd`
+- QA preview: `https://wspv5qa3a5e8018.z29.web.core.windows.net/`
+- dedicated DEV Invoice API: `wsp-v5-invoice-dev-53b6e9a1`
 
-## Initial V5 gate
+### Current PROD before V5 promotion
 
-Before new Purchase/OCR feature development:
+- branch: `main`
+- frontend: `https://wineshoppos.z29.web.core.windows.net/`
+- Supabase ref: `uiurgplnsgmawvxhjzzp`
 
-1. verify V5 frontend parity with inherited PROD source;
-2. bind V5 runtime to WineshopPOS_DEV;
-3. deploy an isolated DEV Invoice API from current PROD Invoice API source;
-4. verify authenticated V5 OCR;
-5. regression-test invoices 15983 and 16845;
-6. create a visibly-labelled V5 QA preview;
-7. only then begin Purchase Receiving Workspace changes.
+V5 DEV/QA resources must never be copied into the PROD frontend build.
 
-PROD remains untouched until explicit promotion.
+## Major V5 areas
 
-<!-- V5_DEV_RUNTIME_COMPLETE_20260907 -->
-## V5 DEV runtime — completed 2026-09-07
+- OCR invoice review and original-invoice evidence retention.
+- Purchase Receiving Workspace with pack, quantity, identity and financial checks.
+- atomic purchase-originated Product Master/barcode + inventory posting through
+  `receive_purchase_v3`.
+- purchase verification and audited correction/resolution.
+- Product Image discovery/selection workflow with free-only provider policy.
+- USB/Bluetooth, local-camera and paired phone-to-PC barcode scanning.
+- encrypted local purchase-draft recovery plus authoritative online server sync.
+- exact 500 ml fallback pack rule and invoice normalization safeguards.
+- V5_29 simplified Inventory scanning/layout, completed Purchase Verification UX,
+  and one-button Confirm Pack classification.
 
-- V5 application source/features remain PROD-derived.
-- Existing WineshopPOS_DEV business data was retained; PROD business data was not copied.
-- Supabase DEV ref: `juhcypzoacauzmtzqnwd`.
-- Existing DEV `ocr-invoice` Edge Function retained.
-- Dedicated DEV Invoice API: `https://wsp-v5-invoice-dev-53b6e9a1.azurewebsites.net`.
-- Dedicated private DEV invoice storage: `wspv5invdev53b6e9a1/invoice-documents`.
-- DEV Invoice API uses the inherited current Invoice API source with managed identity against DEV storage.
-- PROD Invoice API and PROD invoice storage were not rebound.
-- V5 browser code fails closed when `VITE_INVOICE_API_URL` is missing instead of falling back to PROD.
-<!-- /V5_DEV_RUNTIME_COMPLETE_20260907 -->
+## Canonical V5 documentation
 
-<!-- V5_13B_CONTINUITY_CURRENT_STATE_20260908 -->
-## Current continuation authority
-
-For any new ChatGPT/coding-agent conversation, start with:
-
-`docs/versions/v5/V5_CURRENT_STATE_AND_CONTINUATION.md`
-
-That file records current V5 runtime isolation, completed work, active UAT findings,
-shop-specific invoice inference rules, remaining manual UAT and the safe executor
-workflow. Do not restart from historical V3/V4 implementation chapters.
-
-Source-of-truth precedence remains:
-
-`CURRENT V5 SOURCE + CURRENT MIGRATIONS + VERIFIED V5 DEPLOYMENT > OLD DOCUMENTATION`
-<!-- /V5_13B_CONTINUITY_CURRENT_STATE_20260908 -->
-
-
-## V5.14 POS scanner continuation
-
-Current phone-to-PC scanner contract:
-`docs/versions/v5/features/POS_PHONE_TO_PC_BARCODE_SCANNER.md`
-
-Current V5 continuation authority remains:
-`docs/versions/v5/V5_CURRENT_STATE_AND_CONTINUATION.md`
-
-## V5_16_COMBINED_IMAGE_PHONE_SCANNER
-
-Latest combined Product Image + scanner behavior:
-- unsaved Product Image preview auto-loads;
-- saved new products reuse the same automatic Product Image workflow as Products;
-- no new paid service;
-- phone-to-PC scanner repair is implemented; human retest remains required.
-
-See:
-- `features/PRODUCT_IMAGE_AUTO_ENRICHMENT.md`
-- `releases/V5_16_COMBINED_IMAGE_PHONE_SCANNER_2026-09-08.md`
 - `V5_CURRENT_STATE_AND_CONTINUATION.md`
+- `architecture/README.md`
+- `reference/FEATURE_TRACEABILITY_CORE.md`
+- `reference/data/TABLE_CATALOG.md`
+- `reference/generated/`
+- `security/README.md`
+- `testing/README.md`
+- `features/`
+- `releases/`
+
+## Production-promotion rule
+
+Promotion must:
+1. re-derive the exact main..V5 source/migration/service delta;
+2. reconcile migration requirements against live PROD rather than blind-pushing migrations;
+3. build from the promoted source using PROD environment values;
+4. fail if DEV project refs/API endpoints appear in the PROD artifact;
+5. capture rollback before frontend overwrite;
+6. verify authenticated PROD workflows after deployment;
+7. only then mark V5 as deployed and write the V5-to-PROD retrospective.
+
+Truth order:
+`CURRENT SOURCE + CURRENT MIGRATIONS + VERIFIED LIVE STATE + VERIFIED TEST EVIDENCE > STALE DOCS`
