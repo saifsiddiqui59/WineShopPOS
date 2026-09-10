@@ -23,6 +23,7 @@ export default function PurchaseDetails() {
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState("");
   const [corrections, setCorrections] = useState([]);
+  const [showAuditTools, setShowAuditTools] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -141,6 +142,7 @@ export default function PurchaseDetails() {
     reviewDraft: ingestion?.review_draft || null,
     corrections,
     ocrUnitMatch: unitMatch,
+    productById,
   });
   const packResolved = packState.resolved;
 
@@ -167,6 +169,7 @@ export default function PurchaseDetails() {
       corrections={corrections}
       packState={packState}
       viewOriginal={viewOriginal}
+      openAuditTools={() => setShowAuditTools(true)}
     />
 
     <section id="posted-purchase-lines" className="panel verification-target" style={{ marginTop: 16 }}>
@@ -190,6 +193,22 @@ export default function PurchaseDetails() {
       </SortableTable></div>
     </section>
 
+    <section className="panel verification-target" style={{ marginTop: 16 }}>
+      <div className="section-row">
+        <div>
+          <h3>Receipt Audit & Corrections</h3>
+          <p className="muted-text">Normal completed purchases need no action here. Open these tools only to inspect retained OCR evidence or correct a genuinely wrong posted receipt.</p>
+        </div>
+        <button type="button" className="secondary-button" onClick={() => setShowAuditTools((value) => !value)}>
+          {showAuditTools ? "Hide Audit / Correction Tools" : "Open Audit / Correction Tools"}
+        </button>
+      </div>
+      {packResolved && !showAuditTools ? <div className="verification-guidance verification-guidance--ok">
+        <strong>No correction required.</strong> Posted Purchase Lines above are the completed stock receipt. OCR evidence and correction tools are retained for audit only.
+      </div> : null}
+    </section>
+
+    {(!packResolved || showAuditTools) ? <>
     {ocrPackAudit.rows.length ? <section id="ocr-evidence" className="panel verification-target" style={{ marginTop: 16 }}>
       <h3>OCR Evidence Used for Physical Cross-check</h3>
       <p className="muted-text">This is retained extraction evidence, not a second inventory posting. Old OCR is not rewritten after a stock correction.</p>
@@ -223,5 +242,6 @@ export default function PurchaseDetails() {
         <div className="metric-card"><span>Misc / Round</span><strong>{money.format(Number(purchase.miscellaneous_amount || 0) + Number(purchase.rounding_adjustment || 0))}</strong></div>
       </div>
     </section>
+    </> : null}
   </div>;
 }

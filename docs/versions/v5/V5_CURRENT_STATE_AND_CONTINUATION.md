@@ -407,3 +407,45 @@ Human UAT:
 5. USB scanner remains functional.
 6. No Selected Line sidebar; table occupies full receiving workspace.
 <!-- /V5_25_PURCHASE_PHONE_SCANNER_AND_LAYOUT_20260909 -->
+
+<!-- V5_26_PURCHASE_VERIFICATION_SIMPLIFICATION_20260909 -->
+## V5_26 — Purchase verification simplification + optional new-product details
+
+Human UAT on invoice 16845 exposed a false post-receipt Pack Quantity REVIEW after
+V5_23 atomic pending Product creation. Pending rows correctly retain resolved pack
+decisions but intentionally have no Product Master ID before receive_purchase_v3 commits.
+
+V5_26:
+- reconciles existing Product Master rows by exact Product ID + commercial pack;
+- reconciles atomic pending rows one-for-one using created Product identity when
+  available plus pack/quantity/value checks;
+- resolves audited corrections by purchase_item_id so one repeated line cannot
+  accidentally resolve all rows sharing the same Product Master;
+- keeps mismatched identity, size, barcode, pack, quantity or value unresolved;
+- shows Posted Purchase Lines as the normal completed receipt;
+- hides OCR/correction/landed-cost tools after successful pack verification unless
+  the user explicitly opens Audit / Correction Tools;
+- keeps correction tools automatically visible for a genuine unresolved pack;
+- changes new-product details from mandatory Prepare Product to optional
+  Edit New Product Details. A reviewed unmatched row can stage pending Product data
+  on barcode scan, Assign Later, or pack confirmation;
+- links an existing Product Master when a scanned barcode already belongs to it.
+
+Unchanged:
+- receive_purchase_v3, migrations and database write logic;
+- OCR normalization and pack inference rules;
+- Product Image;
+- phone scanner transport/ACK/dedupe;
+- inventory/FIFO write path;
+- PROD.
+
+Manual QA:
+1. Invoice 16845 receipt -> Pack Quantity VERIFIED and Inventory Receipt 996 bottles.
+2. Normal completed receipt -> Posted Purchase Lines visible; three audit/correction
+   tables hidden by default.
+3. Open Audit / Correction Tools -> retained OCR/correction tools remain usable.
+4. New unmatched line -> Scan with Phone without opening Edit New Product Details;
+   pending only until successful receive.
+5. Failed/cancelled receive -> no Product Master/barcode creation.
+6. Successful receive -> Product + purchase + inventory commit atomically.
+<!-- /V5_26_PURCHASE_VERIFICATION_SIMPLIFICATION_20260909 -->

@@ -2495,3 +2495,55 @@ Scanner UI must always name the physical scanner source. Never use an ambiguous
 generic action when both local-camera and persistent remote-phone transports exist.
 Pages that need remote-phone scans must explicitly consume/reroute PHONE_REMOTE
 scanner events; changing the transport itself is unnecessary.
+
+### 2026-09-09 — V5_26A / V5_26B executor pre-commit failures
+
+Marker: `V5_26A_LINKED_WORKTREE_DOTGIT_DIRECTORY_FALSE_NEGATIVE_20260909`
+
+V5_26A incorrectly required `$ROOT/.git` to be a directory. The V5 checkout is a
+linked Git worktree, where `.git` is a file. The executor stopped before source
+mutation. Prevention: validate worktrees with `git rev-parse --is-inside-work-tree`,
+not filesystem assumptions about `.git`.
+
+Marker: `V5_26B_ESCAPED_NEWLINE_PATCH_ANCHOR_FALSE_NEGATIVE_20260909`
+
+V5_26B passed linked-worktree preflight but its generated Node patcher searched
+PurchaseDetails source using string literals containing escaped `\\n`, which
+meant literal backslash+n instead of real line breaks. The exact current source
+contained the intended state line, so the patcher stopped with
+`PurchaseDetails state: expected exactly one source match`.
+
+Outcome for both failed runs:
+- commit/push: NONE;
+- QA deployment: NONE;
+- DB / Function / Edge mutation: NONE;
+- PROD mutation: NONE;
+- V5_26B exact owned rollback: PASS.
+
+V5_26C prevention:
+- use real newline characters in multiline source anchors;
+- verify the critical PurchaseDetails anchor during preflight;
+- keep exact target blob checks;
+- prefer unresolved REVIEW when created Product Master context is unavailable
+  instead of assuming pending-product identity matches.
+
+### 2026-09-10 — V5_26C / V5_26D legacy consolidation test failures
+
+Marker: `V5_26C_D_STALE_LEGACY_TEST_UPDATE_20260910`
+
+V5_26C application changes and dedicated V5_26 tests passed. The full suite then
+failed only because `tests/v5FinalConsolidation.test.mjs` still required the
+obsolete exact label `Prepare Product`.
+
+V5_26D attempted to update that legacy contract but the resulting legacy test file
+failed at file level before its named subtests ran. No application source failure
+was proven by that run.
+
+Both runs stopped before commit and exact owned rollback completed.
+
+V5_26E prevention:
+- update only the single receiving-controls array token;
+- do not introduce a new regex into the legacy file;
+- run `node --check tests/v5FinalConsolidation.test.mjs` immediately after patch;
+- run that legacy test file alone before the full suite;
+- keep all application, DB, scanner and PROD protections unchanged.
