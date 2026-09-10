@@ -507,3 +507,50 @@ Manual UAT:
    must not delete unrelated drafts.
 8. Do not receive stock until the authenticated browser state is visually verified.
 <!-- /V5_28_SYNC_STATUS_AND_LOCAL_DRAFT_CLEANUP_20260910 -->
+
+<!-- V5_28B_SYNC_ERROR_SEMANTICS_RECOVERY_20260910 -->
+## V5_28B — authoritative server sync no longer depends on local IndexedDB
+
+Human retest after V5_28 still showed the same SYNC ERROR banner. Independent
+DEV Supabase verification again showed invoice 16845 successfully saved and
+READY_TO_RECEIVE, proving the remaining UI error was not a database/RPC failure.
+
+Residual V5_28 defect:
+- Purchase Receiving still awaited `saveOfflinePurchaseDraft()` before entering
+  the online server-sync branch;
+- therefore a local IndexedDB write failure could still set `SYNC ERROR` and
+  prevent/interrupt that autosave cycle even though server connectivity was healthy;
+- the sync strip also displayed the GLOBAL local-draft count while online, so an
+  unrelated retained draft could look like a failure of the current invoice.
+
+V5_28B:
+- starts the encrypted local backup attempt without making it a prerequisite for
+  `invoice_save_review_draft`;
+- for ingestion-linked online drafts, `SYNC ERROR` is now reserved for actual
+  server RPC failure;
+- server success sets `SYNCED` before local-maintenance handling;
+- exact current-invoice local backup deletion is verified separately;
+- local backup failures produce local-only warnings and cannot downgrade a
+  successful server sync;
+- the online SYNCED strip no longer displays the global local-draft count;
+- offline mode still reports retained local recovery drafts.
+
+Protected and unchanged:
+- V5_28 IndexedDB transaction-await fix;
+- receive_purchase_v3 and purchase/inventory/FIFO writes;
+- Product Master/barcode atomicity;
+- V5_27 exact 500 ml -> 24;
+- OCR/scanners/connectivity;
+- Confirm as Posted / Correct Pack workflow;
+- DB schema/RPC/data, Functions and PROD.
+
+Manual UAT:
+1. Hard-refresh V5 QA after deployment.
+2. Open invoice 16845 and make one harmless Notes edit.
+3. Network invoice_save_review_draft must return HTTP 200.
+4. Header must settle on SYNCED.
+5. While online/synced, no global "1 local draft(s)" text should be shown.
+6. If local cleanup itself fails, server status must remain SYNCED and only the
+   local-cleanup warning may appear.
+7. Do not change Correct Pack UX until this sync UAT is confirmed.
+<!-- /V5_28B_SYNC_ERROR_SEMANTICS_RECOVERY_20260910 -->

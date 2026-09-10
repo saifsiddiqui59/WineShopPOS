@@ -171,7 +171,76 @@ export default function Purchases(){
  async function saveServer(payload,readyFlag=ready){if(!ingestionId)return;const{error}=await supabase.rpc("invoice_save_review_draft",{p_ingestion_id:ingestionId,p_review_draft:{version:2,stage:"RECEIVE_STOCK",purchaseDraft:payload,updatedAt:new Date().toISOString()},p_ready:Boolean(readyFlag)});if(error)throw error;}
  useEffect(()=>{let alive=true;const refresh=async()=>{const probe=await probeBackendConnectivity();if(!alive)return;setOnline(probe.reachable);setSync(current=>probe.reachable?(["SYNCING","SYNCED","SYNC ERROR"].includes(current)?current:"ONLINE"):"OFFLINE");};void refresh();const signal=()=>void refresh();window.addEventListener("online",signal);window.addEventListener("offline",signal);const interval=setInterval(signal,15000);return()=>{alive=false;clearInterval(interval);window.removeEventListener("online",signal);window.removeEventListener("offline",signal);};},[]);
  useEffect(()=>{void pruneEmptyManualPurchaseDrafts().then(()=>countOfflinePurchaseDrafts()).then(setOfflineCount).catch(()=>{});},[]);
- useEffect(()=>{if(!loaded)return;if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(async()=>{const p=snapshot();try{const local=await saveOfflinePurchaseDraft(draftId,p);try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}if(online&&ingestionId){setSync("SYNCING");await saveServer(p);setSync("SYNCED");try{await removeOfflinePurchaseDraft(draftId);setOfflineCount(await countOfflinePurchaseDrafts());}catch(cleanupError){setMessage("Server draft synced. Local backup cleanup pending"+(cleanupError?.message?": "+cleanupError.message:"."));}}else if(!online&&local?.saved){setSync("OFFLINE");}}catch(e){setSync(online?"SYNC ERROR":"OFFLINE");setMessage(e?.message||"Draft autosave failed.");}},700);return()=>clearTimeout(timer.current);},[supplierName,supplierId,invoiceNumber,invoiceDate,notes,items,charges,financialSummary,loaded,ingestionId,draftId,online]);
+ useEffect(()=>{
+   if(!loaded)return;
+   if(timer.current)clearTimeout(timer.current);
+   timer.current=setTimeout(async()=>{
+     const p=snapshot();
+
+     // Start the encrypted local recovery write first, but never allow a local
+     // IndexedDB failure to prevent an online authoritative server save.
+     const localAttempt=saveOfflinePurchaseDraft(draftId,p)
+       .then(result=>({ok:true,result}))
+       .catch(error=>({ok:false,error}));
+
+     if(online&&ingestionId){
+       setSync("SYNCING");
+       try{
+         await saveServer(p);
+         setSync("SYNCED");
+       }catch(serverError){
+         const local=await localAttempt;
+         try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+         setSync("SYNC ERROR");
+         setMessage(
+           local.ok
+             ?(serverError?.message||"Server draft sync failed. A local recovery copy was kept.")
+             :((serverError?.message||"Server draft sync failed.")+" Local recovery copy also failed"+(local.error?.message?": "+local.error.message:"."))
+         );
+         return;
+       }
+
+       // Server is authoritative and already safe at this point. Local backup
+       // maintenance is a separate class and must never downgrade SYNCED.
+       const local=await localAttempt;
+       try{
+         await removeOfflinePurchaseDraft(draftId);
+         const currentLocal=await loadOfflinePurchaseDraft(draftId).catch(()=>null);
+         if(currentLocal)throw new Error("Current invoice local backup still exists after cleanup.");
+         try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+         if(!local.ok){
+           setMessage("Server draft synced. Local recovery backup was unavailable, but the server copy is safe.");
+         }
+       }catch(cleanupError){
+         try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+         setMessage("Server draft synced. Local backup cleanup pending"+(cleanupError?.message?": "+cleanupError.message:"."));
+       }
+       return;
+     }
+
+     const local=await localAttempt;
+     try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+
+     if(!online){
+       if(local.ok&&local.result?.saved){
+         setSync("OFFLINE");
+       }else{
+         setSync("LOCAL DRAFT ERROR");
+         setMessage(local.error?.message||"Local recovery draft could not be saved.");
+       }
+       return;
+     }
+
+     // Manual, non-ingestion purchase: there is no server review-draft RPC.
+     if(local.ok){
+       setSync(local.result?.saved?"LOCAL SAVED":"ONLINE");
+     }else{
+       setSync("LOCAL DRAFT ERROR");
+       setMessage(local.error?.message||"Local purchase draft could not be saved.");
+     }
+   },700);
+   return()=>clearTimeout(timer.current);
+ },[supplierName,supplierId,invoiceNumber,invoiceDate,notes,items,charges,financialSummary,loaded,ingestionId,draftId,online]);
  useEffect(()=>{let alive=true;(async()=>{setLoaded(false);let ingestion=null,serverDraft=null;if(queryIngestion){const{data,error}=await supabase.from("invoice_ingestions").select("id,review_draft,normalized_invoice,extracted_supplier_name,extracted_invoice_number,extracted_invoice_date,extracted_total,purchase_id").eq("id",queryIngestion).maybeSingle();if(!alive)return;if(error)throw error;ingestion=data;setIngestionId(data?.id||queryIngestion);serverDraft=data?.review_draft?.stage==="RECEIVE_STOCK"?data.review_draft.purchaseDraft:null;}let source=serverDraft;if(!source){const local=await loadOfflinePurchaseDraft(queryIngestion?`ingestion:${queryIngestion}`:draftId).catch(()=>null);if(!online&&local?.payload)source=local.payload;}if(!source){try{const d=JSON.parse(sessionStorage.getItem("wineshop_ocr_purchase_draft")||"null");if(d&&(!queryIngestion||String(d.ingestionId||"")===queryIngestion))source=d;}catch{}}
  if(source){setSupplierId(source.supplierId||"");setSupplierName(source.supplierName||"");setInvoiceNumber(source.invoiceNumber||"");setInvoiceDate(source.invoiceDate||"");setNotes(source.notes||"");setCharges({...chargesFromInvoice(),...(source.charges||{})});setFinancialSummary(source.financialSummary||{});setItems((source.items||[]).map((r,i)=>{const p=byId[r.productId];const x={lineKey:r.lineKey||id("draft"),sourceDescription:normalizeBeerOcrText(r.sourceDescription||r.description||p?.name||`Line ${i+1}`),productId:r.productId||"",productName:r.productName||p?.name||r.pendingProduct?.productName||"",pendingProduct:r.pendingProduct||null,invoiceSizeMl:Number(r.invoiceSizeMl||inferInvoiceSizeMl({description:r.sourceDescription||r.description||"",packing:r.sourceItem?.packing||"",unitsPerCaseHint:r.sourceItem?.unitsPerCaseHint??null},Number(r.unitsPerCase||0))||0),sizeMl:Number(r.sizeMl||p?.sizeMl||0),caseCount:Number(r.caseCount||0),unitsPerCase:Number(r.unitsPerCase||0),looseBottles:Number(r.looseBottles||0),quantity:Number(r.quantity||0),ratePerCase:Number(r.ratePerCase||0),purchasePrice:Number(r.purchasePrice||0),mrp:Number(r.mrp||p?.mrp||0),lineAmount:Number(r.lineAmount||0),batchNumber:r.batchNumber||"",expiryDate:r.expiryDate||"",barcodeState:r.barcodeState||(p?.barcode?"KNOWN":"ASSIGN_LATER"),scannedBarcode:r.scannedBarcode||p?.barcode||"",matchSource:r.matchSource||"DRAFT",matchScore:Number(r.matchScore||0),packResolution:r.packResolution||{state:"NEEDS_REVIEW",source:"RESTORED_DRAFT"},packHistory:r.packHistory||[],sourceItem:r.sourceItem||{}};const q=bottles(x);if(q>0)x.quantity=q;if(x.lineAmount>0&&x.quantity>0)x.purchasePrice=Number((x.lineAmount/x.quantity).toFixed(6));return x;}));setLoaded(true);return;}
  if(ingestion?.normalized_invoice){const inv=ingestion.normalized_invoice,sup=(suppliers||[]).find(s=>normalize(s.supplier_name)===normalize(inv.supplierName)||normalize(s.supplier_name)===normalize(ingestion.extracted_supplier_name)),sid=sup?.id||"",sname=sup?.supplier_name||inv.supplierName||ingestion.extracted_supplier_name||"";const rows=await Promise.all((inv.items||[]).map(async(item,i)=>{const sz=inferInvoiceSizeMl(item,item?.unitsPerCaseHint)||null,{data:c}=await supabase.rpc("resolve_product_master_text",{p_text:normalizeBeerOcrText(item?.description||""),p_size_ml:sz,p_supplier_id:sid||null,p_limit:5}),top=Array.isArray(c)?c[0]:null,p=top&&Number(top.score||0)>=.9?active.find(x=>x.id===top.product_id)||{id:top.product_id,name:top.product_name,barcode:top.barcode||"",sizeMl:Number(top.size_ml||0),brand:top.brand||"",mrp:Number(item?.mrp||0),unitsPerCase:0}:null,r=rowFromOcr(item,i,p);if(top&&p){r.matchSource=top.match_source||"PRODUCT_MASTER";r.matchScore=Number(top.score||0);}return r;}));setSupplierId(sid);setSupplierName(sname);setInvoiceNumber(inv.invoiceNumber||ingestion.extracted_invoice_number||"");setInvoiceDate(inv.invoiceDate||ingestion.extracted_invoice_date||"");setCharges(chargesFromInvoice(inv));setFinancialSummary({subtotal:inv.subtotal??null,total:inv.total??ingestion.extracted_total??null,amountDue:inv.amountDue??null});setItems(rows);}setLoaded(true);})().catch(e=>{if(alive){setMessage(e?.message||"Unable to load Purchase Receiving Workspace.");setLoaded(true);}});return()=>{alive=false};},[queryIngestion]);
@@ -458,7 +527,20 @@ export default function Purchases(){
    }
  }
  if(!loaded)return <div className="panel">Loading authoritative Purchase Draft...</div>;const q=normalize(search),visible=items.map((row,index)=>({row,index})).filter(({row,index})=>(filter==="ALL"||lineStatus(row,index)===filter)&&(!q||normalize(`${row.sourceDescription} ${byId[row.productId]?.name||row.productName} ${byId[row.productId]?.barcode||row.scannedBarcode}`).includes(q)));
- return <div><div className="page-heading"><div><h2>Purchase Receiving Workspace</h2><p>One review workspace for OCR evidence, Product Master, pack, barcode now/later and final stock receipt.</p></div><div className="button-row">{ingestionId?<button type="button" className="secondary-button" onClick={viewOriginal}>View Original Invoice</button>:null}<button type="button" className="secondary-button" onClick={()=>setItems(x=>[...x,{lineKey:id("manual"),sourceDescription:"Manual purchase line",productId:"",productName:"",sizeMl:0,caseCount:0,unitsPerCase:0,looseBottles:0,quantity:0,ratePerCase:0,purchasePrice:0,mrp:0,lineAmount:0,batchNumber:"",expiryDate:"",barcodeState:"ASSIGN_LATER",scannedBarcode:"",matchSource:"MANUAL",packResolution:{state:"MANUAL_ENTRY",source:"MANUAL_ENTRY"},packHistory:[],sourceItem:{}}])}>+ Manual Line</button></div></div><div className={`purchase-sync-strip ${!online?"offline":""}`}><strong>{online?sync:"OFFLINE"}</strong><span>{online?"Server Purchase Draft is authoritative while online.":"Review changes are encrypted on this device; inventory posting is blocked."} {offlineCount?`${offlineCount} local draft(s).`:""}</span></div>{message?<div className="purchase-message">{message}</div>:null}
+ return <div><div className="page-heading"><div><h2>Purchase Receiving Workspace</h2><p>One review workspace for OCR evidence, Product Master, pack, barcode now/later and final stock receipt.</p></div><div className="button-row">{ingestionId?<button type="button" className="secondary-button" onClick={viewOriginal}>View Original Invoice</button>:null}<button type="button" className="secondary-button" onClick={()=>setItems(x=>[...x,{lineKey:id("manual"),sourceDescription:"Manual purchase line",productId:"",productName:"",sizeMl:0,caseCount:0,unitsPerCase:0,looseBottles:0,quantity:0,ratePerCase:0,purchasePrice:0,mrp:0,lineAmount:0,batchNumber:"",expiryDate:"",barcodeState:"ASSIGN_LATER",scannedBarcode:"",matchSource:"MANUAL",packResolution:{state:"MANUAL_ENTRY",source:"MANUAL_ENTRY"},packHistory:[],sourceItem:{}}])}>+ Manual Line</button></div></div><div className={`purchase-sync-strip ${!online?"offline":""}`}>
+   <strong>{online?sync:"OFFLINE"}</strong>
+   <span>{
+     !online
+       ?`Review changes are encrypted on this device; inventory posting is blocked.${offlineCount?` ${offlineCount} local draft(s).`:""}`
+       :sync==="SYNCED"
+         ?"Server Purchase Draft synced."
+         :sync==="SYNC ERROR"
+           ?"Server Purchase Draft sync failed. Local recovery is retained when available."
+           :sync==="LOCAL DRAFT ERROR"
+             ?"Local recovery storage failed; server sync state is separate."
+             :"Server Purchase Draft is authoritative while online."
+   }</span>
+ </div>{message?<div className="purchase-message">{message}</div>:null}
  <section className="panel"><div className="form-grid"><label>Supplier<input list="supplier-list-v5" value={supplierName} onChange={e=>{setSupplierName(e.target.value);const s=suppliers.find(x=>normalize(x.supplier_name)===normalize(e.target.value));setSupplierId(s?.id||"");}}/><datalist id="supplier-list-v5">{suppliers.filter(s=>s.active!==false).map(s=><option key={s.id} value={s.supplier_name}/>)}</datalist></label><label>Invoice Number<input value={invoiceNumber} onChange={e=>setInvoiceNumber(e.target.value)}/></label><label>Invoice Date<input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)}/></label><label>Notes<input value={notes} onChange={e=>setNotes(e.target.value)}/></label></div></section>
  <section className="panel purchase-workspace-toolbar"><div className="button-row"><button type="button" className={filter==="ALL"?"primary-button":"secondary-button"} onClick={()=>setFilter("ALL")}>All</button><button type="button" className={filter==="NEEDS_REVIEW"?"primary-button":"secondary-button"} onClick={()=>setFilter("NEEDS_REVIEW")}>Needs Review ({needsReview})</button><button type="button" className={filter==="READY"?"primary-button":"secondary-button"} onClick={()=>setFilter("READY")}>Ready ({items.length-needsReview})</button><button type="button" className="secondary-button" onClick={()=>{const i=items.findIndex((r,i)=>lineStatus(r,i)==="NEEDS_REVIEW");if(i>=0){setSelected(i);document.getElementById(`purchase-line-${i}`)?.scrollIntoView({behavior:"smooth",block:"center"});}}}>Next Issue</button></div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search invoice product, match or barcode..."/></section>
  <div className="purchase-workspace-layout"><section className="panel"><div className="purchase-receiving-scroll"><table className="data-table purchase-receiving-table"><thead><tr><th>#</th><th>Invoice Product</th><th>Product Match</th><th>Barcode</th><th>Size</th><th>Cases</th><th>Bottles/Case</th><th>Loose</th><th>Final Bottles</th><th>Rate/Case</th><th>Price/Bottle</th><th>MRP</th><th>Line Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>{visible.map(({row:r,index:i})=><tr id={`purchase-line-${i}`} key={r.lineKey} className={selected===i?"is-selected":""} onClick={()=>setSelected(i)}><td>{i+1}</td><td><strong>{r.sourceDescription}</strong><small>{r.matchSource}</small></td><td><select value={r.productId} onChange={e=>chooseProduct(i,e.target.value)}><option value="">{r.pendingProduct?"Pending new product":"Select existing..."}</option>{active.map(p=><option key={p.id} value={p.id}>{p.name} · {p.sizeMl} ml</option>)}</select>{r.pendingProduct?<><small>Pending: {r.pendingProduct.productName} · created only on successful receive</small><button type="button" className="table-action" onClick={()=>openCreate(i)}>Edit Pending Product</button></>:!r.productId?<button type="button" className="table-action" onClick={()=>openCreate(i)}>Edit New Product Details</button>:null}</td><td><strong>{byId[r.productId]?.barcode||r.pendingProduct?.barcode||r.scannedBarcode||"Missing"}</strong><small>{r.barcodeState}</small><div><button type="button" className="table-action" onClick={()=>{setPhoneScanIndex(null);setScannerIndex(i)}}>Camera This Device</button><button type="button" className="table-action" onClick={()=>armPhoneScan(i)}>Scan with Phone</button>{!byId[r.productId]?.barcode?<button type="button" className="table-action" onClick={()=>r.productId?updateLine(i,"barcodeState","ASSIGN_LATER"):stagePendingProduct(i,"",true)}>Assign Later</button>:null}</div></td><td>{r.pendingProduct?.sizeMl||r.sizeMl||"Review"}</td><td><input type="number" min="0" step="1" value={r.caseCount} onChange={e=>updateLine(i,"caseCount",e.target.value)}/></td><td><input type="number" min="1" step="1" value={r.unitsPerCase||""} onChange={e=>updateLine(i,"unitsPerCase",e.target.value)}/><small>{r.packResolution?.source}</small></td><td><input type="number" min="0" step="1" value={r.looseBottles} onChange={e=>updateLine(i,"looseBottles",e.target.value)}/></td><td><strong>{r.quantity||"Review"}</strong></td><td><input type="number" min="0" step="0.000001" value={r.ratePerCase} onChange={e=>updateLine(i,"ratePerCase",e.target.value)}/></td><td><strong>{Number(r.purchasePrice||0).toFixed(6)}</strong></td><td><input type="number" min="0" step="0.01" value={r.mrp} onChange={e=>updateLine(i,"mrp",e.target.value)}/></td><td><input type="number" min="0" step="0.01" value={r.lineAmount} onChange={e=>updateLine(i,"lineAmount",e.target.value)}/></td><td><span className={`invoice-status-badge ${lineStatus(r,i)==="READY"?"ready":"review"}`}>{lineStatus(r,i)==="READY"?"READY":"NEEDS REVIEW"}</span><small>{lineReasons(r,i)[0]||r.packResolution?.state}</small></td><td><button type="button" className="table-action" onClick={()=>packDecision(i,"CONFIRMED_AS_POSTED")}>Confirm as Posted</button><button type="button" className="table-action" onClick={()=>packDecision(i,"CORRECTED")}>Correct Pack</button>{duplicatePending(r,i)?<button type="button" className="table-action" onClick={()=>confirmSeparateDuplicate(i)}>Keep Separate</button>:null}</td></tr>)}</tbody><tfoot><tr><td colSpan="5"><strong>Totals</strong></td><td>{items.reduce((s,r)=>s+Number(r.caseCount||0),0)} cases</td><td>—</td><td>{items.reduce((s,r)=>s+Number(r.looseBottles||0),0)} loose</td><td><strong>{items.reduce((s,r)=>s+Number(r.quantity||0),0)} bottles</strong></td><td colSpan="4"><strong>{money.format(productValue)}</strong></td><td colSpan="2">{needsReview} review</td></tr></tfoot></table></div></section></div>

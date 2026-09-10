@@ -2587,3 +2587,37 @@ change be considered.
 
 PROD / DB / Function mutation:
 None.
+
+### 2026-09-10 — V5_28 residual false SYNC ERROR after successful server save
+
+Marker: `V5_28B_LOCAL_FIRST_AUTOSAVE_STILL_FALSE_SYNC_ERROR_20260910`
+
+Symptom:
+After V5_28, human UAT still showed the same sync-error presentation. DEV
+Supabase again confirmed invoice 16845 was being saved successfully and remained
+READY_TO_RECEIVE.
+
+Residual root cause:
+V5_28 separated post-server cleanup errors, but the autosave sequence still
+awaited the local IndexedDB recovery write BEFORE starting the online server RPC.
+A local write failure could therefore still enter the outer error path and label
+the state SYNC ERROR even though the authoritative server path itself was healthy.
+The online strip also rendered the global local-draft count, which can include
+other meaningful drafts unrelated to the current invoice.
+
+Resolution:
+- start local recovery write independently;
+- never gate an online ingestion server save on IndexedDB success;
+- reserve SYNC ERROR for actual server RPC failure;
+- keep local cleanup/error reporting separate;
+- show local-draft counts in offline recovery context, not as current-invoice
+  server-sync evidence.
+
+Permanent prevention:
+Authoritative remote persistence and local recovery persistence are separate
+failure domains. Local cache/write/cleanup operations may provide resilience, but
+must never prevent or falsify a healthy authoritative online save. Global recovery
+draft counts must not be presented as proof the current online record failed.
+
+DB / Function / PROD mutation:
+None.
