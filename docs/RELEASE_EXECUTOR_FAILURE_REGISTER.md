@@ -2547,3 +2547,43 @@ V5_26E prevention:
 - run `node --check tests/v5FinalConsolidation.test.mjs` immediately after patch;
 - run that legacy test file alone before the full suite;
 - keep all application, DB, scanner and PROD protections unchanged.
+
+### 2026-09-10 — V5_28 server-sync/local-cleanup false error
+
+Marker: `V5_28_SERVER_SYNC_LOCAL_CLEANUP_FALSE_ERROR_20260910`
+
+Stage:
+V5 human UAT, Purchase Receiving encrypted draft autosave.
+
+Symptom:
+The UI displayed `SYNC ERROR · 1 local draft(s)` while DevTools Network showed
+`invoice_save_review_draft` HTTP 200 responses and DEV Supabase confirmed that
+invoice 16845's 15-line authoritative server Purchase Draft was updating.
+
+Root cause:
+IndexedDB draft PUT/DELETE transactions were started but not explicitly awaited.
+In addition, one outer autosave catch classified failures from both the server
+save and post-server local-backup cleanup as `SYNC ERROR`. Therefore a local
+IndexedDB cleanup/count problem could falsely imply that Supabase server sync
+failed after it had actually succeeded.
+
+Resolution:
+- await IndexedDB readwrite transaction completion for draft save/delete;
+- set `SYNCED` immediately after successful server RPC;
+- isolate post-server local cleanup errors so they cannot downgrade server sync
+  state;
+- preserve unrelated meaningful local drafts.
+
+Permanent prevention:
+Server synchronization state and local fallback-storage maintenance are separate
+verification classes. A successfully completed server RPC must not later be
+relabeled failed because local cache cleanup failed. IndexedDB writes/deletes
+used as release-critical state must await transaction completion.
+
+Safe continuation:
+After V5_28 deployment, verify invoice 16845 in the authenticated V5 browser.
+Only after sync UAT passes should the separate V5_29 Confirm Pack automation
+change be considered.
+
+PROD / DB / Function mutation:
+None.

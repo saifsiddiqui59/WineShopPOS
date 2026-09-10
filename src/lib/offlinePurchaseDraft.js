@@ -2,6 +2,11 @@ const DB_NAME="wineshoppos_purchase_drafts_v1",DB_VERSION=1,DRAFT_STORE="purchas
 export const DRAFT_GUARD_MARKER="V5_24_EMPTY_MANUAL_DRAFT_GUARD";
 
 const reqPromise=req=>new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
+const txPromise=tx=>new Promise((resolve,reject)=>{
+  tx.oncomplete=()=>resolve();
+  tx.onerror=()=>reject(tx.error||new Error("IndexedDB transaction failed."));
+  tx.onabort=()=>reject(tx.error||new Error("IndexedDB transaction aborted."));
+});
 
 function openDb(){
   return new Promise((resolve,reject)=>{
@@ -79,11 +84,14 @@ export async function saveOfflinePurchaseDraft(id,payload){
 
   const enc=await encrypt(payload),db=await openDb();
   try{
-    db.transaction(DRAFT_STORE,"readwrite").objectStore(DRAFT_STORE).put({
+    const tx=db.transaction(DRAFT_STORE,"readwrite");
+    const done=txPromise(tx);
+    tx.objectStore(DRAFT_STORE).put({
       id,
       updatedAt:new Date().toISOString(),
       ...enc
     });
+    await done;
     return{saved:true};
   }finally{db.close();}
 }
@@ -101,7 +109,10 @@ export async function removeOfflinePurchaseDraft(id){
   if(!id)return;
   const db=await openDb();
   try{
-    db.transaction(DRAFT_STORE,"readwrite").objectStore(DRAFT_STORE).delete(id);
+    const tx=db.transaction(DRAFT_STORE,"readwrite");
+    const done=txPromise(tx);
+    tx.objectStore(DRAFT_STORE).delete(id);
+    await done;
   }finally{db.close();}
 }
 

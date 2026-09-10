@@ -461,3 +461,49 @@ Unchanged: 330/650/750 rules, OCR MI/M1 normalization, receive_purchase_v3, DB/s
 
 Manual QA: Hoegaarden 500 ml and every other unmatched 500 ml line should show 24 bottles/case; printed pack and Product Master conflicts must retain their precedence.
 <!-- /V5_27_ANY_500ML_DEFAULT_PACK_24_20260910 -->
+
+<!-- V5_28_SYNC_STATUS_AND_LOCAL_DRAFT_CLEANUP_20260910 -->
+## V5_28 — server sync status + local encrypted draft cleanup
+
+Human UAT on invoice 16845 showed `SYNC ERROR · 1 local draft(s)` even while
+the browser Network panel showed repeated HTTP 200 responses from
+`invoice_save_review_draft`. DEV Supabase independently showed the authoritative
+15-line server Purchase Draft successfully updating and reaching
+`READY_TO_RECEIVE`.
+
+Root cause class:
+- the IndexedDB encrypted draft write/delete helpers returned before their
+  readwrite transactions were explicitly awaited;
+- Purchase Receiving used one outer error classification for both server save
+  and the post-server local backup cleanup, so a local cleanup/count failure
+  could incorrectly display `SYNC ERROR` after the server had already saved.
+
+V5_28:
+- waits for encrypted local-draft PUT transaction completion;
+- waits for matching local-draft DELETE transaction completion;
+- marks the ingestion server draft `SYNCED` immediately after successful
+  `invoice_save_review_draft`;
+- performs local-backup cleanup after server success without allowing a cleanup
+  failure to downgrade the server state to `SYNC ERROR`;
+- retains a local-cleanup warning when cleanup itself fails;
+- does not delete unrelated meaningful local drafts.
+
+Unchanged:
+- `receive_purchase_v3`, purchase/inventory/FIFO write paths;
+- Product Master and barcode atomicity;
+- OCR, V5_27 500 ml -> 24 pack rule and existing pack-confirmation workflow;
+- scanner transports;
+- Supabase schema/RPC/data;
+- Azure Functions and PROD.
+
+Manual UAT:
+1. Hard-refresh V5 QA after deployment.
+2. Open the current invoice 16845 Purchase Receiving draft.
+3. Make one harmless Notes edit and wait at least 2 seconds.
+4. Network `invoice_save_review_draft` should return HTTP 200.
+5. Header must settle on `SYNCED`, not `SYNC ERROR`.
+6. The matching invoice local backup should be removed after server success.
+7. If a separate meaningful local draft exists, its count may remain; V5_28
+   must not delete unrelated drafts.
+8. Do not receive stock until the authenticated browser state is visually verified.
+<!-- /V5_28_SYNC_STATUS_AND_LOCAL_DRAFT_CLEANUP_20260910 -->
