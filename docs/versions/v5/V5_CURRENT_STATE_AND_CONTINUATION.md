@@ -449,3 +449,15 @@ Manual QA:
 5. Failed/cancelled receive -> no Product Master/barcode creation.
 6. Successful receive -> Product + purchase + inventory commit atomically.
 <!-- /V5_26_PURCHASE_VERIFICATION_SIMPLIFICATION_20260909 -->
+
+<!-- V5_27_ANY_500ML_DEFAULT_PACK_24_20260910 -->
+## V5_27 — exact 500 ml default pack = 24
+
+User-approved rule: if an invoice line resolves to exactly 500 ml and no explicit printed Bottles/Case is present, WineShopPOS suggests 24 bottles/case regardless of CAN/BOTTLE/UNKNOWN wording. Source marker: `PRIOR_500ML_24`.
+
+Safety precedence remains: printed Bottles/Case wins; an existing Product Master pack is never silently overwritten and conflicting values remain REVIEW; the size rule is a weak prior and does not bypass normal human receiving confirmation.
+
+Unchanged: 330/650/750 rules, OCR MI/M1 normalization, receive_purchase_v3, DB/schema/data, Product/barcode atomicity, scanners, connectivity, FIFO/inventory logic, Azure Functions, V5_26 verification flow, and PROD.
+
+Manual QA: Hoegaarden 500 ml and every other unmatched 500 ml line should show 24 bottles/case; printed pack and Product Master conflicts must retain their precedence.
+<!-- /V5_27_ANY_500ML_DEFAULT_PACK_24_20260910 -->

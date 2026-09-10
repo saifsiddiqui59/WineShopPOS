@@ -129,8 +129,12 @@ export function inferInvoiceUnitsPerCase(item = {}) {
   if (size === 330 && type === "BOTTLE") {
     return { value: 24, source: "PRIOR_330ML_BOTTLE_24", strong: false };
   }
-  if (size === 500 && type === "CAN") {
-    return { value: 24, source: "PRIOR_500ML_CAN_24", strong: false };
+  // Shop rule: exact 500 ml defaults to 24 bottles/case regardless of
+  // CAN/BOTTLE/UNKNOWN wording when no printed Bottles/Case exists.
+  // Keep this weak so normal receiving confirmation and Product Master
+  // conflict handling remain active.
+  if (size === 500) {
+    return { value: 24, source: "PRIOR_500ML_24", strong: false };
   }
   if (size === 650 && type === "BOTTLE") {
     return { value: 12, source: "PRIOR_650ML_BOTTLE_12", strong: false };
