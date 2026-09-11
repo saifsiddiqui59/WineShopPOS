@@ -39,4 +39,3 @@ Call log:
 [2m  - waiting for getByRole('heading', { name: '1. Confirm Supplier', exact: true }) to be visible[22m
 
 ```
-
