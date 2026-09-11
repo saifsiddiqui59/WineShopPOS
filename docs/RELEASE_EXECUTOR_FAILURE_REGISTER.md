@@ -2621,3 +2621,23 @@ draft counts must not be presented as proof the current online record failed.
 
 DB / Function / PROD mutation:
 None.
+
+## 2026-09-11 — V5 real-invoice UAT failure knowledge
+
+<!-- V5_UAT_20260911_FAILURE_KNOWLEDGE -->
+
+Before creating or modifying a V5/V6 Playwright certification runner, read:
+
+`docs/versions/v5/testing/V5_UAT_FAILURE_REGISTER_20260911.md`
+
+It records the selector, state-model, synchronization and resumability failures found during real V5 invoice UAT, plus the first confirmed application/OCR data issue.
+
+Current critical application incident:
+
+`docs/versions/v5/testing/V5_16805_OCR_BUG_LOG.md`
+
+Continuation entry point:
+
+`docs/versions/v5/testing/V5_UAT_HANDOFF_20260911.md`
+
+Permanent rule: do not modify a test harness merely to hide a persisted business-data mismatch. Classify locator/timing failures separately from application/database/OCR defects.

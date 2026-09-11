@@ -45,3 +45,21 @@ Do not label manual UAT `PASS` merely because automated tests/build passed.
 The PROD promotion executor must rerun non-mutating source/build/environment
 gates using the final promotion source, then perform authenticated PROD smoke/UAT
 after deployment.
+
+## Active 2026-09-11 real-invoice certification
+
+<!-- V5_UAT_HANDOFF_20260911 -->
+
+Current continuation entry point:
+
+- `V5_UAT_HANDOFF_20260911.md`
+- `V5_UAT_FAILURE_REGISTER_20260911.md`
+- `V5_16805_OCR_BUG_LOG.md`
+- `../../../scripts/diagnostics/DIAGNOSE_V5_16805_OCR.sh`
+
+Current invoice status:
+- 16845: PASS; revalidate-only on rerun.
+- B-3339: PASS; revalidate-only on rerun.
+- 16805: BLOCKED because physical invoice has 3 product rows while stored OCR evidence has 2 normalized rows.
+
+Do not receive 16805 until the missing-line defect is diagnosed and fixed.
