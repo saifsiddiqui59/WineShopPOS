@@ -165,7 +165,7 @@ export default function Purchases(){
  const calcTotal=Number((productValue+adjustment).toFixed(2));
  const printed=financialSummary?.total==null?null:Number(financialSummary.total);
  const difference=printed==null?null:Number((printed-calcTotal).toFixed(2));
- const financialReady=difference==null||Math.abs(difference)<=1;
+ const financialReady=!ingestionId||(difference!=null&&Math.abs(difference)<=1);
  const duplicateGroups=useMemo(()=>findSuspiciousDuplicateGroups(items),[items]);
  const duplicateIndexSet=useMemo(()=>new Set(duplicateGroups.flatMap((group)=>group.indexes)),[duplicateGroups]);
  const duplicatePending=(row,index)=>duplicateIndexSet.has(index)&&row?.duplicateResolution!=="KEEP_SEPARATE";

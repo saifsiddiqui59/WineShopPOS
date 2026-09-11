@@ -206,6 +206,7 @@ function findSpatialLabeledAmount(evidence, aliases) {
     if (candidates[0]) {
       return {
         value: parseMoneyText(candidates[0].text),
+        rawValue: String(candidates[0].text || ""),
         label: label.text,
         evidence: `${label.text} -> ${candidates[0].text}`,
         pageIndex: label.pageIndex,
@@ -250,6 +251,7 @@ function findTableLabeledAmount(analyzeResult, aliases) {
       const b = bounds(region?.polygon || []) || {};
       return {
         value: best.value,
+        rawValue: String(best.cell?.content || ""),
         label: String(labelCell?.content || ""),
         evidence: `${labelCell?.content || ""} -> ${best.cell?.content || ""}`,
         pageIndex,
@@ -274,6 +276,7 @@ function findKeyValueLabeledAmount(analyzeResult, aliases) {
     const b = bounds(region?.polygon || []) || {};
     return {
       value,
+      rawValue: valueText,
       label: keyText,
       evidence: `${keyText} -> ${valueText}`,
       pageIndex,
@@ -307,6 +310,32 @@ function findLabeledAmount(analyzeResult, evidence, aliases) {
   // Keep spatial fallback for invoices whose finance summary exists only as
   // ordinary page lines (for example older supplier layouts).
   return findSpatialLabeledAmount(evidence, aliases);
+}
+
+function printedMoneyEvidenceIsReliable(entry, referenceValue = 0) {
+  const raw = String(entry?.rawValue ?? "").trim();
+  if (!raw) return false;
+
+  const compact = raw.replace(/\s+/g, "");
+  const unsigned = compact.replace(/[()\-]/g, "");
+  if (!/^\d(?:[\d,.:']*\d)?$/.test(unsigned)) return false;
+
+  const parsed = Math.abs(Number(parseMoneyText(raw)));
+  if (!Number.isFinite(parsed) || parsed <= 0) return false;
+
+  // Historical supplier OCR legitimately uses punctuation such as
+  // "1.48.132.00" for ₹148,132. Do not reject a value merely because
+  // the OCR used repeated separators. Instead reject a labelled TOTAL only
+  // when its parsed magnitude is clearly incompatible with the product value.
+  // This catches DEF-0001's Azure reading "85.044.00" -> 85,044 against
+  // product lines of 7,911 without inventing the expected 8,044.
+  const reference = Math.abs(Number(referenceValue || 0));
+  if (reference > 0) {
+    const ratio = parsed / reference;
+    if (ratio < 0.25 || ratio > 4) return false;
+  }
+
+  return true;
 }
 
 function findPrintedTotal(evidence, summaryEvidence, baseValue, expectedValue) {
@@ -381,10 +410,24 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   const roundOff = findLabeledAmount(analyzeResult, evidence, [
     "round off", "rounding adjustment",
   ]);
+  const assessableValue = findLabeledAmount(analyzeResult, evidence, [
+    "assessable value", "assesable value", "assessable amount",
+  ]);
+  const grossAmount = findLabeledAmount(analyzeResult, evidence, [
+    "gross amount", "gross total",
+  ]);
+  const printedTotalLabel = findLabeledAmount(analyzeResult, evidence, [
+    "invoice total", "grand total", "net amount", "amount due", "net payable", "total",
+  ]);
+  const printedTotalLabelReliable = printedMoneyEvidenceIsReliable(
+    printedTotalLabel,
+    lineProductValue,
+  );
 
   const summaryEvidence = [
     cashDiscount, otherDeduction, freightCarting, transport, handling,
     loadingUnloading, stampDuty, tcs, otherAdditions, roundOff,
+    assessableValue, grossAmount, printedTotalLabel,
   ];
 
   const standardDiscount = Math.max(
@@ -422,6 +465,8 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   const otherAdditionsAmount = absOrZero(otherAdditions);
   const recognizedMisc = stampDutyAmount + tcsAmount + otherAdditionsAmount;
   const miscellaneousAmount = Number((recognizedMisc || standardOther).toFixed(2));
+  const assessableValueAmount = absOrZero(assessableValue);
+  const grossAmountValue = absOrZero(grossAmount);
 
   const explicitSubtotal = Number(fieldNumber(fields.SubTotal) || 0);
   const subtotal =
@@ -435,30 +480,76 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
         ? explicitSubtotal
         : lineProductValue || null;
 
+  // Gross Amount is an independent printed checkpoint before TCS on common
+  // liquor invoices. It is used only for reconciliation/diagnostics; it never
+  // rewrites a misread discount or any other OCR value.
+  const grossKnownAdjustment =
+    freightAmount + transportAmount + handlingAmount + loadingUnloadingAmount +
+    stampDutyAmount + otherAdditionsAmount -
+    supplierDiscountAmount - invoiceDiscountAmount;
+  const calculatedGrossAmount = Number(
+    (lineProductValue + grossKnownAdjustment).toFixed(2),
+  );
+  const grossDifference =
+    grossAmountValue > 0
+      ? Number((grossAmountValue - calculatedGrossAmount).toFixed(2))
+      : null;
+  const grossReconciliationStatus =
+    grossDifference == null
+      ? "NO_PRINTED_GROSS"
+      : Math.abs(grossDifference) <= 0.01
+        ? "MATCH"
+        : "REVIEW";
+
   const knownAdjustment =
     freightAmount + transportAmount + handlingAmount + loadingUnloadingAmount +
     miscellaneousAmount - supplierDiscountAmount - invoiceDiscountAmount;
 
   const expectedBeforeRounding = Number((lineProductValue + knownAdjustment).toFixed(2));
   const explicitTotal = Number(fieldNumber(fields.InvoiceTotal) || 0);
-  const spatialTotal = findPrintedTotal(
-    evidence, summaryEvidence, lineProductValue, expectedBeforeRounding,
-  );
 
-  let printedInvoiceTotal = explicitTotal > 0 ? explicitTotal : spatialTotal;
+  // Prefer an explicitly labelled printed TOTAL when it is readable. If a
+  // TOTAL label exists but Azure returned malformed money text, do NOT hunt
+  // for a numerically-near subtotal/assessable value and call it the total.
+  const spatialTotal = printedTotalLabel
+    ? null
+    : findPrintedTotal(
+        evidence, summaryEvidence, lineProductValue, expectedBeforeRounding,
+      );
 
-  if (spatialTotal > 0) {
-    const explicitLooksImplausible =
-      explicitTotal <= 0 ||
-      explicitTotal < Math.max(100, lineProductValue * 0.5) ||
-      Math.abs(explicitTotal - expectedBeforeRounding) >
-        Math.abs(spatialTotal - expectedBeforeRounding) + 0.01;
-    const explicitLooksLikeSubtotal =
-      explicitTotal > 0 &&
-      Math.abs(explicitTotal - lineProductValue) <= 1 &&
-      Math.abs(knownAdjustment) > 1;
-    if (explicitLooksImplausible || explicitLooksLikeSubtotal) {
-      printedInvoiceTotal = spatialTotal;
+  const printedTotalRaw = printedTotalLabel?.rawValue ?? null;
+  const printedTotalEvidenceStatus = printedTotalLabel
+    ? printedTotalLabelReliable
+      ? "LABELED_TOTAL_RELIABLE"
+      : "LABELED_TOTAL_UNREADABLE"
+    : spatialTotal > 0
+      ? "SPATIAL_FALLBACK"
+      : explicitTotal > 0
+        ? "STRUCTURED_FIELD_ONLY"
+        : "NOT_FOUND";
+
+  let printedInvoiceTotal = null;
+
+  if (printedTotalLabel) {
+    if (printedTotalLabelReliable) {
+      printedInvoiceTotal = Math.abs(Number(printedTotalLabel.value));
+    }
+  } else {
+    printedInvoiceTotal = explicitTotal > 0 ? explicitTotal : spatialTotal;
+
+    if (spatialTotal > 0) {
+      const explicitLooksImplausible =
+        explicitTotal <= 0 ||
+        explicitTotal < Math.max(100, lineProductValue * 0.5) ||
+        Math.abs(explicitTotal - expectedBeforeRounding) >
+          Math.abs(spatialTotal - expectedBeforeRounding) + 0.01;
+      const explicitLooksLikeSubtotal =
+        explicitTotal > 0 &&
+        Math.abs(explicitTotal - lineProductValue) <= 1 &&
+        Math.abs(knownAdjustment) > 1;
+      if (explicitLooksImplausible || explicitLooksLikeSubtotal) {
+        printedInvoiceTotal = spatialTotal;
+      }
     }
   }
 
@@ -476,11 +567,13 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
       ? null
       : Number((printedInvoiceTotal - calculatedInvoiceTotal).toFixed(2));
   const reconciliationStatus =
-    printedInvoiceTotal == null
-      ? "NO_PRINTED_TOTAL"
-      : Math.abs(difference) <= 1
-        ? "MATCH"
-        : "REVIEW";
+    printedTotalLabel && !printedTotalLabelReliable
+      ? "REVIEW_PRINTED_TOTAL_UNREADABLE"
+      : printedInvoiceTotal == null
+        ? "NO_PRINTED_TOTAL"
+        : Math.abs(difference) <= 1
+          ? "MATCH"
+          : "REVIEW";
 
   const standardTax = Number(fieldNumber(fields.TotalTax) || 0);
   const totalTax =
@@ -506,6 +599,13 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
     total: printedInvoiceTotal || null,
     financialAdjustments: {
       lineProductValue,
+      assessableValueAmount: assessableValueAmount || null,
+      printedGrossAmount: grossAmountValue || null,
+      calculatedGrossAmount,
+      grossDifference,
+      grossReconciliationStatus,
+      printedTotalRaw,
+      printedTotalEvidenceStatus,
       cashDiscountAmount: supplierDiscountAmount,
       otherDeductionAmount: invoiceDiscountAmount,
       freightCartingAmount: freightAmount,
