@@ -181,8 +181,16 @@ function logHarness(message, info) {
       "# V5 Test Harness / Prerequisite Failure Log\n\nThese are not product defect serials. They document test infrastructure issues so they are not confused with real application defects.\n\n",
       "utf8");
   }
+  const cleanMessage = redact(message);
+  const duplicateNeedle =
+    `- Runner: \`${runner}\`\n- Stage: \`${stage}\`\n- Component: ${info.component}\n\n\`\`\`text\n${cleanMessage}\n\`\`\``;
+  const existingLog = safeRead(file);
+  if (existingLog.includes(duplicateNeedle)) {
+    console.log(`[DEFECT-REGISTRY] Duplicate harness occurrence suppressed: ${info.cls}.`);
+    return;
+  }
   fs.appendFileSync(file,
-    `## ${new Date().toISOString()} — ${info.cls}\n\n- Runner: \`${runner}\`\n- Stage: \`${stage}\`\n- Component: ${info.component}\n\n\`\`\`text\n${redact(message)}\n\`\`\`\n\n`,
+    `## ${new Date().toISOString()} — ${info.cls}\n\n- Runner: \`${runner}\`\n- Stage: \`${stage}\`\n- Component: ${info.component}\n\n\`\`\`text\n${cleanMessage}\n\`\`\`\n\n`,
     "utf8");
   try {
     git(["add","--",path.relative(repo,file).replaceAll("\\","/")]);

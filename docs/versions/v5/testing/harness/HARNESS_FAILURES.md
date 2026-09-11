@@ -17,29 +17,3 @@ Known resolved/observed harness issues from the 2026-09-11 certification work:
 - Focused diagnostic later hit expired saved QA JWT (`PGRST303` / HTTP 401).
 
 These entries are retained so future test code does not repeat them, but they are not product defects.
-## 2026-09-11T15:15:55.257Z — HARNESS_SELECTOR
-
-- Runner: `R11-REAL-DEFECT-REGISTRY`
-- Stage: `07_REAL_INVOICE_UAT`
-- Component: Playwright selector/state model
-
-```text
-locator.waitFor: Timeout 40000ms exceeded.
-Call log:
-[2m  - waiting for getByText(/Duplicate invoice file detected/i) to be visible[22m
-
-```
-
-## 2026-09-11T15:15:59.128Z — HARNESS_SELECTOR
-
-- Runner: `R11-REAL-DEFECT-REGISTRY`
-- Stage: `07_REAL_INVOICE_UAT`
-- Component: Playwright selector/state model
-
-```text
-locator.waitFor: Timeout 40000ms exceeded.
-Call log:
-[2m  - waiting for getByText(/Duplicate invoice file detected/i) to be visible[22m
-
-```
-

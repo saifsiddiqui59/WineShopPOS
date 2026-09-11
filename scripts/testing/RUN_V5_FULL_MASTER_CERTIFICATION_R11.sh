@@ -6471,16 +6471,29 @@ async function duplicateIdempotencyCheck(fixture, invoicePath) {
     assert(uploadCount === 1, `${fixture.invoiceNumber}: expected exactly one Invoice OCR upload input; found ${uploadCount}.`);
     await invoiceUpload.setInputFiles(invoicePath);
   }
+  const duplicateResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/api/invoice/manual-store"),
+    { timeout: 40_000 },
+  );
+
   await page.getByRole("button", { name: "Analyze Invoice", exact: true }).click();
-  const duplicate = page.getByText(/Duplicate invoice file detected/i);
-  await duplicate.waitFor({ state: "visible", timeout: 40_000 });
-  const text = await duplicate.innerText();
-  assert(/RECEIVED/i.test(text), `${fixture.invoiceNumber}: duplicate message did not identify RECEIVED state: ${text}`);
+
+  const duplicateResponse = await duplicateResponsePromise;
+  assert(duplicateResponse.ok(),
+    `${fixture.invoiceNumber}: duplicate storage API returned HTTP ${duplicateResponse.status()}.`);
+
+  const duplicatePayload = await duplicateResponse.json().catch(() => null);
+  assert(duplicatePayload?.duplicate === true,
+    `${fixture.invoiceNumber}: duplicate API did not report duplicate=true.`);
+  assert(/RECEIVED/i.test(String(duplicatePayload?.existing_status || "")),
+    `${fixture.invoiceNumber}: duplicate API existing_status=${duplicatePayload?.existing_status}; expected RECEIVED.`);
 
   const purchases = await getPurchases();
   const count = purchases.filter((p) => norm(p.invoice_number) === norm(fixture.invoiceNumber)).length;
   assert(count === 1, `${fixture.invoiceNumber}: duplicate check resulted in ${count} purchases.`);
-  return "PASS — duplicate image blocked, purchase count stayed 1";
+  return "PASS — duplicate API blocked existing RECEIVED invoice; purchase count stayed 1";
 }
 
 async function inventoryUiSpotCheck(fixture) {
