@@ -17,6 +17,7 @@ Known resolved/observed harness issues from the 2026-09-11 certification work:
 - Focused diagnostic later hit expired saved QA JWT (`PGRST303` / HTTP 401).
 
 These entries are retained so future test code does not repeat them, but they are not product defects.
+
 ## 2026-09-11T15:21:29.052Z — HARNESS_SELECTOR
 
 - Runner: `R11-REAL-DEFECT-REGISTRY`
@@ -26,4 +27,3 @@ These entries are retained so future test code does not repeat them, but they ar
 ```text
 page.waitForResponse: Timeout 40000ms exceeded while waiting for event "response"
 ```
-
