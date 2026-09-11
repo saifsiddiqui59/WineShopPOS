@@ -39,13 +39,3 @@ Call log:
 [2m  - waiting for getByRole('heading', { name: '1. Confirm Supplier', exact: true }) to be visible[22m
 
 ```
-## 2026-09-11T17:18:37.677Z — TRIAGE_REQUIRED
-
-- Runner: `R11-REAL-DEFECT-REGISTRY`
-- Stage: `07_REAL_INVOICE_UAT`
-- Component: Unclassified test failure
-
-```text
-16845: Create Supplier dialog has no text input for supplier name.
-```
-

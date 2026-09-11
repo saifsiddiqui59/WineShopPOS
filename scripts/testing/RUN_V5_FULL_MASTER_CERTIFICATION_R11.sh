@@ -6076,13 +6076,10 @@ async function confirmSupplierOnOcr(fixture) {
   const dialog = page.getByRole("dialog", { name: "Create supplier" });
   await dialog.waitFor({ state: "visible", timeout: 10_000 });
 
-  // SupplierEditor owns the only text input used for the supplier name.
-  const nameInput = dialog.locator('input[type="text"]').first();
-  const textInputCount = await dialog.locator('input[type="text"]').count();
-  assert(
-    textInputCount >= 1,
-    `${fixture.invoiceNumber}: Create Supplier dialog has no text input for supplier name.`
-  );
+  // SupplierEditor renders Supplier Name without an explicit type="text" attribute.
+  // Use its accessible label so the UAT follows the actual UI contract.
+  const nameInput = dialog.getByLabel(/Supplier Name/i);
+  await nameInput.waitFor({ state: "visible", timeout: 10_000 });
   await nameInput.fill(fixture.supplier);
 
   await dialog
