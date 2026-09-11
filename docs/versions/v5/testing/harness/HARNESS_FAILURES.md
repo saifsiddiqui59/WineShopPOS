@@ -30,3 +30,16 @@ Call log:
 
 ```
 
+## 2026-09-11T15:15:59.128Z — HARNESS_SELECTOR
+
+- Runner: `R11-REAL-DEFECT-REGISTRY`
+- Stage: `07_REAL_INVOICE_UAT`
+- Component: Playwright selector/state model
+
+```text
+locator.waitFor: Timeout 40000ms exceeded.
+Call log:
+[2m  - waiting for getByText(/Duplicate invoice file detected/i) to be visible[22m
+
+```
+
