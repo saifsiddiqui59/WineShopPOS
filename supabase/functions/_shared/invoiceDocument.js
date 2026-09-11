@@ -347,16 +347,58 @@ function semanticTableExtraction(result) {
 }
 
 function tokenScore(a, b) {
-  const aa = new Set(normalize(a).split(" ").filter((x) => x.length > 1));
-  const bb = new Set(normalize(b).split(" ").filter((x) => x.length > 1));
+  const an = normalize(a);
+  const bn = normalize(b);
+  if (!an || !bn) return 0;
+  if (an === bn) return 1;
+
+  // Azure's semantic table can truncate a product description to its first
+  // token while prebuilt-invoice preserves the fuller physical line.
+  // Treat a whole-token prefix as a strong match, but never as permission
+  // to remove an unmatched prebuilt invoice row.
+  if (an.startsWith(`${bn} `) || bn.startsWith(`${an} `)) return 0.95;
+
+  const aa = new Set(an.split(" ").filter((x) => x.length > 1));
+  const bb = new Set(bn.split(" ").filter((x) => x.length > 1));
   if (!aa.size || !bb.size) return 0;
   const common = [...aa].filter((x) => bb.has(x)).length;
   return common / Math.max(aa.size, bb.size);
 }
 
+function normalizePrebuiltCaseShape(item) {
+  const amount = Number(item?.amount || 0);
+  const rate = Number(item?.unitPrice || 0);
+  const ratio = amount > 0 && rate > 0 ? amount / rate : 0;
+  const rounded = Math.round(ratio);
+  const derivedCases =
+    rounded > 0 &&
+    rounded <= 1000 &&
+    Math.abs(ratio - rounded) <= 0.08
+      ? rounded
+      : null;
+
+  if (derivedCases == null) return item;
+
+  return {
+    ...item,
+    quantity: derivedCases,
+    unitText: "case",
+    ratePerCase: rate,
+    caseCount: derivedCases,
+    caseCountSource: "PREBUILT_DERIVED_AMOUNT_RATE",
+    directCaseCount: whole(item?.quantity),
+    extractionSource: "PREBUILT_INVOICE_CASE_DERIVED",
+  };
+}
+
 function mergeTableHints(rawItems, tableItems) {
   if (!tableItems.length) return rawItems;
-  if (tableItems.length >= 2 && (!rawItems.length || tableItems.length >= Math.ceil(rawItems.length * 0.6))) return tableItems;
+  if (!rawItems.length) return tableItems;
+
+  // A semantic table is an enrichment source. It must never reduce a larger
+  // prebuilt Items list. DEF-0001 occurred because 2 semantic rows replaced
+  // 3 prebuilt rows when the old 60% threshold was met.
+  if (tableItems.length >= rawItems.length) return tableItems;
   const used = new Set();
   return rawItems.map((item, index) => {
     let bestIndex = -1;
@@ -369,7 +411,18 @@ function mergeTableHints(rawItems, tableItems) {
     if (bestIndex < 0 && rawItems.length === tableItems.length && !used.has(index)) { bestIndex = index; bestScore = 0.5; }
     if (bestIndex < 0 || bestScore < 0.35) return item;
     used.add(bestIndex);
-    return { ...item, ...tableItems[bestIndex], description: tableItems[bestIndex].description || item.description, extractionSource: "SEMANTIC_TABLE_MERGE" };
+    const hint = tableItems[bestIndex];
+    const itemDescription = String(item?.description || "").trim();
+    const hintDescription = String(hint?.description || "").trim();
+    const itemNorm = normalize(itemDescription);
+    const hintNorm = normalize(hintDescription);
+    const description =
+      itemNorm && hintNorm && itemNorm.startsWith(`${hintNorm} `) && itemDescription.length > hintDescription.length
+        ? itemDescription
+        : itemNorm && hintNorm && hintNorm.startsWith(`${itemNorm} `) && hintDescription.length > itemDescription.length
+          ? hintDescription
+          : hintDescription || itemDescription;
+    return { ...item, ...hint, description, extractionSource: "SEMANTIC_TABLE_MERGE" };
   });
 }
 
@@ -401,7 +454,8 @@ export function normalizeDocumentIntelligenceResult(result) {
   });
 
   const semantic = semanticTableExtraction(result);
-  const items = mergeTableHints(rawItems, semantic.items);
+  const prebuiltItems = rawItems.map(normalizePrebuiltCaseShape);
+  const items = mergeTableHints(prebuiltItems, semantic.items);
   const financial = extractInvoiceFinancials(result, fields, items);
   const invoiceDate = invoiceDateValue(fields.InvoiceDate);
   return {
@@ -421,8 +475,16 @@ export function normalizeDocumentIntelligenceResult(result) {
       semanticTableDetected: semantic.items.length > 0,
       semanticTableLineCount: semantic.items.length,
       genericItemLineCount: rawItems.length,
-      extractionMode: semantic.items.length >= 2 ? "SEMANTIC_TABLE_FIRST" : "PREBUILT_INVOICE_FALLBACK",
-      derivedCaseTotal: semantic.meta?.derivedCaseTotal ?? null,
+      extractionMode:
+        semantic.items.length > 0 && prebuiltItems.length > semantic.items.length
+          ? "SEMANTIC_TABLE_PARTIAL_PREBUILT_PRESERVED"
+          : semantic.items.length >= 2
+            ? "SEMANTIC_TABLE_FIRST"
+            : "PREBUILT_INVOICE_FALLBACK",
+      derivedCaseTotal:
+        prebuiltItems.length > semantic.items.length
+          ? items.reduce((sum, item) => sum + Number(item?.caseCount ?? item?.quantity ?? 0), 0)
+          : semantic.meta?.derivedCaseTotal ?? null,
       derivedBottleTotal: semantic.meta?.derivedBottleTotal ?? null,
       printedCaseTotal: semantic.meta?.printedCaseTotal ?? null,
       caseTotalMatches: semantic.meta?.caseTotalMatches ?? null,
