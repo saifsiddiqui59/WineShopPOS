@@ -27,3 +27,16 @@ These entries are retained so future test code does not repeat them, but they ar
 ```text
 page.waitForResponse: Timeout 40000ms exceeded while waiting for event "response"
 ```
+## 2026-09-11T15:37:44.658Z — HARNESS_SELECTOR
+
+- Runner: `R11-REAL-DEFECT-REGISTRY`
+- Stage: `07_REAL_INVOICE_UAT`
+- Component: Playwright selector/state model
+
+```text
+locator.waitFor: Timeout 120000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('heading', { name: '1. Confirm Supplier', exact: true }) to be visible[22m
+
+```
+
