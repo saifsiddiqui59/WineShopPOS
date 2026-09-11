@@ -1,0 +1,61 @@
+{
+  "runId": "20260911_072719",
+  "startedAt": "2026-09-11T11:27:29.052Z",
+  "baseUrl": "http://127.0.0.1:4175",
+  "devRef": "juhcypzoacauzmtzqnwd",
+  "phoneScannerPhysicalSmoke": "PRE-PASSED BY USER",
+  "invoices": [
+    {
+      "invoiceNumber": "16845",
+      "supplier": "Kapil Alcotech LLP",
+      "expectedCases": 62,
+      "expectedBottles": 996,
+      "result": "PASS",
+      "mode": "REVALIDATED_ALREADY_RECEIVED",
+      "notes": [
+        "Previously received invoice was revalidated and skipped; no second stock mutation was attempted."
+      ],
+      "purchaseId": "13d2ebf0-ec0b-4dbd-a0bb-34655bd40e20",
+      "duplicateCheck": "PASS — duplicate image blocked, purchase count stayed 1"
+    },
+    {
+      "invoiceNumber": "B-3339",
+      "supplier": "S V Wines Private Limited",
+      "expectedCases": 35,
+      "expectedBottles": 540,
+      "result": "PASS",
+      "mode": "REVALIDATED_ALREADY_RECEIVED",
+      "notes": [
+        "Previously received invoice was revalidated and skipped; no second stock mutation was attempted."
+      ],
+      "purchaseId": "1b317e19-3724-4fbd-a797-496e43cc1779",
+      "duplicateCheck": "PASS — duplicate image blocked, purchase count stayed 1"
+    },
+    {
+      "invoiceNumber": "16805",
+      "supplier": "Metri Spirits Private Limited",
+      "expectedCases": 3,
+      "expectedBottles": 144,
+      "result": "RUNNING",
+      "mode": "RESUMED_EXISTING_NEEDS_REVIEW",
+      "notes": [],
+      "ocrLines": 2
+    }
+  ],
+  "warnings": [
+    "Error: 16805: existing OCR evidence has 2 lines; expected 3.\n    at fail (file:///E:/WineShopPOS_V5/.wsp_v5_uat_runtime_4475/runner.mjs:533:9)\n    at assert (file:///E:/WineShopPOS_V5/.wsp_v5_uat_runtime_4475/runner.mjs:536:19)\n    at openOrCreateInvoice (file:///E:/WineShopPOS_V5/.wsp_v5_uat_runtime_4475/runner.mjs:935:5)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///E:/WineShopPOS_V5/.wsp_v5_uat_runtime_4475/runner.mjs:1402:25"
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "failedRequests": [
+    "net::ERR_ABORTED :: https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "net::ERR_ABORTED :: https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "net::ERR_ABORTED :: https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/"
+  ],
+  "blockedProductionRequests": [],
+  "final": "FAIL",
+  "finishedAt": "2026-09-11T11:27:47.504Z"
+}

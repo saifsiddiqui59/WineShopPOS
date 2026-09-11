@@ -1,0 +1,50 @@
+[
+  {
+    "storage": "git",
+    "file": "environment-guard.log",
+    "bytes": 53,
+    "sha256": "efc3d0a924212dffb0e8e737835042d8f2b9b6f704f93f4fc7136165b5d334b1"
+  },
+  {
+    "storage": "local-only",
+    "file": "FAILURE_CURRENT_SCREEN.png",
+    "bytes": 262286,
+    "sha256": "890ffaf038ee8ba02365a3ab6435e66654bcb8af221e77511aecf32cad367109"
+  },
+  {
+    "storage": "local-only",
+    "file": "playwright-trace.zip",
+    "bytes": 11087812,
+    "sha256": "d71b86a6485900d30674864f0a84dbea826e9a72c6ae8a40af48f59df42ba05f"
+  },
+  {
+    "storage": "git",
+    "file": "UAT_RESULT.json",
+    "bytes": 2607,
+    "sha256": "7e864bc6394902f7fe2d504634f64e666dbdf80275449746a80e23d6f13d14f3"
+  },
+  {
+    "storage": "git",
+    "file": "UAT_SUMMARY.md",
+    "bytes": 2230,
+    "sha256": "48d572b810d088af49571554e249955435456754d1fed4650277342d3685c10d"
+  },
+  {
+    "storage": "git",
+    "file": "v5-contract-tests.log",
+    "bytes": 6798,
+    "sha256": "63f9b1aac99ccfefda03a774214aee8b3f46b5626e0f0997aaa7b8df52b30226"
+  },
+  {
+    "storage": "git",
+    "file": "vite-build.log",
+    "bytes": 759,
+    "sha256": "0794d8537e68cb355cc62b51c10b32f9e0a0efbbefe652157e4f173ebdd780c7"
+  },
+  {
+    "storage": "git",
+    "file": "vite-preview.log",
+    "bytes": 77,
+    "sha256": "4572ebe88c040cb2ea26544f4bbf192672600b23f6ee187ad678e6ee79c8ccbf"
+  }
+]

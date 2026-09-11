@@ -1,0 +1,16 @@
+{
+  "id": "DEF-0001",
+  "number": 1,
+  "title": "Invoice 16805 OCR stored 2 lines instead of 3",
+  "status": "OPEN",
+  "classification": "APP_OCR_DATA",
+  "severity": "HIGH",
+  "component": "OCR / invoice normalization",
+  "firstSeen": "2026-09-11",
+  "lastSeen": "2026-09-11",
+  "occurrences": 1,
+  "runner": "R9-SOURCE-AUDITED-OCR-SUPPLIER",
+  "stage": "REAL_INVOICE_UAT",
+  "exactFailure": "16805: existing OCR evidence has 2 lines; expected 3.",
+  "evidenceSource": "C:\\Users\\Shoyeb\\WineShopPOS_V5_UAT\\20260911_072719"
+}

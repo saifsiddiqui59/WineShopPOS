@@ -63,3 +63,15 @@ Current invoice status:
 - 16805: BLOCKED because physical invoice has 3 product rows while stored OCR evidence has 2 normalized rows.
 
 Do not receive 16805 until the missing-line defect is diagnosed and fixed.
+
+## Real application defect registry
+
+<!-- V5_REAL_DEFECT_REGISTRY_20260911 -->
+
+For unresolved V5 application/data/security defects, always start with:
+
+`docs/versions/v5/testing/defects/INDEX.md`
+
+`DEF-####` numbers are reserved for real product defects. Test-harness and authentication-prerequisite issues are documented separately in:
+
+`docs/versions/v5/testing/harness/HARNESS_FAILURES.md`
