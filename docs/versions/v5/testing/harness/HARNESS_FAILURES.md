@@ -83,3 +83,13 @@ Error: GET products?select=id,product_name,barcode,price,selling_price,mrp,activ
 16845: Invoice Inbox shows 0 rows for the same scanned invoice; expected exactly 1.
 ```
 
+## 2026-09-12T07:25:53.533Z — TRIAGE_REQUIRED
+
+- Runner: `R11-REAL-DEFECT-REGISTRY`
+- Stage: `07_REAL_INVOICE_UAT`
+- Component: Unclassified test failure
+
+```text
+B-3339: OCR printed total null does not match physical total 88558.
+```
+
