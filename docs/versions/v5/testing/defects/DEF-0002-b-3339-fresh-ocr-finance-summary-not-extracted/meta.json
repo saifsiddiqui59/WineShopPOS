@@ -8,11 +8,15 @@
   "component": "OCR / invoice finance extraction",
   "firstSeen": "2026-09-12",
   "lastSeen": "2026-09-12",
-  "occurrences": 1,
+  "occurrences": 2,
   "runner": "R11-REAL-DEFECT-REGISTRY",
   "stage": "REAL_INVOICE_UAT",
   "exactFailure": "B-3339: OCR printed total null does not match physical total 88558.",
   "evidenceSource": "DEV invoice_ingestions id 3742e84d-331a-47f6-b305-82641af9cc8f",
   "devIngestionId": "3742e84d-331a-47f6-b305-82641af9cc8f",
-  "purchaseId": null
+  "purchaseId": null,
+  "latestOccurrence": "occurrences/20260912_084232-live-v11/EVIDENCE.md",
+  "latestDevIngestionId": "b2c8dd1e-a8ea-48d7-bb10-d28b2c07066c",
+  "latestFailure": "B-3339 real Azure geometry associated the same 88558 evidence with discount and freight; final TOTAL persisted as #6821.",
+  "nextAction": "Redesign finance evidence assignment against permanent real Azure fixtures before another live OCR run."
 }

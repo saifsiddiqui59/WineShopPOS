@@ -95,3 +95,14 @@ For B-3339 specifically:
 - relevant master certification passes
 
 Only then mark DEF-0002 `RESOLVED`.
+
+
+## Live recurrence after first DEF-0002 fix
+
+Fresh physical OCR on DEV OCR v11 still failed B-3339.
+
+The normalized invoice persisted the same `88558` evidence as both discount and freight, while the final printed-total evidence became `#6821`. The invoice remained `NEEDS_REVIEW` with no purchase.
+
+This occurrence proves the first focused regression was too synthetic. Further finance-parser work must use the permanent real Azure fixtures in `tests/fixtures/ocr/`, not hand-created ideal coordinates.
+
+DEF-0002 remains **OPEN**. No DEF-0003 is created.
