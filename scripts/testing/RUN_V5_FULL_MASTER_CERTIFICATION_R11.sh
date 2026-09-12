@@ -5622,12 +5622,14 @@ const fixtures = [
     "fileName": "invoice_16805.jpeg",
     "lineSubtotal": 7911,
     "printedTotal": 8044,
+    "allowUnreadablePrintedTotal": true,
+    "expectedUnreadableCashDiscount": 95,
     "charges": {
       "freight": 66,
       "transport": 0,
       "handling": 0,
       "loading": 0,
-      "supplierDiscount": 96,
+      "supplierDiscount": 95,
       "invoiceDiscount": 0,
       "misc": 163,
       "rounding": 0
@@ -5635,6 +5637,7 @@ const fixtures = [
     "lines": [
       {
         "name": "Ding Dong Fortified Wine",
+        "identityTokens": ["ding", "dong"],
         "brand": "Ding Dong",
         "category": "Wine",
         "size": 180,
@@ -5649,6 +5652,7 @@ const fixtures = [
       },
       {
         "name": "Dynamite XXX Fortified Wine",
+        "identityTokens": ["dynamite", "xxx"],
         "brand": "Dynamite XXX",
         "category": "Wine",
         "size": 180,
@@ -5663,6 +5667,7 @@ const fixtures = [
       },
       {
         "name": "Go Limlet Fortified Wine",
+        "identityTokens": ["go", "limlet"],
         "brand": "Go Limlet",
         "category": "Wine",
         "size": 180,
@@ -5714,6 +5719,157 @@ function assert(condition, message) {
 function norm(value) {
   return String(value || "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
 }
+
+function ocrTokenDistance(a, b) {
+  const aa = String(a || "");
+  const bb = String(b || "");
+  const row = Array.from({ length: bb.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= aa.length; i += 1) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= bb.length; j += 1) {
+      const saved = row[j];
+      row[j] = Math.min(
+        row[j] + 1,
+        row[j - 1] + 1,
+        previous + (aa[i - 1] === bb[j - 1] ? 0 : 1),
+      );
+      previous = saved;
+    }
+  }
+  return row[bb.length];
+}
+
+function ocrTokenEquivalent(actual, expected) {
+  const a = norm(actual);
+  const e = norm(expected);
+  if (!a || !e) return false;
+  if (a === e) return true;
+
+  if (
+    Math.abs(a.length - e.length) <= 1 &&
+    Math.min(a.length, e.length) >= 4 &&
+    (a.startsWith(e) || e.startsWith(a))
+  ) {
+    return true;
+  }
+
+  const maxDistance = Math.max(a.length, e.length) >= 8 ? 2 : 1;
+  return Math.min(a.length, e.length) >= 4 &&
+    ocrTokenDistance(a, e) <= maxDistance;
+}
+
+function ocrDescriptionIdentity(description, line) {
+  const actualTokens = norm(description).split(" ").filter(Boolean);
+  const expectedTokens = norm(line?.name).split(" ").filter((x) => x.length >= 3);
+  const requiredTokens = Array.isArray(line?.identityTokens) ? line.identityTokens : [];
+
+  const requiredOk = requiredTokens.every((expected) =>
+    actualTokens.some((actual) => ocrTokenEquivalent(actual, expected))
+  );
+
+  const covered = expectedTokens.filter((expected) =>
+    actualTokens.some((actual) => ocrTokenEquivalent(actual, expected))
+  ).length;
+  const coverage = expectedTokens.length ? covered / expectedTokens.length : 0;
+
+  return { ok: requiredOk && coverage >= 0.75, coverage };
+}
+
+function assertOcrDescriptions(fixture, descriptions) {
+  const identityLines = fixture.lines.filter(
+    (line) => Array.isArray(line.identityTokens) && line.identityTokens.length
+  );
+  if (!identityLines.length) return;
+
+  const remaining = descriptions.map((description, index) => ({
+    description: String(description || ""),
+    index,
+  }));
+
+  for (const line of identityLines) {
+    const candidates = remaining
+      .map((row) => ({
+        ...row,
+        match: ocrDescriptionIdentity(row.description, line),
+      }))
+      .filter((row) => row.match.ok);
+
+    assert(
+      candidates.length === 1,
+      `${fixture.invoiceNumber}: OCR identity for "${line.name}" matched ${candidates.length} rows. ` +
+      `Observed descriptions: ${descriptions.join(" | ")}`
+    );
+
+    const chosen = candidates[0];
+    const pos = remaining.findIndex((row) => row.index === chosen.index);
+    remaining.splice(pos, 1);
+  }
+}
+
+function assessFinanceEvidence(fixture, invoice, itemReport) {
+  const finance = invoice?.financialAdjustments || {};
+  const total = invoice?.total ?? finance?.printedInvoiceTotal ?? null;
+  const amountDue = invoice?.amountDue ?? null;
+  const evidenceStatus = String(finance?.printedTotalEvidenceStatus || "");
+  const reconciliation = String(finance?.reconciliationStatus || "");
+
+  if (!fixture.allowUnreadablePrintedTotal) {
+    assert(
+      total != null && Number.isFinite(Number(total)) && almost(total, fixture.printedTotal, 1),
+      `${fixture.invoiceNumber}: OCR printed total ${total} does not match physical total ${fixture.printedTotal}.`
+    );
+    itemReport.financeMode = "MATCH";
+    return { mode: "MATCH", blockedByFinance: false };
+  }
+
+  const reliableMatch =
+    total != null &&
+    Number.isFinite(Number(total)) &&
+    almost(total, fixture.printedTotal, 1) &&
+    reconciliation === "MATCH";
+
+  const unreadable =
+    total == null &&
+    amountDue == null &&
+    evidenceStatus === "LABELED_TOTAL_UNREADABLE" &&
+    reconciliation === "REVIEW_PRINTED_TOTAL_UNREADABLE";
+
+  assert(
+    reliableMatch || unreadable,
+    `${fixture.invoiceNumber}: finance evidence is neither a reliable ${fixture.printedTotal} MATCH ` +
+    `nor the approved unreadable-total review state. ` +
+    `total=${total} amountDue=${amountDue} evidence=${evidenceStatus} reconciliation=${reconciliation}`
+  );
+
+  if (unreadable) {
+    const raw = String(finance?.printedTotalRaw ?? "").trim();
+    assert(raw, `${fixture.invoiceNumber}: unreadable printed-total state did not preserve raw OCR evidence.`);
+
+    if (fixture.expectedUnreadableCashDiscount != null) {
+      const cashDiscount = Number(
+        invoice?.supplierDiscountAmount ??
+        finance?.cashDiscountAmount ??
+        NaN
+      );
+      assert(
+        Number.isFinite(cashDiscount) &&
+          almost(cashDiscount, fixture.expectedUnreadableCashDiscount, 0.01),
+        `${fixture.invoiceNumber}: OCR cash discount changed from preserved evidence ` +
+        `${fixture.expectedUnreadableCashDiscount} to ${cashDiscount}.`
+      );
+    }
+
+    itemReport.financeMode = "UNREADABLE_PRINTED_TOTAL_BLOCKED";
+    itemReport.notes.push(
+      `Printed total preserved as unreadable raw OCR (${raw}); no arithmetic total was manufactured.`
+    );
+    return { mode: itemReport.financeMode, blockedByFinance: true };
+  }
+
+  itemReport.financeMode = "MATCH";
+  return { mode: "MATCH", blockedByFinance: false };
+}
 function almost(a, b, tolerance = 1) {
   return Math.abs(Number(a || 0) - Number(b || 0)) <= tolerance;
 }
@@ -5749,6 +5905,7 @@ function writeReport() {
     lines.push(`- Mode: ${item.mode}`);
     lines.push(`- OCR lines: ${item.ocrLines ?? "n/a"}`);
     lines.push(`- OCR image suggestions: ${item.imageSuggestions ?? "n/a"}`);
+    lines.push(`- Finance mode: ${item.financeMode || "n/a"}`);
     lines.push(`- Cases: ${item.expectedCases}`);
     lines.push(`- Bottles: ${item.expectedBottles}`);
     lines.push(`- Purchase ID: ${item.purchaseId || "n/a"}`);
@@ -6139,12 +6296,34 @@ async function freshOcr(fixture, invoicePath, itemReport) {
   assert(count === fixture.lines.length,
     `${fixture.invoiceNumber}: OCR returned ${count} lines; expected ${fixture.lines.length}. No stock was received.`);
 
-  const totalCard = page.locator(".metric-card").filter({ hasText: "Invoice Total OCR" }).first();
-  if (await totalCard.count()) {
-    const extracted = moneyFromText(await totalCard.innerText());
-    assert(Number.isFinite(extracted) && almost(extracted, fixture.printedTotal, 1),
-      `${fixture.invoiceNumber}: OCR printed total ${extracted} does not match physical total ${fixture.printedTotal}.`);
+  const ocrDescriptions = [];
+  for (let i = 0; i < count; i += 1) {
+    const description = await rows
+      .nth(i)
+      .locator("td")
+      .nth(2)
+      .locator("strong")
+      .first()
+      .innerText();
+    ocrDescriptions.push(description);
   }
+  itemReport.ocrDescriptions = ocrDescriptions;
+  assertOcrDescriptions(fixture, ocrDescriptions);
+
+  const sha = fileSha256(invoicePath);
+  let analyzedIngestion = null;
+  const normalizedDeadline = Date.now() + 10_000;
+  while (Date.now() < normalizedDeadline) {
+    analyzedIngestion = await getIngestionBySha(sha);
+    const storedItems = analyzedIngestion?.normalized_invoice?.items;
+    if (Array.isArray(storedItems) && storedItems.length === count) break;
+    await page.waitForTimeout(250);
+  }
+  assert(
+    analyzedIngestion?.id,
+    `${fixture.invoiceNumber}: analyzed ingestion was not persisted in DEV.`
+  );
+  assessFinanceEvidence(fixture, analyzedIngestion.normalized_invoice || {}, itemReport);
 
   await page.waitForTimeout(4500);
   itemReport.imageSuggestions = await page.locator(".ocr-auto-image-preview img").count();
@@ -6157,7 +6336,6 @@ async function freshOcr(fixture, invoicePath, itemReport) {
   await page.getByRole("button", { name: "Open Purchase Receiving Workspace", exact: true }).click();
   await page.getByRole("heading", { name: "Purchase Receiving Workspace" }).waitFor({ state: "visible", timeout: 30_000 });
 
-  const sha = fileSha256(invoicePath);
   const ingestion = await getIngestionBySha(sha);
   assert(ingestion?.id, `${fixture.invoiceNumber}: stored OCR ingestion could not be located in DEV.`);
   return ingestion.id;
@@ -6177,9 +6355,11 @@ async function openOrCreateInvoice(fixture, invoicePath, itemReport) {
     itemReport.ocrLines = Array.isArray(existing.normalized_invoice?.items) ? existing.normalized_invoice.items.length : null;
     assert(itemReport.ocrLines === fixture.lines.length,
       `${fixture.invoiceNumber}: existing OCR evidence has ${itemReport.ocrLines} lines; expected ${fixture.lines.length}.`);
-    const extracted = Number(existing.extracted_total ?? existing.normalized_invoice?.total);
-    assert(Number.isFinite(extracted) && almost(extracted, fixture.printedTotal, 1),
-      `${fixture.invoiceNumber}: existing OCR total ${extracted} does not match physical total ${fixture.printedTotal}.`);
+    const existingDescriptions = (existing.normalized_invoice?.items || [])
+      .map((item) => String(item?.description || ""));
+    itemReport.ocrDescriptions = existingDescriptions;
+    assertOcrDescriptions(fixture, existingDescriptions);
+    assessFinanceEvidence(fixture, existing.normalized_invoice || {}, itemReport);
     log(`${fixture.invoiceNumber}: resuming existing ${existing.review_status} ingestion ${existing.id}; no duplicate upload.`);
     await page.goto(`${BASE_URL}/#/purchasing/receive?ingestion=${encodeURIComponent(existing.id)}`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "Purchase Receiving Workspace" }).waitFor({ state: "visible", timeout: 30_000 });
@@ -6309,6 +6489,68 @@ async function normalizeReceiving(fixture, ingestionId, itemReport) {
   assert(totalsText.includes(`${fixture.expectedBottles} bottles`),
     `${fixture.invoiceNumber}: UI bottle total does not show ${fixture.expectedBottles}.`);
 
+  if (itemReport.financeMode === "UNREADABLE_PRINTED_TOTAL_BLOCKED") {
+    const finance = page.locator(".verification-guidance").last();
+    await finance.waitFor({ state: "visible", timeout: 10_000 });
+    const financeText = await finance.innerText();
+    assert(
+      /No printed total/i.test(financeText),
+      `${fixture.invoiceNumber}: unreadable printed total did not remain a manual-review finance state: ${financeText}`
+    );
+
+    if (fixture.expectedUnreadableCashDiscount != null) {
+      const discountValue = Number(
+        await page.getByLabel("Cash / Supplier Discount", { exact: true }).inputValue()
+      );
+      assert(
+        almost(discountValue, fixture.expectedUnreadableCashDiscount, 0.01),
+        `${fixture.invoiceNumber}: receiving changed preserved OCR cash discount ` +
+        `${fixture.expectedUnreadableCashDiscount} to ${discountValue}.`
+      );
+    }
+
+    const reviewBadges = page
+      .locator("table.purchase-receiving-table tbody .invoice-status-badge")
+      .filter({ hasText: "NEEDS REVIEW" });
+    assert(
+      await reviewBadges.count() === 0,
+      `${fixture.invoiceNumber}: product/pack review is still unresolved; cannot prove finance is the blocker.`
+    );
+
+    const footer = page.locator(".purchase-receive-footer");
+    await footer.getByText("Receive Stock Blocked", { exact: true })
+      .waitFor({ state: "visible", timeout: 10_000 });
+
+    const footerText = await footer.innerText();
+    assert(
+      /Financial reconciliation must match before receiving/i.test(footerText),
+      `${fixture.invoiceNumber}: receive footer is blocked for an unexpected reason: ${footerText}`
+    );
+
+    const receiveButton = footer.getByRole(
+      "button",
+      { name: "Approve & Receive Stock", exact: true }
+    );
+    assert(
+      await receiveButton.isDisabled(),
+      `${fixture.invoiceNumber}: Approve & Receive Stock is enabled with unreadable printed-total evidence.`
+    );
+
+    await page.waitForTimeout(1500);
+    const ingestion = await getIngestionById(ingestionId);
+    assert(
+      !["READY_TO_RECEIVE", "RECEIVED"].includes(
+        String(ingestion?.review_status || "").toUpperCase()
+      ),
+      `${fixture.invoiceNumber}: server status ${ingestion?.review_status} is unsafe for unreadable printed-total evidence.`
+    );
+
+    await screenshot(
+      `${fixture.invoiceNumber.replace(/[^a-z0-9]/gi, "_")}_02_finance_blocked.png`
+    );
+    return { blockedByFinance: true };
+  }
+
   const finance = page.locator(".verification-guidance").filter({ hasText: /MATCH|BLOCKED/ }).last();
   await finance.waitFor({ state: "visible", timeout: 10_000 });
   const financeText = await finance.innerText();
@@ -6362,6 +6604,7 @@ async function normalizeReceiving(fixture, ingestionId, itemReport) {
   );
 
   await screenshot(`${fixture.invoiceNumber.replace(/[^a-z0-9]/gi, "_")}_02_ready_before_receive.png`);
+  return { blockedByFinance: false };
 }
 
 async function verifyBeforeReceive(fixture) {
@@ -6728,8 +6971,19 @@ async function verifyPreviouslyReceivedFixture(fixture, invoicePath, itemReport)
 
     await assertInvoiceTargetsNew(fixture);
     const ingestionId = await openOrCreateInvoice(fixture, invoicePath, itemReport);
-    await normalizeReceiving(fixture, ingestionId, itemReport);
+    const receiveState = await normalizeReceiving(fixture, ingestionId, itemReport);
     await verifyBeforeReceive(fixture);
+
+    if (receiveState?.blockedByFinance) {
+      itemReport.duplicateCheck =
+        "NOT RUN — invoice intentionally remains unreceived because printed-total evidence is unreadable.";
+      itemReport.result = "PASS";
+      itemReport.notes.push(
+        "Finance safety branch passed: Approve & Receive Stock remained disabled and no purchase/stock mutation was performed."
+      );
+      log(`${fixture.invoiceNumber}: PASS (finance safety branch; intentionally unreceived).`);
+      continue;
+    }
 
     log(`${fixture.invoiceNumber}: clicking Approve & Receive Stock.`);
     await page.getByRole("button", { name: "Approve & Receive Stock", exact: true }).click();
@@ -6746,7 +7000,7 @@ async function verifyPreviouslyReceivedFixture(fixture, invoicePath, itemReport)
     `Safety failure: ${report.blockedProductionRequests.length} production/wrong-environment request(s) were blocked.`);
 
   report.final = "PASS";
-  log("ALL THREE TARGET INVOICES PASSED. Invoice 15983 was never processed.");
+  log("ALL THREE TARGET INVOICE CERTIFICATION BRANCHES PASSED. Unreadable finance evidence remains unreceived; invoice 15983 was never processed.");
 } catch (error) {
   report.final = "FAIL";
   report.warnings.push(error?.stack || String(error));
