@@ -1,0 +1,11 @@
+[EXTENDED] Saved QA session is unavailable. Sign in once in the visible DEV browser.
+[PASS] Authentication / DEV ADMIN — shop <redacted-shop-id>
+[PASS] QA/DEV environment badge — V5 NOT PROD
+[PASS] Golden 16845 — RECEIVED once · 15 lines · 996 bottles
+[PASS] Golden B-3339 — 14 lines · exact 7 finance assertions · MATCH · received once
+[PASS] Golden 16805 — 3 rows · unsafe finance blocked · zero purchase mutation
+[PASS] Prior analytics certification — Owner Center / Inventory Intelligence / Profit Intelligence / Purchase Intelligence passed in Git-evidenced run resume_analytics_20260912_154858
+[PASS] Reports business values — Sales / Purchases / Expenses / Inventory Cost match authoritative DEV data
+[PASS] Final inventory ledger equality — inventory 1558 = net stock movements 1558, per product
+[EXTENDED] FINAL RESULT: PASS
+[EXTENDED] Evidence: C:\Users\<redacted>\WineShopPOS_V5_EXTENDED_CERT\resume_reports_ledger_20260912_155306
