@@ -73,3 +73,13 @@ Error: GET products?select=id,product_name,barcode,price,selling_price,mrp,activ
     at async file:///E:/WineShopPOS_V5/.wsp_v5_full_cert_2783/full-cert.mjs:114:2
 ```
 
+## 2026-09-12T07:17:29.565Z — TRIAGE_REQUIRED
+
+- Runner: `R11-REAL-DEFECT-REGISTRY`
+- Stage: `07_REAL_INVOICE_UAT`
+- Component: Unclassified test failure
+
+```text
+16845: Invoice Inbox shows 0 rows for the same scanned invoice; expected exactly 1.
+```
+
