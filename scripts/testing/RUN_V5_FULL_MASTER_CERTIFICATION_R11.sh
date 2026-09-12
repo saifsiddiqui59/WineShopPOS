@@ -7130,7 +7130,7 @@ async function adminUsers(){
 }
 
 async function criticalFlow(){
- const ps=await rest("products?select=id,product_name,barcode,price,selling_price,mrp,active&barcode=eq.2900000000018&limit=1"),p=ps?.[0];
+ const ps=await rest("products?select=id,product_name,barcode&barcode=eq.2900000000018&limit=1"),p=ps?.[0];
  if(!p){report.blocked.push("POS/Return transaction: QA barcode 2900000000018 absent. Run real invoice UAT first.");feature("POS → Sale → Return","BLOCKED","invoice QA product absent");return}
  const inv0=(await rest(`inventory?select=product_id,quantity&product_id=eq.${p.id}&limit=1`))?.[0];const q0=Number(inv0?.quantity||0);assert(q0>=1,`No stock for POS test: ${q0}`);
  const shifts=await rest(`cashier_shifts?select=id,status,expected_cash,opened_at&cashier_id=eq.${profile.id}&status=in.(OPEN,CLOSE_REQUESTED)&order=opened_at.desc&limit=1`);let shift=shifts?.[0],created=false;
