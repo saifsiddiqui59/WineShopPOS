@@ -59,3 +59,17 @@ Call log:
 16845: duplicate storage API returned HTTP 503.
 ```
 
+## 2026-09-12T06:40:55.091Z — TRIAGE_REQUIRED
+
+- Runner: `R11-REAL-DEFECT-REGISTRY`
+- Stage: `09_FULL_APP_CERT`
+- Component: Unclassified test failure
+
+```text
+Error: GET products?select=id,product_name,barcode,price,selling_price,mrp,active&barcode=eq.2900000000018&limit=1: HTTP 400 {"code":"42703","details":null,"hint":null,"message":"column products.price does not exist"}
+    at rest (file:///E:/WineShopPOS_V5/.wsp_v5_full_cert_2783/full-cert.mjs:29:41)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async criticalFlow (file:///E:/WineShopPOS_V5/.wsp_v5_full_cert_2783/full-cert.mjs:74:11)
+    at async file:///E:/WineShopPOS_V5/.wsp_v5_full_cert_2783/full-cert.mjs:114:2
+```
+
