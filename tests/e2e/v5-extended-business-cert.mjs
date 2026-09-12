@@ -469,9 +469,12 @@ async function salesReturnShiftFlow(selectedProducts){
   assert(afterReturn===beforeReturn+1,`Return stock ${beforeReturn}->${afterReturn}; expected +1.`);
   check("Approved return stock restoration","PASS",`${target.product.product_name} ${beforeReturn}->${afterReturn}`);
 
-  const current=(await rest(`cashier_shifts?select=id,status,expected_cash&cashier_id=eq.${profile.id}&status=eq.OPEN&order=opened_at.desc&limit=1`))?.[0];
+  const current=(await rest(`cashier_shifts?select=id,status&cashier_id=eq.${profile.id}&status=eq.OPEN&order=opened_at.desc&limit=1`))?.[0];
   assert(current?.id,"Open shift missing before close.");
-  const expected=Number(current.expected_cash||0);
+  const totalsRaw=await rpc("shift_totals",{p_shift_id:current.id});
+  const totals=Array.isArray(totalsRaw)?totalsRaw[0]:totalsRaw;
+  const expected=Number(totals?.expected_cash);
+  assert(Number.isFinite(expected),"Authoritative shift expected_cash is unavailable.");
   await rpc("request_close_shift",{p_actual_cash:expected,p_notes:`V5 extended Playwright close ${RUN}`});
   await rpc("approve_shift_close",{p_shift_id:current.id,p_notes:`V5 extended Playwright approve ${RUN}`});
   const closed=(await rest(`cashier_shifts?select=status,cash_difference&id=eq.${current.id}&limit=1`))?.[0];
