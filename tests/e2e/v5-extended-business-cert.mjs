@@ -659,32 +659,62 @@ async function reportsValidation(){
   const now=new Date();
   const from=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
   const to=now.toISOString().slice(0,10);
-  const [sales,purchases,products,inventory,payments]=await Promise.all([
-    rest(`sales?select=id,grand_total,created_at,status&created_at=gte.${encodeURIComponent(from+"T00:00:00")}&created_at=lte.${encodeURIComponent(to+"T23:59:59")}&limit=5000`),
+
+  const [sales,purchases,products,inventory,expenses]=await Promise.all([
+    rest(`sales?select=id,invoice_number,grand_total,created_at,status&created_at=gte.${encodeURIComponent(from+"T00:00:00")}&created_at=lte.${encodeURIComponent(to+"T23:59:59")}&limit=5000`),
     rest(`purchases?select=id,total,invoice_date&invoice_date=gte.${from}&invoice_date=lte.${to}&limit=5000`),
     productRows(),
     rest("inventory?select=product_id,quantity&limit=1000"),
-    rest("payments?select=sale_id,payment_method,payment_type&limit=10000"),
+    rest(`expenses?select=id,amount,status,expense_date&expense_date=gte.${from}&expense_date=lte.${to}&limit=5000`),
   ]);
-  const salesTotal=sales.reduce((s,x)=>s+Number(x.grand_total||0),0);
-  const purchaseTotal=purchases.reduce((s,x)=>s+Number(x.total||0),0);
+
+  const eligibleSales=sales.filter(x=>String(x.status)!=="VOID");
+  const activeExpenses=expenses.filter(x=>String(x.status)==="ACTIVE");
+
+  const salesTotal=eligibleSales.reduce((sum,x)=>sum+Number(x.grand_total||0),0);
+  const purchaseTotal=purchases.reduce((sum,x)=>sum+Number(x.total||0),0);
+  const expenseTotal=activeExpenses.reduce((sum,x)=>sum+Number(x.amount||0),0);
+
   const invMap=new Map(inventory.map(x=>[x.product_id,Number(x.quantity||0)]));
-  const inventoryCost=products.reduce((s,p)=>s+(invMap.get(p.id)||0)*Number(p.purchase_price||0),0);
-  const potentialSales=products.reduce((s,p)=>s+(invMap.get(p.id)||0)*Number(p.selling_price||0),0);
+  const inventoryCost=products.reduce(
+    (sum,p)=>sum+(invMap.get(p.id)||0)*Number(p.purchase_price||0),
+    0
+  );
 
   await page.goto(`${BASE}/#/reports`,{waitUntil:"domcontentloaded"});
-  await page.getByRole("heading",{name:"Reports"}).waitFor({state:"visible",timeout:20000});
-  await page.waitForTimeout(900);
-  assert(await statCardValue("Sales")===roundMoney(salesTotal),`Reports Sales mismatch.`);
-  assert(await statCardValue("Purchases")===roundMoney(purchaseTotal),`Reports Purchases mismatch.`);
-  assert(await statCardValue("Inventory Cost")===roundMoney(inventoryCost),`Reports Inventory Cost mismatch.`);
-  assert(await statCardValue("Potential Sales")===roundMoney(potentialSales),`Reports Potential Sales mismatch.`);
-  const period=page.locator(".panel").filter({hasText:"Period"}).first();
-  assert((await period.innerText()).includes(`Bills: ${sales.length}`),`Reports bill count mismatch.`);
-  assert((await period.innerText()).includes(`Purchases: ${purchases.length}`),`Reports purchase count mismatch.`);
-  report.reports={salesTotal,purchaseTotal,inventoryCost,potentialSales,bills:sales.length,purchases:purchases.length};
+  await page.getByRole("heading",{name:"Reports & Exports",exact:true})
+    .waitFor({state:"visible",timeout:20000});
+  await page.waitForTimeout(1200);
+
+  assert(await metricCardValue("Sales")===roundMoney(salesTotal),
+    `Reports Sales mismatch.`);
+  assert(await metricCardValue("Purchases")===roundMoney(purchaseTotal),
+    `Reports Purchases mismatch.`);
+  assert(await metricCardValue("Expenses")===roundMoney(expenseTotal),
+    `Reports Expenses mismatch.`);
+  assert(await metricCardValue("Inventory Cost")===roundMoney(inventoryCost),
+    `Reports Inventory Cost mismatch.`);
+
+  const body=await page.locator("body").innerText();
+  assert(/Sales Summary/i.test(body),"Reports Sales Summary section missing.");
+  assert(/Export Center/i.test(body),"Reports Export Center section missing.");
+
+  report.reports={
+    salesTotal,
+    purchaseTotal,
+    expenseTotal,
+    inventoryCost,
+    bills:eligibleSales.length,
+    purchases:purchases.length,
+    activeExpenses:activeExpenses.length,
+  };
+
   await shot(page,"08_reports_verified.png");
-  check("Reports business values","PASS","Sales · Purchases · Inventory Cost · Potential Sales · period counts match authoritative data");
+  check(
+    "Reports business values",
+    "PASS",
+    "Sales / Purchases / Expenses / Inventory Cost match authoritative DEV data"
+  );
 }
 
 async function finalInventoryAudit(){
