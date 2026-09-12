@@ -408,7 +408,8 @@ async function createSale(product,method,index){
   }
 
   const search=page.getByLabel("Scan barcode or search products");
-  await search.fill(product.product_name);
+  const uniqueLookup=String(product.barcode||product.sku||product.product_name);
+  await search.fill(uniqueLookup);
   const productButton=page.getByRole("button").filter({hasText:product.product_name}).first();
   await productButton.waitFor({state:"visible",timeout:12000});
   await productButton.click();
