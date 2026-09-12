@@ -80,15 +80,56 @@ function editDistance(a, b) {
   return row[bb.length];
 }
 
+const EXACT_ONLY_FINANCE_ALIASES = new Set(["discount", "discount amount", "freight", "freight charges", "stamp"]);
+
 function labelMatches(value, aliases) {
   const label = normalizeLabelText(value);
   return aliases.some((alias) => {
     const a = normalizeLabelText(alias);
     if (!a || !label) return false;
+
+    // DEF-0002: short printed labels must be exact-only. This allows
+    // (-)DISCOUNT / FREIGHT / STAMP without making "other discount"
+    // accidentally become the cash-discount field.
+    if (EXACT_ONLY_FINANCE_ALIASES.has(a)) return label === a;
+
     if (label === a || label.startsWith(`${a} `) || label.endsWith(` ${a}`) || label.includes(` ${a} `)) return true;
     const maxDistance = Math.max(1, Math.floor(Math.max(label.length, a.length) * 0.08));
     return Math.min(label.length, a.length) >= 5 && editDistance(label, a) <= maxDistance;
   });
+}
+
+
+function financeLabelKinds(value) {
+  const label = normalizeLabelText(value);
+  const kinds = new Set();
+  if (!label) return kinds;
+
+  if (/\b(discount|discounts|deduction|deductions)\b/.test(label)) kinds.add("discount");
+  if (
+    /\bfreight\b/.test(label) ||
+    (/\b(carrying|carriage)\b/.test(label) && /\bforwarding\b/.test(label))
+  ) kinds.add("freight");
+  if (/\bstamp\b/.test(label)) kinds.add("stamp");
+  if (/\btcs\b/.test(label)) kinds.add("tcs");
+  if (/\b(assessable|assesable)\b/.test(label)) kinds.add("assessable");
+  if (/\bgross\b/.test(label)) kinds.add("gross");
+  if (/\bsub\s*total\b/.test(label)) kinds.add("subtotal");
+  if (/\btax\b/.test(label) && !/\btcs\b/.test(label)) kinds.add("tax");
+
+  const strongTotal =
+    /\b(invoice total|grand total|net amount|amount due|net payable)\b/.test(label);
+  const genericTotal =
+    /\btotal\b/.test(label) &&
+    !/\bgross total\b/.test(label) &&
+    !/\bsub\s*total\b/.test(label);
+  if (strongTotal || genericTotal) kinds.add("total");
+
+  return kinds;
+}
+
+function isCompoundFinanceLabel(value) {
+  return financeLabelKinds(value).size > 1;
 }
 
 function parseMoneyText(value) {
@@ -184,11 +225,13 @@ function flattenEvidence(analyzeResult) {
 }
 
 function findSpatialLabeledAmount(evidence, aliases) {
-  for (const label of evidence) {
+  const lineEvidence = evidence.filter((row) => row.source === "line");
+  for (const label of lineEvidence) {
+    if (isCompoundFinanceLabel(label.text)) continue;
     if (!labelMatches(label.text, aliases)) continue;
 
     const tolerance = Math.max(label.pageHeight * 0.012, label.height * 1.6);
-    const candidates = evidence
+    const candidates = lineEvidence
       .filter(
         (row) =>
           row !== label &&
@@ -218,11 +261,40 @@ function findSpatialLabeledAmount(evidence, aliases) {
 }
 
 
+
+function findInlineLabeledAmount(evidence, aliases) {
+  const moneyPattern = /\(?-?\d[\d,.:']*\d\)?|\(?-?\d\)?/g;
+
+  for (const row of evidence.filter((entry) => entry.source === "line")) {
+    if (isCompoundFinanceLabel(row.text)) continue;
+    if (!labelMatches(row.text, aliases)) continue;
+
+    const tokens = String(row.text || "").match(moneyPattern) || [];
+    if (tokens.length !== 1) continue;
+
+    const value = parseMoneyText(tokens[0]);
+    if (!Number.isFinite(value)) continue;
+
+    return {
+      value,
+      rawValue: tokens[0],
+      label: row.text,
+      evidence: row.text,
+      pageIndex: row.pageIndex,
+      y: row.y,
+      source: "inline-line",
+    };
+  }
+
+  return null;
+}
+
 function findTableLabeledAmount(analyzeResult, aliases) {
   const pages = analyzeResult?.analyzeResult?.pages || [];
   for (const table of analyzeResult?.analyzeResult?.tables || []) {
     const cells = table?.cells || [];
     for (const labelCell of cells) {
+      if (isCompoundFinanceLabel(labelCell?.content || "")) continue;
       if (!labelMatches(labelCell?.content || "", aliases)) continue;
       const rowIndex = Number(labelCell?.rowIndex);
       const labelColumn = Number(labelCell?.columnIndex ?? -1);
@@ -267,6 +339,7 @@ function findKeyValueLabeledAmount(analyzeResult, aliases) {
   const pairs = analyzeResult?.analyzeResult?.keyValuePairs || [];
   for (const pair of pairs) {
     const keyText = String(pair?.key?.content || "");
+    if (isCompoundFinanceLabel(keyText)) continue;
     if (!labelMatches(keyText, aliases)) continue;
     const valueText = String(pair?.value?.content || "");
     const value = parseMoneyText(valueText);
@@ -290,6 +363,7 @@ function findKeyValueLabeledAmount(analyzeResult, aliases) {
 function tableHasMatchingLabel(analyzeResult, aliases) {
   for (const table of analyzeResult?.analyzeResult?.tables || []) {
     for (const cell of table?.cells || []) {
+      if (isCompoundFinanceLabel(cell?.content || "")) continue;
       if (labelMatches(cell?.content || "", aliases)) return true;
     }
   }
@@ -303,13 +377,21 @@ function findLabeledAmount(analyzeResult, evidence, aliases) {
   const keyValueMatch = findKeyValueLabeledAmount(analyzeResult, aliases);
   if (keyValueMatch) return keyValueMatch;
 
-  // A structured table label with no row amount is meaningful evidence that
-  // the field is blank. Do not borrow a neighboring finance row's amount.
+  // Direct page-line evidence is authoritative enough to use without
+  // arithmetic inference, even if a semantic table merged adjacent rows.
+  const inlineMatch = findInlineLabeledAmount(evidence, aliases);
+  if (inlineMatch) return inlineMatch;
+
+  // Same-visual-row page-line pairing is also direct evidence. Keep this
+  // page-line-only so a blank table row cannot borrow another table row.
+  const spatialMatch = findSpatialLabeledAmount(evidence, aliases);
+  if (spatialMatch) return spatialMatch;
+
+  // Remaining structured label without a direct amount is ambiguous/blank.
+  // Fail closed rather than borrowing a nearby finance value.
   if (tableHasMatchingLabel(analyzeResult, aliases)) return null;
 
-  // Keep spatial fallback for invoices whose finance summary exists only as
-  // ordinary page lines (for example older supplier layouts).
-  return findSpatialLabeledAmount(evidence, aliases);
+  return null;
 }
 
 function printedMoneyEvidenceIsReliable(entry, referenceValue = 0) {
@@ -385,13 +467,13 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   );
 
   const cashDiscount = findLabeledAmount(analyzeResult, evidence, [
-    "cash discount", "cash discounts", "cash disc",
+    "cash discount", "cash discounts", "cash disc", "discount", "discount amount",
   ]);
   const otherDeduction = findLabeledAmount(analyzeResult, evidence, [
     "other deduction", "other deductions", "other discount", "other discounts", "other ded",
   ]);
   const freightCarting = findLabeledAmount(analyzeResult, evidence, [
-    "freight carting", "freight and carting",
+    "freight carting", "freight and carting", "freight", "freight charges",
     "carrying and forwarding", "carrying forwarding",
     "carriage and forwarding", "carriage forwarding",
   ]);
@@ -401,7 +483,7 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
     "loading unloading", "loading and unloading",
   ]);
   const stampDuty = findLabeledAmount(analyzeResult, evidence, [
-    "stamp duty", "stamp fee", "stamp fees",
+    "stamp duty", "stamp fee", "stamp fees", "stamp",
   ]);
   const tcs = findLabeledAmount(analyzeResult, evidence, ["tcs"]);
   const otherAdditions = findLabeledAmount(analyzeResult, evidence, [
@@ -416,9 +498,12 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   const grossAmount = findLabeledAmount(analyzeResult, evidence, [
     "gross amount", "gross total",
   ]);
-  const printedTotalLabel = findLabeledAmount(analyzeResult, evidence, [
-    "invoice total", "grand total", "net amount", "amount due", "net payable", "total",
+  const strongPrintedTotalLabel = findLabeledAmount(analyzeResult, evidence, [
+    "invoice total", "grand total", "net amount", "amount due", "net payable",
   ]);
+  const printedTotalLabel =
+    strongPrintedTotalLabel ||
+    findLabeledAmount(analyzeResult, evidence, ["total"]);
   const printedTotalLabelReliable = printedMoneyEvidenceIsReliable(
     printedTotalLabel,
     lineProductValue,

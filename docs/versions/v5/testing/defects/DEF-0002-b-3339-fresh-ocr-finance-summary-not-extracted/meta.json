@@ -1,0 +1,18 @@
+{
+  "id": "DEF-0002",
+  "number": 2,
+  "title": "Fresh OCR of invoice B-3339 fails to extract finance summary",
+  "status": "OPEN",
+  "classification": "APP_OCR_DATA",
+  "severity": "HIGH",
+  "component": "OCR / invoice finance extraction",
+  "firstSeen": "2026-09-12",
+  "lastSeen": "2026-09-12",
+  "occurrences": 1,
+  "runner": "R11-REAL-DEFECT-REGISTRY",
+  "stage": "REAL_INVOICE_UAT",
+  "exactFailure": "B-3339: OCR printed total null does not match physical total 88558.",
+  "evidenceSource": "DEV invoice_ingestions id 3742e84d-331a-47f6-b305-82641af9cc8f",
+  "devIngestionId": "3742e84d-331a-47f6-b305-82641af9cc8f",
+  "purchaseId": null
+}

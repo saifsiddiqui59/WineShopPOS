@@ -1,18 +1,19 @@
 # WineShopPOS V5 Real Defect Register
 
-Open real defects: **0** · Total real defects: **1**
+Open real defects: **1** · Total real defects: **2**
 
 This index contains **application/data/security defects only**. Test harness and prerequisite failures are kept separately under `../harness/`.
 
 | Sr | Defect ID | Status | Class | Severity | Defect |
 |---:|---|---|---|---|---|
 | 1 | DEF-0001 | RESOLVED | APP_OCR_DATA | HIGH | Invoice 16805 OCR stored 2 lines instead of 3 |
+| 2 | DEF-0002 | OPEN | APP_OCR_DATA | HIGH | Fresh OCR of invoice B-3339 fails to extract finance summary |
 
 ## Current state
 
-There are no open real defects in the V5 registry.
-
-DEF-0001 was resolved after final certification confirmed that invoice 16805 preserves all 3 OCR rows and that unreadable printed-total evidence remains safely in `NEEDS_REVIEW` without purchase or stock mutation.
+- DEF-0001 remains resolved. Its 16805 unreadable-total fail-closed protection must not be weakened.
+- DEF-0002 is the only open real defect.
+- B-3339 is a golden invoice and must reach reliable finance `MATCH` before receipt; generic safe-review is not an accepted pass for this fixture.
 
 ## New-chat workflow
 
@@ -23,4 +24,4 @@ DEF-0001 was resolved after final certification confirmed that invoice 16805 pre
 5. Add/verify a focused regression test.
 6. Run the relevant end-to-end flow.
 7. Mark `RESOLVED` only after verification.
-8. If there is no `OPEN` defect, do not invent a new defect number without a newly verified application/data/security failure.
+8. Test harness/prerequisite failures stay under `../harness/` and do not receive a numbered real-defect ID.
