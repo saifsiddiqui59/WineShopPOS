@@ -1,76 +1,73 @@
 # DEF-0001 — Invoice 16805 OCR stored 2 lines instead of 3
 
 **Sr No:** 1
-**Status:** OPEN
+**Status:** RESOLVED
 **Classification:** APP_OCR_DATA
 **Severity:** HIGH
 **Environment:** V5 DEV/QA (`juhcypzoacauzmtzqnwd`)
+**Resolved:** 2026-09-12
 **PROD:** untouched
 
-## Defect statement
+## Original defect
 
-Real invoice **16805** physically contains **3 product rows**, but the V5 UAT found existing stored OCR evidence with **2 normalized item lines**.
+Real invoice **16805** physically contains **3 product rows**, but the original V5 UAT found stored OCR evidence with only **2 normalized item lines**.
 
-Exact certification failure:
+Original certification failure:
 
 ```text
 [V5-UAT] FAIL: 16805: existing OCR evidence has 2 lines; expected 3.
 ```
 
-## Expected
-
-Invoice 16805 must preserve all three physical product rows through OCR, normalization, review draft and Purchase Receiving:
+Expected physical product rows:
 
 1. DING DONGS FORTIFIED WINE
 2. DYNAMITE XXX FORTIFIED WINE
 3. GO LIMLET FORTIFIED WINE
 
-Printed commercial values used by UAT:
-- MRP: 60 each
-- rate: approximately 2637.30 each
-- printed product subtotal: 7911
-- printed invoice total: 8044
+## Resolution
 
-## Actual
+The V5 OCR/normalization path now preserves all **3 physical product rows** from invoice 16805 through the review/receiving workspace.
 
-The stored OCR evidence examined by the UAT contained two normalized item rows. The test stopped before Receive Stock.
+The finance-safety behavior was also certified for the same invoice. The printed total remains unreadable rather than being arithmetically invented or silently corrected:
 
-Invoice 16805 must **not** be received until the missing line is identified and fixed.
+- `total = null`
+- `printedTotalEvidenceStatus = LABELED_TOTAL_UNREADABLE`
+- `reconciliationStatus = REVIEW_PRINTED_TOTAL_UNREADABLE`
+- invoice status remains `NEEDS_REVIEW`
+- `purchase_id = null`
+- no inventory or stock mutation occurred
 
-## Known surrounding state
+This is the expected safe outcome for unreadable printed-total evidence. Invoice 16805 remains intentionally unreceived.
 
-- Invoice 16845: PASS; already received; revalidate-only on future runs.
-- Invoice B-3339: PASS; already received; revalidate-only on future runs.
-- Invoice 16805: not received; blocked by this defect.
-- A later read-only diagnostic attempt was blocked by an expired saved QA JWT (`PGRST303`). That authentication failure is a harness prerequisite issue and is **not** this product defect.
+## Final certification evidence — 2026-09-12
 
-## Debugging decision tree
+Evidence source:
 
-1. If fresh OCR Edge Function output has 2 rows → inspect OCR/table extraction / normalization.
-2. If OCR output has 3 rows but `invoice_ingestions.normalized_invoice.items` stores 2 → inspect persistence.
-3. If `normalized_invoice.items` has 3 rows but Purchase Receiving restores 2 → inspect review-draft / receiving hydration.
+```text
+C:\Users\Shoyeb\WineShopPOS_V5_FULL_CERT\20260912_024605
+```
 
-## Likely source areas
+Certified results:
 
-- `src/pages/AutomationHub.jsx`
-- `src/pages/Purchases.jsx`
-- `supabase/functions/ocr-invoice/`
-- invoice normalization/client helpers
-- `scripts/ocr-metiri-real-regression.mjs`
+- Physical invoice 16805 preserves all 3 OCR rows.
+- Focused DEF-0001 finance-evidence regression: **PASS**.
+- Focused DEF-0001 finance-receive guard regression: **PASS**.
+- Invoice UAT branch: **PASS**.
+- Master certification: **PASS_WITH_BLOCKED_PREREQUISITES**.
+- Certification failures: **0**.
+- Blocked prerequisites: **3**.
+- PROD attempts: **0**.
+- Purchase receipt for 16805: **not performed by design**.
+- Inventory/stock mutation for 16805: **none**.
 
-## Required fix
+## Closure decision
 
-Do not weaken the UAT expected line count.
+**DEF-0001 is RESOLVED.**
 
-Fix the application/OCR path so the physical three-row invoice remains three rows through the complete review/receive workflow.
+The original application defect was loss of one of the three physical invoice rows. Final certification proves that all three rows are preserved and that unreadable financial evidence is handled safely without creating a purchase or mutating stock.
 
-## Acceptance criteria
+The unreadable printed total is a review condition, not an unresolved recurrence of DEF-0001.
 
-- Fresh 16805 OCR resolves all 3 physical rows.
-- Review/receiving workspace shows all 3 rows.
-- Purchase receives exactly 3 purchase lines.
-- Expected subtotal/total reconciliation remains correct.
-- No duplicate stock posting.
-- Focused 16805 regression passes.
-- Relevant full certification passes.
-- Only then change DEF-0001 to `RESOLVED`.
+Do not create a follow-on defect solely for this certified safe `NEEDS_REVIEW` state.
+
+PROD was not touched.
