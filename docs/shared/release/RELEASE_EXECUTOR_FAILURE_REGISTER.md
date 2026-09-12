@@ -72,7 +72,7 @@ Prevention: generate resume/new executors only after fetching and reading the cu
 13. Keep transport verification separate from manual authenticated UAT.
 14. Record new executor failure classes in this file before the next release.
 
-Last updated: 2026-09-01.
+Last updated: 2026-09-12.
 
 ### 8. Relative self-script path after directory change
 Observed: validation used `grep ... "$0"` after the executor had changed directory from `/e/WineShopPOS` to `/e/WineShopPOS_V3`. Because `$0` was a relative filename, the validator searched for the executor inside the V3 worktree and failed with `No such file or directory`.
@@ -274,3 +274,211 @@ Reusable failure classes:
 4. Use isolated worktrees around legitimate dirty long-lived PROD/main.
 5. Require real-device mobile visual UAT before release close.
 6. Treat operator path/paste/file-transfer friction as release engineering quality.
+
+<!-- V5_BRANCH_SPECIFIC_PATCH_ANCHOR_MISMATCH_20260912 -->
+### 2026-09-12 — branch-specific patch anchor copied from the wrong source flow
+
+Observed:
+`V5_LEARNED_AI_OCR_EXCEPTION_RESOLVER_SINGLE_PATCH.sh` stopped safely with
+`PATCH FAILED: AutomationHub session handoff assist metadata count=0`.
+No application commit, database migration, function deployment, QA deployment,
+or PROD change occurred; targeted cleanup restored the tracked source edits.
+
+Root cause:
+The executor expected an older/default-branch `AutomationHub` flow containing
+`sessionStorage.setItem("wineshop_ocr_purchase_draft", ...)`. Current V5 had
+already moved to the authoritative ingestion-id handoff:
+`/purchasing/receive?ingestion=<id>`, with `normalized_invoice` persisted on the
+server. A branch-specific executor therefore tried to patch a code path that no
+longer existed on V5.
+
+Classification:
+Release/executor patch-construction defect. This is not an Azure OCR failure,
+not an AI-model failure, and not a new application defect/DEF.
+
+Permanent prevention:
+- branch-specific patch anchors must come from the exact target branch/current
+  HEAD (`git show HEAD:path` or repository fetch with an explicit branch ref);
+- default-branch code search is discovery only and must never be the authority
+  for exact replacement anchors on V5 or another version branch;
+- verify current architecture before editing; do not preserve obsolete
+  sessionStorage handoffs when the branch uses server-authoritative ingestion;
+- validate every exact replacement anchor/count for every target file before
+  the first source write;
+- if an anchor is absent, stop before mutation and re-read current source rather
+  than adding another guessed anchor;
+- resume/deployment scripts must derive current `origin/<branch>` at runtime;
+  do not hardcode a previous-turn base SHA;
+- continue to preserve targeted cleanup and explicit-file staging only.
+
+<!-- V5_AI_EVIDENCE_BUDGET_AND_STATIC_ASSERTION_20260912 -->
+### 2026-09-12 — AI resolver offline gate exposed evidence starvation and a brittle static assertion
+
+Observed:
+`V5_LEARNED_AI_OCR_EXCEPTION_RESOLVER_R2.sh` passed repository/source-anchor
+preflight and created only local candidate files, then stopped during the
+offline test gate. The real B-3339 fixture test could not find direct
+`(+)CD -> 599` evidence, and the integration test expected the punctuation-
+sensitive regex `ingestionId}})` even though the patched source correctly
+contained `ingestionId}});`.
+
+The executor cleanup then restored the tracked source edits and removed its new
+candidate files. It stopped before Git commit/push, DEV migration, Edge Function
+deployment, QA deployment, or any PROD operation.
+
+Root causes:
+1. `buildResolutionEvidence()` appended product-table row evidence before the
+   later finance-summary table and then sliced the first 72 rows globally.
+   B-3339 has a large item table, so valid direct finance evidence such as
+   `(+)CD -> 599` was outside that insertion-order budget.
+2. The static integration test asserted an incidental punctuation shape rather
+   than the semantic invariant that the OCR Edge Function request carries the
+   ingestion id.
+
+Classification:
+Executor/implementation-test design defect. The captured Azure OCR evidence is
+valid; this is not an Azure OCR regression, not an AI provider failure, and not
+a new product DEF.
+
+Permanent prevention:
+- never truncate heterogeneous OCR evidence by raw insertion order;
+- preserve direct table/KV evidence independently from large line-item evidence;
+- choose the small AI prompt evidence set by unresolved target compatibility and
+  evidence priority, not document position;
+- never truncate serialized JSON mid-document; compact structured data before
+  serialization and fail closed if it still exceeds budget;
+- real golden fixtures must explicitly assert that critical direct evidence
+  survives evidence-budgeting before AI mapping tests run;
+- static source tests must assert semantic integration markers and avoid
+  punctuation-sensitive regexes when punctuation is not the contract;
+- offline fixture/regression gates remain before commit, database mutation,
+  service deployment, or QA deployment.
+
+<!-- V5_STATIC_CONTRACT_ASSERTION_FALSE_NEGATIVE_20260912 -->
+### 2026-09-12 — R3 still used punctuation-sensitive static source verification
+
+Observed:
+`V5_LEARNED_AI_OCR_EXCEPTION_RESOLVER_R3.sh` reached the offline gate after
+the current-source preflight and source transformation, but its integration
+test failed on an exact regex for the OCR invoke-call punctuation even though
+the Stage 5 transform had already succeeded. Cleanup restored the candidate
+tracked edits before commit/deploy.
+
+Root cause:
+The verification still encoded punctuation/formatting as the contract instead
+of isolating `invokeOcrWithRetry` and validating the semantic data flow.
+
+Classification:
+Executor verification false negative. Not OCR, not Azure AI, not Supabase, and
+not a new product defect.
+
+Permanent prevention:
+- validate semantic postconditions immediately after deterministic transforms;
+- integration tests must isolate the relevant function/call block and verify
+  identifiers/data flow rather than exact punctuation;
+- avoid assertions that dump an entire 60k+ source file for a one-line contract;
+- direct OCR finance evidence must be budgeted ahead of large line-item evidence;
+- ambiguous product-table rows tied to multiple item indexes may never be
+  AI-corrected or auto-learned;
+- a first-time novel/misspelled label may be suggested by AI but must remain a
+  manual correction until successful human review confirms that field; only
+  confirmed supplier/shop memory may auto-apply it on later invoices.
+
+<!-- V5_R4_RESOLVER_ROUTE_AND_AUTOMATION_WRITE_OMISSION_20260912 -->
+### 2026-09-12 — R4 offline gate exposed resolver-route assumptions and an unwritten transformed source file
+
+Observed:
+`V5_LEARNED_AI_OCR_EXCEPTION_RESOLVER_R4.sh` passed repository/source preflight
+and reached the offline regression gate, then stopped with four tests failing:
+- real B-3339 remained on the old unsafe parser values (`cashDiscountAmount`
+  stayed `88558` instead of `599`), proving the AI finance batch was not
+  applied;
+- the `needs_review=true` test did not retain the expected suggestion set;
+- 16845 made one AI call even though its finance reconciliation already MATCHed;
+- the AutomationHub integration test could not find the new `ingestionId`
+  function parameter on disk.
+
+Confirmed root cause for the AutomationHub failure:
+R4 transformed and semantically validated the `automation` string in memory,
+but omitted `automation_path.write_text(...)`. The pre-write semantic check
+therefore passed while the actual file remained unchanged. Cleanup then
+restored/removes all candidate files before commit/deploy.
+
+Resolver design finding:
+Known generic finance vocabulary (for example `CD`, `FREIGHT`, `TP FEES`,
+`TCS`, and a strong payable/Outstanding total) should not depend on an LLM
+round trip at all. R4 routed these through AI after the primary parser failed.
+The B-3339 result showed that if that AI batch is not accepted as a complete
+reconciled set, the old parser's bad values survive. The exact R4 AI-response
+rejection subreason was not printed by that test, so it must not be guessed.
+
+Also, R4 treated individually missing Rate/Case as an AI-worthy failure even
+when the existing V5 receiving logic can derive price safely from Amount plus a
+usable quantity/case basis. That created unnecessary AI work on a receive-valid
+golden invoice.
+
+Permanent prevention:
+- every in-memory source transformation must be written to disk before any
+  integration/static test and must be re-read from disk by that test;
+- semantic postconditions must validate the persisted file, not only the
+  temporary Python string;
+- generic unambiguous direct OCR labels are resolved deterministically before
+  AI; supplier-confirmed memory still has priority;
+- deterministic/memory finance corrections are applied only when the complete
+  accounting equation reaches MATCH;
+- AI is reserved for genuinely novel/ambiguous labels or unresolved fields;
+- optional/derivable line fields are not classified as failures merely because
+  one redundant representation (such as Rate/Case) is absent;
+- tests that depend on an AI response must expose `reason` when validation
+  rejects a response instead of hiding the rejection behind downstream values;
+- do not create a new product DEF for executor/test-design failures; keep
+  DEF-0002 OPEN until the physical B-3339 certification succeeds.
+
+Classification:
+Executor/implementation-route defect. No commit, migration, Edge deployment,
+QA deployment, or PROD operation occurred in this failed R4 run.
+
+<!-- V5_R5_MANUAL_DATE_TRUSTED_PARTIAL_AND_STALE_OUTAGE_TEST_20260912 -->
+### 2026-09-12 — R5 offline gate exposed manual-date misclassification, over-strict trusted partial application, and a stale outage test
+
+Observed:
+`V5_LEARNED_AI_OCR_EXCEPTION_RESOLVER_R5.sh` passed current-source preflight,
+persisted the candidate source edits correctly, and reached the offline
+regression gate. 24/27 tests passed. The remaining failures were:
+- 16845 was incorrectly classified as having an AI-actionable
+  `header:invoice_date` exception even though current V5 intentionally marks its
+  invoice date for the existing human date-review/candidate-selection flow;
+- a human-confirmed supplier mapping (`FRIEGHT -> freight`) was found from
+  mapping memory but was not applied because trusted finance mappings were
+  incorrectly gated on the entire invoice already reaching MATCH;
+- the AI-provider-outage regression still used B-3339, but R5 had correctly
+  moved B-3339's normal `CD/FREIGHT/TP FEES/TCS/Outstanding` vocabulary into the
+  deterministic direct-evidence layer, so that invoice legitimately reached
+  MATCH without needing the simulated failed AI call.
+
+Cleanup restored the candidate tracked edits and removed generated candidate
+files before commit/deploy. No Git push, DEV migration, Edge Function
+deployment, QA deployment, paid AI smoke, or PROD operation occurred.
+
+Classification:
+Resolver policy/test-design defects found by the offline gate. Not an Azure OCR
+failure, not an Azure AI provider failure, not a Supabase failure, and not a new
+product DEF. DEF-0002 remains OPEN until physical B-3339 certification.
+
+Permanent prevention:
+- distinguish an existing explicit human-review workflow from an AI-actionable
+  exception; `invoiceDateReviewRequired=true` remains on V5's manual date
+  candidate/correction path and does not spend an AI call;
+- human-confirmed supplier memory and unambiguous deterministic direct OCR
+  evidence may fill their individual fields even if another finance field is
+  unresolved; the global reconciliation must remain REVIEW and Receive Stock
+  blocked until the complete accounting equation MATCHes;
+- novel/unconfirmed AI finance mappings still require their stricter
+  suggestion/manual-confirmation policy;
+- provider-outage tests must force a genuinely AI-dependent novel/ambiguous
+  label; do not use a golden invoice that a newer deterministic layer is
+  intentionally able to resolve without AI;
+- test the stage-specific safety invariant (no invented novel value, no false
+  MATCH, manual review preserved), rather than requiring the output to remain
+  byte-for-byte equal to an older parser result after a trusted deterministic
+  stage has legitimately improved it.

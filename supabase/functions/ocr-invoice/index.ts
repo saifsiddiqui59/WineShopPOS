@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { normalizeDocumentIntelligenceResult } from "../_shared/invoiceDocument.js";
+import { resolveInvoiceExceptions } from "../_shared/invoiceResolutionFallback.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,6 +99,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const contentBase64 = String(body?.contentBase64 || "");
+    const ingestionId = String(body?.ingestionId || "").trim() || null;
     if (!contentBase64) throw new Error("Document content is required");
 
     // F0 supports up to 4 MB input. Base64 is larger than the binary input,
@@ -146,7 +148,39 @@ Deno.serve(async (req) => {
 
     if (result?.status !== "succeeded") throw new Error("Azure OCR timed out");
 
-    const invoice = normalizeDocumentIntelligenceResult(result);
+    let invoice = normalizeDocumentIntelligenceResult(result);
+
+    try {
+      invoice = await resolveInvoiceExceptions({
+        analyzeResult: result,
+        invoice,
+        supabase: client,
+        ingestionId,
+        config: {
+          enabled: Deno.env.get("WSP_INVOICE_AI_ENABLED") === "true",
+          baseUrl: Deno.env.get("WSP_INVOICE_AI_BASE_URL") || "",
+          apiKey: Deno.env.get("WSP_INVOICE_AI_API_KEY") || "",
+          model: Deno.env.get("WSP_INVOICE_AI_MODEL") || "",
+          timeoutMs: Number(
+            Deno.env.get("WSP_INVOICE_AI_TIMEOUT_MS") || "10000",
+          ),
+        },
+      });
+    } catch (resolverError) {
+      invoice = {
+        ...invoice,
+        resolutionAssist: {
+          attempted: true,
+          aiCalled: false,
+          reason: "RESOLVER_FAIL_OPEN_TO_MANUAL_REVIEW",
+          requiresHumanConfirmation: true,
+        },
+      };
+      console.error(
+        "Invoice exception resolver failed safely",
+        String(resolverError?.message || resolverError).slice(0, 180),
+      );
+    }
 
     return json({
       ok: true,

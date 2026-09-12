@@ -605,9 +605,9 @@ export default function AutomationHub() {
     setResolution(nextResolution);
   }
 
-  async function invokeOcrWithRetry(contentBase64,contentType){
+  async function invokeOcrWithRetry(contentBase64,contentType,ingestionId=null){
     for(let attempt=1;attempt<=2;attempt+=1){
-      const {data,error}=await supabase.functions.invoke("ocr-invoice",{body:{contentBase64,contentType}});
+      const {data,error}=await supabase.functions.invoke("ocr-invoice",{body:{contentBase64,contentType,ingestionId}});
       if(!error&&data?.ok)return data;
       if(!error&&!data?.ok)throw new Error(data?.message||"OCR failed");
       const details=await edgeFunctionErrorDetails(error);
@@ -713,7 +713,11 @@ export default function AutomationHub() {
       setIngestionId(nextIngestionId);
 
       stageStarted = performance.now();
-      const data = await invokeOcrWithRetry(contentBase64, file.type || "application/octet-stream");
+      const data = await invokeOcrWithRetry(
+        contentBase64,
+        file.type || "application/octet-stream",
+        nextIngestionId,
+      );
       timing.ocrMs = Math.round(performance.now() - stageStarted);
 
       setResult(data.invoice);
