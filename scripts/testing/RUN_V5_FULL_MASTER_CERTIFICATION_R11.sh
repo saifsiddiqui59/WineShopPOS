@@ -6459,38 +6459,84 @@ async function verifyAfterReceive(fixture, ingestionId, itemReport) {
 }
 
 async function duplicateIdempotencyCheck(fixture, invoicePath) {
-  log(`${fixture.invoiceNumber}: checking duplicate/idempotency protection.`);
-  await page.goto(`${BASE_URL}/#/purchasing/ocr`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Invoice OCR" }).waitFor({ state: "visible", timeout: 15_000 });
-  {
-    const invoiceUpload = page.locator('input[type="file"][accept*="application/pdf"]');
-    const uploadCount = await invoiceUpload.count();
-    assert(uploadCount === 1, `${fixture.invoiceNumber}: expected exactly one Invoice OCR upload input; found ${uploadCount}.`);
-    await invoiceUpload.setInputFiles(invoicePath);
-  }
-  const duplicateResponsePromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      response.url().includes("/api/invoice/manual-store"),
-    { timeout: 40_000 },
+  log(`${fixture.invoiceNumber}: checking duplicate/idempotency protection through authoritative storage API.`);
+
+  if (!accessToken) accessToken = await getTokenFromBrowser();
+  assert(accessToken,
+    `${fixture.invoiceNumber}: DEV access token is unavailable for duplicate API verification.`);
+  assert(INVOICE_API_URL,
+    `${fixture.invoiceNumber}: DEV Invoice API URL is unavailable.`);
+
+  const apiUrl = `${INVOICE_API_URL.replace(/\/+$/, "")}/api/invoice/manual-store`;
+  const parsedApiUrl = new URL(apiUrl);
+  assert(
+    parsedApiUrl.hostname !== PROD_HOST &&
+    !apiUrl.includes(PROD_REF),
+    `${fixture.invoiceNumber}: duplicate check resolved to a blocked PROD endpoint.`
   );
 
-  await page.getByRole("button", { name: "Analyze Invoice", exact: true }).click();
+  const beforePurchases = await getPurchases();
+  const beforeCount = beforePurchases
+    .filter((p) => norm(p.invoice_number) === norm(fixture.invoiceNumber))
+    .length;
+  assert(beforeCount === 1,
+    `${fixture.invoiceNumber}: expected exactly 1 purchase before duplicate check; found ${beforeCount}.`);
 
-  const duplicateResponse = await duplicateResponsePromise;
-  assert(duplicateResponse.ok(),
-    `${fixture.invoiceNumber}: duplicate storage API returned HTTP ${duplicateResponse.status()}.`);
+  const ext = path.extname(invoicePath).toLowerCase();
+  const contentType =
+    ext === ".pdf" ? "application/pdf" :
+    ext === ".png" ? "image/png" :
+    ext === ".webp" ? "image/webp" :
+    "image/jpeg";
+
+  const contentBase64 = fs.readFileSync(invoicePath).toString("base64");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120_000);
+
+  let duplicateResponse;
+  try {
+    duplicateResponse = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        file_name: path.basename(invoicePath),
+        content_type: contentType,
+        content_base64: contentBase64,
+      }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const detail = error?.name === "AbortError"
+      ? "timed out after 120 seconds"
+      : String(error?.message || error);
+    throw new Error(
+      `${fixture.invoiceNumber}: duplicate storage API request ${detail}.`
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const duplicatePayload = await duplicateResponse.json().catch(() => null);
+
+  assert(duplicateResponse.ok,
+    `${fixture.invoiceNumber}: duplicate storage API returned HTTP ${duplicateResponse.status}.`);
   assert(duplicatePayload?.duplicate === true,
     `${fixture.invoiceNumber}: duplicate API did not report duplicate=true.`);
   assert(/RECEIVED/i.test(String(duplicatePayload?.existing_status || "")),
     `${fixture.invoiceNumber}: duplicate API existing_status=${duplicatePayload?.existing_status}; expected RECEIVED.`);
 
-  const purchases = await getPurchases();
-  const count = purchases.filter((p) => norm(p.invoice_number) === norm(fixture.invoiceNumber)).length;
-  assert(count === 1, `${fixture.invoiceNumber}: duplicate check resulted in ${count} purchases.`);
-  return "PASS — duplicate API blocked existing RECEIVED invoice; purchase count stayed 1";
+  const afterPurchases = await getPurchases();
+  const afterCount = afterPurchases
+    .filter((p) => norm(p.invoice_number) === norm(fixture.invoiceNumber))
+    .length;
+
+  assert(afterCount === beforeCount && afterCount === 1,
+    `${fixture.invoiceNumber}: duplicate check changed purchase count ${beforeCount} -> ${afterCount}.`);
+
+  return "PASS — duplicate storage API returned existing RECEIVED invoice; purchase count stayed 1";
 }
 
 async function inventoryUiSpotCheck(fixture) {
