@@ -1,0 +1,24 @@
+[EXTENDED] Saved QA session is unavailable. Sign in once in the visible DEV browser.
+[PASS] Authentication / DEV ADMIN — shop <redacted-shop-id>
+[PASS] QA/DEV environment badge — V5 NOT PROD
+[PASS] Golden 16845 — RECEIVED once · 15 lines · 996 bottles
+[PASS] Golden B-3339 — 14 lines · exact 7 finance assertions · MATCH · received once
+[PASS] Golden 16805 — 3 rows · unsafe finance blocked · zero purchase mutation
+[PASS] Large purchase preserved state — 29 lines / 29 bottles / 29 stock movements
+[PASS] Preserved POS/return certification — 7 sales / 6 distinct products / CASH 3 / UPI 2 / CARD 2 / approved return present
+[SALE] INV-2026-000011 CASH Budweiser Beer 120->119
+[PASS] Targeted shift/day close — opening 100 / cash sales 260 / expected 360 / actual 360 / variance 0
+[PASS] Owner Center headline metrics — Revenue · Gross Profit · Operating Profit · Inventory Cost · bills · low stock match RPC
+[PASS] Owner Center graphs — Sales Trend · CASH/UPI/CARD Payment Mix · Top Products match authoritative sales data
+[PASS] Inventory Intelligence — 29 health rows · metric counts and stock row match RPC
+[PASS] Profit Intelligence — Revenue · COGS · Gross Profit · Operating Profit match RPC
+[PASS] Purchase Intelligence — Budweiser Beer latest purchase price matches history RPC
+[EXTENDED] FAIL: locator.waitFor: Error: strict mode violation: getByRole('heading', { name: 'Reports' }) resolved to 3 elements:
+    1) <h1>Reports & Compliance</h1> aka locator('header').getByRole('heading', { name: 'Reports & Compliance' })
+    2) <h1>Reports & Compliance</h1> aka getByRole('heading', { name: 'Reports & Compliance' }).nth(1)
+    3) <h2>Reports & Exports</h2> aka getByRole('heading', { name: 'Reports & Exports' })
+
+Call log:
+[2m  - waiting for getByRole('heading', { name: 'Reports' }) to be visible[22m
+
+[EXTENDED] Evidence: C:\Users\<redacted>\WineShopPOS_V5_EXTENDED_CERT\resume_analytics_20260912_154858
