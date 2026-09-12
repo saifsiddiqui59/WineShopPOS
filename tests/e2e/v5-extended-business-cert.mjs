@@ -190,7 +190,12 @@ async function verifyGoldenState(){
 }
 
 async function productRows(){
-  return await rest("products?select=id,product_name,brand,size_ml,barcode,purchase_price,selling_price,mrp,units_per_case,active&active=eq.true&order=product_name.asc&limit=200");
+  const rows = await rpc("get_products", {});
+  return (Array.isArray(rows) ? rows : [])
+    .filter((p) => p.active !== false)
+    .sort((a, b) =>
+      String(a.product_name || "").localeCompare(String(b.product_name || ""))
+    );
 }
 async function inventoryMap(){
   const rows=await rest("inventory?select=product_id,quantity,reserved_quantity&limit=1000");
