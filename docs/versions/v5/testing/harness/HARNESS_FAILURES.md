@@ -49,3 +49,13 @@ Call log:
 16805: OCR printed total 7911 does not match physical total 8044.
 ```
 
+## 2026-09-12T05:44:11.052Z — TRIAGE_REQUIRED
+
+- Runner: `R11-REAL-DEFECT-REGISTRY`
+- Stage: `07_REAL_INVOICE_UAT`
+- Component: Unclassified test failure
+
+```text
+16845: duplicate storage API returned HTTP 503.
+```
+
