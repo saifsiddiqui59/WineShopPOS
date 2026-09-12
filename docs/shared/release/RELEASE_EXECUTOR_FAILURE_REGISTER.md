@@ -482,3 +482,51 @@ Permanent prevention:
   MATCH, manual review preserved), rather than requiring the output to remain
   byte-for-byte equal to an older parser result after a trusted deterministic
   stage has legitimately improved it.
+
+<!-- V5_R7_UNTRACKED_SCOPE_AND_MAIN_MIGRATION_LEDGER_ASSUMPTION_20260912 -->
+### 2026-09-12 — R7 compared all repo untracked files and would still have misread the canonical migration ledger
+
+Observed:
+`V5_R7_RESUME_AFTER_DEV_MIGRATION_HISTORY_DRIFT.sh` correctly identified DEV
+remote-only migration-history versions and created candidate local no-op
+history markers. It then failed before commit because its safety check compared
+the entire repository's untracked-file inventory with only those new markers.
+
+The repository already contained many intentionally untracked historical
+operator/UAT scripts at the repository root. Those files predated R7 and were
+not created by the release executor. Treating them as unexpected release
+artifacts produced a false failure.
+
+The same migration-list output also showed a second problem that R7 would have
+hit next: the canonical V5 migration directory contains many historical
+LOCAL-only migration versions (20260829..20260903 and 20260904162500) that the
+current DEV ledger does not record under those exact versions because DEV was
+reconstructed through later clone/sync history. Therefore merely adding
+local files for the remote-only versions would NOT make the new OCR resolver
+migration the only pending canonical migration.
+
+Classification:
+Release-executor scope/history-model defect. Not an OCR regression, not an AI
+failure, not a Supabase schema-execution failure, and not a new product DEF.
+No DEV database migration, Edge Function deployment, QA deployment, or PROD
+operation occurred in R7.
+
+Permanent prevention:
+- never compare an executor's expected new files against the entire repository
+  untracked-file set; scope the check to the exact directory/files the executor
+  owns, or snapshot the baseline before creating files;
+- never delete or stage unrelated user/operator untracked scripts;
+- do not add fake/no-op history markers to the canonical repository merely to
+  force a historically divergent environment through `db push`;
+- do not run `migration repair --status reverted` or automatic `db pull` as a
+  release workaround;
+- for a bounded DEV release when canonical history and the DEV ledger are
+  intentionally divergent, create a TEMPORARY Supabase workdir containing:
+  (a) one no-op local marker for every version already present in the remote
+  migration ledger, and (b) only the exact committed migration being deployed;
+- use `supabase --workdir <temporary-project> migration list` to prove zero
+  remote-only versions and exactly one local-only version before dry-run/push;
+- delete the temporary workdir afterward; canonical Git migration history is
+  not rewritten by this release workaround;
+- handle long-term DEV migration-history normalization as a separate controlled
+  maintenance task, not inside an OCR feature release.
