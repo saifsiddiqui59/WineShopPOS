@@ -359,14 +359,29 @@ async function largePurchaseFlow(){
 async function ensureShiftOpen(){
   await page.goto(`${BASE}/#/pos`,{waitUntil:"domcontentloaded"});
   await page.getByRole("heading",{name:"Fast POS Billing"}).waitFor({state:"visible",timeout:20000});
+
   const dialog=page.getByRole("dialog",{name:"Start your shift before making any bill"});
-  if(await dialog.isVisible().catch(()=>false)){
-    await dialog.getByLabel("Opening Cash").fill("0");
-    await dialog.getByRole("button",{name:"Start Shift",exact:true}).click();
-    await dialog.waitFor({state:"hidden",timeout:20000});
+
+  let shifts=await rest(`cashier_shifts?select=id,status,expected_cash,opened_at&cashier_id=eq.${profile.id}&status=eq.OPEN&order=opened_at.desc&limit=1`);
+
+  if(shifts?.[0]?.status==="OPEN"){
+    if(await dialog.isVisible().catch(()=>false)){
+      await dialog.waitFor({state:"hidden",timeout:20000});
+    }
+    return shifts[0];
   }
-  const shifts=await rest(`cashier_shifts?select=id,status,expected_cash,opened_at&cashier_id=eq.${profile.id}&status=eq.OPEN&order=opened_at.desc&limit=1`);
-  assert(shifts?.[0]?.status==="OPEN","POS shift is not OPEN.");
+
+  await dialog.waitFor({state:"visible",timeout:20000});
+  await dialog.getByLabel("Opening Cash").fill("0");
+  await dialog.getByRole("button",{name:"Start Shift",exact:true}).click();
+
+  shifts=await waitFor(async()=>{
+    const rows=await rest(`cashier_shifts?select=id,status,expected_cash,opened_at&cashier_id=eq.${profile.id}&status=eq.OPEN&order=opened_at.desc&limit=1`);
+    return rows?.[0]?.status==="OPEN" ? rows : null;
+  },"authoritative OPEN shift",20000);
+
+  await dialog.waitFor({state:"hidden",timeout:20000});
+
   return shifts[0];
 }
 
@@ -380,8 +395,17 @@ async function createSale(product,method,index){
 
   await page.goto(`${BASE}/#/pos`,{waitUntil:"domcontentloaded"});
   await page.getByRole("heading",{name:"Fast POS Billing"}).waitFor({state:"visible",timeout:15000});
+
   const shiftDialog=page.getByRole("dialog",{name:"Start your shift before making any bill"});
-  assert(!await shiftDialog.isVisible().catch(()=>false),"Shift unexpectedly closed during sales.");
+
+  await waitFor(async()=>{
+    const rows=await rest(`cashier_shifts?select=id,status&cashier_id=eq.${profile.id}&status=eq.OPEN&order=opened_at.desc&limit=1`);
+    return rows?.[0]?.status==="OPEN" ? rows[0] : null;
+  },"authoritative OPEN shift before sale",20000);
+
+  if(await shiftDialog.isVisible().catch(()=>false)){
+    await shiftDialog.waitFor({state:"hidden",timeout:20000});
+  }
 
   const search=page.getByLabel("Scan barcode or search products");
   await search.fill(product.product_name);
