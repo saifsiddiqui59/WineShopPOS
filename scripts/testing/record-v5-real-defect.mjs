@@ -91,6 +91,9 @@ function classify(message) {
   if (/JWT expired|PGRST303|401/i.test(m)) {
     return { real: false, cls: "HARNESS_AUTH_PREREQUISITE", sev: "LOW", component: "Saved QA authentication" };
   }
+  if (/duplicate storage API returned HTTP (?:429|500|502|503|504)|duplicate storage API request .*?(?:timeout|timed out|transport unavailable)/i.test(m)) {
+    return { real: false, cls: "HARNESS_SERVICE_PREREQUISITE", sev: "LOW", component: "DEV invoice storage API availability" };
+  }
   if (/Create Supplier dialog has no text input for supplier name/i.test(m) ||
       /strict mode|locator\.|getByLabel|getByRole|waiting for .*visible|resolved to \d+ elements|Timeout \d+ms exceeded/i.test(m)) {
     return { real: false, cls: "HARNESS_SELECTOR", sev: "MEDIUM", component: "Playwright selector/state model" };
