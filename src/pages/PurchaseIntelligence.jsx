@@ -11,6 +11,11 @@ import { HorizontalBarChartCard, LineChartCard } from "../components/charts/Busi
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
+function matchesTableFilter(row,query){
+  if(!query)return true;
+  return Object.values(row||{}).some((value)=>String(value??"").toLowerCase().includes(query));
+}
+
 export default function PurchaseIntelligence(){
   const{products}=useShop();
   const[productId,setProductId]=useState("");
@@ -21,7 +26,14 @@ export default function PurchaseIntelligence(){
   const[history,setHistory]=useState([]);
   const[loading,setLoading]=useState(false);
   const[message,setMessage]=useState("");
+  const[tableFilter,setTableFilter]=useState("");
   const selected=useMemo(()=>products.find((p)=>p.id===productId),[products,productId]);
+  const filterQuery=tableFilter.trim().toLowerCase();
+  const filteredComparison=useMemo(()=>comparison.filter((r)=>matchesTableFilter(r,filterQuery)),[comparison,filterQuery]);
+  const filteredHistory=useMemo(()=>history.filter((r)=>matchesTableFilter(r,filterQuery)),[history,filterQuery]);
+  const filteredScores=useMemo(()=>scores.filter((r)=>matchesTableFilter(r,filterQuery)),[scores,filterQuery]);
+  const filteredCoach=useMemo(()=>coach.filter((r)=>matchesTableFilter(r,filterQuery)),[coach,filterQuery]);
+  const filteredSuppliers=useMemo(()=>suppliers.filter((r)=>matchesTableFilter(r,filterQuery)),[suppliers,filterQuery]);
 
   async function loadSupplierIntelligence(){
     const[a,b,c]=await Promise.all([
@@ -61,8 +73,9 @@ export default function PurchaseIntelligence(){
     <PageHeader title="Smart Purchase Intelligence" subtitle="OCR review, supplier score, landed-cost trends, overbuy warnings and reorder coaching." tier="PRO"/>
     {message?<div className="purchase-message">{message}</div>:null}
 
-    <section className="panel intelligence-filter">
+    <section className="panel intelligence-filter" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
       <label>Analyze Product<select value={productId} onChange={(e)=>inspectProduct(e.target.value)}><option value="">Select product</option>{products.filter((p)=>p.active).map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <label>Filter Tables<input type="search" value={tableFilter} onChange={(e)=>setTableFilter(e.target.value)} placeholder="Supplier, product, action, amount..." aria-label="Filter Purchase Intelligence tables"/></label>
     </section>
 
     {loading?<LoadingState label="Analyzing purchase history..."/>:null}
@@ -79,25 +92,25 @@ export default function PurchaseIntelligence(){
         <HorizontalBarChartCard title="Supplier Average Price" subtitle="Lower bars indicate more competitive historical unit cost" data={supplierChart} formatValue={(v)=>money.format(v)}/>
       </div>
       <div className="settings-grid" style={{marginTop:16}}>
-        <section className="panel"><h3>Supplier Price Comparison</h3>{comparison.length===0?<EmptyState title="No supplier history yet" message="Receive this product from suppliers to build comparison history."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Units</th><th>Avg</th><th>Min</th><th>Max</th><th>Last</th></tr></thead><tbody>{comparison.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name||"Supplier"}</td><td>{r.purchase_count}</td><td>{r.total_units}</td><td>{money.format(r.avg_price)}</td><td>{money.format(r.min_price)}</td><td>{money.format(r.max_price)}</td><td>{money.format(r.last_price)}</td></tr>)}</tbody></SortableTable></div>}</section>
-        <section className="panel"><h3>Recent Price History</h3>{history.length===0?<EmptyState title="No price history" message="Purchase receipts will populate this timeline."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Date</th><th>Supplier</th><th>Price</th></tr></thead><tbody>{history.slice(0,10).map((r,i)=><tr key={`${r.invoice_date||i}-${r.invoice_date}`}><td>{formatDateIN(r.invoice_date)}</td><td>{r.supplier_name||"-"}</td><td>{money.format(r.purchase_price)}</td></tr>)}</tbody></SortableTable></div>}</section>
+        <section className="panel"><h3>Supplier Price Comparison</h3>{comparison.length===0?<EmptyState title="No supplier history yet" message="Receive this product from suppliers to build comparison history."/>:<div className="data-table-wrapper"><SortableTable className="data-table" showSerial><thead><tr><th>Supplier</th><th>Purchases</th><th>Units</th><th>Avg</th><th>Min</th><th>Max</th><th>Last</th></tr></thead><tbody>{filteredComparison.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name||"Supplier"}</td><td>{r.purchase_count}</td><td>{r.total_units}</td><td>{money.format(r.avg_price)}</td><td>{money.format(r.min_price)}</td><td>{money.format(r.max_price)}</td><td>{money.format(r.last_price)}</td></tr>)}</tbody></SortableTable></div>}</section>
+        <section className="panel"><h3>Recent Price History</h3>{history.length===0?<EmptyState title="No price history" message="Purchase receipts will populate this timeline."/>:<div className="data-table-wrapper"><SortableTable className="data-table" showSerial><thead><tr><th>Date</th><th>Supplier</th><th>Price</th></tr></thead><tbody>{filteredHistory.slice(0,10).map((r,i)=><tr key={`${r.invoice_date||i}-${r.invoice_date}`}><td>{formatDateIN(r.invoice_date)}</td><td>{r.supplier_name||"-"}</td><td>{money.format(r.purchase_price)}</td></tr>)}</tbody></SortableTable></div>}</section>
       </div>
     </>:null}
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Supplier Performance Score · Last 180 Days</h3>
-      {scores.length===0?<EmptyState title="No supplier score yet" message="Purchases and purchase orders will build the score."/>:<div className="data-table-wrapper"><table className="data-table sticky"><thead><tr><th>Supplier</th><th>Score</th><th>Fill</th><th>On Time</th><th>Returns</th><th>Price Variation</th><th>Spend</th><th>Outstanding</th></tr></thead><tbody>{scores.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name}</td><td><strong>{Number(r.score).toFixed(1)}/100</strong></td><td>{Number(r.fill_rate).toFixed(1)}%</td><td>{Number(r.on_time_rate).toFixed(1)}%</td><td>{Number(r.return_rate).toFixed(1)}%</td><td>{Number(r.price_variation).toFixed(1)}%</td><td>{money.format(r.total_spend)}</td><td>{money.format(r.outstanding)}</td></tr>)}</tbody></table></div>}
+      {scores.length===0?<EmptyState title="No supplier score yet" message="Purchases and purchase orders will build the score."/>:<div className="data-table-wrapper"><SortableTable className="data-table sticky" showSerial><thead><tr><th>Supplier</th><th>Score</th><th>Fill</th><th>On Time</th><th>Returns</th><th>Price Variation</th><th>Spend</th><th>Outstanding</th></tr></thead><tbody>{filteredScores.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name}</td><td><strong>{Number(r.score).toFixed(1)}/100</strong></td><td>{Number(r.fill_rate).toFixed(1)}%</td><td>{Number(r.on_time_rate).toFixed(1)}%</td><td>{Number(r.return_rate).toFixed(1)}%</td><td>{Number(r.price_variation).toFixed(1)}%</td><td>{money.format(r.total_spend)}</td><td>{money.format(r.outstanding)}</td></tr>)}</tbody></SortableTable></div>}
     </section>
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Purchase Coach</h3>
       <p className="muted-text">Uses 30-day demand, current stock, recent supplier cost and margin to flag reorder, overbuy/no-movement and margin risk.</p>
-      {coach.length===0?<EmptyState title="No purchase action needed" message="No configured reorder/overbuy/margin condition is currently triggered."/>:<div className="data-table-wrapper"><table className="data-table sticky"><thead><tr><th>Priority</th><th>Product</th><th>Action</th><th>Stock</th><th>Days Cover</th><th>Recommended Qty</th><th>Best Supplier</th><th>Recent Cost</th><th>Margin</th><th>Why</th></tr></thead><tbody>{coach.map((r)=><tr key={`${r.product_id}-${r.recommendation_type}`}><td><StatusBadge status={r.priority}/></td><td>{r.product_name}</td><td>{r.recommendation_type.replaceAll("_"," ")}</td><td>{r.current_stock}</td><td>{r.days_cover??"-"}</td><td>{r.recommended_quantity}</td><td>{r.best_supplier_name||"-"}</td><td>{r.best_recent_cost==null?"-":money.format(r.best_recent_cost)}</td><td>{r.estimated_margin_percent==null?"-":`${Number(r.estimated_margin_percent).toFixed(1)}%`}</td><td>{r.message}</td></tr>)}</tbody></table></div>}
+      {coach.length===0?<EmptyState title="No purchase action needed" message="No configured reorder/overbuy/margin condition is currently triggered."/>:<div className="data-table-wrapper"><SortableTable className="data-table sticky" showSerial><thead><tr><th>Priority</th><th>Product</th><th>Action</th><th>Stock</th><th>Days Cover</th><th>Recommended Qty</th><th>Best Supplier</th><th>Recent Cost</th><th>Margin</th><th>Why</th></tr></thead><tbody>{filteredCoach.map((r)=><tr key={`${r.product_id}-${r.recommendation_type}`}><td><span style={{display:"none"}}>{r.priority}</span><StatusBadge status={r.priority}/></td><td>{r.product_name}</td><td>{r.recommendation_type.replaceAll("_"," ")}</td><td>{r.current_stock}</td><td>{r.days_cover??"-"}</td><td>{r.recommended_quantity}</td><td>{r.best_supplier_name||"-"}</td><td>{r.best_recent_cost==null?"-":money.format(r.best_recent_cost)}</td><td>{r.estimated_margin_percent==null?"-":`${Number(r.estimated_margin_percent).toFixed(1)}%`}</td><td>{r.message}</td></tr>)}</tbody></SortableTable></div>}
     </section>
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Supplier Intelligence · Last 180 Days</h3>
-      {suppliers.length===0?<EmptyState title="No supplier activity yet" message="Purchases and supplier payments will build reliability and price history."/>:<div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Supplier</th><th>Purchases</th><th>Purchase Total</th><th>Returns</th><th>Outstanding</th><th>Ordered</th><th>Received</th><th>Variance</th></tr></thead><tbody>{suppliers.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name}</td><td>{r.purchase_count}</td><td>{money.format(r.purchase_total)}</td><td>{money.format(r.return_total)}</td><td>{money.format(r.outstanding)}</td><td>{r.po_ordered}</td><td>{r.po_received}</td><td>{r.receive_variance}</td></tr>)}</tbody></SortableTable></div>}
+      {suppliers.length===0?<EmptyState title="No supplier activity yet" message="Purchases and supplier payments will build reliability and price history."/>:<div className="data-table-wrapper"><SortableTable className="data-table" showSerial><thead><tr><th>Supplier</th><th>Purchases</th><th>Purchase Total</th><th>Returns</th><th>Outstanding</th><th>Ordered</th><th>Received</th><th>Variance</th></tr></thead><tbody>{filteredSuppliers.map((r)=><tr key={r.supplier_id}><td>{r.supplier_name}</td><td>{r.purchase_count}</td><td>{money.format(r.purchase_total)}</td><td>{money.format(r.return_total)}</td><td>{money.format(r.outstanding)}</td><td>{r.po_ordered}</td><td>{r.po_received}</td><td>{r.receive_variance}</td></tr>)}</tbody></SortableTable></div>}
     </section>
 
   </div>
