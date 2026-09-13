@@ -1,0 +1,17 @@
+{
+  "runId": "20260913_172417",
+  "mode": "V5_15983_STRESS_CONTINUATION_ONLY",
+  "environment": "V5 QA / DEV",
+  "productionTouched": false,
+  "startedAt": "2026-09-13T21:24:21.539Z",
+  "result": "FAIL",
+  "invoice15983": {},
+  "cashiers": [],
+  "stress": {},
+  "returnTest": {},
+  "shifts": [],
+  "analytics": {},
+  "blockedProductionRequests": [],
+  "failure": "Error: 15983 still has 1 NEEDS REVIEW row(s): NEEDS REVIEW\n    at receive15983 (file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/stress-continuation/20260913_172417/v5-15983-stress-continuation.mjs:414:11)\n    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/stress-continuation/20260913_172417/v5-15983-stress-continuation.mjs:1443:3",
+  "finishedAt": "2026-09-13T21:25:05.662Z"
+}

@@ -1,0 +1,23 @@
+
+==========================================================
+DEV ADMIN LOGIN REQUIRED
+A browser window is open.
+Sign in to V5 DEV once. The runner will continue itself.
+==========================================================
+
+[PASS] DEV ADMIN authenticated for shop 5c94dbca-9bb5-451e-831a-8cfa42d06013
+
+[15983] Loading authoritative DEV review...
+[15983] Resume ingestion a796a478-c5bf-4a97-bb00-c16e9c6ebdb7; OCR will NOT be rerun.
+
+============================================================
+ V5 STRESS CONTINUATION: FAIL
+============================================================
+Error: 15983 still has 1 NEEDS REVIEW row(s): NEEDS REVIEW
+    at receive15983 (file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/stress-continuation/20260913_172417/v5-15983-stress-continuation.mjs:414:11)
+    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/stress-continuation/20260913_172417/v5-15983-stress-continuation.mjs:1443:3
+
+Do NOT rerun blindly.
+Evidence: E:\WineShopPOS_V5_E2E_20260912_105856\.wsp-local\stress-continuation\20260913_172417
+PROD: NOT TOUCHED
+============================================================

@@ -152,3 +152,21 @@ Do not modify/push the canonical V5 failure register while an active local UAT r
   - normalized invoice has 3 but receiving has 2 → repair draft/receiving hydration.
 - Permanent prevention: invoice 16805 becomes a permanent 3-row regression fixture; certification must require all three lines before receive.
 - Safe continuation: 16845 and B-3339 remain PASS/revalidate-only. Stop full certification at 16805 until this defect is diagnosed and fixed.
+
+<!-- V5_STRESS_CONTINUATION_20260913_172417 -->
+## 2026-09-13 — V5 15983 / 100-bill stress continuation stopped
+
+- Run: `20260913_172417`
+- Stage: continuation-only flow after the previously corrected invoice 15983 review; full R11 replay was intentionally disabled.
+- Result: **FAIL**
+- Classification: **15983_REVIEW_BOUNDARY**
+- Symptom: Error: 15983 still has 1 NEEDS REVIEW row(s): NEEDS REVIEW at receive15983 (file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/stress-continuation/20260913_172417/v5-15983-stress-continuation.mjs:414:11) at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/stress-continuation/20260913_172417/v5-15983-stress-continuation.mjs:1443:3
+- Git evidence: `docs/versions/v5/testing/evidence/stress_continuation_20260913_172417`
+- Raw local evidence: `/e/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/stress-continuation/20260913_172417`
+- Root cause: **pending Git-backed triage**. Do not infer an application defect until the committed sanitized log/result prove it.
+- Safety:
+  - this evidence-promotion patch does not rerun Playwright;
+  - it does not alter Supabase, Azure, inventory, sales, users, or PROD;
+  - preserve any already-completed 15983/cashier/sale/return/shift checkpoints from the failed run.
+- Safe continuation: inspect the committed evidence, identify the first unverified stage, patch only that stage, and do not restart R11 or re-OCR invoice 15983.
+<!-- /V5_STRESS_CONTINUATION_20260913_172417 -->
