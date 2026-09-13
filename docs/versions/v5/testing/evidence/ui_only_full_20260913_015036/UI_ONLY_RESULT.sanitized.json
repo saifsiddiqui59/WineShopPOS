@@ -1,0 +1,37 @@
+{
+  "runId": "ui_only_full_20260913_015036",
+  "mode": "PLAYWRIGHT_UI_ONLY",
+  "environment": "V5 QA / DEV",
+  "productionTouched": false,
+  "result": "FAIL",
+  "startedAt": "2026-09-13T05:50:41.116Z",
+  "checks": [
+    {
+      "name": "Admin authentication",
+      "status": "PASS",
+      "detail": "real V5 login form · QA/DEV badge verified"
+    },
+    {
+      "name": "Fresh DEV UI baseline",
+      "status": "PASS",
+      "detail": "0 products · 0 inventory rows · 0 sales · 0 invoice ingestions"
+    }
+  ],
+  "invoices": [],
+  "productsAfterInvoices": [],
+  "cashiers": [],
+  "stress": {},
+  "return": null,
+  "shifts": [],
+  "analytics": {},
+  "consoleErrors": [
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "failedRequests": [
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/"
+  ],
+  "failure": "locator.setInputFiles: Error: strict mode violation: locator('input[type=\"file\"]') resolved to 2 elements:\n    1) <input hidden=\"\" type=\"file\" accept=\"image/jpeg,image/png,image/webp\"/> aka getByRole('complementary', { name: 'Application navigation' }).locator('input[type=\"file\"]')\n    2) <input type=\"file\" accept=\"image/*,.pdf,application/pdf\"/> aka getByRole('button', { name: 'Choose File' })\n\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"file\"]')\u001b[22m\n\n    at async uploadAndReceiveInvoice (E:\\WineShopPOS_V5_E2E_20260912_105856\\tests\\e2e\\.wsp_ui_only_ui_only_full_20260913_015036.mjs:245:3)\n    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_ui_only_ui_only_full_20260913_015036.mjs:890:38",
+  "finishedAt": "2026-09-13T05:50:54.131Z"
+}

@@ -1,0 +1,18 @@
+============================================================
+ V5 PLAYWRIGHT UI-ONLY FULL TEST
+ No direct Supabase calls are made by this runner.
+============================================================
+[PASS] Admin authentication — real V5 login form · QA/DEV badge verified
+[1] Verify fresh DEV state through UI only...
+[PASS] Fresh DEV UI baseline — 0 products · 0 inventory rows · 0 sales · 0 invoice ingestions
+[2.1] OCR + receive invoice 16845 through V5 UI...
+
+[FINAL] V5 PLAYWRIGHT UI-ONLY FULL TEST: FAIL
+[FAIL] locator.setInputFiles: Error: strict mode violation: locator('input[type="file"]') resolved to 2 elements:
+    1) <input hidden="" type="file" accept="image/jpeg,image/png,image/webp"/> aka getByRole('complementary', { name: 'Application navigation' }).locator('input[type="file"]')
+    2) <input type="file" accept="image/*,.pdf,application/pdf"/> aka getByRole('button', { name: 'Choose File' })
+
+Call log:
+[2m  - waiting for locator('input[type="file"]')[22m
+
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\test-runs\ui_only_full_20260913_015036
