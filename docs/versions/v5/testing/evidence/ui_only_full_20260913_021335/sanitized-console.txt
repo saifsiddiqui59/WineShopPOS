@@ -1,0 +1,13 @@
+============================================================
+ V5 PLAYWRIGHT UI-ONLY FULL TEST — RESUME SAFE R6
+ No direct Supabase calls are made by this runner.
+============================================================
+[PASS] Admin authentication — real V5 login form · QA/DEV badge verified
+[1] Verify resumable DEV state through UI only...
+[PASS] Resumable DEV UI state — 0 products · 0 inventory · 0 sales · one pending OCR draft for 16845
+[2.1] OCR + receive invoice 16845 through V5 UI...
+[RESUME] 16845: continuing existing Receive Stock draft
+
+[FINAL] V5 PLAYWRIGHT UI-ONLY FULL TEST: FAIL
+[FAIL] 16845: receipt page does not show invoice number.
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\test-runs\ui_only_full_20260913_021335
