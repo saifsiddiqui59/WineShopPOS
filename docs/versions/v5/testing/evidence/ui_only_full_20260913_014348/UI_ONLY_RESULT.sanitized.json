@@ -1,0 +1,32 @@
+{
+  "runId": "ui_only_full_20260913_014348",
+  "mode": "PLAYWRIGHT_UI_ONLY",
+  "environment": "V5 QA / DEV",
+  "productionTouched": false,
+  "result": "FAIL",
+  "startedAt": "2026-09-13T05:43:55.961Z",
+  "checks": [
+    {
+      "name": "Admin authentication",
+      "status": "PASS",
+      "detail": "real V5 login form · QA/DEV badge verified"
+    }
+  ],
+  "invoices": [],
+  "productsAfterInvoices": [],
+  "cashiers": [],
+  "stress": {},
+  "return": null,
+  "shifts": [],
+  "analytics": {},
+  "consoleErrors": [
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "failedRequests": [
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/"
+  ],
+  "failure": "locator.waitFor: Error: strict mode violation: getByRole('heading', { name: 'Products', exact: true }) resolved to 3 elements:\n    1) <h1>Products</h1> aka locator('header').getByRole('heading', { name: 'Products' })\n    2) <h1>Products</h1> aka getByRole('heading', { name: 'Products' }).nth(1)\n    3) <h2>Products</h2> aka locator('h2')\n\nCall log:\n\u001b[2m  - waiting for getByRole('heading', { name: 'Products', exact: true }) to be visible\u001b[22m\n\n    at initialUiCleanCheck (E:\\WineShopPOS_V5_E2E_20260912_105856\\tests\\e2e\\.wsp_ui_only_ui_only_full_20260913_014348.mjs:124:64)\n    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_ui_only_ui_only_full_20260913_014348.mjs:888:3",
+  "finishedAt": "2026-09-13T05:44:07.347Z"
+}

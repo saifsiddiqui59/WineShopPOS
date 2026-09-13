@@ -1,0 +1,17 @@
+============================================================
+ V5 PLAYWRIGHT UI-ONLY FULL TEST
+ No direct Supabase calls are made by this runner.
+============================================================
+[PASS] Admin authentication — real V5 login form · QA/DEV badge verified
+[1] Verify fresh DEV state through UI only...
+
+[FINAL] V5 PLAYWRIGHT UI-ONLY FULL TEST: FAIL
+[FAIL] locator.waitFor: Error: strict mode violation: getByRole('heading', { name: 'Products', exact: true }) resolved to 3 elements:
+    1) <h1>Products</h1> aka locator('header').getByRole('heading', { name: 'Products' })
+    2) <h1>Products</h1> aka getByRole('heading', { name: 'Products' }).nth(1)
+    3) <h2>Products</h2> aka locator('h2')
+
+Call log:
+[2m  - waiting for getByRole('heading', { name: 'Products', exact: true }) to be visible[22m
+
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\test-runs\ui_only_full_20260913_014348
