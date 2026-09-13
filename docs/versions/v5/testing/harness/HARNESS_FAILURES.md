@@ -107,3 +107,13 @@ Error: Clean-baseline precondition failed: purchases has 1 row(s).
     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
 ```
 
+## 2026-09-13T07:19:03.064Z — TRIAGE_REQUIRED
+
+- Runner: `R11-REAL-DEFECT-REGISTRY`
+- Stage: `07_REAL_INVOICE_UAT`
+- Component: Unclassified test failure
+
+```text
+16845: previously received product missing for barcode 2900000000018.
+```
+
