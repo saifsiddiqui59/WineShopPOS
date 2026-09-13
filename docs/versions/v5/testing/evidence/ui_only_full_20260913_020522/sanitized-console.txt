@@ -1,0 +1,13 @@
+============================================================
+ V5 PLAYWRIGHT UI-ONLY FULL TEST — RESUME SAFE
+ No direct Supabase calls are made by this runner.
+============================================================
+[PASS] Admin authentication — real V5 login form · QA/DEV badge verified
+[1] Verify resumable DEV state through UI only...
+
+[FINAL] V5 PLAYWRIGHT UI-ONLY FULL TEST: FAIL
+[FAIL] locator.selectOption: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByLabel('Status', { exact: true })[22m
+
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\test-runs\ui_only_full_20260913_020522
