@@ -1,0 +1,83 @@
+============================================================
+ V5 READ-ONLY PLAYWRIGHT HARNESS PREFLIGHT — STABLE R3
+ No invoice upload / receive / user create / sale / return / shift mutation
+============================================================
+[A] Static V5 source-contract preflight...
+[PASS] Login — 5 source contract token(s) verified in src/pages/Login.jsx
+[PASS] Products page — 2 source contract token(s) verified in src/pages/Products.jsx
+[PASS] Inventory page — 2 source contract token(s) verified in src/pages/Inventory.jsx
+[PASS] Sales page — 3 source contract token(s) verified in src/pages/Sales.jsx
+[PASS] Invoice OCR — 5 source contract token(s) verified in src/pages/AutomationHub.jsx
+[PASS] Invoice Inbox — 6 source contract token(s) verified in src/pages/InvoiceInbox.jsx
+[PASS] Purchase Receiving — 10 source contract token(s) verified in src/pages/Purchases.jsx
+[PASS] Purchase Verification receipt — 3 source contract token(s) verified in src/pages/PurchaseDetails.jsx
+[PASS] Receipt success assertion — use Purchase Verification + Posted Purchase Lines; do NOT require invoice number text
+[PASS] Users & Roles — 7 source contract token(s) verified in src/pages/Users.jsx
+[PASS] POS — 7 source contract token(s) verified
+[PASS] Returns — 5 source contract token(s) verified
+[PASS] Shift close — 4 source contract token(s) verified
+[PASS] Owner Center — 4 source contract token(s) verified
+[PASS] Inventory Intelligence — 1 source contract token(s) verified
+[PASS] Profit Intelligence — 1 source contract token(s) verified
+[PASS] Purchase Intelligence — 1 source contract token(s) verified
+[PASS] Reports — 3 source contract token(s) verified
+[B0] Launch deployed V5...
+[PASS] QA/DEV environment badge — exactly one matching element
+[PASS] Login auth card — exactly one matching element
+[PASS] Login email — exactly one matching element
+[PASS] Login password — exactly one matching element
+[PASS] Login button — exactly one matching element
+[PASS] Admin authentication — real login form; no storage-state shortcut
+[B] Deployed V5 DOM-contract preflight (collect-all mode)...
+[PASS] /products route — rendered with source-backed title Products
+[PASS] /inventory route — rendered with source-backed title Inventory & Product Stock
+[PASS] /pos/sales route — rendered with source-backed title Sales
+[PASS] /purchasing/invoices route — rendered with source-backed title Invoice Inbox
+[PASS] Invoice Inbox status filter — exactly one matching element
+[SKIP] 16845 state — not currently present in Invoice Inbox
+[PASS] /purchasing/ocr route — rendered with source-backed title Invoice OCR
+[PASS] OCR invoice file input — exactly one matching element
+[PASS] OCR Analyze Invoice button — exactly one matching element
+[PASS] /purchasing/receive route — rendered with source-backed title Purchase Receiving Workspace
+[PASS] Receiving Supplier input — exactly one matching element
+[PASS] Receiving Invoice Number — exactly one matching element
+[PASS] Receiving Invoice Date — exactly one matching element
+[PASS] Financial Reconciliation panel — exactly one matching element
+[PASS] Reviewed Printed Invoice Total — exactly one matching element
+[PASS] Approve & Receive Stock button — exactly one matching element
+[PASS] /admin/users route — rendered with source-backed title Users & Roles
+[PASS] Create Shop User form — exactly one matching element
+[PASS] User Full Name input — exactly one matching element
+[PASS] User Email input — exactly one matching element
+[PASS] User Temporary Password input — exactly one matching element
+[PASS] User Role select — exactly one matching element
+[PASS] Create User button — exactly one matching element
+[PASS] /pos route — rendered with source-backed title Fast POS Billing
+[PASS] POS product search — exactly one matching element
+[PASS] POS CASH payment button — present
+[PASS] POS UPI payment button — present
+[PASS] POS CARD payment button — present
+[PASS] POS shift gate — present; preflight did not start shift
+[PASS] /pos/returns route — rendered with source-backed title Returns, Refunds & Voids
+[PASS] /operations/shifts route — rendered with source-backed title Cashier Shift & Day Close
+[PASS] /owner route — rendered with source-backed title Owner Control Center
+[PASS] /inventory/intelligence route — rendered with source-backed title Inventory Intelligence
+[PASS] /owner/profit route — rendered with source-backed title Profit & Business Intelligence
+[PASS] /purchasing/intelligence route — route remained active at #/purchasing/intelligence
+[PASS] /reports route — rendered with source-backed title Reports & Exports
+[PASS] /inventory/ageing route — route remained active at #/inventory/ageing
+[PASS] /inventory/count route — route remained active at #/inventory/count
+[PASS] /inventory/transfers route — route remained active at #/inventory/transfers
+[PASS] /operations/offline route — route remained active at #/operations/offline
+[PASS] /admin/access route — route remained active at #/admin/access
+[PASS] /admin/audit route — route remained active at #/admin/audit
+[PASS] /admin/backup route — route remained active at #/admin/backup
+[PASS] /admin/settings route — route remained active at #/admin/settings
+[PASS] /owner/recommendations route — route remained active at #/owner/recommendations
+[PASS] /owner/exceptions route — route remained active at #/owner/exceptions
+[PASS] /owner/ask route — route remained active at #/owner/ask
+[SKIP] Return form runtime controls — no sale exists yet; source contract verified
+[STATE] products=0 inventoryRows=0 sales=0 invoices=0 16845=ABSENT
+
+[FINAL] HARNESS PREFLIGHT: PASS
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\harness-preflight\harness_preflight_20260913_023732

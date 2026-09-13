@@ -1,0 +1,389 @@
+{
+  "runId": "harness_preflight_20260913_023732",
+  "mode": "READ_ONLY_HARNESS_PREFLIGHT",
+  "result": "PASS",
+  "productionTouched": false,
+  "startedAt": "2026-09-13T06:37:32.809Z",
+  "staticContracts": [
+    {
+      "name": "Login",
+      "status": "PASS",
+      "detail": "5 source contract token(s) verified in src/pages/Login.jsx"
+    },
+    {
+      "name": "Products page",
+      "status": "PASS",
+      "detail": "2 source contract token(s) verified in src/pages/Products.jsx"
+    },
+    {
+      "name": "Inventory page",
+      "status": "PASS",
+      "detail": "2 source contract token(s) verified in src/pages/Inventory.jsx"
+    },
+    {
+      "name": "Sales page",
+      "status": "PASS",
+      "detail": "3 source contract token(s) verified in src/pages/Sales.jsx"
+    },
+    {
+      "name": "Invoice OCR",
+      "status": "PASS",
+      "detail": "5 source contract token(s) verified in src/pages/AutomationHub.jsx"
+    },
+    {
+      "name": "Invoice Inbox",
+      "status": "PASS",
+      "detail": "6 source contract token(s) verified in src/pages/InvoiceInbox.jsx"
+    },
+    {
+      "name": "Purchase Receiving",
+      "status": "PASS",
+      "detail": "10 source contract token(s) verified in src/pages/Purchases.jsx"
+    },
+    {
+      "name": "Purchase Verification receipt",
+      "status": "PASS",
+      "detail": "3 source contract token(s) verified in src/pages/PurchaseDetails.jsx"
+    },
+    {
+      "name": "Receipt success assertion",
+      "status": "PASS",
+      "detail": "use Purchase Verification + Posted Purchase Lines; do NOT require invoice number text"
+    },
+    {
+      "name": "Users & Roles",
+      "status": "PASS",
+      "detail": "7 source contract token(s) verified in src/pages/Users.jsx"
+    },
+    {
+      "name": "POS",
+      "status": "PASS",
+      "detail": "7 source contract token(s) verified"
+    },
+    {
+      "name": "Returns",
+      "status": "PASS",
+      "detail": "5 source contract token(s) verified"
+    },
+    {
+      "name": "Shift close",
+      "status": "PASS",
+      "detail": "4 source contract token(s) verified"
+    },
+    {
+      "name": "Owner Center",
+      "status": "PASS",
+      "detail": "4 source contract token(s) verified"
+    },
+    {
+      "name": "Inventory Intelligence",
+      "status": "PASS",
+      "detail": "1 source contract token(s) verified"
+    },
+    {
+      "name": "Profit Intelligence",
+      "status": "PASS",
+      "detail": "1 source contract token(s) verified"
+    },
+    {
+      "name": "Purchase Intelligence",
+      "status": "PASS",
+      "detail": "1 source contract token(s) verified"
+    },
+    {
+      "name": "Reports",
+      "status": "PASS",
+      "detail": "3 source contract token(s) verified"
+    }
+  ],
+  "runtimeContracts": [
+    {
+      "name": "QA/DEV environment badge",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Login auth card",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Login email",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Login password",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Login button",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Admin authentication",
+      "status": "PASS",
+      "detail": "real login form; no storage-state shortcut"
+    },
+    {
+      "name": "/products route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Products"
+    },
+    {
+      "name": "/inventory route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Inventory & Product Stock"
+    },
+    {
+      "name": "/pos/sales route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Sales"
+    },
+    {
+      "name": "/purchasing/invoices route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Invoice Inbox"
+    },
+    {
+      "name": "Invoice Inbox status filter",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "/purchasing/ocr route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Invoice OCR"
+    },
+    {
+      "name": "OCR invoice file input",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "OCR Analyze Invoice button",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "/purchasing/receive route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Purchase Receiving Workspace"
+    },
+    {
+      "name": "Receiving Supplier input",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Receiving Invoice Number",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Receiving Invoice Date",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Financial Reconciliation panel",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Reviewed Printed Invoice Total",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Approve & Receive Stock button",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "/admin/users route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Users & Roles"
+    },
+    {
+      "name": "Create Shop User form",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "User Full Name input",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "User Email input",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "User Temporary Password input",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "User Role select",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "Create User button",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "/pos route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Fast POS Billing"
+    },
+    {
+      "name": "POS product search",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    },
+    {
+      "name": "POS CASH payment button",
+      "status": "PASS",
+      "detail": "present"
+    },
+    {
+      "name": "POS UPI payment button",
+      "status": "PASS",
+      "detail": "present"
+    },
+    {
+      "name": "POS CARD payment button",
+      "status": "PASS",
+      "detail": "present"
+    },
+    {
+      "name": "POS shift gate",
+      "status": "PASS",
+      "detail": "present; preflight did not start shift"
+    },
+    {
+      "name": "/pos/returns route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Returns, Refunds & Voids"
+    },
+    {
+      "name": "/operations/shifts route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Cashier Shift & Day Close"
+    },
+    {
+      "name": "/owner route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Owner Control Center"
+    },
+    {
+      "name": "/inventory/intelligence route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Inventory Intelligence"
+    },
+    {
+      "name": "/owner/profit route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Profit & Business Intelligence"
+    },
+    {
+      "name": "/purchasing/intelligence route",
+      "status": "PASS",
+      "detail": "route remained active at #/purchasing/intelligence"
+    },
+    {
+      "name": "/reports route",
+      "status": "PASS",
+      "detail": "rendered with source-backed title Reports & Exports"
+    },
+    {
+      "name": "/inventory/ageing route",
+      "status": "PASS",
+      "detail": "route remained active at #/inventory/ageing"
+    },
+    {
+      "name": "/inventory/count route",
+      "status": "PASS",
+      "detail": "route remained active at #/inventory/count"
+    },
+    {
+      "name": "/inventory/transfers route",
+      "status": "PASS",
+      "detail": "route remained active at #/inventory/transfers"
+    },
+    {
+      "name": "/operations/offline route",
+      "status": "PASS",
+      "detail": "route remained active at #/operations/offline"
+    },
+    {
+      "name": "/admin/access route",
+      "status": "PASS",
+      "detail": "route remained active at #/admin/access"
+    },
+    {
+      "name": "/admin/audit route",
+      "status": "PASS",
+      "detail": "route remained active at #/admin/audit"
+    },
+    {
+      "name": "/admin/backup route",
+      "status": "PASS",
+      "detail": "route remained active at #/admin/backup"
+    },
+    {
+      "name": "/admin/settings route",
+      "status": "PASS",
+      "detail": "route remained active at #/admin/settings"
+    },
+    {
+      "name": "/owner/recommendations route",
+      "status": "PASS",
+      "detail": "route remained active at #/owner/recommendations"
+    },
+    {
+      "name": "/owner/exceptions route",
+      "status": "PASS",
+      "detail": "route remained active at #/owner/exceptions"
+    },
+    {
+      "name": "/owner/ask route",
+      "status": "PASS",
+      "detail": "route remained active at #/owner/ask"
+    }
+  ],
+  "stateSnapshot": {
+    "productRows": 0,
+    "inventoryRows": 0,
+    "salesRows": 0,
+    "invoiceRows": 0,
+    "invoice16845State": "ABSENT"
+  },
+  "skipped": [
+    {
+      "name": "16845 state",
+      "detail": "not currently present in Invoice Inbox"
+    },
+    {
+      "name": "Return form runtime controls",
+      "detail": "no sale exists yet; source contract verified"
+    }
+  ],
+  "warnings": [],
+  "consoleErrors": [
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "failedRequests": [
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/"
+  ],
+  "failure": "",
+  "finishedAt": "2026-09-13T06:37:51.382Z"
+}
