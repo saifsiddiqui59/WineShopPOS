@@ -1,0 +1,201 @@
+================================================================
+ WineShopPOS V5 — B-3339 OCR + PURCHASE RECEIVING FROM PAST TEST
+================================================================
+Repo     : /e/WineShopPOS_V5_E2E_20260912_105856
+Evidence : /c/Users/<redacted>/WineShopPOS_V5_UAT/20260913_183241
+Invoice 15983: EXCLUDED
+
+[1/8] Git + environment safety preflight...
+Environment isolation OK: V5 -> juhcypzoacauzmtzqnwd
+[2/8] Decoding the embedded B-3339 physical invoice image...
+[3/8] Running current V5 contract tests...
+✔ exact 500 ml defaults to 24 for can bottle and unknown (4.7997ms)
+✔ printed Bottles/Case still wins (0.3304ms)
+✔ new 500 ml product gets 24 suggestion but still requires review (2.0976ms)
+✔ existing Product Master is not silently overwritten (0.4908ms)
+✔ non-500 nearby sizes are untouched (0.497ms)
+✔ Add Product image and barcode are independent (6.0457ms)
+✔ exact chosen image survives Product creation (0.3912ms)
+✔ phone remains global persistent scanner transport (0.3762ms)
+DEF_0001_FINANCE_EVIDENCE_REGRESSION=PASS
+✔ tests\v5Def0001FinanceEvidence.test.mjs (167.3456ms)
+DEF_0001_FINANCE_RECEIVE_GUARD=PASS
+✔ tests\v5Def0001FinanceReceiveGuard.test.mjs (125.8612ms)
+DEF_0001_HARNESS_POLICY_REGRESSION=PASS
+✔ tests\v5Def0001HarnessPolicy.test.mjs (172.2313ms)
+DEF_0001_OCR_LINE_PRESERVATION=PASS
+✔ tests\v5Def0001OcrLinePreservation.test.mjs (185.037ms)
+✔ DEF-0002: permanent Azure finance fixtures are real captured evidence (37.6354ms)
+✔ DEF-0002: B-3339 raw fixture contains actual finance vocabulary, not idealized test rows (9.8925ms)
+✔ DEF-0002: B-3339 recovers directly labeled finance summary without arithmetic invention (27.1086ms)
+✔ DEF-0002: ambiguous compound summary alone still fails closed (7.781ms)
+✔ DEF-0002: R11 keeps B-3339 as a strict golden finance invoice (4.2154ms)
+✔ IndexedDB encrypted draft writes and deletes still await transaction completion (2.1283ms)
+✔ online server save is not gated by local IndexedDB success (0.8091ms)
+✔ SYNC ERROR is reserved for authoritative server RPC failure (0.7752ms)
+✔ online synced strip does not present global local-draft count as current invoice failure (0.51ms)
+✔ V5_27 500 ml rule and atomic purchase posting remain protected (1.0868ms)
+✔ V5_29 one-button pack confirmation preserves V5_28B sync protection (0.9133ms)
+✔ production EnvironmentBadge cannot display the QA banner (1.9225ms)
+✔ production bundle source has no deployment-specific V5 QA hostname (0.4555ms)
+✔ non-production builds retain the QA DEV V5 banner (0.344ms)
+✔ mobile photo/barcode (2.1913ms)
+✔ USB scanner preserved (1.937ms)
+✔ OCR handoff and no 750 invention (0.9871ms)
+✔ subcategory safe and lager context (0.3459ms)
+✔ authoritative/offline draft (0.4089ms)
+✔ receiving controls (0.976ms)
+✔ idempotency (0.6001ms)
+✔ line-level pack (0.403ms)
+✔ precision/free-only (2.3755ms)
+✔ persistent global pairing (4.2556ms)
+✔ global host injects scanner events (0.4003ms)
+✔ phone ACK/retry remains idempotent (0.397ms)
+✔ host has no direct business-table mutation (0.6148ms)
+✔ POS no longer owns phone pairing panel (0.6792ms)
+✔ liquid units (4.0704ms)
+✔ pack priors do not invent unknown (1.5149ms)
+✔ 15983 golden (0.4549ms)
+✔ 16845 golden (0.3995ms)
+✔ B-3339 evidence budget never drops direct finance summary behind the large line-item table (327.3301ms)
+✔ B-3339: generic known finance vocabulary resolves real Azure evidence to exact MATCH before AI (169.883ms)
+✔ AI needs_review=true preserves a validated direct mapping as a manual suggestion (119.0867ms)
+✔ 16845: receive-valid golden invoice has no actionable exception and spends zero AI calls (101.0593ms)
+✔ confirmed supplier mapping memory resolves repeat B-3339 without an AI call (123.0668ms)
+✔ 16805: unresolved total remains safe-review; AI cannot invent 8044 (82.9381ms)
+✔ AI cannot swap CD and generic DISCOUNT (117.7475ms)
+✔ first-time misspelled finance label is an AI suggestion, not an auto-trusted value (0.2488ms)
+✔ human-confirmed supplier memory can reuse a misspelled finance label without another AI call (0.7769ms)
+✔ AI cannot remap a label that clearly belongs to another known finance field (0.2915ms)
+✔ ambiguous line evidence associated with multiple normalized items is never AI-corrected (0.3027ms)
+✔ AI cannot invent IDs, reuse evidence, or use a line TOTAL as invoice total (119.3333ms)
+✔ AI provider outage preserves safe manual review for a genuinely novel unresolved label (1.232ms)
+✔ AI request is compact, text-only and strict structured output (122.2129ms)
+✔ manual correction remains for header, line, finance and printed total (2.4854ms)
+✔ OCR resolver preserves V5 server-authoritative ingestion handoff and fail-open manual fallback (1.1379ms)
+✔ learning occurs after successful human receive, not autonomous AI self-training (0.5648ms)
+✔ existing product alias learning remains intact (0.2991ms)
+✔ executor failure registry records all V5 resolver executor failures discovered before deployment (0.4555ms)
+V5_MASTER_CERT_PRODUCT_SCHEMA_CONTRACT=PASS
+✔ tests\v5MasterCertificationProductSchema.test.mjs (148.6443ms)
+✔ dedicated 1D ROI decoder remains (2.104ms)
+✔ rear camera and native fallback remain (0.634ms)
+✔ pinch replaces Zoom plus/minus controls (0.7929ms)
+✔ scanner copy is minimal and Retry is error-only (0.7485ms)
+✔ scanner is hardened to full dynamic mobile viewport (1.5193ms)
+✔ scanner remains local with no paid recognition service (0.4241ms)
+✔ V5_21 starts ZXing before optional camera enhancements (0.4368ms)
+✔ V5_21 exposes Retry instead of indefinite Opening camera (0.3057ms)
+✔ V5 preview badge (4.942ms)
+✔ OCR retry safety (0.4385ms)
+✔ OCR columns/sticky/suggested product (0.7536ms)
+✔ OCR line preview remains non-mutating (0.7356ms)
+✔ Add Product uses pre-save internet image chooser (0.3937ms)
+✔ OCR can edit linked Product and return (0.4301ms)
+✔ MRP safety remains (0.3859ms)
+✔ phone scanner public route remains (2.7346ms)
+✔ persistent pairing uses high entropy secret (0.3686ms)
+✔ Realtime transport is present regardless of source formatting (0.6295ms)
+✔ phone cannot mutate business tables directly (0.5759ms)
+✔ simple Phone Scanner UI has no visible auto toggle (0.6382ms)
+✔ connected phone opens once then reopens after accepted ACK (0.4931ms)
+✔ real-invoice 500 ml line cannot become READY against 330 ml Product Master (3.9185ms)
+✔ known physical barcode mismatch is a hard identity review (0.528ms)
+✔ same Product Master at different MRP/rate/amount is a legitimate repeated commercial line (1.8146ms)
+✔ identical-looking repeated invoice rows require explicit Keep Separate review (0.8972ms)
+✔ package mismatch blocks only when both sides explicitly disagree (0.4184ms)
+✔ Purchase Receiving preserves invoice evidence and explains blockers (0.6115ms)
+✔ ShopContext no longer rejects every repeated Product Master but repeats identity defense (0.4139ms)
+✔ database V2 receive processes lines individually and has hard server identity guards (0.3973ms)
+✔ Purchase Intelligence has one page filter (1.7622ms)
+✔ all five tables use shared serial and sortable behavior (0.6007ms)
+✔ Purchase Coach priority remains sortable without changing badge (0.229ms)
+✔ data RPC contract is unchanged (0.4476ms)
+✔ atomic pending products stay verified after Product Master IDs are created (3.2419ms)
+✔ changed posted pack remains unresolved (1.8282ms)
+✔ different created Product Master identity remains unresolved (0.4359ms)
+✔ repeated identical pending rows are consumed one-for-one (0.719ms)
+✔ correction on one repeated Product Master line does not resolve its sibling (2.204ms)
+✔ normal completed UX hides correction tables but preserves explicit audit access (10.8676ms)
+✔ V5_26 does not introduce an unrelated generic 500 ml beer -> 24 pack rule (1.0187ms)
+✔ POS keeps USB and same-device camera (2.4873ms)
+✔ global scanner contract preserved (0.3918ms)
+✔ continuity remains V5 QA authority (0.4706ms)
+✔ pre-save image search uses identity not barcode (1.9667ms)
+✔ exact selected candidate applies after create with identity safety (0.4588ms)
+✔ OCR Edit Product returns to same review (0.3467ms)
+✔ scanner full-screen pinch UX (0.5803ms)
+✔ phone UI minimal but transport retained (0.4276ms)
+✔ central OCR rules learn numeric MI/M1 as ml without a global MI replacement (4.9161ms)
+✔ learned explicit 500 MI wins before pack-24 heuristic (1.0291ms)
+✔ product OCR normalization applies learned product corrections (0.7333ms)
+✔ existing 330 ml Product Master remains blocked against learned 500 ml invoice evidence (1.7595ms)
+✔ prepared product can satisfy purchase identity without existing product id (0.8338ms)
+✔ Purchase Receiving has no pre-receive Product Master write (1.1525ms)
+✔ OCR review defers unmatched Product creation to receiving (2.2755ms)
+✔ ShopContext uses atomic receive_purchase_v3 and carries pending product (0.9004ms)
+✔ database RPC contains product/barcode/purchase/inventory atomic boundary (2.3325ms)
+✔ HTTP response including 401 proves backend reachability (4.1158ms)
+✔ network exception is classified unreachable (0.5941ms)
+✔ blank manual purchase snapshot is not meaningful (0.8902ms)
+✔ meaningful purchase data remains draft-worthy (0.3271ms)
+✔ global header no longer trusts navigator.onLine (2.458ms)
+✔ Purchase Receiving no longer blocks on navigator.onLine (0.8708ms)
+✔ ShopContext still uses atomic purchase v3 and real refresh attempt (2.2207ms)
+✔ Purchase Receiving separates local camera and paired phone (2.0504ms)
+✔ Prepare Product consumes paired phone barcode without committing Product Master (0.4754ms)
+✔ Selected Line sidebar is removed and table is full width (0.4159ms)
+✔ existing global scanner transport is reused, not rewritten (0.4399ms)
+✔ V5_23 atomic purchase and V5_24 connectivity remain (0.4104ms)
+✔ Inventory paired-phone scan fills search and focused hardware scanner is supported (1.0371ms)
+✔ Inventory product list receives the larger desktop column (0.3866ms)
+✔ Confirm Pack automatically preserves audit distinction (0.2654ms)
+✔ completed Purchase Verification is success-first and audit lists stay explicit (0.2492ms)
+✔ protected V5_28B, V5_27 and atomic purchase contracts remain (0.5792ms)
+ℹ tests 138
+ℹ suites 0
+ℹ pass 138
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1811.6162
+[4/8] Building current V5 without running documentation-mutating prebuild scripts...
+[36mvite v8.2.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 2318 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     0.51 kB │ gzip:   0.31 kB
+dist/assets/index-Csi3Y8ep.css    193.15 kB │ gzip:  37.04 kB
+dist/assets/index-DKJyxXWZ.js   1,597.61 kB │ gzip: 427.99 kB
+
+[32m✓ built in 1.09s[39m
+[33m[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[5/8] Ensuring Playwright Chromium is installed...
+[6/8] Starting current V5 locally against DEV...
+[7/8] Generating current V5_29 Playwright business-flow runner...
+[8/8] Running visible V5_29 end-to-end UAT...
+The browser is automated. Only if the saved QA login has expired, sign in once in the visible browser.
+
+[V5-UAT] FIRST RUN ONLY: sign in once in the visible V5 DEV browser. No terminal input is required.
+[V5-UAT] Environment verified: DEV juhcypzoacauzmtzqnwd, role ADMIN.
+[V5-UAT] B-3339: running real V5 OCR from physical invoice image.
+[V5-UAT] Supplier S V Wines Private Limited not present in DEV. Creating QA supplier from invoice.
+[V5-UAT] B-3339: normalizing current V5_29 receiving workspace.
+
+[V5-UAT] FAIL: locator.fill: Error: strict mode violation: getByLabel('Supplier') resolved to 3 elements:
+    1) <nav class="module-tabs" aria-label="Purchases & Suppliers navigation">…</nav> aka getByRole('navigation', { name: 'Purchases & Suppliers' })
+    2) <input list="supplier-list-v5" value="S V Wines Private Limited"/> aka getByRole('combobox', { name: 'Supplier' })
+    3) <input step="0.01" value="599" type="number"/> aka getByRole('spinbutton', { name: 'Cash / Supplier Discount' })
+
+Call log:
+[2m  - waiting for getByLabel('Supplier')[22m
+
+
+[V5-UAT] FINAL RESULT: FAIL
+[V5-UAT] Evidence: C:\Users\<redacted>\WineShopPOS_V5_UAT\20260913_183241
