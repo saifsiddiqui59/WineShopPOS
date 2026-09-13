@@ -1,0 +1,41 @@
+{
+  "runId": "success_e2e_20260913_033206",
+  "mode": "SUCCESS_R11_PLUS_UI_DELTA",
+  "environment": "V5 QA / DEV",
+  "productionTouched": false,
+  "result": "FAIL",
+  "startedAt": "2026-09-13T07:33:03.977Z",
+  "checks": [
+    {
+      "name": "Successful-runner ADMIN session",
+      "status": "PASS",
+      "detail": "reused R11 saved authenticated browser state"
+    }
+  ],
+  "invoices": [],
+  "productsAfterInvoices": [],
+  "cashiers": [],
+  "stress": {},
+  "return": null,
+  "shifts": [],
+  "analytics": {},
+  "consoleErrors": [
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "failedRequests": [
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/"
+  ],
+  "failure": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table.data-table tbody tr').filter({ hasText: 'B-3339' }).first() to be visible\u001b[22m\n\n    at verifySuccessfulBaseViaUi (E:\\WineShopPOS_V5_E2E_20260912_105856\\tests\\e2e\\.wsp_success_e2e_success_e2e_20260913_033206.mjs:183:15)\n    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_success_e2e_success_e2e_20260913_033206.mjs:1065:3",
+  "classification": "HARNESS",
+  "finishedAt": "2026-09-13T07:33:28.090Z"
+}

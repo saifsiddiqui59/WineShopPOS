@@ -1,0 +1,2188 @@
+================================================================
+ WineShopPOS V5 — FULL MASTER CERTIFICATION
+ Runner   : 2026-09-11-R11-REAL-DEFECT-REGISTRY
+================================================================
+Repo     : /e/WineShopPOS_V5_E2E_20260912_105856
+Evidence : /c/Users/<redacted>/WineShopPOS_V5_FULL_CERT/20260913_033208
+PROD     : HARD BLOCKED
+
+[1/10] Git + DEV safety preflight...
+Environment isolation OK: V5 -> juhcypzoacauzmtzqnwd
+[2/10] All repository Node contract/unit tests...
+✔ quality gate accepts metrics above thresholds (132.5506ms)
+✔ cross-shop leakage is an absolute release blocker (127.7946ms)
+✔ groundedness below 4.0 fails release gate (172.5011ms)
+✔ tool call accuracy below 95 percent fails release gate (132.4638ms)
+✔ size conversion handles ml/cl/l (3.5822ms)
+✔ package aliases normalize CAN/TIN and BOTTLE/BTL (0.592ms)
+✔ EAN-13 checksum validation (2.3068ms)
+✔ hard conflict catches size and package (2.5972ms)
+✔ hard conflict catches clear variant mismatch (0.6662ms)
+✔ exact barcode cannot hide hard conflicts (1.0914ms)
+✔ cache identity separates discovery and barcode confirmation (0.6665ms)
+✔ exact barcode strongly prefers matching candidate (0.577ms)
+✔ Brave fallback decision only triggers when useful visuals are insufficient (0.4954ms)
+✔ AUTO_IMAGE remains image-only (3.8421ms)
+✔ pre-save image search never sends barcode (0.6052ms)
+✔ exact pre-save choice is applied before fallback auto image (0.3604ms)
+✔ saved Product Master chooser actions remain (2.7791ms)
+✔ new Product pre-save chooser actions exist (0.3992ms)
+✔ ProductForm chooser works before and after save (3.0302ms)
+✔ image chooser remains 20 per page (2.5574ms)
+✔ India and Global scopes remain (0.5603ms)
+✔ chooser remains scrollable (2.0968ms)
+✔ SerpApi remains free-only by default (2.925ms)
+✔ internet image provider remains capped at two searches (1.7021ms)
+✔ pre-save choices use same free internet image provider and no barcode key (0.5745ms)
+✔ exact 500 ml defaults to 24 for can bottle and unknown (6.7895ms)
+✔ printed Bottles/Case still wins (0.3496ms)
+✔ new 500 ml product gets 24 suggestion but still requires review (1.9691ms)
+✔ existing Product Master is not silently overwritten (0.4773ms)
+✔ non-500 nearby sizes are untouched (0.4316ms)
+✔ Add Product image and barcode are independent (3.1204ms)
+✔ exact chosen image survives Product creation (0.3702ms)
+✔ phone remains global persistent scanner transport (0.3836ms)
+DEF_0001_FINANCE_EVIDENCE_REGRESSION=PASS
+✔ tests\v5Def0001FinanceEvidence.test.mjs (225.1254ms)
+DEF_0001_FINANCE_RECEIVE_GUARD=PASS
+✔ tests\v5Def0001FinanceReceiveGuard.test.mjs (134.2989ms)
+DEF_0001_HARNESS_POLICY_REGRESSION=PASS
+✔ tests\v5Def0001HarnessPolicy.test.mjs (155.5368ms)
+DEF_0001_OCR_LINE_PRESERVATION=PASS
+✔ tests\v5Def0001OcrLinePreservation.test.mjs (256.1521ms)
+✔ DEF-0002: permanent Azure finance fixtures are real captured evidence (20.3775ms)
+✔ DEF-0002: B-3339 raw fixture contains actual finance vocabulary, not idealized test rows (6.3529ms)
+✔ DEF-0002: B-3339 recovers directly labeled finance summary without arithmetic invention (38.1579ms)
+✔ DEF-0002: ambiguous compound summary alone still fails closed (7.7302ms)
+✔ DEF-0002: R11 keeps B-3339 as a strict golden finance invoice (3.4739ms)
+✔ IndexedDB encrypted draft writes and deletes still await transaction completion (2.1687ms)
+✔ online server save is not gated by local IndexedDB success (0.9027ms)
+✔ SYNC ERROR is reserved for authoritative server RPC failure (0.6758ms)
+✔ online synced strip does not present global local-draft count as current invoice failure (0.5081ms)
+✔ V5_27 500 ml rule and atomic purchase posting remain protected (2.2406ms)
+✔ V5_29 one-button pack confirmation preserves V5_28B sync protection (0.4483ms)
+✔ mobile photo/barcode (2.1952ms)
+✔ USB scanner preserved (1.5196ms)
+✔ OCR handoff and no 750 invention (0.7208ms)
+✔ subcategory safe and lager context (0.3433ms)
+✔ authoritative/offline draft (0.4609ms)
+✔ receiving controls (0.8123ms)
+✔ idempotency (0.3887ms)
+✔ line-level pack (0.3521ms)
+✔ precision/free-only (1.9368ms)
+✔ persistent global pairing (4.8267ms)
+✔ global host injects scanner events (0.4562ms)
+✔ phone ACK/retry remains idempotent (0.3203ms)
+✔ host has no direct business-table mutation (0.4587ms)
+✔ POS no longer owns phone pairing panel (0.4628ms)
+✔ liquid units (3.387ms)
+✔ pack priors do not invent unknown (1.2806ms)
+✔ 15983 golden (0.4533ms)
+✔ 16845 golden (0.3573ms)
+✔ B-3339 evidence budget never drops direct finance summary behind the large line-item table (335.6116ms)
+✔ B-3339: generic known finance vocabulary resolves real Azure evidence to exact MATCH before AI (192.4086ms)
+✔ AI needs_review=true preserves a validated direct mapping as a manual suggestion (121.3227ms)
+✔ 16845: receive-valid golden invoice has no actionable exception and spends zero AI calls (99.8633ms)
+✔ confirmed supplier mapping memory resolves repeat B-3339 without an AI call (144.5392ms)
+✔ 16805: unresolved total remains safe-review; AI cannot invent 8044 (84.5323ms)
+✔ AI cannot swap CD and generic DISCOUNT (116.9428ms)
+✔ first-time misspelled finance label is an AI suggestion, not an auto-trusted value (0.2231ms)
+✔ human-confirmed supplier memory can reuse a misspelled finance label without another AI call (0.7712ms)
+✔ AI cannot remap a label that clearly belongs to another known finance field (0.2869ms)
+✔ ambiguous line evidence associated with multiple normalized items is never AI-corrected (0.2832ms)
+✔ AI cannot invent IDs, reuse evidence, or use a line TOTAL as invoice total (118.7664ms)
+✔ AI provider outage preserves safe manual review for a genuinely novel unresolved label (1.2543ms)
+✔ AI request is compact, text-only and strict structured output (123.7422ms)
+✔ manual correction remains for header, line, finance and printed total (2.1918ms)
+✔ OCR resolver preserves V5 server-authoritative ingestion handoff and fail-open manual fallback (1.0531ms)
+✔ learning occurs after successful human receive, not autonomous AI self-training (0.7729ms)
+✔ existing product alias learning remains intact (0.4106ms)
+✔ executor failure registry records all V5 resolver executor failures discovered before deployment (0.6355ms)
+V5_MASTER_CERT_PRODUCT_SCHEMA_CONTRACT=PASS
+✔ tests\v5MasterCertificationProductSchema.test.mjs (145.1169ms)
+✔ dedicated 1D ROI decoder remains (1.9057ms)
+✔ rear camera and native fallback remain (0.6532ms)
+✔ pinch replaces Zoom plus/minus controls (0.7373ms)
+✔ scanner copy is minimal and Retry is error-only (0.6221ms)
+✔ scanner is hardened to full dynamic mobile viewport (1.5918ms)
+✔ scanner remains local with no paid recognition service (0.4522ms)
+✔ V5_21 starts ZXing before optional camera enhancements (0.4965ms)
+✔ V5_21 exposes Retry instead of indefinite Opening camera (0.3461ms)
+✔ V5 preview badge (4.0826ms)
+✔ OCR retry safety (0.4222ms)
+✔ OCR columns/sticky/suggested product (0.5701ms)
+✔ OCR line preview remains non-mutating (0.3753ms)
+✔ Add Product uses pre-save internet image chooser (0.3576ms)
+✔ OCR can edit linked Product and return (0.3985ms)
+✔ MRP safety remains (0.3651ms)
+✔ phone scanner public route remains (1.9639ms)
+✔ persistent pairing uses high entropy secret (0.4587ms)
+✔ Realtime transport is present regardless of source formatting (0.5654ms)
+✔ phone cannot mutate business tables directly (0.4205ms)
+✔ simple Phone Scanner UI has no visible auto toggle (0.5804ms)
+✔ connected phone opens once then reopens after accepted ACK (0.3058ms)
+✔ real-invoice 500 ml line cannot become READY against 330 ml Product Master (3.2367ms)
+✔ known physical barcode mismatch is a hard identity review (0.5705ms)
+✔ same Product Master at different MRP/rate/amount is a legitimate repeated commercial line (2.01ms)
+✔ identical-looking repeated invoice rows require explicit Keep Separate review (1.752ms)
+✔ package mismatch blocks only when both sides explicitly disagree (0.4878ms)
+✔ Purchase Receiving preserves invoice evidence and explains blockers (0.6284ms)
+✔ ShopContext no longer rejects every repeated Product Master but repeats identity defense (0.4078ms)
+✔ database V2 receive processes lines individually and has hard server identity guards (1.9609ms)
+✔ Purchase Intelligence has one page filter (2.5112ms)
+✔ all five tables use shared serial and sortable behavior (0.6262ms)
+✔ Purchase Coach priority remains sortable without changing badge (0.3149ms)
+✔ data RPC contract is unchanged (0.4141ms)
+✔ atomic pending products stay verified after Product Master IDs are created (3.1662ms)
+✔ changed posted pack remains unresolved (2.1098ms)
+✔ different created Product Master identity remains unresolved (0.5005ms)
+✔ repeated identical pending rows are consumed one-for-one (0.6819ms)
+✔ correction on one repeated Product Master line does not resolve its sibling (2.0774ms)
+✔ normal completed UX hides correction tables but preserves explicit audit access (4.8909ms)
+✔ V5_26 does not introduce an unrelated generic 500 ml beer -> 24 pack rule (1.7816ms)
+✔ POS keeps USB and same-device camera (2.0568ms)
+✔ global scanner contract preserved (0.4376ms)
+✔ continuity remains V5 QA authority (0.3753ms)
+✔ pre-save image search uses identity not barcode (3.2948ms)
+✔ exact selected candidate applies after create with identity safety (0.6554ms)
+✔ OCR Edit Product returns to same review (0.3995ms)
+✔ scanner full-screen pinch UX (0.5585ms)
+✔ phone UI minimal but transport retained (0.4744ms)
+✔ central OCR rules learn numeric MI/M1 as ml without a global MI replacement (3.6033ms)
+✔ learned explicit 500 MI wins before pack-24 heuristic (1.0102ms)
+✔ product OCR normalization applies learned product corrections (0.609ms)
+✔ existing 330 ml Product Master remains blocked against learned 500 ml invoice evidence (1.8134ms)
+✔ prepared product can satisfy purchase identity without existing product id (0.8512ms)
+✔ Purchase Receiving has no pre-receive Product Master write (2.3072ms)
+✔ OCR review defers unmatched Product creation to receiving (2.0873ms)
+✔ ShopContext uses atomic receive_purchase_v3 and carries pending product (1.7317ms)
+✔ database RPC contains product/barcode/purchase/inventory atomic boundary (1.8918ms)
+✔ HTTP response including 401 proves backend reachability (3.293ms)
+✔ network exception is classified unreachable (0.7465ms)
+✔ blank manual purchase snapshot is not meaningful (0.5997ms)
+✔ meaningful purchase data remains draft-worthy (0.3335ms)
+✔ global header no longer trusts navigator.onLine (2.2577ms)
+✔ Purchase Receiving no longer blocks on navigator.onLine (1.8345ms)
+✔ ShopContext still uses atomic purchase v3 and real refresh attempt (1.6814ms)
+✔ Purchase Receiving separates local camera and paired phone (1.8595ms)
+✔ Prepare Product consumes paired phone barcode without committing Product Master (0.3529ms)
+✔ Selected Line sidebar is removed and table is full width (0.3484ms)
+✔ existing global scanner transport is reused, not rewritten (0.311ms)
+✔ V5_23 atomic purchase and V5_24 connectivity remain (0.2759ms)
+✔ Inventory paired-phone scan fills search and focused hardware scanner is supported (1.6375ms)
+✔ Inventory product list receives the larger desktop column (0.6073ms)
+✔ Confirm Pack automatically preserves audit distinction (0.3789ms)
+✔ completed Purchase Verification is success-first and audit lists stay explicit (0.2802ms)
+✔ protected V5_28B, V5_27 and atomic purchase contracts remain (1.7098ms)
+ℹ tests 160
+ℹ suites 0
+ℹ pass 160
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2125.9255
+[3/10] Lint + docs integrity + build...
+
+> wineshoppos@0.0.0 lint
+> oxlint
+
+
+  ! eslint(no-unused-vars): Function 'fieldContent' is declared but never used.
+    ,-[supabase/functions/ocr-invoice/index.ts:16:10]
+ 15 | 
+ 16 | function fieldContent(field: any) {
+    :          ^^^^^^|^^^^^
+    :                `-- 'fieldContent' is declared here
+ 17 |   return (
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Function 'numberValue' is declared but never used.
+    ,-[supabase/functions/ocr-invoice/index.ts:26:10]
+ 25 | 
+ 26 | function numberValue(field: any) {
+    :          ^^^^^|^^^^^
+    :               `-- 'numberValue' is declared here
+ 27 |   const value = field?.valueNumber ?? field?.valueCurrency?.amount ?? field?.content;
+    `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/ui/ProductThumb.jsx:14:19]
+ 13 | 
+ 14 |   useEffect(() => setBroken(false), [src]);
+    :   ^^^^|^^^^       ^^^^|^^^^
+    :       |               `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 15 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Recommendations.jsx:21:18]
+ 20 | 
+ 21 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 22 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'load'
+    ,-[src/pages/Recommendations.jsx:21:26]
+ 20 | 
+ 21 |   useEffect(()=>{load()},[]);
+    :                  ^^|^    ^^
+    :                    `-- useEffect uses `load` here
+ 22 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/pages/DemoWorkspace.jsx:39:17]
+ 38 | 
+ 39 | export function clearDemoWorkspace() {
+    :                 ^^^^^^^^^^^^^^^^^^
+ 40 |   sessionStorage.removeItem(DEMO_SESSION_KEY);
+    `----
+
+  ! react(purity): Cannot call impure function during render
+    ,-[src/pages/DemoWorkspace.jsx:63:34]
+ 62 |   );
+ 63 |   const [now, setNow] = useState(Date.now());
+    :                                  ^^^^^|^^^^
+    :                                       `-- Cannot call impure function
+ 64 | 
+    `----
+  help: `Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component re-renders
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/purity
+
+  ! react(purity): Cannot call impure function during render
+    ,-[src/pages/DemoWorkspace.jsx:84:21]
+ 83 |       sales:[
+ 84 |         {id:`DEMO-${Date.now()}`,at:"Just now",total:product.price},
+    :                     ^^^^^|^^^^
+    :                          `-- Cannot call impure function
+ 85 |         ...data.sales,
+    `----
+  help: `Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component re-renders
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/purity
+
+  ! eslint(no-useless-escape): Unnecessary escape character '/'
+    ,-[scripts/testing/record-v5-real-defect.mjs:26:38]
+ 25 |   return String(text || "")
+ 26 |     .replace(/Bearer\s+[A-Za-z0-9._~+\/=-]+/gi, "Bearer <REDACTED>")
+    :                                      ^^
+ 27 |     .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, "<REDACTED_JWT>")
+    `----
+  help: Replace `\/` with `/`.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Transfers.jsx:9:352]
+  8 | export default function Transfers(){const{products,getStock,refreshAll}=useShop();const{profile}=useAuth();const[dest,setDest]=useState([]);const[transfers,setTransfers]=useState([]);const[destination,setDestination]=useState("");const[productId,setProductId]=useState("");const[qty,setQty]=useState(1);const[message,setMessage]=useState("");
+  9 | async function load(){const[d,t]=await Promise.all([supabase.rpc("available_transfer_destinations"),supabase.from("stock_transfers").select("*,stock_transfer_items(*)").order("created_at",{ascending:false}).limit(150)]);if(d.error||t.error)setMessage("Unable to load transfer queue.");else{setDest(d.data||[]);setTransfers(t.data||[])}}useEffect(()=>{load()},[]);
+    :                                                                                                                                                                                                                                                                                                                                                 ^^^^|^^^^      ^^|^
+    :                                                                                                                                                                                                                                                                                                                                                     |            `-- Avoid calling setState() directly within an effect
+    :                                                                                                                                                                                                                                                                                                                                                     `-- This is the containing effect
+ 10 | async function create(e){e.preventDefault();const{error}=await supabase.rpc("create_stock_transfer",{p_destination_shop_id:destination,p_items:[{product_id:productId,quantity:Number(qty)}],p_notes:null});setMessage(error?"Unable to request transfer.":"Transfer requested. Destination must approve before dispatch.");if(!error){setProductId("");setQty(1);load()}}
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Variable 'beforeTotals' is declared but never used. Unused variables should start with a '_'.
+     ,-[tests/e2e/v5-extended-business-cert.mjs:292:9]
+ 291 |   const before=await inventoryMap();
+ 292 |   const beforeTotals=await totalsSnapshot();
+     :         ^^^^^^|^^^^^
+     :               `-- 'beforeTotals' is declared here
+ 293 | 
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Parameter 'selectedProducts' is declared but never used. Unused parameters should start with a '_'.
+     ,-[tests/e2e/v5-extended-business-cert.mjs:443:37]
+ 442 | 
+ 443 | async function salesReturnShiftFlow(selectedProducts){
+     :                                     ^^^^^^^^|^^^^^^^
+     :                                             `-- 'selectedProducts' is declared here
+ 444 |   const shift=await ensureShiftOpen();
+     `----
+  help: Consider removing this parameter.
+
+  ! eslint(no-unused-vars): Variable 'shift' is declared but never used. Unused variables should start with a '_'.
+     ,-[tests/e2e/v5-extended-business-cert.mjs:444:9]
+ 443 | async function salesReturnShiftFlow(selectedProducts){
+ 444 |   const shift=await ensureShiftOpen();
+     :         ^^|^^
+     :           `-- 'shift' is declared here
+ 445 |   const fresh=await productRows();
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Function 'statCardValue' is declared but never used.
+     ,-[tests/e2e/v5-extended-business-cert.mjs:490:16]
+ 489 | }
+ 490 | async function statCardValue(label){
+     :                ^^^^^^|^^^^^^
+     :                      `-- 'statCardValue' is declared here
+ 491 |   const card=page.locator(".stat-card").filter({hasText:label}).first();
+     `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Suppliers.jsx:29:21]
+ 28 | 
+ 29 |   useEffect(() => { load(); }, []);
+    :   ^^^^|^^^^         ^^|^
+    :       |               `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 30 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/OwnerWhatsApp.jsx:22:18]
+ 21 | 
+ 22 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 23 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Users.jsx:31:21]
+ 30 | 
+ 31 |   useEffect(() => { loadUsers(); }, [isAdmin]);
+    :   ^^^^|^^^^         ^^^^|^^^^
+    :       |                 `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 32 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'loadUsers'
+    ,-[src/pages/Users.jsx:31:37]
+ 30 | 
+ 31 |   useEffect(() => { loadUsers(); }, [isAdmin]);
+    :                     ^^^^|^^^^       ^^^^^^^^^
+    :                         `-- useEffect uses `loadUsers` here
+ 32 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/OwnerProfit.jsx:14:18]
+ 13 |   async function load(){const[a,b]=await Promise.all([supabase.rpc("owner_center_summary",{p_from:from,p_to:to}),supabase.rpc("profit_by_product",{p_from:from,p_to:to})]);if(a.error||b.error)setMsg("Unable to calculate profit intelligence.");else{setS(a.data||{});setRows(b.data||[])}}
+ 14 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 15 |   const bridge=useMemo(()=>[
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'load'
+    ,-[src/pages/OwnerProfit.jsx:14:26]
+ 13 |   async function load(){const[a,b]=await Promise.all([supabase.rpc("owner_center_summary",{p_from:from,p_to:to}),supabase.rpc("profit_by_product",{p_from:from,p_to:to})]);if(a.error||b.error)setMsg("Unable to calculate profit intelligence.");else{setS(a.data||{});setRows(b.data||[])}}
+ 14 |   useEffect(()=>{load()},[]);
+    :                  ^^|^    ^^
+    :                    `-- useEffect uses `load` here
+ 15 |   const bridge=useMemo(()=>[
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/ScannerSettings.jsx:10:19]
+  9 | 
+ 10 |   useEffect(() => setDraft(settings), [settings]);
+    :   ^^^^|^^^^       ^^^^|^^^
+    :       |               `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 11 |   useEffect(() => { if (lastScan) setHistory((h) => [lastScan, ...h].slice(0, 10)); }, [lastScan]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/ScannerSettings.jsx:11:35]
+ 10 |   useEffect(() => setDraft(settings), [settings]);
+ 11 |   useEffect(() => { if (lastScan) setHistory((h) => [lastScan, ...h].slice(0, 10)); }, [lastScan]);
+    :   ^^^^|^^^^                       ^^^^^|^^^^
+    :       |                                `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 12 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/BackupRecovery.jsx:9:467]
+  8 | 
+  9 | export default function BackupRecovery(){const{createBackup}=useShop();const[tests,setTests]=useState([]);const[msg,setMsg]=useState("");const[form,setForm]=useState({environment:"STAGING",reference:"",result:"PASS",notes:""});async function load(){const{data,error}=await supabase.from("backup_restore_tests").select("*").order("created_at",{ascending:false}).limit(50);if(error)setMsg("Unable to load restore-test history.");else setTests(data||[])}useEffect(()=>{load()},[]);
+    :                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ^^^^|^^^^      ^^|^
+    :                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |            `-- Avoid calling setState() directly within an effect
+    :                                                                                                                                                                                                                                                                                                                                                                                                                                                                        `-- This is the containing effect
+ 10 | function exportSnapshot(){const snapshot=createBackup();const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`wineshoppos-operational-snapshot-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url)}
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/OwnerExceptions.jsx:33:18]
+ 32 | 
+ 33 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 34 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'load'
+    ,-[src/pages/OwnerExceptions.jsx:33:26]
+ 32 | 
+ 33 |   useEffect(()=>{load()},[]);
+    :                  ^^|^    ^^
+    :                    `-- useEffect uses `load` here
+ 34 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/CustomerCredit.jsx:36:18]
+ 35 |   }
+ 36 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 37 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/SaleDetails.jsx:76:7]
+ 73 | 
+ 74 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 75 |     if (!id || cached) {
+ 76 |       setRemoteLoading(false);
+    :       ^^^^^^^^|^^^^^^^
+    :               `-- Avoid calling setState() directly within an effect
+ 77 |       return undefined;
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Shifts.jsx:11:18]
+ 10 |   async function load(){const[{data,error},counts]=await Promise.all([supabase.from("cashier_shifts").select("*").order("opened_at",{ascending:false}).limit(100),offlineQueueCounts().catch(()=>({total:0,pending:0,conflict:0}))]);setOfflineCounts(counts);if(error)setMessage(error.message);else setShifts(data||[]);}
+ 11 |   useEffect(()=>{load();const fn=()=>load();window.addEventListener("online",fn);return()=>window.removeEventListener("online",fn);},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 12 |   const mine=shifts.find((s)=>s.cashier_id===profile?.user_id&&["OPEN","CLOSE_REQUESTED"].includes(s.status));
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/StockCount.jsx:63:10]
+ 61 | 
+ 62 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 63 |     void loadCounts();
+    :          ^^^^^|^^^^
+    :               `-- Avoid calling setState() directly within an effect
+ 64 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/StockCount.jsx:67:10]
+ 65 | 
+ 66 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 67 |     void loadItems(activeId);
+    :          ^^^^|^^^^
+    :              `-- Avoid calling setState() directly within an effect
+ 68 |   }, [activeId]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/StockCount.jsx:214:7]
+ 204 | 
+ 205 |   useEffect(() => {
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 206 |     const scanId = lastScan?.id || "";
+ 207 |     if (!scanId) return;
+ 208 | 
+ 209 |     if (lastHandledScanIdRef.current === scanId) return;
+ 210 |     lastHandledScanIdRef.current = scanId;
+ 211 | 
+ 212 |     if (!activeId || activeStatus !== "OPEN") {
+ 213 |       errorBeep();
+ 214 |       setMessage("Start or select an OPEN stock count before scanning physical stock.");
+     :       ^^^^^|^^^^
+     :            `-- Avoid calling setState() directly within an effect
+ 215 |       return;
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'loadCounts'
+    ,-[src/pages/StockCount.jsx:64:6]
+ 62 |   useEffect(() => {
+ 63 |     void loadCounts();
+    :          ^^^^^|^^^^
+    :               `-- useEffect uses `loadCounts` here
+ 64 |   }, []);
+    :      ^^
+ 65 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/OwnerCenter.jsx:29:18]
+ 28 |   }
+ 29 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 30 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Returns.jsx:17:18]
+ 16 |   async function load(){const{data,error}=await supabase.from("sale_return_requests").select(`id,sale_id,status,reason,refund_method,total_refund,created_at,reviewed_at,sale_return_items(id,sale_item_id,product_id,quantity,unit_refund,line_refund)`).order("created_at",{ascending:false}).limit(100);if(error)setMessage(error.message);else setRequests(data||[])}
+ 17 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 18 |   async function requestReturn(e){e.preventDefault();const items=(selected?.items||[]).map((i)=>({sale_item_id:i.id,quantity:Number(qty[i.id]||0)})).filter((i)=>i.quantity>0);const{error}=await supabase.rpc("create_return_request",{p_sale_id:saleId,p_items:items,p_reason:reason,p_refund_method:method,p_refund_reference:reference||null});setMessage(error?error.message:"Return request submitted for manager approval.");if(!error){setQty({});setReason("");await load()}}
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Settings.jsx:42:21]
+ 41 | 
+ 42 |   useEffect(() => { load(); }, []);
+    :   ^^^^|^^^^         ^^|^
+    :       |               `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 43 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Compliance.jsx:10:18]
+  9 |   async function load(){const{data,error}=await supabase.from("compliance_profiles").select("*").maybeSingle();if(error){setMsg("Unable to load compliance configuration.");return}if(data){setExists(true);setForm({stateCode:data.state_code||"",stateName:data.state_name||"",licenseType:data.license_type||"",licenseNumber:data.license_number||"",validFrom:data.license_valid_from||"",validTo:data.license_valid_to||"",exciseRegistration:data.excise_registration_number||"",notes:data.notes||""})}}
+ 10 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 11 |   async function save(e){e.preventDefault();setBusy(true);const{error}=await supabase.rpc("upsert_compliance_profile",{p_state_code:form.stateCode||null,p_state_name:form.stateName||null,p_license_number:form.licenseNumber||null,p_license_type:form.licenseType||null,p_license_valid_from:form.validFrom||null,p_license_valid_to:form.validTo||null,p_excise_registration_number:form.exciseRegistration||null,p_notes:form.notes||null});setMsg(error?"Unable to save compliance configuration.":"Compliance profile saved. No legal report is enabled until its verified state specification is implemented.");if(!error)setExists(true);setBusy(false)}
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/InvoiceInbox.jsx:64:18]
+ 63 | 
+ 64 |   useEffect(()=>{load();},[profile?.shop_id,year,month,status]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 65 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React hook useMemo depends on `now`, which changes every render
+    ,-[src/pages/InvoiceInbox.jsx:43:88]
+ 33 |   const navigate=useNavigate();
+ 34 |   const now=new Date();
+    :         ^|^
+    :          `-- `now` is declared here
+ 35 | 
+ 36 |   const[year,setYear]=useState(now.getFullYear());
+ 37 |   const[month,setMonth]=useState(now.getMonth()+1);
+ 38 |   const[status,setStatus]=useState("ALL");
+ 39 |   const[rows,setRows]=useState([]);
+ 40 |   const[busy,setBusy]=useState(false);
+ 41 |   const[message,setMessage]=useState("");
+ 42 | 
+ 43 |   const years=useMemo(()=>[now.getFullYear()-1,now.getFullYear(),now.getFullYear()+1],[now]);
+    :                                                                                        ^|^
+    :                                                                                         `-- it will always cause this hook to re-evaluate
+ 44 | 
+    `----
+  help: Try memoizing this variable with `useRef` or `useCallback`.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'load'
+    ,-[src/pages/InvoiceInbox.jsx:64:27]
+ 63 | 
+ 64 |   useEffect(()=>{load();},[profile?.shop_id,year,month,status]);
+    :                  ^^|^     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    :                    `-- useEffect uses `load` here
+ 65 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+   ,-[src/pages/OfflineQueue.jsx:6:253]
+ 5 | 
+ 6 | export default function OfflineQueue(){const{syncOfflineSales}=useShop();const[rows,setRows]=useState([]);const[message,setMessage]=useState("");async function load(){try{setRows(await listOfflineSales())}catch(e){setMessage(e.message)}}useEffect(()=>{load()},[]);async function sync(){const r=await syncOfflineSales();setMessage(r.message);await load()}
+   :                                                                                                                                                                                                                                              ^^^^|^^^^      ^^|^
+   :                                                                                                                                                                                                                                                  |            `-- Avoid calling setState() directly within an effect
+   :                                                                                                                                                                                                                                                  `-- This is the containing effect
+ 7 | return <div><div className="page-heading"><div><h2>Offline POS Queue</h2><p>Encrypted emergency sales awaiting controlled Supabase synchronization.</p></div><button className="primary-button" disabled={!navigator.onLine} onClick={sync}>Sync Now</button></div>{message&&<div className="purchase-message">{message}</div>}<section className="panel"><p><strong>Important:</strong> offline mode is for a device that has already logged in and cached the catalog. A first-time cold login still requires internet. Server sync revalidates stock and prices; conflicts remain visible instead of being force-applied.</p><div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Created</th><th>Client Sale ID</th><th>Items</th><th>Payment</th><th>Status</th><th>Error</th></tr></thead><tbody>{rows.map((r)=><tr key={r.id}><td>{new Date(r.createdAt).toLocaleString("en-IN")}</td><td>{r.id}</td><td>{r.payload?.items?.reduce((s,i)=>s+i.quantity,0)??"?"}</td><td>{r.payload?.paymentMethod||"?"}</td><td>{r.status}</td><td>{r.lastError||r.decryptError||"-"}</td></tr>)}</tbody></SortableTable></div></section></div>}
+   `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(preserve-manual-memoization): Existing memoization could not be preserved
+    ,-[src/pages/ReportsConsolidated.jsx:50:6]
+ 49 |     return [...map.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([date,value])=>({label:new Date(`${date}T12:00:00`).toLocaleDateString("en-IN",{day:"numeric",month:"short"}),value}));
+ 50 |   },[fs]);
+    :      ^|
+    :       `-- This dependency may be modified later
+ 51 | 
+    `----
+  help: React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. This dependency may be mutated later, which could cause the value to change unexpectedly
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/preserve-manual-memoization
+
+  ! react(preserve-manual-memoization): Existing memoization could not be preserved
+    ,-[src/pages/ReportsConsolidated.jsx:46:15]
+ 45 | 
+ 46 |   const trend=useMemo(()=>{
+    :               ^^^|^^^ |
+    :                  |    `-- Manual memoization callback starts here
+    :                  `-- Manual memoization is not preserved here
+ 47 |     const map=new Map();
+    `----
+  help: React Compiler could not prove that this useMemo/useCallback remains memoized. Fix related React Compiler errors inside the callback first. If manual memoization is not required for semantics, remove it; otherwise restructure the callback to avoid values that invalidate memoization
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/preserve-manual-memoization
+
+  ! react(preserve-manual-memoization): Existing memoization could not be preserved
+    ,-[src/pages/ReportsConsolidated.jsx:56:6]
+ 55 |     return Object.entries(map).map(([label,value])=>({label,value}));
+ 56 |   },[fs]);
+    :      ^|
+    :       `-- This dependency may be modified later
+ 57 | 
+    `----
+  help: React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. This dependency may be mutated later, which could cause the value to change unexpectedly
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/preserve-manual-memoization
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/ReportsConsolidated.jsx:37:18]
+ 36 |   }
+ 37 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 38 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'load'
+    ,-[src/pages/ReportsConsolidated.jsx:37:26]
+ 36 |   }
+ 37 |   useEffect(()=>{load()},[]);
+    :                  ^^|^    ^^
+    :                    `-- useEffect uses `load` here
+ 38 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useMemo has unnecessary dependency: location.search
+    ,-[src/pages/Login.jsx:15:55]
+ 14 |   const location = useLocation();
+ 15 |   const environment = useMemo(() => getEnvironment(), [location.search, location.hash]);
+    :                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 16 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useMemo has unnecessary dependency: location.hash
+    ,-[src/pages/Login.jsx:15:55]
+ 14 |   const location = useLocation();
+ 15 |   const environment = useMemo(() => getEnvironment(), [location.search, location.hash]);
+    :                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 16 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(preserve-manual-memoization): Existing memoization could not be preserved
+    ,-[src/pages/Reports.jsx:41:7]
+ 40 |     return result;
+ 41 |   }, [filteredSales]);
+    :       ^^^^^^|^^^^^^
+    :             `-- This dependency may be modified later
+ 42 | 
+    `----
+  help: React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. This dependency may be mutated later, which could cause the value to change unexpectedly
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/preserve-manual-memoization
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/InventoryIntelligence.jsx:14:18]
+ 13 |   async function load(){const {data,error}=await supabase.rpc("inventory_health",{p_history_days:30,p_dead_days:45});if(error)setMessage("Unable to load inventory intelligence.");else setHealth(data||[])}
+ 14 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 15 |   async function explainProduct(id){setProductId(id);setExplain([]);if(!id)return;const{data,error}=await supabase.rpc("stock_explanation",{p_product_id:id,p_days:365});if(error)setMessage("Unable to explain stock movement.");else setExplain(data||[])}
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(immutability): Cannot reassign variable after render completes
+    ,-[src/components/charts/BusinessCharts.jsx:54:66]
+ 52 |   if (!total) return <section className="chart-card"><div className="chart-heading"><div><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div></div><EmptyChart/></section>;
+ 53 |   let cursor = 0;
+    :       ^^^|^^
+    :          `-- `cursor` is declared here
+ 54 |   const stops = rows.map((row, index) => { const start = cursor; cursor += safeNumber(row[valueKey]) / total * 100; return `${PALETTE[index % PALETTE.length]} ${start}% ${cursor}%`; });
+    :                                                                  ^^^|^^
+    :                                                                     `-- Cannot reassign `cursor` after render completes
+ 55 |   return <section className="chart-card">
+    `----
+  help: Reassigning `cursor` after render has completed can cause inconsistent behavior on subsequent renders. Consider using state instead
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/immutability
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+   ,-[src/pages/Reorder.jsx:6:426]
+ 5 | 
+ 6 | export default function Reorder(){const{products,suppliers}=useShop();const[days,setDays]=useState(30);const[target,setTarget]=useState(7);const[rows,setRows]=useState([]);const[message,setMessage]=useState("");async function load(){const{data,error}=await supabase.rpc("reorder_suggestions",{p_history_days:Number(days),p_target_days:Number(target)});if(error)setMessage(error.message);else setRows(data||[])}useEffect(()=>{load()},[]);
+   :                                                                                                                                                                                                                                                                                                                                                                                                                           ^^^^|^^^^      ^^|^
+   :                                                                                                                                                                                                                                                                                                                                                                                                                               |            `-- Avoid calling setState() directly within an effect
+   :                                                                                                                                                                                                                                                                                                                                                                                                                               `-- This is the containing effect
+ 7 | async function createPO(row){const sid=prompt("Supplier UUID for this order",suppliers[0]?.id||"");if(!sid)return;const p=products.find((x)=>x.id===row.product_id);const{error}=await supabase.rpc("create_purchase_order",{p_supplier_id:sid,p_items:[{product_id:row.product_id,quantity:row.suggested_cases*row.units_per_case,purchase_price:p?.purchasePrice||0}],p_expected_date:null,p_notes:`Smart reorder: ${row.suggested_cases} case(s)`});setMessage(error?error.message:"Purchase order created from reorder suggestion.")}
+   `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'load'
+   ,-[src/pages/Reorder.jsx:6:434]
+ 5 | 
+ 6 | export default function Reorder(){const{products,suppliers}=useShop();const[days,setDays]=useState(30);const[target,setTarget]=useState(7);const[rows,setRows]=useState([]);const[message,setMessage]=useState("");async function load(){const{data,error}=await supabase.rpc("reorder_suggestions",{p_history_days:Number(days),p_target_days:Number(target)});if(error)setMessage(error.message);else setRows(data||[])}useEffect(()=>{load()},[]);
+   :                                                                                                                                                                                                                                                                                                                                                                                                                                          ^^|^    ^^
+   :                                                                                                                                                                                                                                                                                                                                                                                                                                            `-- useEffect uses `load` here
+ 7 | async function createPO(row){const sid=prompt("Supplier UUID for this order",suppliers[0]?.id||"");if(!sid)return;const p=products.find((x)=>x.id===row.product_id);const{error}=await supabase.rpc("create_purchase_order",{p_supplier_id:sid,p_items:[{product_id:row.product_id,quantity:row.suggested_cases*row.units_per_case,purchase_price:p?.purchasePrice||0}],p_expected_date:null,p_notes:`Smart reorder: ${row.suggested_cases} case(s)`});setMessage(error?error.message:"Purchase order created from reorder suggestion.")}
+   `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/BulkProductImport.jsx:119:9]
+ 112 | 
+ 113 |   useEffect(() => {
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 114 |     if (!fromOcr) return;
+ 115 | 
+ 116 |     try {
+ 117 |       const ocrRows = rowsFromOcrReview(activeCategories);
+ 118 |       if (ocrRows.length) {
+ 119 |         setRows(ocrRows);
+     :         ^^^|^^^
+     :            `-- Avoid calling setState() directly within an effect
+ 120 |         setMessage(
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'successBeep', and 'lastScan.barcode'
+     ,-[src/pages/BulkProductImport.jsx:111:6]
+ 101 |   useEffect(() => {
+ 102 |     if (!lastScan?.barcode || barcodeTargetRow.current == null) return;
+     :          ^^^^^^^^
+ 103 |     const rowIndex = Number(barcodeTargetRow.current);
+ 104 |     setRows((current) =>
+ 105 |       current.map((row, index) =>
+ 106 |         index === rowIndex ? { ...row, barcode: lastScan.barcode } : row,
+ 107 |       ),
+ 108 |     );
+ 109 |     setMessage(`Barcode ${lastScan.barcode} scanned into row ${rowIndex + 1}.`);
+ 110 |     successBeep();
+     :     ^^^^^^^^^^^
+ 111 |   }, [lastScan?.id]);
+     :      ^^^^^^^^^^^^^^
+ 112 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/PrinterSettings.jsx:11:18]
+ 10 |   const[message,setMessage]=useState("");
+ 11 |   useEffect(()=>{setAutoPrintState(getReceiptAutoPrint(profile?.shop_id));},[profile?.shop_id]);
+    :   ^^^^|^^^^      ^^^^^^^^|^^^^^^^^
+    :       |                  `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 12 |   useEffect(()=>{supabase.from("shop_settings").select("store_address,store_phone,tax_registration_number,receipt_footer,printer_paper_mm").maybeSingle().then(({data,error})=>{if(error)setMessage(error.message);else if(data)setForm((current)=>({...current,...data}));});},[]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/InventoryAgeing.jsx:40:18]
+ 39 |   async function load(){setLoading(true);setMessage("");const[a,f]=await Promise.all([supabase.rpc("inventory_ageing_report"),supabase.rpc("fifo_receipt_lots")]);if(missing(a.error)||missing(f.error)){setAvailable(false);setAgeing([]);setFifo([]);}else if(a.error||f.error)setMessage("Unable to load receipt ageing/FIFO data.");else{setAvailable(true);setAgeing(a.data||[]);setFifo(f.data||[]);}setLoading(false);}
+ 40 |   useEffect(()=>{load();},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 41 |   const totals=useMemo(()=>{const b={};let value=0,old=0,untracked=0;for(const r of ageing){const v=Number(r.cost_value||0);value+=v;b[r.age_bucket]=(b[r.age_bucket]||0)+v;if(["91-180","180+"].includes(r.age_bucket))old+=v;if(r.age_bucket==="UNTRACKED")untracked+=Number(r.quantity||0);}return{b,value,old,untracked};},[ageing]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Inventory.jsx:31:5]
+ 24 | 
+ 25 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 26 |     if (!lastScan?.id || lastScan.source !== "PHONE_REMOTE") return;
+ 27 |     if (handledPhoneScanId.current === lastScan.id) return;
+ 28 |     const barcode = String(lastScan.barcode || "").trim();
+ 29 |     if (!barcode) return;
+ 30 |     handledPhoneScanId.current = lastScan.id;
+ 31 |     setSearch(barcode);
+    :     ^^^^|^^^^
+    :         `-- Avoid calling setState() directly within an effect
+ 32 |     successBeep();
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'lastScan.barcode', 'successBeep', and 'lastScan.source'
+    ,-[src/pages/Inventory.jsx:33:6]
+ 25 |   useEffect(() => {
+ 26 |     if (!lastScan?.id || lastScan.source !== "PHONE_REMOTE") return;
+    :                          ^^^^^^^^
+ 27 |     if (handledPhoneScanId.current === lastScan.id) return;
+ 28 |     const barcode = String(lastScan.barcode || "").trim();
+    :                            ^^^^^^^^
+ 29 |     if (!barcode) return;
+ 30 |     handledPhoneScanId.current = lastScan.id;
+ 31 |     setSearch(barcode);
+ 32 |     successBeep();
+    :     ^^^^^^^^^^^
+ 33 |   }, [lastScan?.id]);
+    :      ^^^^^^^^^^^^^^
+ 34 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Expenses.jsx:13:18]
+ 12 |   async function load(){const[c,e]=await Promise.all([supabase.from("expense_categories").select("id,name,active").eq("active",true).order("name"),supabase.from("expenses").select("id,expense_date,amount,description,payment_method,reference_number,status,created_at,expense_categories(name)").order("expense_date",{ascending:false}).limit(300)]);if(c.error||e.error)setMessage("Unable to load expense data.");else{setCategories(c.data||[]);setRows(e.data||[])}}
+ 13 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 14 |   const monthTotal=useMemo(()=>{const month=new Date().toISOString().slice(0,7);return rows.filter((r)=>r.status==="ACTIVE"&&String(r.expense_date).startsWith(month)).reduce((s,r)=>s+Number(r.amount||0),0)},[rows]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/PlatformAdmin.jsx:78:10]
+ 76 | 
+ 77 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 78 |     void load();
+    :          ^^|^
+    :            `-- Avoid calling setState() directly within an effect
+ 79 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Variable 'landedTotal' is declared but never used. Unused variables should start with a '_'.
+     ,-[src/pages/PurchaseDetails.jsx:136:9]
+ 135 |   const productValue = Number(purchase.total || 0);
+ 136 |   const landedTotal = purchase.total_landed_cost == null ? productValue : Number(purchase.total_landed_cost || 0);
+     :         ^^^^^|^^^^^
+     :              `-- 'landedTotal' is declared here
+ 137 |   const extractedTotal = ingestion?.extracted_total == null ? null : Number(ingestion.extracted_total);
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'extractedTotal' is declared but never used. Unused variables should start with a '_'.
+     ,-[src/pages/PurchaseDetails.jsx:137:9]
+ 136 |   const landedTotal = purchase.total_landed_cost == null ? productValue : Number(purchase.total_landed_cost || 0);
+ 137 |   const extractedTotal = ingestion?.extracted_total == null ? null : Number(ingestion.extracted_total);
+     :         ^^^^^^^|^^^^^^
+     :                `-- 'extractedTotal' is declared here
+ 138 |   const unitEvidenceAvailable = ocrPackAudit.units != null;
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Catch parameter 'error' is caught but never used.
+     ,-[src/pages/AddProduct.jsx:149:16]
+ 148 |         await refreshAll();
+ 149 |       } catch (error) {
+     :                ^^|^^
+     :                  `-- 'error' is declared here
+ 150 |         enrichmentWarning = enrichmentWarning
+     `----
+  help: Consider handling this error.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Account.jsx:20:19]
+ 19 | 
+ 20 |   useEffect(() => setForm({ fullName: profile?.full_name || "", phone: profile?.phone || "", avatarUrl: profile?.avatar_url || "", theme: profile?.theme || "SYSTEM" }), [profile]);
+    :   ^^^^|^^^^       ^^^|^^^
+    :       |              `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 21 |   const lastLogin = useMemo(() => user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString("en-IN") : "Not available", [user]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(preserve-manual-memoization): Existing memoization could not be preserved
+     ,-[src/pages/POS.jsx:108:5]
+  65 |   const refreshShiftState=useCallback(async()=>{
+  66 |     if(!profile?.shop_id||!profile?.user_id){
+     :         ^^^^^^^^|^^^^^^^
+     :                 `-- This dependency is inferred here
+  67 |       setShiftOpen(false);
+  68 |       setShiftLoading(false);
+  69 |       return false;
+  70 |     }
+  71 | 
+  72 |     if(!navigator.onLine){
+  73 |       const cached=sessionStorage.getItem(shiftStorageKey);
+  74 |       setShiftOpen(Boolean(cached));
+  75 |       setShiftLoading(false);
+  76 |       setShiftMessage(
+  77 |         cached
+  78 |           ?"Using the shift verified earlier in this browser session."
+  79 |           :"Connect to the internet to verify or start your shift.",
+  80 |       );
+  81 |       return Boolean(cached);
+  82 |     }
+  83 | 
+  84 |     setShiftLoading(true);
+  85 |     const{data,error}=await supabase
+  86 |       .from("cashier_shifts")
+  87 |       .select("id,status,opened_at")
+  88 |       .eq("shop_id",profile.shop_id)
+  89 |       .eq("cashier_id",profile.user_id)
+  90 |       .eq("status","OPEN")
+  91 |       .order("opened_at",{ascending:false})
+  92 |       .limit(1);
+  93 | 
+  94 |     if(error){
+  95 |       setShiftOpen(false);
+  96 |       setShiftMessage(error.message||"Unable to verify your shift.");
+  97 |       setShiftLoading(false);
+  98 |       return false;
+  99 |     }
+ 100 | 
+ 101 |     const current=data?.[0]||null;
+ 102 |     setShiftOpen(Boolean(current));
+ 103 |     setShiftMessage("");
+ 104 |     if(current?.id)sessionStorage.setItem(shiftStorageKey,current.id);
+ 105 |     else sessionStorage.removeItem(shiftStorageKey);
+ 106 |     setShiftLoading(false);
+ 107 |     return Boolean(current);
+ 108 |   },[profile?.shop_id,profile?.user_id,shiftStorageKey]);
+     :     ^^^^^^^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^^^^^^^
+     :                              `-- This dependency list does not match the dependencies inferred from the callback
+ 109 | 
+     `----
+  help: React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `profile`, but the source dependencies were [profile?.shop_id, profile?.user_id,
+        shiftStorageKey]. Inferred less specific property than source
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/preserve-manual-memoization
+
+  ! react(purity): Cannot call impure function during render
+    ,-[src/pages/POS.jsx:26:32]
+ 25 |   const loadedCartKeyRef=useRef("");
+ 26 |   const posMountedAtRef=useRef(Date.now());
+    :                                ^^^^^|^^^^
+    :                                     `-- Cannot call impure function
+ 27 |   const searchInputRef=useRef(null);
+    `----
+  help: `Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component re-renders
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/purity
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/POS.jsx:111:10]
+ 109 | 
+ 110 |   useEffect(()=>{
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 111 |     void refreshShiftState();
+     :          ^^^^^^^^|^^^^^^^^
+     :                  `-- Avoid calling setState() directly within an effect
+ 112 |     const online=()=>void refreshShiftState();
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/POS.jsx:164:5]
+ 162 | 
+ 163 |   useEffect(()=>{
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 164 |     setAutoPrint(getReceiptAutoPrint(profile?.shop_id));
+     :     ^^^^^^|^^^^^
+     :           `-- Avoid calling setState() directly within an effect
+ 165 |   },[profile?.shop_id]);
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/POS.jsx:187:7]
+ 177 | 
+ 178 |   useEffect(()=>{
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 179 |     if(!profile?.shop_id||!products.length||loadedCartKeyRef.current===cartStorageKey)return;
+ 180 |     try{
+ 181 |       const saved=JSON.parse(sessionStorage.getItem(cartStorageKey)||"[]");
+ 182 |       const restored=Array.isArray(saved)?saved.map((row)=>{
+ 183 |         const product=products.find((p)=>p.id===row.productId&&p.active);
+ 184 |         if(!product)return null;
+ 185 |         return {product,quantity:Math.max(1,Number(row.quantity||1)),unitPrice:Number(row.unitPrice??product.price)};
+ 186 |       }).filter(Boolean):[];
+ 187 |       setCart(restored);
+     :       ^^^|^^^
+     :          `-- Avoid calling setState() directly within an effect
+ 188 |     }catch{sessionStorage.removeItem(cartStorageKey);setCart([]);}
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'processBarcode', 'lastScan.barcode', and 'lastScan.at'
+     ,-[src/pages/POS.jsx:292:5]
+ 287 |   useEffect(()=>{
+ 288 |     if(!lastScan?.barcode)return;
+     :         ^^^^^^^^
+ 289 |     const scannedAt=Date.parse(lastScan.at||"");
+     :                                ^^^^^^^^
+ 290 |     if(Number.isFinite(scannedAt)&&scannedAt<posMountedAtRef.current)return;
+ 291 |     processBarcode(lastScan.barcode);
+     :     ^^^^^^^^^^^^^^
+ 292 |   },[lastScan?.id]);
+     :     ^^^^^^^^^^^^^^
+ 293 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Variable 'foundryStage' is assigned a value but never used. Unused variables should start with a '_'.
+     ,-[azure-functions/ai-owner-assistant/src/index.js:196:7]
+ 195 |   const sources = new Set();
+ 196 |   let foundryStage = "CREATE_CONVERSATION";
+     :       ^^^^^^|^^^^^
+     :             `-- 'foundryStage' is declared here
+ 197 | 
+ 198 |   try {
+ 199 |     conversation = await openai.conversations.create();
+ 200 |     foundryStage = "FIRST_RESPONSE";
+ 201 | 
+ 202 |     let response = await createAgentResponse(openai, {
+ 203 |       input: [{
+ 204 |         type: "message",
+ 205 |         role: "user",
+ 206 |         content: trustedContextPrompt(trustedContext, body),
+ 207 |       }],
+ 208 |       conversation: conversation.id,
+ 209 |       max_output_tokens: MAX_OUTPUT_TOKENS,
+ 210 |     });
+ 211 | 
+ 212 |     let rounds = 0;
+ 213 |     let totalCalls = 0;
+ 214 | 
+ 215 |     while (rounds < MAX_TOOL_ROUNDS) {
+ 216 |       const calls = (response.output || []).filter((item) => item.type === "function_call");
+ 217 |       if (!calls.length) break;
+ 218 | 
+ 219 |       totalCalls += calls.length;
+ 220 |       if (totalCalls > MAX_TOOL_CALLS) {
+ 221 |         throw new Error("AI tool-call limit exceeded.");
+ 222 |       }
+ 223 | 
+ 224 |       const outputs = [];
+ 225 |       for (const call of calls) {
+ 226 |         foundryStage = `TOOL:${call.name}`;
+ 227 |         if (!TOOL_DEFINITIONS.some((t) => t.name === call.name)) throw new Error("Agent requested an unapproved tool.");
+ 228 | 
+ 229 |         let parsed;
+ 230 |         try { parsed = JSON.parse(call.arguments || "{}"); }
+ 231 |         catch { throw new Error("Agent produced invalid tool arguments."); }
+ 232 | 
+ 233 |         const { result, source } = await executeTool(caller, trustedContext, call.name, parsed);
+ 234 |         toolsCalled.push(call.name);
+ 235 |         sources.add(source);
+ 236 |         outputs.push({
+ 237 |           type: "function_call_output",
+ 238 |           call_id: call.call_id,
+ 239 |           output: JSON.stringify(result),
+ 240 |         });
+ 241 |       }
+ 242 | 
+ 243 |       foundryStage = "FOLLOWUP_RESPONSE";
+     :       ^^^^^^|^^^^^
+     :             `-- it was last assigned here
+ 244 |       response = await createAgentResponse(openai, {
+     `----
+  help: Did you mean to use this variable?
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Procurement.jsx:48:21]
+ 47 | 
+ 48 |   useEffect(() => { load(); }, []);
+    :   ^^^^|^^^^         ^^|^
+    :       |               `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 49 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Variable 'pages' is declared but never used. Unused variables should start with a '_'.
+     ,-[supabase/functions/_shared/invoiceFinance.js:293:9]
+ 292 | function findTableLabeledAmount(analyzeResult, aliases) {
+ 293 |   const pages = analyzeResult?.analyzeResult?.pages || [];
+     :         ^^|^^
+     :           `-- 'pages' is declared here
+ 294 |   for (const table of analyzeResult?.analyzeResult?.tables || []) {
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-useless-escape): Unnecessary escape character '-'
+    ,-[supabase/functions/_shared/invoiceFinance.js:12:34]
+ 11 |     const negative = /^-/.test(raw) || /^\(.*\)$/.test(raw);
+ 12 |     const body = raw.replace(/[()\-]/g, "");
+    :                                  ^^
+ 13 |     const digits = body.replace(/\D/g, "");
+    `----
+  help: Replace `\-` with `-`.
+
+  ! eslint(no-useless-escape): Unnecessary escape character '-'
+     ,-[supabase/functions/_shared/invoiceFinance.js:402:40]
+ 401 |   const compact = raw.replace(/\s+/g, "");
+ 402 |   const unsigned = compact.replace(/[()\-]/g, "");
+     :                                        ^^
+ 403 |   if (!/^\d(?:[\d,.:']*\d)?$/.test(unsigned)) return false;
+     `----
+  help: Replace `\-` with `-`.
+
+  ! eslint(no-unused-vars): Variable 'root' is declared but never used. Unused variables should start with a '_'.
+   ,-[scripts/docs/generate-static-traceability.mjs:4:7]
+ 3 | 
+ 4 | const root = process.cwd();
+   :       ^^|^
+   :         `-- 'root' is declared here
+ 5 | const sourceRoots = ["src", "supabase/functions", "azure-functions"];
+   `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'lower' is declared but never used. Unused variables should start with a '_'.
+    ,-[scripts/docs/generate-static-traceability.mjs:85:9]
+ 84 |   const text = fs.readFileSync(file, "utf8");
+ 85 |   const lower = text.toLowerCase();
+    :         ^^|^^
+    :           `-- 'lower' is declared here
+ 86 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! react(preserve-manual-memoization): Existing memoization could not be preserved
+     ,-[src/pages/AutomationHub.jsx:442:6]
+ 427 |   const supplierMatches = useMemo(() => {
+ 428 |     if (!result?.supplierName) return [];
+     :          ^^^^^^^^^^|^^^^^^^^^
+     :                    `-- This dependency is inferred here
+ 429 |     return suppliers
+ 430 |       .filter((supplier) => supplier.active !== false)
+ 431 |       .map((supplier) => ({
+ 432 |         ...supplier,
+ 433 |         score: supplierScore(result.supplierName, supplier.supplier_name),
+ 434 |       }))
+ 435 |       .filter((supplier) => supplier.score >= 35)
+ 436 |       .sort(
+ 437 |         (a, b) =>
+ 438 |           b.score - a.score ||
+ 439 |           a.supplier_name.localeCompare(b.supplier_name),
+ 440 |       )
+ 441 |       .slice(0, 5);
+ 442 |   }, [result?.supplierName, suppliers]);
+     :      ^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^
+     :                      `-- This dependency list does not match the dependencies inferred from the callback
+ 443 | 
+     `----
+  help: React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `result`, but the source dependencies were [result?.supplierName, suppliers]. Inferred
+        less specific property than source
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/preserve-manual-memoization
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/AutomationHub.jsx:449:9]
+ 443 | 
+ 444 |   useEffect(() => {
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 445 |     try {
+ 446 |       const saved = sessionStorage.getItem(REVIEW_KEY);
+ 447 |       if (saved) {
+ 448 |         const state = JSON.parse(saved);
+ 449 |         setResult(state.result || null);
+     :         ^^^^|^^^^
+     :             `-- Avoid calling setState() directly within an effect
+ 450 |         setMatches(state.matches || {});
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'refreshAll'
+     ,-[src/pages/AutomationHub.jsx:529:6]
+ 480 |         sessionStorage.removeItem(CREATED_KEY);
+ 481 |         void refreshAll();
+     :              ^^^^^|^^^^
+     :                   `-- useEffect uses `refreshAll` here
+ 482 |         setMessage(
+ 483 |           "New product created and linked. Review quantity/price, then Confirm Line to learn this supplier description for future invoices.",
+ 484 |         );
+ 485 |       }
+ 486 | 
+ 487 |       const bulkCreated = sessionStorage.getItem(BULK_CREATED_KEY);
+ 488 |       if (bulkCreated) {
+ 489 |         const createdRows = JSON.parse(bulkCreated);
+ 490 |         if (Array.isArray(createdRows) && createdRows.length) {
+ 491 |           setResolution((current) => {
+ 492 |             const next = { ...current };
+ 493 |             for (const item of createdRows) {
+ 494 |               next[item.lineIndex] = {
+ 495 |                 ...(next[item.lineIndex] || {}),
+ 496 |                 productId: item.productId,
+ 497 |                 status: "SELECTED_NEEDS_CONFIRMATION",
+ 498 |                 source: "CREATED_PRODUCT",
+ 499 |               };
+ 500 |             }
+ 501 |             return next;
+ 502 |           });
+ 503 |           setMatches((current) => {
+ 504 |             const next = { ...current };
+ 505 |             for (const item of createdRows) {
+ 506 |               next[item.lineIndex] = [{
+ 507 |                 product_id: item.productId,
+ 508 |                 product_name: item.productName || "Newly created product",
+ 509 |                 score: 1,
+ 510 |                 match_source: "CREATED_PRODUCT",
+ 511 |               }];
+ 512 |             }
+ 513 |             return next;
+ 514 |           });
+ 515 |           void refreshAll().then((refreshResult) => {
+ 516 |             setMessage(
+ 517 |               refreshResult?.ok
+ 518 |                 ? `${createdRows.length} new OCR product(s) were bulk-created, verified and loaded into Product Master. Review quantity/price and confirm each line before Receive Stock.`
+ 519 |                 : `${createdRows.length} product(s) were created and linked, but Product Master refresh failed. Do not bulk-create again; refresh this page before Receive Stock.`,
+ 520 |             );
+ 521 |           });
+ 522 |         }
+ 523 |         sessionStorage.removeItem(BULK_CREATED_KEY);
+ 524 |       }
+ 525 |     } catch {
+ 526 |       sessionStorage.removeItem(REVIEW_KEY);
+ 527 |       sessionStorage.removeItem(CREATED_KEY);
+ 528 |     }
+ 529 |   }, []);
+     :      ^^
+ 530 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'persistReviewDraft'
+      ,-[src/pages/AutomationHub.jsx:1091:6]
+ 1087 |     const timer = window.setTimeout(() => {
+ 1088 |       persistReviewDraft({ silent: true });
+      :       ^^^^^^^^^|^^^^^^^^
+      :                `-- useEffect uses `persistReviewDraft` here
+ 1089 |     }, 1200);
+ 1090 |     return () => window.clearTimeout(timer);
+ 1091 |   }, [ingestionId, result, matches, resolution, supplierId, confirmedSupplier, sourceFileName, charges]);
+      :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1092 | 
+      `----
+  help: Either include it or remove the dependency array.
+
+  ! File is too long to fit on the screen
+  help: src/pages/Audit.jsx seems like a minified file
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Approvals.jsx:49:18]
+ 48 | 
+ 49 |   useEffect(()=>{load()},[]);
+    :   ^^^^|^^^^      ^^|^
+    :       |            `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 50 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Identifier 'purchaseIdentityIssues' is imported but never used.
+    ,-[src/pages/Purchases.jsx:16:3]
+ 15 |   findSuspiciousDuplicateGroups,
+ 16 |   purchaseIdentityIssues,
+    :   ^^^^^^^^^^^|^^^^^^^^^^
+    :              `-- 'purchaseIdentityIssues' is imported here
+ 17 |   purchaseLineReviewReasons,
+    `----
+  help: Consider removing this import.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/Purchases.jsx:399:6]
+ 392 |  }
+ 393 |  useEffect(()=>{
+     :  ^^^^|^^^^
+     :      `-- This is the containing effect
+ 394 |    if(!lastScan?.id||lastScan.source!=="PHONE_REMOTE")return;
+ 395 |    const scan=String(lastScan.barcode||"").trim();
+ 396 |    if(!scan)return;
+ 397 | 
+ 398 |    if(createIndex!=null&&createForm){
+ 399 |      setCreateForm(current=>current?{...current,barcode:scan}:current);
+     :      ^^^^^^|^^^^^^
+     :            `-- Avoid calling setState() directly within an effect
+ 400 |      setMessage(`Barcode ${scan} received from paired phone and filled into Prepare New Product. Nothing is committed yet.`);
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'saveServer', and 'snapshot'
+     ,-[src/pages/Purchases.jsx:251:4]
+ 185 |    timer.current=setTimeout(async()=>{
+ 186 |      const p=snapshot();
+     :              ^^^^^^^^
+ 187 | 
+ 188 |      // Start the encrypted local recovery write first, but never allow a local
+ 189 |      // IndexedDB failure to prevent an online authoritative server save.
+ 190 |      const localAttempt=saveOfflinePurchaseDraft(draftId,p)
+ 191 |        .then(result=>({ok:true,result}))
+ 192 |        .catch(error=>({ok:false,error}));
+ 193 | 
+ 194 |      if(online&&ingestionId){
+ 195 |        setSync("SYNCING");
+ 196 |        try{
+ 197 |          await saveServer(p);
+     :                ^^^^^^^^^^
+ 198 |          setSync("SYNCED");
+ 199 |        }catch(serverError){
+ 200 |          const local=await localAttempt;
+ 201 |          try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+ 202 |          setSync("SYNC ERROR");
+ 203 |          setMessage(
+ 204 |            local.ok
+ 205 |              ?(serverError?.message||"Server draft sync failed. A local recovery copy was kept.")
+ 206 |              :((serverError?.message||"Server draft sync failed.")+" Local recovery copy also failed"+(local.error?.message?": "+local.error.message:"."))
+ 207 |          );
+ 208 |          return;
+ 209 |        }
+ 210 | 
+ 211 |        // Server is authoritative and already safe at this point. Local backup
+ 212 |        // maintenance is a separate class and must never downgrade SYNCED.
+ 213 |        const local=await localAttempt;
+ 214 |        try{
+ 215 |          await removeOfflinePurchaseDraft(draftId);
+ 216 |          const currentLocal=await loadOfflinePurchaseDraft(draftId).catch(()=>null);
+ 217 |          if(currentLocal)throw new Error("Current invoice local backup still exists after cleanup.");
+ 218 |          try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+ 219 |          if(!local.ok){
+ 220 |            setMessage("Server draft synced. Local recovery backup was unavailable, but the server copy is safe.");
+ 221 |          }
+ 222 |        }catch(cleanupError){
+ 223 |          try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+ 224 |          setMessage("Server draft synced. Local backup cleanup pending"+(cleanupError?.message?": "+cleanupError.message:"."));
+ 225 |        }
+ 226 |        return;
+ 227 |      }
+ 228 | 
+ 229 |      const local=await localAttempt;
+ 230 |      try{setOfflineCount(await countOfflinePurchaseDrafts());}catch{}
+ 231 | 
+ 232 |      if(!online){
+ 233 |        if(local.ok&&local.result?.saved){
+ 234 |          setSync("OFFLINE");
+ 235 |        }else{
+ 236 |          setSync("LOCAL DRAFT ERROR");
+ 237 |          setMessage(local.error?.message||"Local recovery draft could not be saved.");
+ 238 |        }
+ 239 |        return;
+ 240 |      }
+ 241 | 
+ 242 |      // Manual, non-ingestion purchase: there is no server review-draft RPC.
+ 243 |      if(local.ok){
+ 244 |        setSync(local.result?.saved?"LOCAL SAVED":"ONLINE");
+ 245 |      }else{
+ 246 |        setSync("LOCAL DRAFT ERROR");
+ 247 |        setMessage(local.error?.message||"Local purchase draft could not be saved.");
+ 248 |      }
+ 249 |    },700);
+ 250 |    return()=>clearTimeout(timer.current);
+ 251 |  },[supplierName,supplierId,invoiceNumber,invoiceDate,notes,items,charges,financialSummary,loaded,ingestionId,draftId,online]);
+     :    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 252 |  useEffect(()=>{let alive=true;(async()=>{setLoaded(false);let ingestion=null,serverDraft=null;if(queryIngestion){const{data,error}=await supabase.from("invoice_ingestions").select("id,review_draft,normalized_invoice,extracted_supplier_name,extracted_invoice_number,extracted_invoice_date,extracted_total,purchase_id").eq("id",queryIngestion).maybeSingle();if(!alive)return;if(error)throw error;ingestion=data;setIngestionId(data?.id||queryIngestion);serverDraft=data?.review_draft?.stage==="RECEIVE_STOCK"?data.review_draft.purchaseDraft:null;}let source=serverDraft;if(!source){const local=await loadOfflinePurchaseDraft(queryIngestion?`ingestion:${queryIngestion}`:draftId).catch(()=>null);if(!online&&local?.payload)source=local.payload;}if(!source){try{const d=JSON.parse(sessionStorage.getItem("wineshop_ocr_purchase_draft")||"null");if(d&&(!queryIngestion||String(d.ingestionId||"")===queryIngestion))source=d;}catch{}}
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! File is too long to fit on the screen
+  help: src/pages/Purchases.jsx seems like a minified file
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/PurchaseIntelligence.jsx:50:18]
+ 49 | 
+ 50 |   useEffect(()=>{loadSupplierIntelligence()},[]);
+    :   ^^^^|^^^^      ^^^^^^^^^^^^|^^^^^^^^^^^
+    :       |                      `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 51 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Variable 'activeCameraLabel' is declared but never used. Unused variables should start with a '_'.
+     ,-[src/components/MobileBarcodeScanner.jsx:192:10]
+ 191 |   const [activeDeviceId, setActiveDeviceId] = useState("");
+ 192 |   const [activeCameraLabel, setActiveCameraLabel] = useState("");
+     :          ^^^^^^^^|^^^^^^^^
+     :                  `-- 'activeCameraLabel' is declared here
+ 193 |   const [cameraResolution, setCameraResolution] = useState("");
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'cameraResolution' is declared but never used. Unused variables should start with a '_'.
+     ,-[src/components/MobileBarcodeScanner.jsx:193:10]
+ 192 |   const [activeCameraLabel, setActiveCameraLabel] = useState("");
+ 193 |   const [cameraResolution, setCameraResolution] = useState("");
+     :          ^^^^^^^^|^^^^^^^
+     :                  `-- 'cameraResolution' is declared here
+ 194 |   const [torchSupported, setTorchSupported] = useState(false);
+     `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Function 'field' is declared but never used.
+   ,-[supabase/functions/invoice-automation-ingest/index.ts:6:10]
+ 5 | function normalize(v:unknown){return String(v||"").toLowerCase().replace(/&/g," and ").replace(/\b(private|pvt|limited|ltd|llp|company|co)\b/g," ").replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");}
+ 6 | function field(f:any){return f?.content??f?.valueString??f?.valueNumber??f?.valueDate??null;}
+   :          ^^|^^
+   :            `-- 'field' is declared here
+ 7 | function number(f:any){const v=f?.valueNumber??f?.valueCurrency?.amount??f?.content;const n=Number(String(v??"").replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:null;}
+   `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Function 'number' is declared but never used.
+   ,-[supabase/functions/invoice-automation-ingest/index.ts:7:10]
+ 6 | function field(f:any){return f?.content??f?.valueString??f?.valueNumber??f?.valueDate??null;}
+ 7 | function number(f:any){const v=f?.valueNumber??f?.valueCurrency?.amount??f?.content;const n=Number(String(v??"").replace(/[^0-9.-]/g,""));return Number.isFinite(n)?n:null;}
+   :          ^^^|^^
+   :             `-- 'number' is declared here
+ 8 | async function hashBase64(s:string){const raw=atob(s);const b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);const d=await crypto.subtle.digest("SHA-256",b);return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,"0")).join("");}
+   `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/LegalNoticeBoundary.jsx:47:10]
+ 45 | 
+ 46 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 47 |     void load();
+    :          ^^|^
+    :            `-- Avoid calling setState() directly within an effect
+ 48 |   }, [load]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'user'
+    ,-[src/components/LegalNoticeBoundary.jsx:44:6]
+ 22 |   const load = useCallback(async () => {
+ 23 |     if (!user) {
+    :          ^^|^
+    :            `-- useCallback uses `user` here
+ 24 |       setState({ loading:false, notice:null, error:"" });
+ 25 |       return;
+ 26 |     }
+ 27 |     if (!navigator.onLine) {
+ 28 |       setState({ loading:false, notice:{ enabled:false, accepted:false }, error:"" });
+ 29 |       return;
+ 30 |     }
+ 31 | 
+ 32 |     setState((current) => ({ ...current, loading:true, error:"" }));
+ 33 |     const { data, error } = await supabase.rpc("my_legal_notice");
+ 34 |     if (error) {
+ 35 |       if (missingRpc(error)) {
+ 36 |         console.warn("Legal notice RPC not available; compatibility mode keeps the gate disabled.");
+ 37 |         setState({ loading:false, notice:{ enabled:false, accepted:false }, error:"" });
+ 38 |       } else {
+ 39 |         setState({ loading:false, notice:null, error:error.message || "Unable to verify the pilot/privacy notice." });
+ 40 |       }
+ 41 |       return;
+ 42 |     }
+ 43 |     setState({ loading:false, notice:one(data), error:"" });
+ 44 |   }, [user?.id]);
+    :      ^^^^^^^^^^
+ 45 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+     ,-[src/context/SaaSContext.jsx:141:17]
+ 140 | 
+ 141 | export function useSaaS() {
+     :                 ^^^^^^^
+ 142 |   const value = useContext(SaaSContext);
+     `----
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/context/SaaSContext.jsx:71:5]
+ 69 | 
+ 70 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 71 |     setState(null);
+    :     ^^^^|^^^
+    :         `-- Avoid calling setState() directly within an effect
+ 72 |     setError("");
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'user'
+    ,-[src/context/SaaSContext.jsx:82:6]
+ 75 | 
+ 76 |     if (user) {
+    :         ^^|^
+    :           `-- useEffect uses `user` here
+ 77 |       setLoading(true);
+ 78 |       void refresh();
+ 79 |     } else {
+ 80 |       setLoading(false);
+ 81 |     }
+ 82 |   }, [user?.id, refresh]);
+    :      ^^^^^^^^^^^^^^^^^^^
+ 83 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'user'
+     ,-[src/context/SaaSContext.jsx:109:6]
+  84 |   useEffect(() => {
+  85 |     if (!user) return undefined;
+     :          ^^|^
+     :            `-- useEffect uses `user` here
+  86 | 
+  87 |     const intervalId = window.setInterval(() => {
+  88 |       void refresh({ silent:true });
+  89 |     }, POLL_MS);
+  90 | 
+  91 |     const onFocus = () => void refresh({ silent:true });
+  92 |     const onOnline = () => void refresh({ silent:true });
+  93 |     const onVisibility = () => {
+  94 |       if (document.visibilityState === "visible") {
+  95 |         void refresh({ silent:true });
+  96 |       }
+  97 |     };
+  98 | 
+  99 |     window.addEventListener("focus", onFocus);
+ 100 |     window.addEventListener("online", onOnline);
+ 101 |     document.addEventListener("visibilitychange", onVisibility);
+ 102 | 
+ 103 |     return () => {
+ 104 |       window.clearInterval(intervalId);
+ 105 |       window.removeEventListener("focus", onFocus);
+ 106 |       window.removeEventListener("online", onOnline);
+ 107 |       document.removeEventListener("visibilitychange", onVisibility);
+ 108 |     };
+ 109 |   }, [user?.id, refresh]);
+     :      ^^^^^^^^^^^^^^^^^^^
+ 110 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/context/GlobalErrorContext.jsx:96:17]
+ 95 | 
+ 96 | export function useGlobalError() {
+    :                 ^^^^^^^^^^^^^^
+ 97 |   const value = useContext(GlobalErrorContext);
+    `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+     ,-[src/context/GlobalErrorContext.jsx:104:17]
+ 103 | 
+ 104 | export function reportGlobalError(error, options = {}) {
+     :                 ^^^^^^^^^^^^^^^^^
+ 105 |   window.dispatchEvent(
+     `----
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/LegalAdminCard.jsx:58:10]
+ 56 | 
+ 57 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 58 |     void load();
+    :          ^^|^
+    :            `-- Avoid calling setState() directly within an effect
+ 59 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-control-regex): Unexpected control character
+   ,-[src/lib/barcode.js:3:40]
+ 2 |   // Preserve leading zeros; remove whitespace/control characters scanners may append.
+ 3 |   return String(value ?? "").replace(/[\u0000-\u0020\u007f-\u009f]/g, "").trim();
+   :                                        ^^^|^^
+   :                                           `-- 'U+0000' is a control character.
+ 4 | }
+   `----
+  help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/Layout.jsx:47:5]
+ 45 | 
+ 46 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 47 |     setMobileOpen(false);
+    :     ^^^^^^|^^^^^^
+    :           `-- Avoid calling setState() directly within an effect
+ 48 |   }, [location.pathname]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has missing dependencies: 'verifyBarcode', 'lastScan.barcode', and 'lastScan.at'
+     ,-[src/components/ProductEnrichmentPanel.jsx:235:6]
+ 230 |     if (stage !== "SELECTED_AWAITING_BARCODE" || !lastScan?.id) return;
+ 231 |     const scanTime = Date.parse(lastScan.at || "");
+     :                                 ^^^^^^^^
+ 232 |     if (Number.isFinite(scanTime) && scanTime < selectedAtRef.current) return;
+ 233 |     void verifyBarcode(lastScan.barcode);
+     :          ^^^^^^^^^^^^^ ^^^^^^^^
+ 234 |     // lastScan.id is the one-event consumption key; do not replay old scans.
+ 235 |   }, [lastScan?.id, stage]);
+     :      ^^^^^^^^^^^^^^^^^^^^^
+ 236 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+     ,-[src/context/AuthContext.jsx:208:17]
+ 207 | 
+ 208 | export function useAuth() {
+     :                 ^^^^^^^
+ 209 |   const context = useContext(AuthContext);
+     `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/components/GlobalPhoneScannerHost.jsx:10:17]
+  9 | 
+ 10 | export function loadPhonePairing() {
+    :                 ^^^^^^^^^^^^^^^^
+ 11 |   try {
+    `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/components/GlobalPhoneScannerHost.jsx:20:17]
+ 19 | 
+ 20 | export function clearPhonePairing() {
+    :                 ^^^^^^^^^^^^^^^^^
+ 21 |   localStorage.removeItem(PHONE_PAIRING_KEY);
+    `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/components/GlobalPhoneScannerHost.jsx:25:17]
+ 24 | 
+ 25 | export function savePhonePairing(value) {
+    :                 ^^^^^^^^^^^^^^^^
+ 26 |   if (!value?.shopId || !value?.sessionId || !value?.token) {
+    `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/components/GlobalPhoneScannerHost.jsx:33:17]
+ 32 | 
+ 33 | export function makePhonePairing(shopId) {
+    :                 ^^^^^^^^^^^^^^^^
+ 34 |   if (!shopId) throw new Error("A shop is required before pairing a phone.");
+    `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/components/GlobalPhoneScannerHost.jsx:46:17]
+ 45 | 
+ 46 | export function pairingTopic(pairing) {
+    :                 ^^^^^^^^^^^^
+ 47 |   return `global-phone:${pairing.shopId}:${pairing.sessionId}:${pairing.token}`;
+    `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+    ,-[src/components/GlobalPhoneScannerHost.jsx:50:17]
+ 49 | 
+ 50 | export function pairingUrl(pairing) {
+    :                 ^^^^^^^^^^
+ 51 |   const q = new URLSearchParams({
+    `----
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/PurchaseVerificationEngine.jsx:20:34]
+ 19 |   async function loadState(){const{data,error}=await supabase.rpc("get_purchase_verification_state",{p_purchase_id:purchase.id});if(error){setStateError(`Verification engine unavailable; showing safe fallback: ${error.message}`);setServerState(null);}else{setStateError("");setServerState(data||null);}}
+ 20 |   useEffect(()=>{if(purchase?.id)loadState();},[purchase?.id]);
+    :   ^^^^|^^^^                      ^^^^|^^^^
+    :       |                              `-- Avoid calling setState() directly within an effect
+    :       `-- This is the containing effect
+ 21 | 
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'loadState'
+    ,-[src/components/PurchaseVerificationEngine.jsx:20:48]
+ 19 |   async function loadState(){const{data,error}=await supabase.rpc("get_purchase_verification_state",{p_purchase_id:purchase.id});if(error){setStateError(`Verification engine unavailable; showing safe fallback: ${error.message}`);setServerState(null);}else{setStateError("");setServerState(data||null);}}
+ 20 |   useEffect(()=>{if(purchase?.id)loadState();},[purchase?.id]);
+    :                                  ^^^^|^^^^     ^^^^^^^^^^^^^^
+    :                                      `-- useEffect uses `loadState` here
+ 21 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+   ,-[src/context/ScannerContext.jsx:7:14]
+ 6 | 
+ 7 | export const SCANNER_DEFAULTS = {
+   :              ^^^^^^^^^^^^^^^^
+ 8 |   enabled: true,
+   `----
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+     ,-[src/context/ScannerContext.jsx:251:17]
+ 250 | 
+ 251 | export function useScanner() {
+     :                 ^^^^^^^^^^
+ 252 |   const value = useContext(ScannerContext);
+     `----
+
+  ! react-hooks(exhaustive-deps): React Hook useMemo has missing dependencies: 'successBeep', 'saveSettings', and 'errorBeep'
+     ,-[src/context/ScannerContext.jsx:245:5]
+ 238 |       settings,
+ 239 |       saveSettings,
+     :       ^^^^^^^^^^^^
+ 240 |       lastScan,
+ 241 |       successBeep,
+     :       ^^^^^^^^^^^
+ 242 |       errorBeep,
+     :       ^^^^^^^^^
+ 243 |       injectScan,
+ 244 |     }),
+ 245 |     [settings, lastScan, injectScan]
+     :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 246 |   );
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/SidebarExtras.jsx:17:7]
+ 12 | 
+ 13 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 14 |     try {
+ 15 |       const storedImage = localStorage.getItem(IMG_KEY) || "";
+ 16 |       const storedHeight = Number(localStorage.getItem(H_KEY) || "150");
+ 17 |       setImage(storedImage);
+    :       ^^^^|^^^
+    :           `-- Avoid calling setState() directly within an effect
+ 18 |       setHeight(Math.min(260, Math.max(92, storedHeight || 150)));
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(purity): Cannot call impure function during render
+    ,-[src/components/PhoneToPcScannerPanel.jsx:78:5]
+ 77 |     phoneSeenAt > 0 &&
+ 78 |     Date.now() - phoneSeenAt < HEARTBEAT_STALE_MS &&
+    :     ^^^^^|^^^^
+    :          `-- Cannot call impure function
+ 79 |     secondsLeft > 0;
+    `----
+  help: `Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component re-renders
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/purity
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/PhoneToPcScannerPanel.jsx:83:7]
+ 80 | 
+ 81 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 82 |     if (!pairing) {
+ 83 |       setSecondsLeft(0);
+    :       ^^^^^^^|^^^^^^
+    :              `-- Avoid calling setState() directly within an effect
+ 84 |       return undefined;
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/components/PhoneToPcScannerPanel.jsx:105:5]
+ 100 | 
+ 101 |   useEffect(() => {
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 102 |     if (!pairing) return undefined;
+ 103 | 
+ 104 |     ackCacheRef.current = new Map();
+ 105 |     setPhoneSeenAt(0);
+     :     ^^^^^^^|^^^^^^
+     :            `-- Avoid calling setState() directly within an effect
+ 106 |     setLastScan(null);
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/SpiritualImageTile.jsx:24:7]
+ 21 | 
+ 22 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 23 |     try {
+ 24 |       setImage(localStorage.getItem(`${baseKey}_image`) || "");
+    :       ^^^^|^^^
+    :           `-- Avoid calling setState() directly within an effect
+ 25 |       setHeight(clampHeight(localStorage.getItem(`${baseKey}_height`) || DEFAULT_HEIGHT));
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(purity): Cannot call impure function during render
+     ,-[src/components/SaaSBanner.jsx:397:34]
+ 396 |   const environment = getEnvironment();
+ 397 |   const [now, setNow] = useState(Date.now());
+     :                                  ^^^^^|^^^^
+     :                                       `-- Cannot call impure function
+ 398 | 
+     `----
+  help: `Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component re-renders
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/purity
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/components/SaaSBanner.jsx:59:7]
+ 56 | 
+ 57 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 58 |     try {
+ 59 |       setAcked(sessionStorage.getItem(key) === "1");
+    :       ^^^^|^^^
+    :           `-- Avoid calling setState() directly within an effect
+ 60 |     } catch {
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useMemo has a missing dependency: 'saas'
+     ,-[src/components/SaaSBanner.jsx:407:6]
+ 404 |       const billingNotice = useMemo(() => {
+ 405 |         if (saas.isDemo) return buildDemoNotice(saas, now);
+     :                                                 ^^|^
+     :                                                   `-- useMemo uses `saas` here
+ 406 |         return buildLiveBillingNotice({saas, role:profile?.role, now});
+ 407 | ,->   }, [
+ 408 | |       saas.isDemo,
+ 409 | |       saas.trialEndsAt,
+ 410 | |       saas.expiresAt,
+ 411 | |       saas.planCode,
+ 412 | |       saas.subscriptionStatus,
+ 413 | |       saas.isPlatformAdmin,
+ 414 | |       profile?.role,
+ 415 | |       now,
+ 416 | `->   ]);
+ 417 |     
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+     ,-[src/context/ShopContext.jsx:528:17]
+ 527 | 
+ 528 | export function useShop(){const c=useContext(ShopContext);if(!c)throw new Error("useShop must be used inside ShopProvider");return c;}
+     :                 ^^^^^^^
+     `----
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/context/ShopContext.jsx:207:21]
+ 206 | 
+ 207 |   useEffect(() => { refreshAll(); }, [refreshAll]);
+     :   ^^^^|^^^^         ^^^^^|^^^^
+     :       |                  `-- Avoid calling setState() directly within an effect
+     :       `-- This is the containing effect
+ 208 |   useEffect(() => { const fn = () => refreshAll(); window.addEventListener("online", fn); return () => window.removeEventListener("online", fn); }, [refreshAll]);
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/context/ShopContext.jsx:212:7]
+ 209 | 
+ 210 |   useEffect(() => {
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+ 211 |     if (!canUseShop || !profile?.shop_id || !user?.id) {
+ 212 |       setStockSyncStatus(isDemo ? "DEMO" : "IDLE");
+     :       ^^^^^^^^^|^^^^^^^^
+     :                `-- Avoid calling setState() directly within an effect
+ 213 |       return undefined;
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useCallback has a missing dependency: 'profile'
+     ,-[src/context/ShopContext.jsx:205:6]
+ 167 |       const [salesResult, purchasesResult] = await Promise.all([
+ 168 |         loadSalesRows(profile, productById),
+     :                       ^^^|^^^
+     :                          `-- useCallback uses `profile` here
+ 169 |         profile?.role === "CASHIER"
+ 170 |           ? Promise.resolve({ data: [], error: null })
+ 171 |           : supabase.from("purchases").select(`id,purchase_number,supplier_id,supplier_name_snapshot,invoice_number,invoice_date,subtotal,tax,total,status,notes,created_at,freight_amount,transport_amount,handling_amount,loading_unloading_amount,supplier_discount_amount,invoice_discount_amount,miscellaneous_amount,rounding_adjustment,total_landed_cost,purchase_items(id,product_id,quantity,purchase_unit,case_count,units_per_case,loose_bottles,purchase_price,line_total)`).order("created_at", { ascending: false }).limit(1000),
+ 172 |       ]);
+ 173 |       const operationalErrors = [];
+ 174 |       const cacheSnapshot = readCache() || {};
+ 175 |       const nextSales = salesResult.error ? (cacheSnapshot.sales || []) : (salesResult.data || []);
+ 176 |       const nextPurchases = purchasesResult.error
+ 177 |         ? (cacheSnapshot.purchases || [])
+ 178 |         : (purchasesResult.data || []).map((r) => normalizePurchase(r, productById));
+ 179 | 
+ 180 |       if (salesResult.error) {
+ 181 |         operationalErrors.push(`Sales headers: ${salesResult.error.message || salesResult.error}`);
+ 182 |       } else {
+ 183 |         setSales(nextSales);
+ 184 |         if (salesResult.warning) operationalErrors.push(salesResult.warning);
+ 185 |       }
+ 186 | 
+ 187 |       if (purchasesResult.error) operationalErrors.push(`Purchases: ${purchasesResult.error.message || purchasesResult.error}`);
+ 188 |       else setPurchases(nextPurchases);
+ 189 | 
+ 190 |       writeCache({ products: normalizedProducts, inventory: stockMap, sales: nextSales, purchases: nextPurchases, categories: categoriesResult.data || [], suppliers: suppliersResult.data || [] });
+ 191 | 
+ 192 |       if (operationalErrors.length) {
+ 193 |         const message = `Core shop data refreshed. ${operationalErrors.join(" · ")}`;
+ 194 |         setDataError(message);
+ 195 |         return { ok: true, partial: true, message, salesOk: !salesResult.error, salesHeaderCount: Number(salesResult.headerCount || nextSales.length || 0), purchasesOk: !purchasesResult.error };
+ 196 |       }
+ 197 |       return { ok: true, salesOk: true, salesHeaderCount: Number(salesResult.headerCount || nextSales.length || 0), purchasesOk: true };
+ 198 |     } catch (error) {
+ 199 |       const message = error?.message || String(error); setDataError(message);
+ 200 |       const c = readCache();
+ 201 |       const connectivity=await probeBackendConnectivity({timeoutMs:2500});
+ 202 |       if (!connectivity.reachable && c) return { ok: true, offline: true, message: "Using cached offline data." };
+ 203 |       return { ok: false, message };
+ 204 |     } finally { setLoadingData(false); }
+ 205 |   }, [canUseShop, profile?.role, profile?.user_id]);
+     :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 206 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useMemo has a missing dependency: 'getStock'
+     ,-[src/context/ShopContext.jsx:523:101]
+ 522 |   function createBackup(){return{meta:{app:"WineShopPOS",mode:"SUPABASE_CLOUD",exportedAt:new Date().toISOString()},data:{products,inventory,sales,purchases}}}
+ 523 |   const lowStockProducts=useMemo(()=>products.filter((p)=>p.active&&getStock(p.id)<=p.minimumStock),[products,inventory]);
+     :                                                                     ^^^^|^^^                        ^^^^^^^^^^^^^^^^^^^^
+     :                                                                         `-- useMemo uses `getStock` here
+ 524 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react-hooks(exhaustive-deps): React Hook useMemo has unnecessary dependency: inventory
+     ,-[src/context/ShopContext.jsx:523:101]
+ 522 |   function createBackup(){return{meta:{app:"WineShopPOS",mode:"SUPABASE_CLOUD",exportedAt:new Date().toISOString()},data:{products,inventory,sales,purchases}}}
+ 523 |   const lowStockProducts=useMemo(()=>products.filter((p)=>p.active&&getStock(p.id)<=p.minimumStock),[products,inventory]);
+     :                                                                                                     ^^^^^^^^^^^^^^^^^^^^
+ 524 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/components/ProductForm.jsx:108:7]
+  94 | 
+  95 |   useEffect(() => {
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+  96 |     const identity = initialFormIdentity(initialValue);
+  97 |     if (initializedIdentityRef.current === identity) return;
+  98 |     initializedIdentityRef.current = identity;
+  99 | 
+ 100 |     if (initialValue) {
+ 101 |       const incomingMrp = Number(initialValue.mrp ?? 0);
+ 102 |       const incomingPrice = Number(initialValue.price ?? 0);
+ 103 |       const effectivePrice =
+ 104 |         Number.isFinite(incomingPrice) && incomingPrice > 0
+ 105 |           ? incomingPrice
+ 106 |           : defaultSellingFromMrp(incomingMrp);
+ 107 | 
+ 108 |       setForm({
+     :       ^^^|^^^
+     :          `-- Avoid calling setState() directly within an effect
+ 109 |         ...emptyProduct, ...initialValue,
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'loadImageChoices'
+     ,-[src/components/ProductForm.jsx:441:6]
+ 430 |         const timer = window.setTimeout(() => {
+ 431 |           void loadImageChoices("INDIA", {
+     :                ^^^^^^^^|^^^^^^^
+     :                        `-- useEffect uses `loadImageChoices` here
+ 432 |             autoSelect: true,
+ 433 |             silent: true,
+ 434 |           });
+ 435 |         }, 550);
+ 436 |     
+ 437 |         return () => {
+ 438 |           window.clearTimeout(timer);
+ 439 |           imageChoiceRequestRef.current += 1;
+ 440 |         };
+ 441 | ,->   }, [
+ 442 | |       initialValue?.id,
+ 443 | |       profile?.shop_id,
+ 444 | |       form.name,
+ 445 | |       form.brand,
+ 446 | |       form.sizeMl,
+ 447 | |       form.lookupPackageType,
+ 448 | |       form.imageFile,
+ 449 | `->   ]);
+ 450 |     
+     `----
+  help: Either include it or remove the dependency array.
+
+Found 134 warnings and 0 errors.
+Finished in 415ms on 222 files with 104 rules using 8 threads.
+
+> wineshoppos@0.0.0 docs:check
+> node scripts/docs/check-doc-system.mjs
+
+DOC SYSTEM CHECK: PASS (v5)
+[36mvite v8.2.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 2318 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     0.51 kB │ gzip:   0.31 kB
+dist/assets/index-Csi3Y8ep.css    193.15 kB │ gzip:  37.04 kB
+dist/assets/index-DnuZEmbp.js   1,597.55 kB │ gzip: 427.98 kB
+
+[32m✓ built in 3.58s[39m
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[33m[33m[PLUGIN_TIMINGS] [0mYour build spent 45% of 3.6s inside plugin hooks (1.6s).
+Measured inside the callback, so queue time is excluded and time the callback itself awaited is not:
+  - vite:css transform (37%, 1.3s, 7 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+[39m
+Listing tests:
+  read-only.spec.mjs:18:1 › public login page renders
+  read-only.spec.mjs:25:1 › valid active account enters app without browser refresh
+  read-only.spec.mjs:45:3 › authenticated read-only smoke › core modules load
+  read-only.spec.mjs:54:3 › authenticated read-only smoke › Invoice Inbox exposes friendly labels
+  read-only.spec.mjs:65:3 › authenticated read-only smoke › POS search and scanner diagnostics follow current shift-safe placement
+  read-only.spec.mjs:78:3 › authenticated read-only smoke › Admin Product Cleanup opens without deletion
+  read-only.spec.mjs:85:3 › authenticated read-only smoke › Admin Backup & Recovery loads restore history without schema error
+  v4-commercial-readiness.spec.mjs:16:1 › V4 demo login is usable on phone viewport
+  v4-commercial-readiness.spec.mjs:24:1 › V4 demo stays isolated and mobile-safe
+  v4-commercial-readiness.spec.mjs:35:1 › V4 tablet login layout has no horizontal overflow
+Total: 10 tests in 2 files
+[4/10] Deep real-invoice V5_29 UAT...
+SKIPPED by SKIP_REAL_INVOICE_UAT=1
+[5/10] Start current V5 locally...
+[6/10] Generate full-app Playwright certification runner...
+[7/10] Whole-app browser + transactional certification...
+FIRST RUN ONLY: sign in once in the visible DEV browser. No terminal input is needed.
+[PASS] Authentication / ADMIN session — shop 5c94dbca-9bb5-451e-831a-8cfa42d06013
+[PASS] QA/DEV environment badge — V5 NOT PROD
+[PASS] All V5 static feature routes — 45 authenticated route surfaces loaded
+[PASS] Users / Access Control backend — 8 user(s) returned by authorized Edge Function
+[PASS] Real Invoice OCR / Purchase / Product Master — deep 3-invoice stage: 16845, B-3339, 16805
+[PASS] Invoice 15983 protection — hard-excluded from real-invoice stage
+[PASS] Phone scanner — physical smoke pre-passed + V5 contracts
+[PASS] USB/Bluetooth scanner — scanner contracts + hardware route; physical wedge remains hardware boundary
+[PASS] Product Image — product-image contract suite + OCR surface
+[PASS] Purchase atomicity / inventory / stock movements — deep invoice stage + receive_purchase_v3 validation
+[PASS] Invoice duplicate/idempotency — deep invoice stage duplicate re-upload check
+[BLOCKED] POS → Sale → Return — invoice QA product absent
+[PASS] Physical Stock Count transaction — 15 SKUs counted exactly; expected zero inventory variance
+[BLOCKED] Role security — MANAGER — credentials not supplied
+[BLOCKED] Role security — CASHIER — credentials not supplied
+[PASS] RLS shop-filter sanity — random foreign shop id returned zero products
+[BLOCKED] Multi-shop isolation — second-shop credentials not supplied
+[PASS] Suppliers — UI + real-invoice supplier resolution
+[PASS] Procurement / Purchase Orders — UI + repository contracts; no fake PO created
+[PASS] Transfers — UI + contracts; mutation depends on configured source/destination
+[PASS] Expenses — UI + authorization surface
+[PASS] Approvals — UI + authorization surface
+[PASS] Customer Credit / Loyalty — UI + POS commercial surface
+[PASS] Offline Queue / Recovery — UI + local-draft/offline contracts
+[PASS] Reports / Compliance — authenticated routes loaded
+[PASS] Owner Center / Profit / Exceptions / Recommendations — all owner routes loaded
+[PASS] Owner AI — authenticated UI loaded; paid generation not forced
+[PASS] Owner WhatsApp — share UI loaded; delivery not sent
+[PASS] Hardware / Printer — setup routes loaded; physical output external
+[PASS] Backup / Recovery — admin route loaded + repository tests
+[PASS] Audit — admin audit route loaded
+[PASS] Settings — admin settings route loaded
+[PASS] Product Cleanup — protected route loaded; destructive deletion not run
+
+FULL CERTIFICATION RESULT: PASS_WITH_BLOCKED_PREREQUISITES
+Report: C:\Users\<redacted>\WineShopPOS_V5_FULL_CERT\20260913_033208\FULL_CERT_SUMMARY.md
+[8/10] Existing Playwright read-only suite when explicit credentials exist...
+Existing read-only.spec.mjs needs E2E_EMAIL/E2E_PASSWORD; master browser session already covered routes.
+[9/10] Source immutability check...
+[10/10] Done.
+
+================================================================
+ V5 FULL MASTER CERTIFICATION FINISHED
+================================================================
+Summary : /c/Users/<redacted>/WineShopPOS_V5_FULL_CERT/20260913_033208/FULL_CERT_SUMMARY.md
+JSON    : /c/Users/<redacted>/WineShopPOS_V5_FULL_CERT/20260913_033208/FULL_CERT_RESULT.json
+Trace   : /c/Users/<redacted>/WineShopPOS_V5_FULL_CERT/20260913_033208/full-cert-trace.zip
+
+PASS = automated coverage passed with all supplied prerequisites.
+PASS_WITH_BLOCKED_PREREQUISITES = tested portions passed, but a role/other-shop/live-session prerequisite was deliberately not fabricated.
+FAIL = at least one certified behavior failed.
+================================================================

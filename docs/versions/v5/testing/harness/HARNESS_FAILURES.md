@@ -117,3 +117,10 @@ Error: Clean-baseline precondition failed: purchases has 1 row(s).
 16845: previously received product missing for barcode 2900000000018.
 ```
 
+
+## 2026-09-13T03:33:28-04:00 — HARNESS_SUCCESS_BASED_E2E
+
+- Runner: SUCCESS-R11-PLUS-UI-DELTA
+- Stage: 15983 / 4-cashier UI stress
+- Evidence: `docs/versions/v5/testing/evidence/success_e2e_20260913_033206`
+- Classification: harness only; **no DEF serial**.
