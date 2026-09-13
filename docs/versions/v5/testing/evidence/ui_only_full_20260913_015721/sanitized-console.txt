@@ -1,0 +1,19 @@
+============================================================
+ V5 PLAYWRIGHT UI-ONLY FULL TEST
+ No direct Supabase calls are made by this runner.
+============================================================
+[PASS] Admin authentication — real V5 login form · QA/DEV badge verified
+[1] Verify fresh DEV state through UI only...
+[PASS] Fresh DEV UI baseline — 0 products · 0 inventory rows · 0 sales · 0 invoice ingestions
+[2.1] OCR + receive invoice 16845 through V5 UI...
+
+[FINAL] V5 PLAYWRIGHT UI-ONLY FULL TEST: FAIL
+[FAIL] locator.fill: Error: strict mode violation: getByLabel('Supplier') resolved to 3 elements:
+    1) <nav class="module-tabs" aria-label="Purchases & Suppliers navigation">…</nav> aka getByRole('navigation', { name: 'Purchases & Suppliers' })
+    2) <input list="supplier-list-v5" value="Kapil Alcotech LLP"/> aka getByRole('combobox', { name: 'Supplier' })
+    3) <input step="0.01" value="1216" type="number"/> aka getByRole('spinbutton', { name: 'Cash / Supplier Discount' })
+
+Call log:
+[2m  - waiting for getByLabel('Supplier')[22m
+
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\test-runs\ui_only_full_20260913_015721
