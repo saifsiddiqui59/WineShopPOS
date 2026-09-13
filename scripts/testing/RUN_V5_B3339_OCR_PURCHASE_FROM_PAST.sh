@@ -3,6 +3,7 @@
 set -Eeuo pipefail
 
 # WineShopPOS V5_29 — current real-invoice zero-touch UAT runner
+# WSP_B3339_REGISTRY_FIX_20260913
 # Scope: DEV/QA only. PROD and invoice 15983 are hard-blocked.
 # Physical phone-scanner smoke test is intentionally NOT repeated here.
 
@@ -2254,10 +2255,34 @@ async function assertInvoiceTargetsNew(fixture) {
 }
 
 async function confirmSupplierOnOcr(fixture) {
-  if (await page.getByText(/Confirmed supplier:/i).isVisible().catch(() => false)) return;
+  const analyzeButton = page.getByRole("button", { name: "Analyze Invoice", exact: true });
+  await analyzeButton.waitFor({ state: "visible", timeout: 120_000 });
 
-  const select = page.getByLabel("Existing Supplier");
-  await select.waitFor({ state: "visible", timeout: 10_000 });
+  const supplierPanel = page.locator("section.panel")
+    .filter({ hasText: "1. Confirm Supplier" })
+    .first();
+  await supplierPanel.waitFor({ state: "visible", timeout: 20_000 });
+
+  const supplierDeadline = Date.now() + 20_000;
+  let select = null;
+  while (Date.now() < supplierDeadline) {
+    const confirmed = supplierPanel.getByText(/Confirmed supplier:/i).first();
+    if (await confirmed.isVisible().catch(() => false)) {
+      const panelText = await supplierPanel.innerText();
+      assert(norm(panelText).includes(norm(fixture.supplier)),
+        `${fixture.invoiceNumber}: auto-confirmed supplier does not match ${fixture.supplier}: ${panelText}`);
+      return;
+    }
+
+    const candidate = supplierPanel.locator("select").first();
+    if (await candidate.isVisible().catch(() => false)) {
+      select = candidate;
+      break;
+    }
+    await page.waitForTimeout(250);
+  }
+  assert(select,
+    `${fixture.invoiceNumber}: supplier panel exposed neither auto-confirmed supplier nor Existing Supplier selector.`);
   const options = await select.locator("option").evaluateAll((els) =>
     els.map((el) => ({ value: el.value, text: el.textContent || "" }))
   );
@@ -2284,7 +2309,10 @@ async function freshOcr(fixture, invoicePath, itemReport) {
   log(`${fixture.invoiceNumber}: running real V5 OCR from physical invoice image.`);
   await page.goto(`${BASE_URL}/#/purchasing/ocr`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Invoice OCR" }).waitFor({ state: "visible", timeout: 15_000 });
-  await page.locator('input[type="file"]').setInputFiles(invoicePath);
+  const ocrUpload = page.locator('input[type="file"][accept*="application/pdf"]');
+  assert(await ocrUpload.count() === 1,
+    `${fixture.invoiceNumber}: expected exactly one Invoice OCR upload input; found ${await ocrUpload.count()}.`);
+  await ocrUpload.setInputFiles(invoicePath);
   await page.getByRole("button", { name: "Analyze Invoice" }).click();
 
   await page.getByText(/1\. Confirm Supplier/i).waitFor({ state: "visible", timeout: 120_000 });
@@ -2452,14 +2480,27 @@ async function normalizeReceiving(fixture, ingestionId, itemReport) {
   const financeText = await finance.innerText();
   assert(/MATCH/i.test(financeText), `${fixture.invoiceNumber}: financial reconciliation is not MATCH: ${financeText}`);
 
-  const syncStrong = page.locator(".purchase-sync-strip strong");
-  await syncStrong.filter({ hasText: "SYNCED" }).waitFor({ state: "visible", timeout: 20_000 });
-  const body = await page.locator("body").innerText();
-  assert(!/SYNC ERROR/.test(body), `${fixture.invoiceNumber}: V5_28B regression — UI still shows SYNC ERROR after server save.`);
+  const readyUi = page.getByText(/^Ready to Receive$/).last();
+  await readyUi.waitFor({ state: "visible", timeout: 20_000 });
 
-  const ingestion = await getIngestionById(ingestionId);
-  assert(ingestion?.review_status === "READY_TO_RECEIVE",
-    `${fixture.invoiceNumber}: server draft status=${ingestion?.review_status}; expected READY_TO_RECEIVE.`);
+  const syncStrong = page.locator(".purchase-sync-strip strong");
+  const readyDeadline = Date.now() + 30_000;
+  let ingestion = null;
+  while (Date.now() < readyDeadline) {
+    const bodyNow = await page.locator("body").innerText();
+    assert(!/SYNC ERROR/.test(bodyNow),
+      `${fixture.invoiceNumber}: V5_28B regression — UI shows SYNC ERROR while waiting for server draft.`);
+    ingestion = await getIngestionById(ingestionId);
+    if (String(ingestion?.review_status || "").toUpperCase() === "READY_TO_RECEIVE") break;
+    await page.waitForTimeout(500);
+  }
+
+  assert(String(ingestion?.review_status || "").toUpperCase() === "READY_TO_RECEIVE",
+    `${fixture.invoiceNumber}: server draft status=${ingestion?.review_status}; expected READY_TO_RECEIVE after settle window.`);
+  await syncStrong.filter({ hasText: "SYNCED" }).waitFor({ state: "visible", timeout: 20_000 });
+  const bodyAfterReady = await page.locator("body").innerText();
+  assert(!/SYNC ERROR/.test(bodyAfterReady),
+    `${fixture.invoiceNumber}: V5_28B regression — UI shows SYNC ERROR after READY_TO_RECEIVE.`);
 
   await screenshot(`${fixture.invoiceNumber.replace(/[^a-z0-9]/gi, "_")}_02_ready_before_receive.png`);
 }
@@ -2562,7 +2603,10 @@ async function duplicateIdempotencyCheck(fixture, invoicePath) {
   log(`${fixture.invoiceNumber}: checking duplicate/idempotency protection.`);
   await page.goto(`${BASE_URL}/#/purchasing/ocr`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Invoice OCR" }).waitFor({ state: "visible", timeout: 15_000 });
-  await page.locator('input[type="file"]').setInputFiles(invoicePath);
+  const ocrUpload = page.locator('input[type="file"][accept*="application/pdf"]');
+  assert(await ocrUpload.count() === 1,
+    `${fixture.invoiceNumber}: expected exactly one Invoice OCR upload input; found ${await ocrUpload.count()}.`);
+  await ocrUpload.setInputFiles(invoicePath);
   await page.getByRole("button", { name: "Analyze Invoice" }).click();
   const duplicate = page.getByText(/Duplicate invoice file detected/i);
   await duplicate.waitFor({ state: "visible", timeout: 40_000 });

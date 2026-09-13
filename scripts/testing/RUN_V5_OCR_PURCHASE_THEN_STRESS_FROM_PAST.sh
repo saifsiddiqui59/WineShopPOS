@@ -54,6 +54,10 @@ s=re.sub(r'(?i)C:\\Users\\[^\\\r\n]+',r'C:\\Users\\<redacted>',s)
 s=re.sub(r'/c/Users/[^/\r\n]+','/c/Users/<redacted>',s)
 s=re.sub(r'\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\b','<redacted-jwt>',s)
 s=re.sub(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}','<redacted-email>',s)
+s=s.replace("\r\n","\n").replace("\r","\n")
+s="\n".join(line.rstrip() for line in s.split("\n"))
+if s and not s.endswith("\n"):
+    s += "\n"
 dst.write_text(s,encoding="utf-8")
 PY
 
