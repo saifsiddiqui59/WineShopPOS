@@ -1,0 +1,15 @@
+============================================================
+ V5 END-TO-END — SUCCESSFUL R11 + CURRENT DELTA
+ New delta: 15983 + 4 cashiers + 96+ genuine POS UI bills; no historical-row replay
+ No direct Supabase SQL/REST/RPC calls are made by this delta.
+============================================================
+[PASS] Successful-runner ADMIN session — reused R11 saved authenticated browser state
+[BASE] Confirm successful R11 contract + inspect current DEV invoice state...
+[PASS] Successful R11 base contract — R11 passed in documented rerun mode; current DEV snapshot={"15983":"REVIEW_OR_PENDING","16805":"ABSENT","16845":"COMPLETED","B-3339":"ABSENT"}
+[2.1] OCR + receive invoice 15983 through V5 UI...
+[RESUME] 15983: reopening existing OCR review
+
+[FINAL] V5 SUCCESS-BASED END-TO-END: FAIL
+[CLASSIFICATION] TRIAGE_REQUIRED
+[FAIL] 15983: resumed OCR review cannot continue to Purchase Receiving.
+[RAW EVIDENCE] E:\WineShopPOS_V5_E2E_20260912_105856\.wsp-local\success-e2e\success_e2e_20260913_040741
