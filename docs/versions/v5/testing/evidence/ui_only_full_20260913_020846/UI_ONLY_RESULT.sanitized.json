@@ -1,0 +1,53 @@
+{
+  "runId": "ui_only_full_20260913_020846",
+  "mode": "PLAYWRIGHT_UI_ONLY",
+  "environment": "V5 QA / DEV",
+  "productionTouched": false,
+  "result": "FAIL",
+  "startedAt": "2026-09-13T06:08:51.424Z",
+  "checks": [
+    {
+      "name": "Admin authentication",
+      "status": "PASS",
+      "detail": "real V5 login form · QA/DEV badge verified"
+    },
+    {
+      "name": "Resumable DEV UI state",
+      "status": "PASS",
+      "detail": "0 products · 0 inventory · 0 sales · one pending OCR draft for 16845"
+    }
+  ],
+  "invoices": [],
+  "productsAfterInvoices": [],
+  "cashiers": [],
+  "stress": {},
+  "return": null,
+  "shifts": [],
+  "analytics": {},
+  "consoleErrors": [
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "failedRequests": [
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/functions/v1/product-enrichment",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/functions/v1/product-enrichment",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/functions/v1/product-enrichment",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/functions/v1/product-enrichment",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/"
+  ],
+  "failure": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('spinbutton', { name: 'Reviewed Printed Invoice Total', exact: true }).first() to be visible\u001b[22m\n\n    at uploadAndReceiveInvoice (E:\\WineShopPOS_V5_E2E_20260912_105856\\tests\\e2e\\.wsp_ui_only_ui_only_full_20260913_020846.mjs:380:17)\n    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_ui_only_ui_only_full_20260913_020846.mjs:996:38",
+  "finishedAt": "2026-09-13T06:09:22.373Z"
+}

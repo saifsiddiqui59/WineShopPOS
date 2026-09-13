@@ -1,0 +1,16 @@
+============================================================
+ V5 PLAYWRIGHT UI-ONLY FULL TEST — RESUME SAFE R5
+ No direct Supabase calls are made by this runner.
+============================================================
+[PASS] Admin authentication — real V5 login form · QA/DEV badge verified
+[1] Verify resumable DEV state through UI only...
+[PASS] Resumable DEV UI state — 0 products · 0 inventory · 0 sales · one pending OCR draft for 16845
+[2.1] OCR + receive invoice 16845 through V5 UI...
+[RESUME] 16845: reopening existing OCR review
+
+[FINAL] V5 PLAYWRIGHT UI-ONLY FULL TEST: FAIL
+[FAIL] locator.waitFor: Timeout 15000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('spinbutton', { name: 'Reviewed Printed Invoice Total', exact: true }).first() to be visible[22m
+
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\test-runs\ui_only_full_20260913_020846
