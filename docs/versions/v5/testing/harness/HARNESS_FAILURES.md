@@ -124,3 +124,15 @@ Error: Clean-baseline precondition failed: purchases has 1 row(s).
 - Stage: 15983 / 4-cashier UI stress
 - Evidence: `docs/versions/v5/testing/evidence/success_e2e_20260913_033206`
 - Classification: harness only; **no DEF serial**.
+
+<!-- STRESS_ONLY_ENV_WORKTREE_20260913_180313 -->
+## 2026-09-13 — HARNESS_ENV_WORKTREE
+
+- Runner: `RUN_V5_STRESS_ONLY_96_UI_FROM_CHAT.sh`
+- Stage: stress-only preflight, before Vite/browser launch
+- Symptom: `DEV Supabase ref was not found in local V5 env.`
+- Root cause: the first committed stress-only wrapper hardcoded `/e/WineShopPOS_V5`, while the previously working certification flow intentionally selected `/e/WineShopPOS_V5_E2E_20260912_105856` when available because that worktree carries the DEV QA environment.
+- Impact: **no stress mutation occurred**; Vite and Playwright were never started.
+- Resolution: restore the original certification-worktree selection logic before the environment guard.
+- Classification: test harness prerequisite/path defect; **not a WineShopPOS application defect**.
+<!-- /STRESS_ONLY_ENV_WORKTREE_20260913_180313 -->

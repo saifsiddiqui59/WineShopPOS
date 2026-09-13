@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO="/e/WineShopPOS_V5"
+PRIMARY_REPO="/e/WineShopPOS_V5"
+CERT_REPO="/e/WineShopPOS_V5_E2E_20260912_105856"
+
+if [[ -n "${WSP_REPO:-}" ]]; then
+  REPO="$WSP_REPO"
+elif [[ -d "$CERT_REPO" ]] && git -C "$CERT_REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  REPO="$CERT_REPO"
+else
+  REPO="$PRIMARY_REPO"
+fi
+
 TEST_REL="tests/e2e/v5-stress-only-96-ui-from-chat.mjs"
 TEST="$REPO/$TEST_REL"
 PORT="4185"
@@ -40,6 +50,7 @@ echo "Flow     : 4 cashiers -> 96+ UI bills -> return -> shifts -> reports/analy
 echo "R11      : NOT RUN"
 echo "15983    : NOT OCR / NOT RECEIVE"
 echo "PROD     : HARD BLOCKED"
+echo "Worktree : $REPO"
 echo "Evidence : $RAW_DIR"
 echo "================================================================"
 
