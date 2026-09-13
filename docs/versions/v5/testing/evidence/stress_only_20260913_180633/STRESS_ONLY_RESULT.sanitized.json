@@ -1,0 +1,307 @@
+{
+  "runId": "stress_only_20260913_180633",
+  "mode": "STRESS_ONLY_96_UI_FROM_CHAT",
+  "environment": "V5 QA / DEV",
+  "productionTouched": false,
+  "result": "FAIL",
+  "startedAt": "2026-09-13T22:06:38.191Z",
+  "checks": [
+    {
+      "name": "DEV ADMIN session",
+      "status": "PASS",
+      "detail": "saved auth reused or interactive DEV login completed"
+    },
+    {
+      "name": "Product Master pre-stress",
+      "status": "PASS",
+      "detail": "15 products available for genuine POS stress"
+    },
+    {
+      "name": "Pre-stress Sales baseline",
+      "status": "PASS",
+      "detail": "0 existing bill(s) preserved"
+    },
+    {
+      "name": "Four cashier profiles",
+      "status": "PASS",
+      "detail": "created and verified through Admin → Users UI"
+    },
+    {
+      "name": "Test Cashier 1 login + shift",
+      "status": "PASS",
+      "detail": "independent browser context · shift opened through POS UI"
+    },
+    {
+      "name": "Test Cashier 2 login + shift",
+      "status": "PASS",
+      "detail": "independent browser context · shift opened through POS UI"
+    },
+    {
+      "name": "Test Cashier 3 login + shift",
+      "status": "PASS",
+      "detail": "independent browser context · shift opened through POS UI"
+    },
+    {
+      "name": "Test Cashier 4 login + shift",
+      "status": "PASS",
+      "detail": "independent browser context · shift opened through POS UI"
+    }
+  ],
+  "invoices": [],
+  "productsAfterInvoices": [
+    {
+      "key": "BUDWEISER BEER||650",
+      "name": "BUDWEISER BEER",
+      "size": 650,
+      "stock": 0,
+      "purchase": 120,
+      "mrp": 226,
+      "selling": 245,
+      "barcode": "+\nBUDWEISER BEER\n\n\nBUDWEISER · 650 ml",
+      "meta": "BUDWEISER · 650 ml"
+    },
+    {
+      "key": "BUDWEISER BEER||330",
+      "name": "BUDWEISER BEER",
+      "size": 330,
+      "stock": 0,
+      "purchase": 24,
+      "mrp": 157,
+      "selling": 170,
+      "barcode": "+\nBUDWEISER BEER\n\n\nBUDWEISER · 330 ml",
+      "meta": "BUDWEISER · 330 ml"
+    },
+    {
+      "key": "BUDWEISER BEER CAN||500",
+      "name": "BUDWEISER BEER CAN",
+      "size": 500,
+      "stock": 0,
+      "purchase": 120,
+      "mrp": 175,
+      "selling": 190,
+      "barcode": "+\nBUDWEISER BEER CAN\n\n\nBUDWEISER · 500 ml",
+      "meta": "BUDWEISER · 500 ml"
+    },
+    {
+      "key": "Budweiser Magnum Strong Beer||650",
+      "name": "Budweiser Magnum Strong Beer",
+      "size": 650,
+      "stock": 0,
+      "purchase": 120,
+      "mrp": 240,
+      "selling": 260,
+      "barcode": "+\nBudweiser Magnum Strong Beer\n\n\nBudweiser · 650 ml",
+      "meta": "Budweiser · 650 ml"
+    },
+    {
+      "key": "Budweiser Magnum Strong Beer||330",
+      "name": "Budweiser Magnum Strong Beer",
+      "size": 330,
+      "stock": 0,
+      "purchase": 24,
+      "mrp": 166,
+      "selling": 180,
+      "barcode": "+\nBudweiser Magnum Strong Beer\n\n\nBudweiser · 330 ml",
+      "meta": "Budweiser · 330 ml"
+    },
+    {
+      "key": "Budweiser Magnum Strong Beer Can||500",
+      "name": "Budweiser Magnum Strong Beer Can",
+      "size": 500,
+      "stock": 0,
+      "purchase": 120,
+      "mrp": 185,
+      "selling": 200,
+      "barcode": "+\nBudweiser Magnum Strong Beer Can\n\n\nBudweiser · 500 ml",
+      "meta": "Budweiser · 500 ml"
+    },
+    {
+      "key": "Corona Extra Premium Beer||330",
+      "name": "Corona Extra Premium Beer",
+      "size": 330,
+      "stock": 0,
+      "purchase": 24,
+      "mrp": 185,
+      "selling": 200,
+      "barcode": "+\nCorona Extra Premium Beer\n\n\nCorona · 330 ml",
+      "meta": "Corona · 330 ml"
+    },
+    {
+      "key": "Corona Extra Premium Beer||500",
+      "name": "Corona Extra Premium Beer",
+      "size": 500,
+      "stock": 0,
+      "purchase": 24,
+      "mrp": 231,
+      "selling": 250,
+      "barcode": "+\nCorona Extra Premium Beer\n\n\nCorona · 500 ml",
+      "meta": "Corona · 500 ml"
+    },
+    {
+      "key": "Haywards 2000 Strong Beer||650",
+      "name": "Haywards 2000 Strong Beer",
+      "size": 650,
+      "stock": 0,
+      "purchase": 180,
+      "mrp": 148,
+      "selling": 160,
+      "barcode": "+\nHaywards 2000 Strong Beer\n\n\nHaywards · 650 ml",
+      "meta": "Haywards · 650 ml"
+    },
+    {
+      "key": "Haywards 2000 Strong Can||500",
+      "name": "Haywards 2000 Strong Can",
+      "size": 500,
+      "stock": 0,
+      "purchase": 72,
+      "mrp": 115,
+      "selling": 125,
+      "barcode": "+\nHaywards 2000 Strong Can\n\n\nHaywards · 500 ml",
+      "meta": "Haywards · 500 ml"
+    },
+    {
+      "key": "HOEGAARDEN BELGIAN WITBIER||500",
+      "name": "HOEGAARDEN BELGIAN WITBIER",
+      "size": 500,
+      "stock": 0,
+      "purchase": 24,
+      "mrp": 231,
+      "selling": 250,
+      "barcode": "+\nHOEGAARDEN BELGIAN WITBIER\n\n\nHOEGAARDEN · 500 ml",
+      "meta": "HOEGAARDEN · 500 ml"
+    },
+    {
+      "key": "HOEGAARDEN BELGIAN WITBIER||330",
+      "name": "HOEGAARDEN BELGIAN WITBIER",
+      "size": 330,
+      "stock": 0,
+      "purchase": 24,
+      "mrp": 166,
+      "selling": 180,
+      "barcode": "+\nHOEGAARDEN BELGIAN WITBIER\n\n\nHOEGAARDEN · 330 ml",
+      "meta": "HOEGAARDEN · 330 ml"
+    },
+    {
+      "key": "Royal Challenge Premium Lager Beer||650",
+      "name": "Royal Challenge Premium Lager Beer",
+      "size": 650,
+      "stock": 0,
+      "purchase": 36,
+      "mrp": 129,
+      "selling": 140,
+      "barcode": "+\nRoyal Challenge Premium Lager Beer\n\n\nRoyal · 650 ml",
+      "meta": "Royal · 650 ml"
+    },
+    {
+      "key": "Royal Challenge Premium Super Crisp Lager Beer||500",
+      "name": "Royal Challenge Premium Super Crisp Lager Beer",
+      "size": 500,
+      "stock": 0,
+      "purchase": 48,
+      "mrp": 97,
+      "selling": 105,
+      "barcode": "+\nRoyal Challenge Premium Super Crisp Lager Beer\n\n\nRoyal · 500 ml",
+      "meta": "Royal · 500 ml"
+    },
+    {
+      "key": "Royal Challenge Strong Premium Beer||650",
+      "name": "Royal Challenge Strong Premium Beer",
+      "size": 650,
+      "stock": 0,
+      "purchase": 36,
+      "mrp": 148,
+      "selling": 160,
+      "barcode": "+\nRoyal Challenge Strong Premium Beer\n\n\nRoyal · 650 ml",
+      "meta": "Royal · 650 ml"
+    }
+  ],
+  "cashiers": [
+    {
+      "fullName": "Test Cashier 1",
+      "email": "<redacted-email>"
+    },
+    {
+      "fullName": "Test Cashier 2",
+      "email": "<redacted-email>"
+    },
+    {
+      "fullName": "Test Cashier 3",
+      "email": "<redacted-email>"
+    },
+    {
+      "fullName": "Test Cashier 4",
+      "email": "<redacted-email>"
+    }
+  ],
+  "stress": {
+    "baselineSales": {
+      "count": 0,
+      "total": 0,
+      "paymentMix": {
+        "CASH": 0,
+        "UPI": 0,
+        "CARD": 0
+      }
+    }
+  },
+  "return": null,
+  "shifts": [],
+  "analytics": {},
+  "consoleErrors": [
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 1: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 1: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 1: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 1: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 2: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 2: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 2: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 2: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 3: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 3: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 3: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 3: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "DEV ADMIN: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 4: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 4: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 4: Failed to load resource: the server responded with a status of 401 ()",
+    "Test Cashier 4: Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "failedRequests": [
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 1: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 1: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 1: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 1: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 2: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 2: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 2: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 2: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 3: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 3: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 3: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 3: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "DEV ADMIN: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 4: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 4: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 4: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/",
+    "Test Cashier 4: net::ERR_ABORTED https://juhcypzoacauzmtzqnwd.supabase.co/rest/v1/"
+  ],
+  "failure": "Error: Only 0 sellable products available after invoices.\n    at assert (file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/v5-stress-only-96-ui-from-chat.mjs:46:38)\n    at buildUiStressPlan (file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/v5-stress-only-96-ui-from-chat.mjs:686:3)\n    at file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/v5-stress-only-96-ui-from-chat.mjs:1146:14",
+  "classification": "TRIAGE_REQUIRED",
+  "finishedAt": "2026-09-13T22:07:23.719Z"
+}
