@@ -1,0 +1,25 @@
+============================================================
+ V5 READ-ONLY PLAYWRIGHT HARNESS PREFLIGHT
+ No invoice upload / receive / user create / sale / return / shift mutation
+============================================================
+[A] Static V5 source-contract preflight...
+[PASS] Invoice OCR — 5 source contract token(s) verified in src/pages/AutomationHub.jsx
+[PASS] Invoice Inbox — 6 source contract token(s) verified in src/pages/InvoiceInbox.jsx
+[PASS] Purchase Receiving — 10 source contract token(s) verified in src/pages/Purchases.jsx
+[PASS] Purchase Verification receipt — 3 source contract token(s) verified in src/pages/PurchaseDetails.jsx
+[PASS] Receipt success assertion — use Purchase Verification + Posted Purchase Lines; do NOT require invoice number text
+[PASS] Users & Roles — 7 source contract token(s) verified in src/pages/Users.jsx
+[PASS] POS — 7 source contract token(s) verified
+[PASS] Returns — 5 source contract token(s) verified
+[PASS] Shift close — 4 source contract token(s) verified
+[PASS] Owner Center — 4 source contract token(s) verified
+[PASS] Inventory Intelligence — 1 source contract token(s) verified
+[PASS] Profit Intelligence — 1 source contract token(s) verified
+[PASS] Purchase Intelligence — 1 source contract token(s) verified
+[PASS] Reports — 3 source contract token(s) verified
+[B0] Launch deployed V5...
+[PASS] QA/DEV environment badge — exactly one matching element
+
+[FINAL] HARNESS PREFLIGHT: FAIL
+[FAIL] Login email: expected exactly 1 element, found 0.
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\harness-preflight\harness_preflight_20260913_023516
