@@ -1,0 +1,93 @@
+{
+  "runId": "harness_preflight_20260913_022236",
+  "mode": "READ_ONLY_HARNESS_PREFLIGHT",
+  "result": "FAIL",
+  "productionTouched": false,
+  "startedAt": "2026-09-13T06:22:37.699Z",
+  "staticContracts": [
+    {
+      "name": "Invoice OCR",
+      "status": "PASS",
+      "detail": "5 source contract token(s) verified in src/pages/AutomationHub.jsx"
+    },
+    {
+      "name": "Invoice Inbox",
+      "status": "PASS",
+      "detail": "6 source contract token(s) verified in src/pages/InvoiceInbox.jsx"
+    },
+    {
+      "name": "Purchase Receiving",
+      "status": "PASS",
+      "detail": "10 source contract token(s) verified in src/pages/Purchases.jsx"
+    },
+    {
+      "name": "Purchase Verification receipt",
+      "status": "PASS",
+      "detail": "3 source contract token(s) verified in src/pages/PurchaseDetails.jsx"
+    },
+    {
+      "name": "Receipt success assertion",
+      "status": "PASS",
+      "detail": "use Purchase Verification + Posted Purchase Lines; do NOT require invoice number text"
+    },
+    {
+      "name": "Users & Roles",
+      "status": "PASS",
+      "detail": "7 source contract token(s) verified in src/pages/Users.jsx"
+    },
+    {
+      "name": "POS",
+      "status": "PASS",
+      "detail": "7 source contract token(s) verified"
+    },
+    {
+      "name": "Returns",
+      "status": "PASS",
+      "detail": "5 source contract token(s) verified"
+    },
+    {
+      "name": "Shift close",
+      "status": "PASS",
+      "detail": "4 source contract token(s) verified"
+    },
+    {
+      "name": "Owner Center",
+      "status": "PASS",
+      "detail": "4 source contract token(s) verified"
+    },
+    {
+      "name": "Inventory Intelligence",
+      "status": "PASS",
+      "detail": "1 source contract token(s) verified"
+    },
+    {
+      "name": "Profit Intelligence",
+      "status": "PASS",
+      "detail": "1 source contract token(s) verified"
+    },
+    {
+      "name": "Purchase Intelligence",
+      "status": "PASS",
+      "detail": "1 source contract token(s) verified"
+    },
+    {
+      "name": "Reports",
+      "status": "PASS",
+      "detail": "3 source contract token(s) verified"
+    }
+  ],
+  "runtimeContracts": [
+    {
+      "name": "QA/DEV environment badge",
+      "status": "PASS",
+      "detail": "exactly one matching element"
+    }
+  ],
+  "stateSnapshot": {},
+  "skipped": [],
+  "warnings": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "failure": "Error: Login email: expected exactly 1 element, found 0.\n    at assert (file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_harness_preflight_harness_preflight_20260913_022236.mjs:39:36)\n    at uniqueVisible (file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_harness_preflight_harness_preflight_20260913_022236.mjs:69:3)\n    at async login (file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_harness_preflight_harness_preflight_20260913_022236.mjs:121:3)\n    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/tests/e2e/.wsp_harness_preflight_harness_preflight_20260913_022236.mjs:388:11",
+  "finishedAt": "2026-09-13T06:22:44.071Z"
+}
