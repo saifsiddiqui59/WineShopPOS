@@ -1,0 +1,10 @@
+============================================================
+ V5 PLAYWRIGHT UI-ONLY FINAL FULL TEST — PREFLIGHT PASSED
+ No direct Supabase calls are made by this runner.
+============================================================
+[PASS] Admin authentication — real V5 login form · QA/DEV badge verified
+[1] Verify resumable DEV state through UI only...
+
+[FINAL] V5 PLAYWRIGHT UI-ONLY FULL TEST: FAIL
+[FAIL] Resume safety failed: Product Master already has 15 row(s).
+[RAW EVIDENCE] E:\WineShopPOS_V5\.wsp-local\test-runs\ui_only_full_20260913_024652
