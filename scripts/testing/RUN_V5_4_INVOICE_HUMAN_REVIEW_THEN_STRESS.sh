@@ -138,7 +138,7 @@ elif 'filter({ hasText: "Current Stock" })' not in runner:
 
 for marker in ['"invoiceNumber": "16845"','"invoiceNumber": "B-3339"','"invoiceNumber": "16805"',"READY_TO_RECEIVE"]:
     if marker not in runner: raise SystemExit(f"R11 transformed harness missing {marker}")
-out.write_text(runner.rstrip()+"\\n",encoding="utf-8",newline="\\n")
+out.write_text(runner.rstrip()+"\n",encoding="utf-8")
 PY
 
 chmod +x "$R11_ONLY"
@@ -150,9 +150,9 @@ s=Path(sys.argv[1]).read_text(encoding="utf-8")
 m="cat > \"$RUNTIME/runner.mjs\" <<'NODE'\n"
 a=s.find(m)
 if a<0: raise SystemExit("runner.mjs marker missing")
-a+=len(m); b=s.find("\\nNODE\\n",a)
+a+=len(m); b=s.find("\nNODE\n",a)
 if b<0: raise SystemExit("runner.mjs end marker missing")
-Path(sys.argv[2]).write_text(s[a:b]+"\\n",encoding="utf-8",newline="\\n")
+Path(sys.argv[2]).write_text(s[a:b]+"\n",encoding="utf-8")
 PY
 node --check "$RAW/r11-runner.mjs" || die "Transformed R11 Playwright failed syntax check."
 
