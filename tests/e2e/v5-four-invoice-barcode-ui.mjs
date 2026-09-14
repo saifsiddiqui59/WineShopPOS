@@ -140,12 +140,24 @@ try{
   });
   const page=await ctx.newPage();
   await page.goto(`${BASE}/#/products`,{waitUntil:"domcontentloaded"});
-  if(!await page.locator("h2").filter({hasText:/^Products$/}).first().isVisible().catch(()=>false)){
+
+  const productsHeading=page.locator("h2").filter({hasText:/^Products$/}).first();
+  if(!await productsHeading.isVisible().catch(()=>false)){
     console.log("[BARCODE] Saved QA session expired. Sign in once in the visible DEV browser.");
-    await page.locator("h2").filter({hasText:/^Products$/}).first().waitFor({state:"visible",timeout:300000});
+
+    const nav=page.getByRole("navigation",{name:"Main navigation"});
+    await nav.waitFor({state:"visible",timeout:300000});
+
+    await ctx.storageState({path:AUTH});
+    console.log("[BARCODE] Login accepted. Refreshed QA session saved.");
+
+    await page.goto(`${BASE}/#/products`,{waitUntil:"domcontentloaded"});
   }
+
   await waitProducts(page);
   await page.locator('[data-environment-badge="QA-DEV-V5"]').waitFor({state:"visible",timeout:20000});
+
+  await ctx.storageState({path:AUTH});
 
   const stats={ADDED:0,KEEP:0,ABSENT:0};
   for(const item of entries) stats[await ensureBarcode(page,item)]++;
