@@ -668,15 +668,38 @@ function loadExistingCashiers(){
   return creds;
 }
 
+async function waitForVerifiedOpenShift(page,label){
+  const dialog=page.getByRole("dialog",{name:"Start your shift before making any bill"});
+
+  // Current POS intentionally renders this same dialog while the OPEN-shift
+  // lookup is still running. A visible dialog is therefore not proof that the
+  // shift is missing. Wait for verification to settle; never click Start Shift.
+  try{
+    await dialog.waitFor({state:"hidden",timeout:30000});
+    return;
+  }catch{
+    const text=(await dialog.innerText().catch(()=>"")).replace(/\s+/g," ").trim();
+    const checking=/Checking your current shift/i.test(text);
+    const startVisible=await dialog.getByRole("button",{name:"Start Shift",exact:true})
+      .isVisible().catch(()=>false);
+
+    const error=new Error(
+      `${label}: POS did not confirm the preserved OPEN shift within 30s. `+
+      `state=${checking?"CHECKING":startVisible?"START_SHIFT_REQUIRED":"UNKNOWN"}; `+
+      `dialog=${text||"(not readable)"}`
+    );
+
+    if(checking) error.classification="HARNESS";
+    throw error;
+  }
+}
+
 async function verifyExistingOpenShiftViaUi(session){
   const {page,label}=session;
   await page.goto(`${BASE}/#/pos`,{waitUntil:"domcontentloaded"});
   await page.locator("h2").filter({hasText:/^Fast\ POS\ Billing$/}).first()
     .waitFor({state:"visible",timeout:20000});
-  const dialog=page.getByRole("dialog",{name:"Start your shift before making any bill"});
-  await sleep(500);
-  assert(!(await dialog.isVisible().catch(()=>false)),
-    `${label}: preserved OPEN shift is missing; refusing to create another shift automatically.`);
+  await waitForVerifiedOpenShift(page,label);
   logPass(`${label} login + preserved shift`,
     "independent browser context · existing OPEN shift reused");
 }
@@ -863,8 +886,7 @@ async function runOneUiSale(session,tx,globalIndex){
   const {page,label}=session;
   await page.goto(`${BASE}/#/pos`,{waitUntil:"domcontentloaded"});
   await page.locator("h2").filter({hasText:/^Fast\ POS\ Billing$/}).first().waitFor({state:"visible",timeout:20000});
-  const dialog=page.getByRole("dialog",{name:"Start your shift before making any bill"});
-  assert(!(await dialog.isVisible().catch(()=>false)),`${label}: shift gate appeared during stress.`);
+  await waitForVerifiedOpenShift(page,label);
 
   const auto=page.getByRole("button",{name:/Auto Print:/});
   if(await auto.isVisible().catch(()=>false) && /ON/i.test(await auto.innerText())) await auto.click();
@@ -1300,7 +1322,14 @@ try{
   }
 
   const productsForPlan=await readProductMaster(admin.page);
-  const plan=buildUiStressPlan(productsForPlan,96);
+  const targetTotalBills=96;
+  const remainingBillFloor=Math.max(0,targetTotalBills-baselineSales.count);
+  const plan=buildUiStressPlan(productsForPlan,remainingBillFloor);
+  report.stress.continuation={
+    targetTotalBills,
+    alreadyCommittedBills:baselineSales.count,
+    minimumAdditionalBills:remainingBillFloor,
+  };
   report.stress.plan={
     transactions:plan.txCount,
     lines:plan.targetLines,
@@ -1310,13 +1339,20 @@ try{
     maxSameSkuPerBill:4,
     browserSessions:4,
   };
-  appAssert(plan.txCount>=96,`Stress plan generated only ${plan.txCount} bills.`);
+  appAssert(
+    baselineSales.count+plan.txCount>=targetTotalBills,
+    `Continuation would reach only ${baselineSales.count+plan.txCount}/${targetTotalBills} total bills.`
+  );
   logPass("UI stress plan",
     `${plan.txCount} bills · ${plan.targetLines} lines · ${plan.totalUnits} bottles · 4 independent sessions`);
 
   await runAllUiStress(sessions,plan);
-  appAssert(report.stress.transactions>=96,
-    `Only ${report.stress.transactions||0} UI bills completed; expected at least 96.`);
+  report.stress.totalBillsIncludingPrior=
+    baselineSales.count+Number(report.stress.transactions||0);
+  appAssert(
+    report.stress.totalBillsIncludingPrior>=targetTotalBills,
+    `Only ${report.stress.totalBillsIncludingPrior} total UI bills completed; expected at least ${targetTotalBills}.`
+  );
 
   for(const s of sessions) await verifyCashierSales(s);
 
