@@ -326,8 +326,25 @@ try{
   try{
     await inboxHeading.waitFor({state:"visible",timeout:30000});
   }catch{
-    console.log("[15983 HUMAN] QA login is actually required. Sign in once in the visible DEV browser.");
-    await inboxHeading.waitFor({state:"visible",timeout:300000});
+    console.log("[15983 HUMAN] QA login is required. Sign in once in the visible DEV browser.");
+
+    const nav=page.getByRole("navigation",{name:"Main navigation"});
+    const verificationProblem=page.getByRole("heading",{name:"Unable to Verify Account",exact:true});
+
+    const outcome=await Promise.race([
+      nav.waitFor({state:"visible",timeout:300000}).then(()=>"AUTHENTICATED"),
+      verificationProblem.waitFor({state:"visible",timeout:300000}).then(()=>"VERIFY_ERROR")
+    ]);
+
+    if(outcome==="VERIFY_ERROR"){
+      throw new Error("Login succeeded but WineShopPOS could not verify profile/shop access.");
+    }
+
+    await ctx.storageState({path:AUTH});
+    console.log("[15983 HUMAN] Login accepted. Refreshed QA session saved.");
+
+    await page.goto(`${BASE}/#/purchasing/invoices`,{waitUntil:"domcontentloaded"});
+    await waitInbox(page);
   }
 
   await ctx.storageState({path:AUTH});
