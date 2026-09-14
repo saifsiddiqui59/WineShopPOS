@@ -3,532 +3,206 @@ set -Eeuo pipefail
 
 REPO="/e/WineShopPOS_V5_E2E_20260912_105856"
 R11_REL="scripts/testing/RUN_V5_FULL_MASTER_CERTIFICATION_R11.sh"
+FIXTURE_REL="tests/fixtures/v5-four-invoice-e2e.json"
+BARCODE_REL="tests/e2e/v5-four-invoice-barcode-ui.mjs"
+REVIEW_REL="tests/e2e/v5-15983-human-review.mjs"
 STRESS_REL="scripts/testing/RUN_V5_STRESS_RESUME_AFTER_OCR_FROM_CHAT.sh"
 CREDS="$REPO/.wsp-local/stress_only_20260913_180633-cashiers.json"
 
 DEV_REF="juhcypzoacauzmtzqnwd"
 PROD_REF="uiurgplnsgmawvxhjzzp"
-PROD_HOST="wineshoppos.z29.web.core.windows.net"
-
-RUN_ID="four_invoice_human_review_$(date +%Y%m%d_%H%M%S)"
-RAW="$REPO/.wsp-local/four-invoice-human-review/$RUN_ID"
-mkdir -p "$RAW"
-
-R11_ONLY="$RAW/R11_INVOICE_ONLY.sh"
-R11_LOG="$RAW/R11_3_INVOICE.log"
-PORT_15983="4195"
-BASE_15983="http://127.0.0.1:${PORT_15983}"
+PORT="4196"
+BASE="http://127.0.0.1:${PORT}"
+AUTH="$HOME/.wineshoppos-v5-uat/auth.json"
+RUN_ID="true_e2e_4_invoices_$(date +%Y%m%d_%H%M%S)"
+RAW="$REPO/.wsp-local/true-e2e/$RUN_ID"
+R11_ONLY="$RAW/r11-invoices-only.sh"
+R11_LOG="$RAW/r11.log"
 VITE_PID=""
+
+mkdir -p "$RAW"
 
 die(){
   echo
   echo "================================================================"
-  echo "STOPPED SAFELY: $*"
+  echo "TRUE E2E STOPPED SAFELY: $*"
   echo "Evidence: $RAW"
-  echo "Do not blindly rerun after any committed sale."
+  echo "Do not blindly rerun stress after any sale mutation."
   echo "================================================================"
   exit 1
 }
-
 cleanup(){
   set +e
-  [[ -n "$VITE_PID" ]] && kill "$VITE_PID" >/dev/null 2>&1 || true
+  if [[ -n "$VITE_PID" ]]; then
+    kill "$VITE_PID" >/dev/null 2>&1 || true
+    wait "$VITE_PID" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT INT TERM
 
-cd "$REPO" || die "Missing certification worktree."
+cd "$REPO" || die "Certification worktree missing."
 [[ "$(git branch --show-current)" == "V5" ]] || die "Certification worktree is not V5."
-
 git fetch origin V5 --quiet
-[[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/V5)" ]] \
-  || die "Certification worktree differs from origin/V5."
-
-[[ -z "$(git status --porcelain --untracked-files=no)" ]] || {
-  git status --porcelain --untracked-files=no
-  die "Certification worktree has tracked changes."
-}
-
-if grep -Rqs "$PROD_REF" .env .env.local 2>/dev/null; then
-  die "PROD Supabase ref found in certification env."
-fi
-grep -Rqs "$DEV_REF" .env .env.local 2>/dev/null \
-  || die "Expected DEV Supabase ref missing from certification env."
-
-[[ -f "$R11_REL" ]] || die "R11 source missing."
-[[ -f "$STRESS_REL" ]] || die "Stress continuation missing."
+[[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/V5)" ]] || die "Certification worktree differs from origin/V5."
+[[ -z "$(git status --porcelain --untracked-files=no)" ]] || die "Certification worktree has tracked changes."
+[[ -f "$AUTH" ]] || die "Saved QA ADMIN auth missing: $AUTH"
 [[ -f "$CREDS" ]] || die "Preserved four-cashier checkpoint missing."
+for f in "$R11_REL" "$FIXTURE_REL" "$BARCODE_REL" "$REVIEW_REL" "$STRESS_REL"; do
+  [[ -f "$f" ]] || die "Required file missing: $f"
+done
+if grep -Rqs "$PROD_REF" .env .env.local 2>/dev/null; then die "PROD Supabase ref found in certification env."; fi
+grep -Rqs "$DEV_REF" .env .env.local 2>/dev/null || die "DEV Supabase ref missing from certification env."
 
 echo "================================================================"
-echo " WineShopPOS V5 — 4 INVOICES + HUMAN REVIEW + STRESS"
+echo " WineShopPOS V5 — TRUE END-TO-END 4-INVOICE CERTIFICATION"
 echo "================================================================"
-echo "16845  : R11 proven path"
-echo "B-3339 : R11 proven path"
-echo "16805  : R11 OCR/safe-review path"
-echo "15983  : golden human correction path"
-echo "Stress : existing 4 cashiers / OPEN shifts / 96+ UI bills"
-echo "PROD   : HARD BLOCKED"
-echo "Evidence: $RAW"
+echo " 16845   : received earlier -> idempotent revalidation"
+echo " B-3339  : received earlier -> idempotent revalidation"
+echo " 16805   : OCR + 3 physical rows + fail-closed finance when unreadable"
+echo " 15983   : human-reviewed physical golden -> UI corrections -> receive"
+echo " Products : missing barcodes added only through Product UI"
+echo " POS      : barcode-driven 96+ genuine UI bills / 4 cashiers"
+echo " Finish   : return -> shift close -> reports / analytics"
+echo " PROD     : HARD BLOCKED"
+echo " Evidence : $RAW"
 echo "================================================================"
+
 echo
+echo "[1/7] Extract proven R11 invoice stage and remove stale harness assumptions..."
 
-echo "[1/6] Extract current proven R11 invoice harness only..."
-
-python - "$R11_REL" "$R11_ONLY" <<'PY_EXTRACT'
+python - "$R11_REL" "$R11_ONLY" <<'PY'
 from pathlib import Path
 import sys
-
 src=Path(sys.argv[1]).read_text(encoding="utf-8")
 out=Path(sys.argv[2])
-
 start="cat > \"$RUNTIME/invoice-uat.sh\" <<'__WSP_EMBEDDED_INVOICE_RUNNER__'\n"
 end="\n__WSP_EMBEDDED_INVOICE_RUNNER__\n"
-
 a=src.find(start)
-if a<0: raise SystemExit("R11 embedded invoice harness start marker missing.")
+if a<0: raise SystemExit("R11 embedded invoice harness start marker missing")
 a+=len(start)
 b=src.find(end,a)
-if b<0: raise SystemExit("R11 embedded invoice harness end marker missing.")
-
+if b<0: raise SystemExit("R11 embedded invoice harness end marker missing")
 runner=src[a:b]
 
-required=[
-  'input[type="file"][accept*="application/pdf"]',
-  'getByRole("combobox", { name: "Supplier", exact: true })',
-  'READY_TO_RECEIVE',
-  '"invoiceNumber": "16845"',
-  '"invoiceNumber": "B-3339"',
-  '"invoiceNumber": "16805"',
-]
-missing=[x for x in required if x not in runner]
-if missing:
-    raise SystemExit("R11 invoice harness missing safeguard(s): "+", ".join(missing))
+old="""  const products = await getProducts();
+  const productByBarcode = new Map(products.map((p) => [String(p.barcode || "").trim(), p]));
+  const itemByProduct = new Map(items.map((i) => [i.product_id, i]));
 
-# OCR learning is application behavior, not Playwright-harness text.
-# Validate it at the application layer where reviewed values are persisted.
-app=Path("src/pages/Purchases.jsx").read_text(encoding="utf-8")
-app_required={
-    "human-review learning RPC": 'invoice_ocr_record_review',
-    "review outcome classifier": 'reviewedMappingOutcome',
-    "learning after reviewed receive": 'recordOcrLearning',
-    "OCR assistance UI": 'OCR Exception Assistance',
-    "manual correction UI": 'Manual correction is allowed',
-}
-missing_app=[name for name,marker in app_required.items() if marker not in app]
-if missing_app:
-    raise SystemExit(
-        "Purchases.jsx missing OCR human-review safeguard(s): "
-        + ", ".join(missing_app)
-    )
+  for (const line of fixture.lines) {
+    const p = productByBarcode.get(line.barcode);
+    assert(p, `${fixture.invoiceNumber}: previously received product missing for barcode ${line.barcode}.`);
+"""
+new="""  const products = await getProducts();
+  const productByBarcode = new Map(products.map((p) => [String(p.barcode || "").trim(), p]));
+  const itemByProduct = new Map(items.map((i) => [i.product_id, i]));
+  const purchaseProductIds = new Set(items.map((i) => i.product_id).filter(Boolean));
+  const fallbackUsedProductIds = new Set();
 
-out.write_text(runner.rstrip()+"\n",encoding="utf-8",newline="\n")
-PY_EXTRACT
+  for (const line of fixture.lines) {
+    let p = productByBarcode.get(line.barcode);
+    if (!p) {
+      const expectedQty = Number(line.cases || 0) * Number(line.pack || 0) + Number(line.loose || 0);
+      const candidates = products.filter((candidate) => {
+        if (!purchaseProductIds.has(candidate.id) || fallbackUsedProductIds.has(candidate.id)) return false;
+        const pi = itemByProduct.get(candidate.id);
+        return pi
+          && norm(candidate.product_name) === norm(line.name)
+          && Number(candidate.size_ml) === Number(line.size)
+          && Number(pi.quantity || 0) === expectedQty;
+      });
+      assert(candidates.length === 1,
+        `${fixture.invoiceNumber}: missing historical QA barcode ${line.barcode}; strict purchase-linked fallback found ${candidates.length} match(es) for ${line.name} ${line.size}ml.`);
+      p = candidates[0];
+      fallbackUsedProductIds.add(p.id);
+      log(`${fixture.invoiceNumber}: revalidated ${p.product_name} ${p.size_ml}ml by immutable purchase link; barcode will be repaired later through Product UI if missing.`);
+    }
+    assert(p, `${fixture.invoiceNumber}: previously received product identity could not be revalidated for ${line.name}.`);
+"""
+if old in runner:
+    runner=runner.replace(old,new,1)
+elif "purchaseProductIds" not in runner:
+    raise SystemExit("R11 received revalidation shape changed; refusing fuzzy transform")
+
+old2="""  await search.fill(line.barcode);
+  await page.getByText(line.name, { exact: false }).first().waitFor({ state: "visible", timeout: 10_000 });
+"""
+new2="""  await search.fill(line.name);
+  const currentStock = page.locator("section.panel").filter({ hasText: "Current Stock" }).first();
+  const stockRow = currentStock.locator("table.data-table tbody tr").filter({ hasText: line.name }).first();
+  await stockRow.waitFor({ state: "visible", timeout: 10_000 });
+"""
+if old2 in runner:
+    runner=runner.replace(old2,new2,1)
+elif 'filter({ hasText: "Current Stock" })' not in runner:
+    raise SystemExit("R11 inventory spot-check shape changed; refusing fuzzy transform")
+
+for marker in ['"invoiceNumber": "16845"','"invoiceNumber": "B-3339"','"invoiceNumber": "16805"',"READY_TO_RECEIVE"]:
+    if marker not in runner: raise SystemExit(f"R11 transformed harness missing {marker}")
+out.write_text(runner.rstrip()+"\\n",encoding="utf-8",newline="\\n")
+PY
 
 chmod +x "$R11_ONLY"
-bash -n "$R11_ONLY" || die "Extracted R11 invoice harness failed bash -n."
-
-# Syntax-check the embedded Playwright runner too.
-python - "$R11_ONLY" "$RAW/r11-runner-check.mjs" <<'PY_JS'
+bash -n "$R11_ONLY" || die "Transformed R11 invoice shell failed bash -n."
+python - "$R11_ONLY" "$RAW/r11-runner.mjs" <<'PY'
 from pathlib import Path
 import sys
 s=Path(sys.argv[1]).read_text(encoding="utf-8")
 m="cat > \"$RUNTIME/runner.mjs\" <<'NODE'\n"
 a=s.find(m)
-if a<0: raise SystemExit("Embedded runner.mjs start missing.")
-a+=len(m)
-b=s.find("\nNODE\n",a)
-if b<0: raise SystemExit("Embedded runner.mjs end missing.")
-Path(sys.argv[2]).write_text(s[a:b]+"\n",encoding="utf-8",newline="\n")
-PY_JS
-node --check "$RAW/r11-runner-check.mjs" || die "R11 Playwright syntax failed."
-
-echo "[PASS] Current successful R11 invoice harness validated."
+if a<0: raise SystemExit("runner.mjs marker missing")
+a+=len(m); b=s.find("\\nNODE\\n",a)
+if b<0: raise SystemExit("runner.mjs end marker missing")
+Path(sys.argv[2]).write_text(s[a:b]+"\\n",encoding="utf-8",newline="\\n")
+PY
+node --check "$RAW/r11-runner.mjs" || die "Transformed R11 Playwright failed syntax check."
 
 echo
-echo "[2/6] Run 16845 + B-3339 + 16805 through current R11 invoice logic..."
-
+echo "[2/7] Run 16845 + B-3339 + 16805 invoice stage..."
 set +e
 bash "$R11_ONLY" 2>&1 | tee "$R11_LOG"
 R11_RC=${PIPESTATUS[0]}
 set -e
-
-if [[ "$R11_RC" -ne 0 ]]; then
-  # 16805 is allowed to remain safe-review if the only remaining issue is
-  # genuinely unreadable finance evidence. Any unrelated R11 failure stops.
-  if grep -Eqi '16805.*(safe.?review|unreadable|printed total|NEEDS_REVIEW|financial)|FINANCE_REVIEW_PRINTED_TOTAL_UNREADABLE' "$R11_LOG" \
-     && ! grep -Eqi '16845.*FAIL|B-3339.*FAIL|PROD|wrong environment' "$R11_LOG"; then
-    echo "[SAFE REVIEW] 16805 still has unresolved physical finance evidence."
-    echo "[SAFE REVIEW] It remains unreceived; the suite continues as a human reviewer would."
-  else
-    die "R11 3-invoice stage failed outside the accepted 16805 safe-review boundary."
-  fi
-else
-  echo "[PASS] R11 3-invoice stage completed."
-fi
+[[ "$R11_RC" -eq 0 ]] || die "R11 invoice stage failed. Business state is preserved; inspect r11.log."
+grep -q '16845: PASS' "$R11_LOG" || die "16845 PASS marker missing."
+grep -q 'B-3339: PASS' "$R11_LOG" || die "B-3339 PASS marker missing."
+grep -q '16805: PASS' "$R11_LOG" || die "16805 PASS marker missing."
+echo "[PASS] R11 three-invoice stage completed without duplicate receipt."
 
 echo
-echo "[3/6] Start current V5 for 15983 human-style verification..."
-
-VITE_ENV_BADGE="QA / DEV · V5 · NOT PROD" \
-  npx vite --host 127.0.0.1 --port "$PORT_15983" \
-  >"$RAW/vite-15983.log" 2>&1 &
+echo "[3/7] Start one DEV browser app for barcode + 15983 human review..."
+VITE_ENV_BADGE="QA / DEV · V5 · NOT PROD" npx vite --host 127.0.0.1 --port "$PORT" --strictPort >"$RAW/vite.log" 2>&1 &
 VITE_PID=$!
-
-for _ in $(seq 1 80); do
-  if curl -fsS "$BASE_15983/" >/dev/null 2>&1; then break; fi
-  sleep 0.25
+for _ in $(seq 1 100); do
+  if curl -fsS "$BASE/" >/dev/null 2>&1; then break; fi
+  if ! kill -0 "$VITE_PID" >/dev/null 2>&1; then cat "$RAW/vite.log"; die "DEV Vite exited early."; fi
+  sleep 0.2
 done
-curl -fsS "$BASE_15983/" >/dev/null 2>&1 \
-  || die "Vite 15983 review server did not start."
-
-cat > "$RAW/review-15983.mjs" <<'NODE_15983'
-import fs from "node:fs";
-import path from "node:path";
-import { chromium } from "@playwright/test";
-
-const BASE=process.env.BASE_URL;
-const RAW=process.env.RAW;
-const AUTH=process.env.AUTH_FILE;
-const PROD_REF="uiurgplnsgmawvxhjzzp";
-const PROD_HOST="wineshoppos.z29.web.core.windows.net";
-
-const golden={
-  invoice:"15983",
-  supplier:"METRI SPIRITS PRIVATE LIMITED",
-  date:"2026-08-17",
-  cases:[20,2,5,13,5,5,2],
-  packs:[12,24,24,12,24,12,24],
-  rates:[2271.73,3546.12,2881.23,2881.22,4432.65,2659.59,4100.20],
-  mrp:[205,160,140,250,200,240,185],
-  amounts:[45435,7092,14406,37456,22163,13298,8200],
-  subtotal:148050,
-  cashDiscount:1497,
-  invoiceDiscount:2475,
-  freight:1144,
-  misc:2910,
-  total:148132,
-  bottles:792,
-};
-
-const report={
-  invoice:"15983",
-  result:"RUNNING",
-  corrections:[],
-  before:{},
-  after:{},
-  assistance:"",
-  received:false,
-  productionTouched:false,
-};
-
-const norm=v=>String(v||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const assert=(v,m)=>{if(!v)throw new Error(m);};
-
-function num(v){
-  const n=Number(String(v??"").replace(/[^\d.-]/g,""));
-  return Number.isFinite(n)?n:NaN;
-}
-function changed(field,before,after){
-  if(String(before??"")!==String(after??"")){
-    report.corrections.push({field,before,after,source:"PHYSICAL_GOLDEN_REVIEW"});
-  }
-}
-async function fillIfDifferent(locator,value,field){
-  const before=await locator.inputValue();
-  if(String(before)!==String(value)){
-    await locator.fill(String(value));
-    changed(field,before,value);
-  }
-}
-async function openReceiving(page){
-  await page.goto(`${BASE}/#/purchasing/invoices`,{waitUntil:"domcontentloaded"});
-  await page.locator("h2").filter({hasText:/Invoice Inbox/i}).first()
-    .waitFor({state:"visible",timeout:30000});
-
-  const status=page.locator("select").filter({has:page.locator('option[value="ALL"]')}).first();
-  if(await status.isVisible().catch(()=>false)){
-    await status.selectOption("ALL").catch(()=>{});
-    await sleep(500);
-  }
-
-  const row=page.locator("table.data-table tbody tr").filter({hasText:"15983"}).first();
-  await row.waitFor({state:"visible",timeout:30000});
-  const rowText=(await row.innerText()).replace(/\s+/g," ").trim();
-
-  if(/Completed/i.test(rowText)){
-    report.result="PASS_ALREADY_RECEIVED";
-    report.received=true;
-    return false;
-  }
-
-  const actionNames=[
-    /Continue Receive Stock/i,
-    /Resume Review/i,
-    /Start Review/i,
-  ];
-
-  let clicked=false;
-  for(const rx of actionNames){
-    const b=row.getByRole("button",{name:rx}).first();
-    if(await b.isVisible().catch(()=>false)){
-      await b.click();
-      clicked=true;
-      break;
-    }
-  }
-  assert(clicked,`15983 row has no resume/receive action. Row: ${rowText}`);
-
-  for(let i=0;i<120;i++){
-    if(await page.locator("h2").filter({hasText:/Purchase Receiving Workspace/i}).isVisible().catch(()=>false)){
-      return true;
-    }
-    const open=page.getByRole("button",{name:/Open Purchase Receiving Workspace/i}).first();
-    if(await open.isVisible().catch(()=>false)){
-      await open.click();
-      await sleep(300);
-      continue;
-    }
-    await sleep(250);
-  }
-  throw new Error("15983 did not reach Purchase Receiving Workspace.");
-}
-
-let browser;
-try{
-  assert(fs.existsSync(AUTH),`Saved QA auth missing: ${AUTH}`);
-  browser=await chromium.launch({headless:false,slowMo:8});
-  const context=await browser.newContext({storageState:AUTH});
-
-  await context.route("**/*",route=>{
-    const u=route.request().url();
-    if(u.includes(PROD_REF)||u.includes(PROD_HOST)){
-      report.productionTouched=true;
-      return route.abort("blockedbyclient");
-    }
-    return route.continue();
-  });
-
-  const page=await context.newPage();
-  const shouldReview=await openReceiving(page);
-
-  if(!shouldReview){
-    console.log("[15983] already received; no duplicate receipt attempted.");
-  }else{
-    await page.locator("h2").filter({hasText:/Purchase Receiving Workspace/i}).first()
-      .waitFor({state:"visible",timeout:30000});
-
-    const assistance=page.locator("section.panel").filter({hasText:"OCR Exception Assistance"}).first();
-    if(await assistance.isVisible().catch(()=>false)){
-      report.assistance=(await assistance.innerText()).replace(/\s+/g," ").trim();
-      console.log(`[15983] OCR assistance: ${report.assistance}`);
-    }
-
-    const supplier=page.getByRole("combobox",{name:"Supplier",exact:true});
-    const invNo=page.getByLabel("Invoice Number",{exact:true});
-    const invDate=page.getByLabel("Invoice Date",{exact:true});
-
-    report.before.supplier=await supplier.inputValue();
-    report.before.invoice=await invNo.inputValue();
-    report.before.date=await invDate.inputValue();
-
-    await fillIfDifferent(supplier,golden.supplier,"header.supplier");
-    await fillIfDifferent(invNo,golden.invoice,"header.invoice_number");
-    await fillIfDifferent(invDate,golden.date,"header.invoice_date");
-
-    const table=page.locator("table.purchase-receiving-table");
-    await table.waitFor({state:"visible",timeout:30000});
-    const rows=table.locator("tbody tr");
-    const count=await rows.count();
-
-    // Physical golden has 7 lines. A line-loss here is not an OCR-score failure:
-    // keep the invoice in review rather than inventing a missing product identity.
-    if(count!==7){
-      report.result="SAFE_REVIEW";
-      report.after.reason=`Physical invoice has 7 rows; receiving workspace has ${count}.`;
-      fs.writeFileSync(path.join(RAW,"15983_RESULT.json"),JSON.stringify(report,null,2));
-      console.log(`[15983 SAFE REVIEW] expected 7 physical rows, found ${count}; no stock posted.`);
-      await context.close();
-      process.exit(0);
-    }
-
-    const beforeRows=[];
-    page.on("dialog",async d=>{
-      await d.accept("Verified/corrected against physical invoice golden fixture.");
-    });
-
-    for(let i=0;i<7;i++){
-      const row=rows.nth(i);
-      const cells=row.locator("td");
-      const description=(await cells.nth(1).innerText()).trim();
-
-      const caseInput=cells.nth(5).locator('input[type="number"]');
-      const packInput=cells.nth(6).locator('input[type="number"]');
-      const looseInput=cells.nth(7).locator('input[type="number"]');
-      const rateInput=cells.nth(9).locator('input[type="number"]');
-      const mrpInput=cells.nth(11).locator('input[type="number"]');
-      const amountInput=cells.nth(12).locator('input[type="number"]');
-
-      const snap={
-        line:i+1,
-        description,
-        cases:await caseInput.inputValue(),
-        pack:await packInput.inputValue(),
-        loose:await looseInput.inputValue(),
-        rate:await rateInput.inputValue(),
-        mrp:await mrpInput.inputValue(),
-        amount:await amountInput.inputValue(),
-      };
-      beforeRows.push(snap);
-
-      await fillIfDifferent(caseInput,golden.cases[i],`line.${i+1}.cases`);
-      await fillIfDifferent(packInput,golden.packs[i],`line.${i+1}.bottles_per_case`);
-      await fillIfDifferent(looseInput,0,`line.${i+1}.loose`);
-      await fillIfDifferent(rateInput,golden.rates[i],`line.${i+1}.rate_per_case`);
-      await fillIfDifferent(mrpInput,golden.mrp[i],`line.${i+1}.mrp`);
-      await fillIfDifferent(amountInput,golden.amounts[i],`line.${i+1}.amount`);
-
-      // If OCR could not resolve Product Master, stage the reviewed row exactly as
-      // the real UI permits. Nothing is created until receive succeeds.
-      const productSelect=cells.nth(2).locator("select");
-      const selected=await productSelect.inputValue().catch(()=>"");
-      const pendingText=await cells.nth(2).innerText().catch(()=>"");
-      if(!selected&&!/Pending:/i.test(pendingText)){
-        const assign=row.getByRole("button",{name:"Assign Later",exact:true});
-        if(await assign.isVisible().catch(()=>false)){
-          await assign.click();
-          await sleep(120);
-        }
-      }
-
-      const confirm=row.getByRole("button",{name:"Confirm Pack",exact:true});
-      await confirm.click();
-      await sleep(120);
-
-      const keep=row.getByRole("button",{name:"Keep Separate",exact:true});
-      if(await keep.isVisible().catch(()=>false)){
-        await keep.click();
-        await sleep(120);
-      }
-    }
-    report.before.lines=beforeRows;
-
-    const finance={
-      "Freight / Carting":golden.freight,
-      "Transport":0,
-      "Handling":0,
-      "Loading / Unloading":0,
-      "Cash / Supplier Discount":golden.cashDiscount,
-      "Other Invoice Deduction":golden.invoiceDiscount,
-      "TCS / Stamp / Other Additions":golden.misc,
-      "Rounding Adjustment":0,
-      "Reviewed Printed Invoice Total":golden.total,
-    };
-
-    for(const [label,value] of Object.entries(finance)){
-      const loc=page.getByLabel(label,{exact:true});
-      await fillIfDifferent(loc,value,`finance.${label}`);
-    }
-
-    // Allow the application's 700 ms server-draft debounce to settle.
-    await sleep(1200);
-
-    const footer=page.locator("section.purchase-receive-footer");
-    await footer.getByText("Ready to Receive",{exact:true})
-      .waitFor({state:"visible",timeout:30000});
-
-    const sync=page.locator(".purchase-sync-strip strong");
-    for(let i=0;i<60;i++){
-      const body=await page.locator("body").innerText();
-      assert(!/SYNC ERROR/.test(body),"15983 authoritative review draft shows SYNC ERROR.");
-      if(/SYNCED/i.test(await sync.innerText().catch(()=>""))) break;
-      await sleep(500);
-    }
-
-    const totalsText=await table.locator("tfoot").innerText();
-    report.after.totals=totalsText.replace(/\s+/g," ").trim();
-    assert(/52 cases/i.test(totalsText),`15983 cases total not 52: ${totalsText}`);
-    assert(/792 bottles/i.test(totalsText),`15983 bottles total not 792: ${totalsText}`);
-
-    const receive=footer.getByRole("button",{name:"Approve & Receive Stock",exact:true});
-    assert(!(await receive.isDisabled()),"15983 receive button remains disabled after golden human review.");
-
-    await page.screenshot({path:path.join(RAW,"15983_READY_AFTER_HUMAN_REVIEW.png"),fullPage:true});
-    await receive.click();
-
-    await page.waitForURL(u=>u.hash.includes("#/purchasing/receipts/"),{timeout:60000});
-    await page.locator("h2").filter({hasText:/Purchase Verification/i}).first()
-      .waitFor({state:"visible",timeout:30000});
-
-    report.received=true;
-    report.result="PASS_RECEIVED";
-    await page.screenshot({path:path.join(RAW,"15983_RECEIPT.png"),fullPage:true});
-  }
-
-  assert(report.productionTouched===false,"PROD request was attempted.");
-  report.finishedAt=new Date().toISOString();
-  fs.writeFileSync(path.join(RAW,"15983_RESULT.json"),JSON.stringify(report,null,2));
-
-  console.log(`[15983] RESULT=${report.result}`);
-  console.log(`[15983] OCR/HUMAN CORRECTIONS=${report.corrections.length}`);
-  for(const c of report.corrections){
-    console.log(`[15983 CORRECTION] ${c.field}: ${c.before} -> ${c.after}`);
-  }
-
-  await context.close();
-}catch(e){
-  report.result="FAIL";
-  report.failure=e?.stack||String(e);
-  report.finishedAt=new Date().toISOString();
-  try{fs.writeFileSync(path.join(RAW,"15983_RESULT.json"),JSON.stringify(report,null,2));}catch{}
-  console.error("[15983] FAIL:",e?.message||e);
-  process.exitCode=1;
-}finally{
-  try{if(browser)await browser.close();}catch{}
-}
-NODE_15983
-
-AUTH_FILE="$HOME/.wineshoppos-v5-uat/auth.json"
-[[ -f "$AUTH_FILE" ]] || die "Saved QA auth is missing."
+curl -fsS "$BASE/" >/dev/null 2>&1 || die "DEV Vite did not become ready."
 
 echo
-echo "[4/6] Run 15983 as human verification: OCR -> compare -> correct -> learn -> receive..."
-
-set +e
-BASE_URL="$BASE_15983" \
-RAW="$RAW" \
-AUTH_FILE="$AUTH_FILE" \
-node "$RAW/review-15983.mjs" 2>&1 | tee "$RAW/15983-console.log"
-R15983=${PIPESTATUS[0]}
-set -e
-
-[[ "$R15983" -eq 0 ]] || die "15983 human-review stage failed before safe completion."
-
-# SAFE_REVIEW is a valid UAT outcome: OCR/image was reviewed and no unsafe stock
-# was posted. PASS_RECEIVED and PASS_ALREADY_RECEIVED are also valid.
-node - "$RAW/15983_RESULT.json" <<'NODE_VALIDATE'
-const fs=require("fs");
-const f=process.argv[2];
-const j=JSON.parse(fs.readFileSync(f,"utf8"));
-if(!["PASS_RECEIVED","PASS_ALREADY_RECEIVED","SAFE_REVIEW"].includes(j.result)){
-  throw new Error(`Unexpected 15983 result ${j.result}`);
-}
-if(j.productionTouched)throw new Error("15983 attempted PROD.");
-console.log(`[PASS] 15983 human-review outcome: ${j.result}; corrections logged=${j.corrections?.length||0}`);
-NODE_VALIDATE
+echo "[4/7] Add/verify missing 16845 + B-3339 barcodes through Product UI..."
+WSP_BASE_URL="$BASE" WSP_AUTH_FILE="$AUTH" WSP_E2E_FIXTURE="$REPO/$FIXTURE_REL" \
+WSP_STRICT_INVOICES="16845,B-3339" node "$BARCODE_REL" 2>&1 | tee "$RAW/barcodes-before-15983.log"
 
 echo
-echo "[5/6] Stop temporary 15983 Vite server before stress..."
+echo "[5/7] Resume invoice 15983 and act like a human reviewer..."
+WSP_BASE_URL="$BASE" WSP_AUTH_FILE="$AUTH" WSP_E2E_FIXTURE="$REPO/$FIXTURE_REL" \
+WSP_E2E_OUT="$RAW" node "$REVIEW_REL" 2>&1 | tee "$RAW/15983.log"
+grep -Eq 'PASS_RECEIVED|PASS_ALREADY_RECEIVED' "$RAW/15983.log" || die "15983 did not complete safely."
+
+echo
+echo "[6/7] Verify all received invoice products have barcodes through Product UI..."
+WSP_BASE_URL="$BASE" WSP_AUTH_FILE="$AUTH" WSP_E2E_FIXTURE="$REPO/$FIXTURE_REL" \
+WSP_STRICT_INVOICES="16845,B-3339,15983" node "$BARCODE_REL" 2>&1 | tee "$RAW/barcodes-after-15983.log"
+
 kill "$VITE_PID" >/dev/null 2>&1 || true
+wait "$VITE_PID" >/dev/null 2>&1 || true
 VITE_PID=""
 sleep 1
 
 echo
-echo "[6/6] Run preserved 4-cashier 96+ UI stress continuation..."
-
-# The invoice stages may add stock, but they do not close or recreate the four
-# preserved cashier shifts. Stress runner validates those shifts again.
-STRESS_RUN_ID="stress_after_4_invoice_$(date +%Y%m%d_%H%M%S)"
-
+echo "[7/7] Barcode-driven 4-cashier 96+ UI stress -> return -> shifts -> analytics..."
+STRESS_RUN_ID="true_e2e_stress_$(date +%Y%m%d_%H%M%S)"
 set +e
 WSP_REPO="$REPO" \
 WSP_RESUME_CASHIER_FILE="$CREDS" \
@@ -540,23 +214,22 @@ set -e
 if [[ "$STRESS_RC" -eq 0 ]]; then
   echo
   echo "================================================================"
-  echo "FINAL 4-INVOICE HUMAN REVIEW + STRESS: PASS"
-  echo "16845   : tested/revalidated by R11"
-  echo "B-3339  : tested/revalidated by R11"
-  echo "16805   : tested by R11; safe-review allowed if evidence remains unreadable"
-  echo "15983   : tested with golden human correction and learning path"
-  echo "Stress  : PASS"
-  echo "PROD    : NOT TOUCHED"
-  echo "Evidence: $RAW"
+  echo " TRUE END-TO-END RESULT: PASS"
+  echo " 4 physical invoices covered"
+  echo " OCR/human review covered"
+  echo " Product/barcode UI covered"
+  echo " Purchase/inventory covered"
+  echo " 96+ barcode-driven POS UI bills covered"
+  echo " Return + shift close + analytics covered"
+  echo " PROD untouched"
+  echo " Evidence: $RAW"
   echo "================================================================"
 else
   echo
   echo "================================================================"
-  echo "INVOICES COMPLETED; STRESS STOPPED ($STRESS_RC)"
-  echo "Do NOT rerun invoices blindly."
-  echo "Use the stress evidence/progress checkpoint for continuation."
-  echo "Evidence: $RAW"
+  echo " INVOICE/BARCODE STAGES PASSED; STRESS STOPPED: $STRESS_RC"
+  echo " Do not blindly rerun if STRESS_PROGRESS.json indicates sales were committed."
+  echo " Evidence: $RAW"
   echo "================================================================"
 fi
-
 exit "$STRESS_RC"

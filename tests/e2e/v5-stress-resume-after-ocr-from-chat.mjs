@@ -709,7 +709,7 @@ async function openShiftViaUi(session){
 
 function buildUiStressPlan(products,minTx=96){
   const eligible=products
-    .filter(p=>p.stock>=3 && p.selling>0)
+    .filter(p=>p.stock>=3 && p.selling>0 && String(p.barcode||"").trim())
     .sort((a,b)=>a.key.localeCompare(b.key));
   assert(eligible.length>=12,`Only ${eligible.length} sellable products available after invoices.`);
 
@@ -802,7 +802,8 @@ function buildUiStressPlan(products,minTx=96){
 async function addLineToPos(page,line){
   const p=line.product;
   const search=page.getByLabel("Scan barcode or search products");
-  await search.fill(p.name);
+  assert(String(p.barcode||"").trim(),`${p.key}: barcode missing in barcode-driven stress.`);
+  await search.fill(p.barcode);
   let tiles=page.locator("button.pos-v5h-product-tile").filter({hasText:p.name});
   if(p.size>0) tiles=tiles.filter({hasText:`${p.size} ml`});
   const tile=tiles.first();
