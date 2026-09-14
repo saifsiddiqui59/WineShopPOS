@@ -185,15 +185,19 @@ async function selectExistingOrStage(page,row,line,rowIndex){
     await editNew.waitFor({state:"visible",timeout:10000});
     await editNew.click();
   }
-  const modal=page.getByRole("heading",{name:"Edit New Product Details",exact:true}).locator("..").locator("..");
-  await page.getByRole("heading",{name:"Edit New Product Details",exact:true}).waitFor({state:"visible",timeout:10000});
+  const modal=page.locator(".product-image-chooser-modal").first();
+  await modal.waitFor({state:"visible",timeout:10000});
+  await modal.getByRole("heading",{name:"Edit New Product Details",exact:true}).waitFor({state:"visible",timeout:10000});
 
-  const nameInput=page.getByLabel("Product Name",{exact:true});
-  const brandInput=page.getByLabel("Brand",{exact:true});
-  const sizeInput=page.getByLabel("Size (ml)",{exact:true});
-  const packInput=page.getByLabel("Bottles/Case",{exact:true});
-  const mrpInput=page.getByLabel("MRP",{exact:true});
-  const barcodeInput=page.getByLabel("Barcode optional",{exact:true});
+  const nameInput=modal.getByLabel("Product Name",{exact:true});
+  const brandInput=modal.getByLabel("Brand",{exact:true});
+  const sizeInput=modal.getByLabel("Size (ml)",{exact:true});
+  const packInput=modal.getByLabel("Bottles/Case",{exact:true});
+  const mrpInput=modal.getByLabel("MRP",{exact:true});
+  const barcodeInputs=modal.locator('input[data-scanner-capture="barcode"]');
+  assert(await barcodeInputs.count()===1,
+    `Expected exactly one pending-product barcode input; found ${await barcodeInputs.count()}.`);
+  const barcodeInput=barcodeInputs.first();
   await fill(nameInput,line.name,`line.${rowIndex+1}.product_name`);
   await fill(brandInput,line.brand,`line.${rowIndex+1}.brand`);
   await fill(sizeInput,line.size,`line.${rowIndex+1}.size_ml`);
@@ -255,9 +259,20 @@ async function fillFinance(page){
     ["Freight / Carting",f.freight],["Transport",0],["Handling",0],["Loading / Unloading",0],
     ["Cash / Supplier Discount",f.cashDiscount],["Other Invoice Deduction",f.invoiceDiscount],
     ["TCS / Stamp / Other Additions",f.misc],["Rounding Adjustment",0],
-    ["Reviewed Printed Invoice Total",f.total],
   ];
   for(const [label,value] of fields) await fill(page.getByLabel(label,{exact:true}),value,`finance.${label}`);
+
+  // Current V5 wraps helper <small> text inside this label, so an exact
+  // accessible-name selector is intentionally unsafe. Scope by owning panel,
+  // then target the numeric input inside the visible label.
+  const financePanel=page.locator("section.panel").filter({hasText:"Financial Reconciliation"}).first();
+  await financePanel.waitFor({state:"visible",timeout:30000});
+  const reviewedTotalInputs=financePanel.locator("label")
+    .filter({hasText:"Reviewed Printed Invoice Total"})
+    .locator('input[type="number"]');
+  assert(await reviewedTotalInputs.count()===1,
+    `Expected exactly one Reviewed Printed Invoice Total input; found ${await reviewedTotalInputs.count()}.`);
+  await fill(reviewedTotalInputs.first(),f.total,"finance.Reviewed Printed Invoice Total");
 }
 async function verifyReadyAndReceive(page){
   // Let earlier debounced writes settle, then force one fresh harmless Notes
