@@ -6900,10 +6900,42 @@ async function verifyPreviouslyReceivedFixture(fixture, invoicePath, itemReport)
   const products = await getProducts();
   const productByBarcode = new Map(products.map((p) => [String(p.barcode || "").trim(), p]));
   const itemByProduct = new Map(items.map((i) => [i.product_id, i]));
+  // WSP_RECEIVED_CATALOG_RESET_FALLBACK_V1
+  // QA catalogue cleanup may remove synthetic barcodes after a purchase is
+  // already committed. For RECEIVED revalidation only, fall back to the
+  // immutable purchase-linked product identity. Never guess an ambiguous row.
+  const purchaseProductIds = new Set(items.map((i) => i.product_id).filter(Boolean));
+  const fallbackUsedProductIds = new Set();
 
   for (const line of fixture.lines) {
-    const p = productByBarcode.get(line.barcode);
-    assert(p, `${fixture.invoiceNumber}: previously received product missing for barcode ${line.barcode}.`);
+    let p = productByBarcode.get(line.barcode);
+    if (!p) {
+      const expectedQty = Number(line.cases || 0) * Number(line.pack || 0)
+        + Number(line.loose || 0);
+      const candidates = products.filter((candidate) => {
+        if (!purchaseProductIds.has(candidate.id)) return false;
+        if (fallbackUsedProductIds.has(candidate.id)) return false;
+        const pi = itemByProduct.get(candidate.id);
+        if (!pi) return false;
+        return norm(candidate.product_name) === norm(line.name)
+          && Number(candidate.size_ml) === Number(line.size)
+          && Number(pi.quantity || 0) === expectedQty;
+      });
+      assert(
+        candidates.length === 1,
+        `${fixture.invoiceNumber}: historical QA barcode ${line.barcode} is absent; strict purchase-linked fallback found ${candidates.length} match(es) for ${line.name} ${line.size}ml.`
+      );
+      p = candidates[0];
+      fallbackUsedProductIds.add(p.id);
+      log(
+        `${fixture.invoiceNumber}: QA barcode ${line.barcode} is absent after catalogue cleanup; ` +
+        `revalidated by purchase-linked ${p.product_name} ${p.size_ml}ml / qty ${expectedQty}.`
+      );
+    }
+    assert(
+      p,
+      `${fixture.invoiceNumber}: previously received product identity could not be revalidated for ${line.name}.`
+    );
     assert(
       norm(p.product_name) === norm(line.name),
       `${fixture.invoiceNumber}: existing product-name mismatch for ${line.barcode}: ${p.product_name} vs ${line.name}.`
