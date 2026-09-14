@@ -10,7 +10,7 @@ TEST="$REPO/$TEST_REL"
 RESUME_CASHIER_FILE="${WSP_RESUME_CASHIER_FILE:-$CERT_REPO/.wsp-local/stress_only_20260913_180633-cashiers.json}"
 PORT="4185"
 BASE_URL="http://127.0.0.1:${PORT}"
-RUN_ID="stress_after_ocr_$(date +%Y%m%d_%H%M%S)"
+RUN_ID="${WSP_RUN_ID:-stress_after_ocr_$(date +%Y%m%d_%H%M%S)}"
 RAW_DIR="$REPO/.wsp-local/stress-after-ocr/$RUN_ID"
 AUTH_FILE="$HOME/.wineshoppos-v5-uat/auth.json"
 PUBLIC_REL="docs/versions/v5/testing/evidence/$RUN_ID"
@@ -128,11 +128,18 @@ const rc=Number(process.env.WSP_TEST_RC||1);
 fs.mkdirSync(pub,{recursive:true});
 
 function sanitize(value){
-  return String(value??"")
+  const normalized=String(value??"")
+    .replace(/\r\n/g,"\n")
+    .replace(/\r/g,"\n")
     .replace(/C:\\Users\\[^\\\r\n]+/gi,"C:\\Users\\<redacted>")
-    .replace(/\/c\/Users\/[^/\r\n]+/g,"/c/Users/<redacted>")
+    .replace(/\/c\/Users\/[^\/\r\n]+/g,"/c/Users/<redacted>")
     .replace(/\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\b/g,"<redacted-jwt>")
     .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,"<redacted-email>");
+  const cleaned=normalized
+    .split("\n")
+    .map(line=>line.replace(/[ \t]+$/g,""))
+    .join("\n");
+  return cleaned && !cleaned.endsWith("\n") ? `${cleaned}\n` : cleaned;
 }
 
 function copySanitized(src,dst){

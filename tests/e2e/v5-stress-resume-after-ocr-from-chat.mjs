@@ -849,15 +849,82 @@ async function runOneUiSale(session,tx,globalIndex){
 async function runAllUiStress(sessions,plan){
   console.log(`[6] Run ${plan.txCount} genuine POS UI transactions across four sessions...`);
   const results=[];
+
+  report.stress.transactions=0;
+  report.stress.totalBottles=0;
+  report.stress.partialMutationRisk=false;
+  report.stress.activeBatch=null;
+
+  const writeProgress=()=>{
+    const p={
+      runId:RUN,
+      transactions:results.length,
+      totalBottles:results.reduce((a,x)=>a+x.bottles,0),
+      partialMutationRisk:Boolean(report.stress.partialMutationRisk),
+      activeBatch:report.stress.activeBatch,
+      updatedAt:new Date().toISOString(),
+    };
+    fs.writeFileSync(path.join(RAW,"STRESS_PROGRESS.json"),JSON.stringify(p,null,2));
+  };
+
+  writeProgress();
+
   for(let i=0;i<plan.txs.length;i+=4){
     const batch=plan.txs.slice(i,i+4);
-    const batchResults=await Promise.all(batch.map((tx,j)=>runOneUiSale(sessions[(i+j)%4],tx,i+j)));
-    results.push(...batchResults);
+
+    report.stress.activeBatch={
+      startIndex:i,
+      count:batch.length,
+      status:"RUNNING",
+    };
+    writeProgress();
+
+    const settled=await Promise.allSettled(
+      batch.map((tx,j)=>runOneUiSale(sessions[(i+j)%4],tx,i+j))
+    );
+
+    const failures=[];
+    for(let j=0;j<settled.length;j++){
+      const item=settled[j];
+      if(item.status==="fulfilled"){
+        results.push(item.value);
+      }else{
+        failures.push({
+          globalIndex:i+j,
+          message:String(item.reason?.message||item.reason||"UNKNOWN"),
+        });
+      }
+    }
+
+    report.stress.transactions=results.length;
+    report.stress.totalBottles=results.reduce((a,x)=>a+x.bottles,0);
+
+    if(failures.length){
+      report.stress.partialMutationRisk=true;
+      report.stress.activeBatch={
+        startIndex:i,
+        count:batch.length,
+        status:"FAILED_OR_UNKNOWN",
+        failures,
+      };
+      writeProgress();
+
+      throw new Error(
+        `Stress batch ${i}-${i+batch.length-1} had ${failures.length} failed/unknown sale(s). `+
+        `Automatic rerun is unsafe because a rejected browser task may already have committed. `+
+        failures.map(x=>`#${x.globalIndex+1}: ${x.message}`).join(" | ")
+      );
+    }
+
+    report.stress.activeBatch=null;
+    writeProgress();
+
     if(results.length%20===0||results.length===plan.txs.length){
       console.log(`[UI STRESS] ${results.length}/${plan.txs.length} bills completed`);
     }
     await sleep(120);
   }
+
   report.stress.transactions=results.length;
   report.stress.totalBottles=results.reduce((a,x)=>a+x.bottles,0);
   report.stress.paymentMix=results.reduce((a,x)=>{a[x.method]=(a[x.method]||0)+1;return a;},{});
@@ -867,9 +934,11 @@ async function runAllUiStress(sessions,plan){
     maxMs:Math.max(...results.map(x=>x.latency)),
     avgMs:Math.round(results.reduce((a,x)=>a+x.latency,0)/results.length),
   };
-  logPass("Genuine multi-session POS stress",`${results.length} complete browser/UI bills · ${report.stress.totalBottles} bottles`);
-}
+  writeProgress();
 
+  logPass("Genuine multi-session POS stress",
+    `${results.length} complete browser/UI bills · ${report.stress.totalBottles} bottles`);
+}
 async function verifyCashierSales(session){
   const {page,label}=session;
   await page.goto(`${BASE}/#/pos/sales`,{waitUntil:"domcontentloaded"});
