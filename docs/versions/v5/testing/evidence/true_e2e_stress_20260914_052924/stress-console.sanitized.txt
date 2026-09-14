@@ -1,0 +1,38 @@
+============================================================
+ V5 STRESS RESUME — EXACT PRIOR-CHAT LOGIC AFTER OCR PURCHASE
+ 4 cashiers + 96+ genuine POS UI bills + return + shift close + analytics
+ R11 replay: NO · OCR purchase already completed by merged stage · PROD: HARD BLOCKED
+============================================================
+[PASS] DEV ADMIN session — saved auth reused or interactive DEV login completed
+[PRODUCT MASTER] semantic columns OK · products=36 · stocked=36 · validEAN13=36
+[PASS] Product Master pre-stress — 36 products available for genuine POS stress
+[PASS] Pre-stress Sales baseline — 5 existing bill(s) preserved
+[PASS] Four cashier profiles — reused exact cashier credentials from the preserved stress checkpoint
+[PASS] Test Cashier 1 login + preserved shift — independent browser context · existing OPEN shift reused
+[PASS] Test Cashier 2 login + preserved shift — independent browser context · existing OPEN shift reused
+[PASS] Test Cashier 3 login + preserved shift — independent browser context · existing OPEN shift reused
+[PASS] Test Cashier 4 login + preserved shift — independent browser context · existing OPEN shift reused
+[PRODUCT MASTER] semantic columns OK · products=36 · stocked=36 · validEAN13=36
+[PASS] UI stress plan — 106 bills · 530 lines · 2066 bottles · 4 independent sessions
+[6] Run 106 genuine POS UI transactions across four sessions...
+[UI STRESS] 20/106 bills completed
+[UI STRESS] 40/106 bills completed
+[UI STRESS] 60/106 bills completed
+[UI STRESS] 80/106 bills completed
+[UI STRESS] 100/106 bills completed
+[UI STRESS] 106/106 bills completed
+[PASS] Genuine multi-session POS stress — 106 complete browser/UI bills · 2066 bottles
+[PASS] Test Cashier 1 own-sales visibility — 28 own sales · {"CASH":0,"UPI":0,"CARD":0}
+[PASS] Test Cashier 2 own-sales visibility — 28 own sales · {"CASH":0,"UPI":0,"CARD":0}
+[PASS] Test Cashier 3 own-sales visibility — 28 own sales · {"CASH":0,"UPI":0,"CARD":0}
+[PASS] Test Cashier 4 own-sales visibility — 27 own sales · {"CASH":0,"UPI":0,"CARD":0}
+[7] Cashier return request + Admin approval through UI...
+[PASS] Return/refund workflow — cashier requested 1 unit · Admin approved through UI
+
+[FINAL] V5 STRESS ONLY: FAIL
+[CLASSIFICATION] HARNESS
+[FAIL] locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('.purchase-message').filter({ hasText: 'Shift closed.' }) to be visible[22m
+
+[RAW EVIDENCE] E:\WineShopPOS_V5_E2E_20260912_105856\.wsp-local\stress-after-ocr\true_e2e_stress_20260914_052924

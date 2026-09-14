@@ -136,3 +136,11 @@ Error: Clean-baseline precondition failed: purchases has 1 row(s).
 - Resolution: restore the original certification-worktree selection logic before the environment guard.
 - Classification: test harness prerequisite/path defect; **not a WineShopPOS application defect**.
 <!-- /STRESS_ONLY_ENV_WORKTREE_20260913_180313 -->
+
+<!-- STRESS_ONLY_true_e2e_stress_20260914_052924 -->
+## 2026-09-14T05:33:23-04:00 — STRESS_RESUME_AFTER_OCR
+
+- Runner: `scripts/testing/RUN_V5_STRESS_RESUME_AFTER_OCR_FROM_CHAT.sh`
+- Evidence: `docs/versions/v5/testing/evidence/true_e2e_stress_20260914_052924`
+- Classification: **HARNESS**
+<!-- /STRESS_ONLY_true_e2e_stress_20260914_052924 -->
