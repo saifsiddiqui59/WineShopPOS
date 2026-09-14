@@ -95,7 +95,6 @@ required=[
   'input[type="file"][accept*="application/pdf"]',
   'getByRole("combobox", { name: "Supplier", exact: true })',
   'READY_TO_RECEIVE',
-  'invoice_ocr_record_review',
   '"invoiceNumber": "16845"',
   '"invoiceNumber": "B-3339"',
   '"invoiceNumber": "16805"',
@@ -103,6 +102,23 @@ required=[
 missing=[x for x in required if x not in runner]
 if missing:
     raise SystemExit("R11 invoice harness missing safeguard(s): "+", ".join(missing))
+
+# OCR learning is application behavior, not Playwright-harness text.
+# Validate it at the application layer where reviewed values are persisted.
+app=Path("src/pages/Purchases.jsx").read_text(encoding="utf-8")
+app_required={
+    "human-review learning RPC": 'invoice_ocr_record_review',
+    "review outcome classifier": 'reviewedMappingOutcome',
+    "learning after reviewed receive": 'recordOcrLearning',
+    "OCR assistance UI": 'OCR Exception Assistance',
+    "manual correction UI": 'Manual correction is allowed',
+}
+missing_app=[name for name,marker in app_required.items() if marker not in app]
+if missing_app:
+    raise SystemExit(
+        "Purchases.jsx missing OCR human-review safeguard(s): "
+        + ", ".join(missing_app)
+    )
 
 out.write_text(runner.rstrip()+"\n",encoding="utf-8",newline="\n")
 PY_EXTRACT
