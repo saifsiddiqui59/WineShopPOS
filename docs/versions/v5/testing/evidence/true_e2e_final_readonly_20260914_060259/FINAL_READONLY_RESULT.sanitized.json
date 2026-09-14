@@ -1,0 +1,121 @@
+{
+  "result": "PASS",
+  "classification": "PASS",
+  "productionTouched": false,
+  "checks": [
+    {
+      "name": "DEV ADMIN session",
+      "status": "PASS",
+      "detail": "QA/DEV authenticated"
+    },
+    {
+      "name": "111 committed UI bills",
+      "status": "PASS",
+      "detail": "CASH 39 · UPI 36 · CARD 36 · Total 446745"
+    },
+    {
+      "name": "Test Cashier 1 role security",
+      "status": "PASS",
+      "detail": "restricted navigation hidden · protected routes redirected to /#/pos"
+    },
+    {
+      "name": "Test Cashier 2 role security",
+      "status": "PASS",
+      "detail": "restricted navigation hidden · protected routes redirected to /#/pos"
+    },
+    {
+      "name": "Test Cashier 3 role security",
+      "status": "PASS",
+      "detail": "restricted navigation hidden · protected routes redirected to /#/pos"
+    },
+    {
+      "name": "Test Cashier 4 role security",
+      "status": "PASS",
+      "detail": "restricted navigation hidden · protected routes redirected to /#/pos"
+    },
+    {
+      "name": "Owner Center + charts",
+      "status": "PASS",
+      "detail": "Revenue 446745 · Bills 111"
+    },
+    {
+      "name": "Inventory Intelligence",
+      "status": "PASS",
+      "detail": "rendered"
+    },
+    {
+      "name": "Inventory Ageing",
+      "status": "PASS",
+      "detail": "rendered"
+    },
+    {
+      "name": "Profit Intelligence",
+      "status": "PASS",
+      "detail": "Revenue / COGS / Gross Profit / Operating Profit visible"
+    },
+    {
+      "name": "Purchase Intelligence",
+      "status": "PASS",
+      "detail": "rendered"
+    },
+    {
+      "name": "Reports + charts",
+      "status": "PASS",
+      "detail": "Sales 446745 reconciled to Sales history"
+    }
+  ],
+  "roleChecks": [
+    {
+      "label": "Test Cashier 1",
+      "status": "PASS",
+      "restrictedNavHidden": true,
+      "protectedRoutesRedirected": 6,
+      "finalHash": "#/pos"
+    },
+    {
+      "label": "Test Cashier 2",
+      "status": "PASS",
+      "restrictedNavHidden": true,
+      "protectedRoutesRedirected": 6,
+      "finalHash": "#/pos"
+    },
+    {
+      "label": "Test Cashier 3",
+      "status": "PASS",
+      "restrictedNavHidden": true,
+      "protectedRoutesRedirected": 6,
+      "finalHash": "#/pos"
+    },
+    {
+      "label": "Test Cashier 4",
+      "status": "PASS",
+      "restrictedNavHidden": true,
+      "protectedRoutesRedirected": 6,
+      "finalHash": "#/pos"
+    }
+  ],
+  "analytics": {
+    "owner": {
+      "revenue": 446745,
+      "bills": 111
+    },
+    "inventoryIntelligence": "PASS",
+    "inventoryAgeing": "PASS",
+    "profitIntelligence": "PASS",
+    "purchaseIntelligence": "PASS",
+    "reports": {
+      "sales": 446745
+    }
+  },
+  "sales": {
+    "count": 111,
+    "total": 446745,
+    "mix": {
+      "CASH": 39,
+      "UPI": 36,
+      "CARD": 36
+    }
+  },
+  "failure": "",
+  "finishedAt": "2026-09-14T10:04:09.506Z"
+}

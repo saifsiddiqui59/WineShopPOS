@@ -1,0 +1,25 @@
+[ADMIN] QA session expired. Sign in once in the visible DEV browser.
+[PASS] DEV ADMIN session — QA/DEV authenticated
+[PASS] 111 committed UI bills — CASH 39 · UPI 36 · CARD 36 · Total 446745
+[PASS] Test Cashier 1 role routing — restricted links hidden and 6 protected routes redirected to /#/pos
+[PASS] Test Cashier 1 role security — restricted navigation hidden · protected routes redirected to /#/pos
+[PASS] Test Cashier 2 role routing — restricted links hidden and 6 protected routes redirected to /#/pos
+[PASS] Test Cashier 2 role security — restricted navigation hidden · protected routes redirected to /#/pos
+[PASS] Test Cashier 3 role routing — restricted links hidden and 6 protected routes redirected to /#/pos
+[PASS] Test Cashier 3 role security — restricted navigation hidden · protected routes redirected to /#/pos
+[PASS] Test Cashier 4 role routing — restricted links hidden and 6 protected routes redirected to /#/pos
+[PASS] Test Cashier 4 role security — restricted navigation hidden · protected routes redirected to /#/pos
+[PASS] Owner Center + charts — Revenue 446745 · Bills 111
+[PASS] Inventory Intelligence — rendered
+[PASS] Inventory Ageing — rendered
+[PASS] Profit Intelligence — Revenue / COGS / Gross Profit / Operating Profit visible
+[PASS] Purchase Intelligence — rendered
+[PASS] Reports + charts — Sales 446745 reconciled to Sales history
+
+================================================================
+ WINE SHOP POS TRUE END-TO-END CERTIFICATION: PASS
+ 111 bills · return · four CLOSED shifts · role security · analytics
+ Mutation in final pass: NONE
+ PROD: NOT TOUCHED
+================================================================
+[RAW EVIDENCE] E:\WineShopPOS_V5_E2E_20260912_105856\.wsp-local\final-readonly\true_e2e_final_readonly_20260914_060259
