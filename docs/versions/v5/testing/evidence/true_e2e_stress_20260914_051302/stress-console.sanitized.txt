@@ -1,0 +1,18 @@
+============================================================
+ V5 STRESS RESUME — EXACT PRIOR-CHAT LOGIC AFTER OCR PURCHASE
+ 4 cashiers + 96+ genuine POS UI bills + return + shift close + analytics
+ R11 replay: NO · OCR purchase already completed by merged stage · PROD: HARD BLOCKED
+============================================================
+[PASS] DEV ADMIN session — saved auth reused or interactive DEV login completed
+[PASS] Product Master pre-stress — 36 products available for genuine POS stress
+[PASS] Pre-stress Sales baseline — 0 existing bill(s) preserved
+[PASS] Four cashier profiles — reused exact cashier credentials from the preserved stress checkpoint
+[PASS] Test Cashier 1 login + preserved shift — independent browser context · existing OPEN shift reused
+[PASS] Test Cashier 2 login + preserved shift — independent browser context · existing OPEN shift reused
+[PASS] Test Cashier 3 login + preserved shift — independent browser context · existing OPEN shift reused
+[PASS] Test Cashier 4 login + preserved shift — independent browser context · existing OPEN shift reused
+
+[FINAL] V5 STRESS ONLY: FAIL
+[CLASSIFICATION] TRIAGE_REQUIRED
+[FAIL] Only 0 sellable products available after invoices.
+[RAW EVIDENCE] E:\WineShopPOS_V5_E2E_20260912_105856\.wsp-local\stress-after-ocr\true_e2e_stress_20260914_051302
