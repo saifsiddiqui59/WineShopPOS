@@ -99,7 +99,12 @@ export function purchaseIdentityIssues(row,product){
     );
   }
 
-  const invoiceTokens=distinctiveTokens(row.sourceDescription);
+  // Raw OCR sourceDescription remains immutable for audit. Only an explicit
+  // human-reviewed product confirmation may provide a corrected identity text
+  // for readiness validation (for example TURORG -> TUBORG).
+  const reviewedIdentity=String(row.reviewedSourceDescription||"").trim();
+  const identityText=reviewedIdentity||row.sourceDescription;
+  const invoiceTokens=distinctiveTokens(identityText);
   const productTokens=distinctiveTokens(`${product.name||""} ${product.brand||""}`);
 
   if(invoiceTokens.length&&productTokens.length){
@@ -107,7 +112,7 @@ export function purchaseIdentityIssues(row,product){
     const overlap=invoiceTokens.some((token)=>productSet.has(token));
     if(!overlap){
       issues.push(
-        `Product identity mismatch: invoice "${String(row.sourceDescription||"").trim()}" does not share a distinctive name/brand token with Product "${String(product.name||"").trim()}".`,
+        `Product identity mismatch: ${reviewedIdentity?"reviewed invoice identity":"invoice"} "${String(identityText||"").trim()}" does not share a distinctive name/brand token with Product "${String(product.name||"").trim()}".`,
       );
     }
   }

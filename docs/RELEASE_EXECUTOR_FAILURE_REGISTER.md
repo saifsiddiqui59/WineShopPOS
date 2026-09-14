@@ -2641,3 +2641,120 @@ Continuation entry point:
 `docs/versions/v5/testing/V5_UAT_HANDOFF_20260911.md`
 
 Permanent rule: do not modify a test harness merely to hide a persisted business-data mismatch. Classify locator/timing failures separately from application/database/OCR defects.
+
+### 2026-09-14 — V5 15983 raw-OCR identity blocked a human-reviewed correction
+
+Release/stage:
+PROD V5 15983 exact Playwright human-review continuation — Purchase Receiving readiness gate.
+
+Symptom:
+The certified reviewer corrected physical line 3 from OCR `TURORG STRONG PREMIUM BEER`
+to reviewed product `TUBORG STRONG PREMIUM BEER`, but the footer remained
+`Receive Stock Blocked` even though size, pack, barcode, quantity, price and
+financial reconciliation were valid.
+
+Root cause:
+`purchaseIdentityIssues()` used immutable `row.sourceDescription` as the only
+invoice identity token source. That is correct raw OCR audit evidence, but after
+an explicit human correction it incorrectly remained authoritative for readiness.
+`TURORG` and `TUBORG` share no distinctive token, so the safety guard rejected
+the reviewed product.
+
+Resolution used:
+- Keep raw `sourceDescription` unchanged for audit.
+- Add `reviewedSourceDescription` only when the human explicitly confirms
+  `Edit New/Pending Product -> Use on This Purchase`.
+- Preserve that field in the RECEIVE_STOCK draft.
+- Identity validation uses the reviewed identity when present; otherwise it
+  keeps using raw OCR evidence.
+- Do not weaken size, barcode, package, pack, price or duplicate validation.
+
+Permanent prevention:
+When an immutable OCR field is corrected by explicit human review, never
+overwrite the raw evidence and never keep raw evidence as the only authoritative
+readiness value. Store raw evidence and reviewed authoritative value separately.
+
+Safe continuation point:
+Do not wipe or replay R11. Reuse existing 15983 RECEIVE_STOCK draft and rerun
+the exact certified V5 15983 Playwright reviewer.
+
+Verified outcome:
+Pending exact PROD E2E continuation.
+
+### 2026-09-14 — V5 15983 atomic receive rolled back on repeated literal AUTO SKU
+
+Release/stage:
+PROD V5 15983 exact Playwright continuation — Approve & Receive Stock.
+
+Symptom:
+15983 reached READY_TO_RECEIVE and Playwright clicked Approve & Receive Stock,
+but no receipt route appeared. Read-only verification showed purchase_id NULL,
+purchases still 2, inventory quantity still 1536, and stock movement sum still
+1536, proving the receive transaction did not commit.
+
+Root cause:
+`receive_purchase_v3` created every prepared Product Master row with literal
+`sku='AUTO'`, while `products` enforces `UNIQUE (shop_id, sku)`. Invoice 15983
+contains seven prepared products. The first staged row could use AUTO; the
+second violated SKU uniqueness, causing PostgreSQL to roll back the entire
+atomic purchase/product/inventory transaction.
+
+Resolution:
+Keep the SKU uniqueness constraint and keep `receive_purchase_v3` atomic.
+Generate `AUTO-<barcode>` when a prepared barcode exists; otherwise generate
+`AUTO-<uuid>` using `gen_random_uuid()`. Do not create Product Master rows
+before receive and do not repair 15983 directly in business tables.
+
+Permanent prevention:
+Atomic multi-line tests must include at least two newly prepared products in one
+purchase. Source certification must reject a repeated literal AUTO SKU in the
+`receive_purchase_v3` prepared-product insert.
+
+Safe continuation point:
+15983 remains unreceived but READY_TO_RECEIVE. Do not wipe or replay R11.
+Apply the function migration, then rerun the exact certified 15983 Playwright
+reviewer.
+
+
+### 2026-09-14 — 15983 reviewed identity was dropped before receiveStock
+
+Release/stage:
+V5 PROD 15983 certified E2E — Approve & Receive Stock.
+
+Symptom:
+Purchase Receiving reached Ready to Receive and Playwright clicked Approve & Receive Stock, but no purchase/inventory transaction was committed and the reviewer timed out waiting for Purchase Verification.
+
+Root cause:
+The UI row correctly retained `reviewedSourceDescription` so reviewed OCR corrections such as `TURORG -> TUBORG` passed the workspace readiness check. However, `Purchases.jsx` rebuilt each row before calling `receiveStock()` and transported `sourceDescription` while dropping `reviewedSourceDescription`. `ShopContext.receiveStock()` then re-ran `purchaseIdentityIssues()` without the reviewed identity and failed client-side before `receive_purchase_v3` was called.
+
+Proof:
+A rollback-only PostgreSQL reproduction using the authoritative saved 15983 draft completed `receive_purchase_v3` successfully, proving the backend atomic receive itself is valid. PROD state remained unchanged after the forced rollback.
+
+Resolution:
+Preserve `reviewedSourceDescription` in the `Purchases.jsx -> receiveStock()` row mapping. Keep raw `sourceDescription` unchanged for OCR evidence/audit.
+
+Permanent prevention:
+Any reviewed identity field used to decide UI readiness must survive every intermediate DTO/mapping layer before the final receive validation. Add a regression that checks reviewed identity transport separately from the identity helper itself.
+
+Safe continuation:
+Build/deploy frontend only, then resume existing 15983 READY_TO_RECEIVE through the certified Playwright continuation. Do not wipe, re-upload, or replay R11.
+
+### 2026-09-14 — reviewed-identity transport patch used a global already-patched check
+
+Release/stage:
+V5 PROD 15983 reviewed-identity transport continuation.
+
+Symptom:
+The first transport-fix script reached its focused regression and failed even though the intended patch step had run.
+
+Root cause:
+The script's idempotency check searched all of `Purchases.jsx` for `reviewedSourceDescription:r.reviewedSourceDescription||""`. That field can exist elsewhere in the component, so the script could falsely classify the exact `receiveStock()` DTO mapping as already patched and skip the required insertion.
+
+Resolution:
+Bound patching and verification to the exact block from `items:payload.items.map(r=>({` through `charges:payload.charges`. Assert exactly one raw identity field, exactly one reviewed identity field, and their order before `invoiceSizeMl`.
+
+Permanent prevention:
+Idempotency guards for repeated field names must be scoped to the exact semantic block being modified. Do not use whole-file existence as proof that a specific DTO/transport boundary contains the field.
+
+Safe continuation:
+Rerun only this transport continuation. Do not rerun diagnostics, wipe PROD, re-upload 15983, or replay R11.
