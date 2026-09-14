@@ -1,0 +1,85 @@
+{
+  "result": "FAIL",
+  "classification": "APP_DEFECT",
+  "productionTouched": false,
+  "checks": [
+    {
+      "name": "DEV ADMIN session",
+      "status": "PASS",
+      "detail": "QA/DEV authenticated"
+    },
+    {
+      "name": "111 committed UI bills",
+      "status": "PASS",
+      "detail": "CASH 39 · UPI 36 · CARD 36 · Total 446745"
+    },
+    {
+      "name": "Inventory reconciliation",
+      "status": "PASS",
+      "detail": "36 products · net -2065 bottles · no negative stock · all EAN-13 present"
+    },
+    {
+      "name": "Approved return checkpoint",
+      "status": "PASS",
+      "detail": "1 unit already APPROVED"
+    },
+    {
+      "name": "Four shifts authoritative verification",
+      "status": "PASS",
+      "detail": "all 4 CLOSED in Admin Shift History · Expected=Actual · Difference=0"
+    }
+  ],
+  "sales": {
+    "count": 111,
+    "total": 446745,
+    "mix": {
+      "CASH": 39,
+      "UPI": 36,
+      "CARD": 36
+    }
+  },
+  "inventory": {
+    "products": 36,
+    "beforeTotal": 2228,
+    "currentTotal": 163,
+    "netDelta": 2065
+  },
+  "return": {
+    "reason": "UI return true_e2e_stress_20260914_052924",
+    "status": "APPROVED"
+  },
+  "shifts": [
+    {
+      "token": "be657b90",
+      "status": "CLOSED",
+      "expected": 41195,
+      "actual": 41195,
+      "difference": 0
+    },
+    {
+      "token": "990047f2",
+      "status": "CLOSED",
+      "expected": 39995,
+      "actual": 39995,
+      "difference": 0
+    },
+    {
+      "token": "5698b1aa",
+      "status": "CLOSED",
+      "expected": 36645,
+      "actual": 36645,
+      "difference": 0
+    },
+    {
+      "token": "0371825c",
+      "status": "CLOSED",
+      "expected": 41310,
+      "actual": 41310,
+      "difference": 0
+    }
+  ],
+  "roleChecks": [],
+  "analytics": {},
+  "failure": "Error: APP_DEFECT: Test Cashier 1: unauthorized access to /#/products.\n    at appFail (file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/final-verification/verify_true_e2e_111_20260914_055704/verify.mjs:36:29)\n    at appAssert (file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/final-verification/verify_true_e2e_111_20260914_055704/verify.mjs:37:31)\n    at freshCashierRoleCheck (file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/final-verification/verify_true_e2e_111_20260914_055704/verify.mjs:245:7)\n    at async file:///E:/WineShopPOS_V5_E2E_20260912_105856/.wsp-local/final-verification/verify_true_e2e_111_20260914_055704/verify.mjs:413:13",
+  "finishedAt": "2026-09-14T09:57:45.993Z"
+}

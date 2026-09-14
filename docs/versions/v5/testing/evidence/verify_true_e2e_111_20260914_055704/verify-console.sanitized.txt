@@ -1,0 +1,11 @@
+[ADMIN] QA session expired. Sign in once in the visible DEV browser.
+[PASS] DEV ADMIN session — QA/DEV authenticated
+[PASS] 111 committed UI bills — CASH 39 · UPI 36 · CARD 36 · Total 446745
+[PASS] Inventory reconciliation — 36 products · net -2065 bottles · no negative stock · all EAN-13 present
+[PASS] Approved return checkpoint — 1 unit already APPROVED
+[PASS] Four shifts authoritative verification — all 4 CLOSED in Admin Shift History · Expected=Actual · Difference=0
+
+[FINAL] WINE SHOP POS TRUE END-TO-END: FAIL
+[CLASSIFICATION] APP_DEFECT
+[FAIL] APP_DEFECT: Test Cashier 1: unauthorized access to /#/products.
+[RAW EVIDENCE] E:\WineShopPOS_V5_E2E_20260912_105856\.wsp-local\final-verification\verify_true_e2e_111_20260914_055704

@@ -170,3 +170,29 @@ Do not modify/push the canonical V5 failure register while an active local UAT r
   - preserve any already-completed 15983/cashier/sale/return/shift checkpoints from the failed run.
 - Safe continuation: inspect the committed evidence, identify the first unverified stage, patch only that stage, and do not restart R11 or re-OCR invoice 15983.
 <!-- /V5_STRESS_CONTINUATION_20260913_172417 -->
+
+<!-- V5_ROLE_ROUTE_BODY_FALSE_POSITIVE_20260914 -->
+## 2026-09-14 — Cashier protected-route check false-failed on POS body text
+
+- Stage: final role-security verification after the completed 111-bill E2E flow.
+- Symptom: test reported `Test Cashier 1: unauthorized access to /#/products`.
+- Proven application route contract:
+  - `/products` is wrapped in `RequireRole roles={["ADMIN","MANAGER"]}`;
+  - denied users are redirected to `/`;
+  - `HomeRedirect` sends CASHIER to `/pos`;
+  - the cashier POS page legitimately renders **Quick Products**.
+- Root cause: the harness navigated to `/products` and then used
+  `body.includes("Products")`. After the correct redirect to POS, the text
+  `Quick Products` caused a false positive.
+- Resolution:
+  - assert the final URL/hash is `/#/pos`;
+  - assert the protected module heading is absent;
+  - assert restricted module links are absent from Main navigation;
+  - do not use page-global substring checks as an authorization oracle.
+- Safe continuation:
+  - do not replay sales, OCR, invoices, returns, or shift-close mutations;
+  - the previous verifier already proved 111 sales, inventory reconciliation,
+    the approved return, and four CLOSED zero-variance shifts;
+  - resume with read-only role-route and analytics verification only.
+- Classification: test-runner authorization-assertion defect, not application security failure.
+<!-- /V5_ROLE_ROUTE_BODY_FALSE_POSITIVE_20260914 -->
