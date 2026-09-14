@@ -571,26 +571,65 @@ async function duplicateInvoiceUiCheck(page){
 async function readProductMaster(page){
   await page.goto(`${BASE}/#/products`,{waitUntil:"domcontentloaded"});
   await waitProductMasterLoaded(page);
-  const rows=page.locator(".products-master-table tbody tr");
+
+  const table=page.locator(".products-master-table").first();
+  const headers=(await table.locator("thead th").allInnerTexts())
+    .map(text=>String(text||"").replace(/\s+/g," ").trim());
+
+  const column=(label)=>{
+    const wanted=label.toLowerCase();
+    const index=headers.findIndex(text=>text.toLowerCase().startsWith(wanted));
+    if(index<0){
+      const error=new Error(
+        `HARNESS: Product Master column "${label}" not found. Headers=${JSON.stringify(headers)}`
+      );
+      error.classification="HARNESS";
+      throw error;
+    }
+    return index;
+  };
+
+  // SortableTable prepends "Sr. No." by default. Resolve semantic headers
+  // instead of relying on physical td offsets.
+  const barcodeCol=column("Barcode");
+  const stockCol=column("Stock");
+  const purchaseCol=column("Purchase");
+  const mrpCol=column("MRP");
+  const sellingCol=column("Selling");
+
+  const rows=table.locator("tbody tr");
   const n=await rows.count();
   const out=[];
+
   for(let i=0;i<n;i++){
     const row=rows.nth(i);
     const cells=row.locator("td");
     const name=(await row.locator(".products-product-name").innerText()).trim();
     const meta=(await row.locator(".products-product-meta").innerText()).trim();
     const size=Number((meta.match(/(\d+)\s*ml/i)||[])[1]||0);
-    const stock=Number((await cells.nth(3).innerText()).replace(/[^\d.-]/g,""));
-    const purchase=moneyNumber(await cells.nth(4).innerText());
-    const mrp=moneyNumber(await cells.nth(5).innerText());
-    const selling=moneyNumber(await cells.nth(6).innerText());
-    const barcode=(await cells.nth(1).innerText()).trim();
+    const barcode=(await cells.nth(barcodeCol).innerText()).trim();
+    const stock=Number((await cells.nth(stockCol).innerText()).replace(/[^\d.-]/g,""));
+    const purchase=moneyNumber(await cells.nth(purchaseCol).innerText());
+    const mrp=moneyNumber(await cells.nth(mrpCol).innerText());
+    const selling=moneyNumber(await cells.nth(sellingCol).innerText());
+
+    assert(Number.isFinite(stock),
+      `${name}: Product Master Stock is not numeric after semantic-column parsing.`);
+
     out.push({
       key:`${name}||${size}`,
       name,size,stock,purchase,mrp,selling,barcode,
       meta
     });
   }
+
+  const stocked=out.filter(p=>p.stock>0);
+  const barcoded=out.filter(p=>/^\d{13}$/.test(String(p.barcode||"").trim()));
+  console.log(
+    `[PRODUCT MASTER] semantic columns OK · products=${out.length} · `+
+    `stocked=${stocked.length} · validEAN13=${barcoded.length}`
+  );
+
   return out;
 }
 
@@ -998,9 +1037,20 @@ async function requestShiftCloseViaUi(session){
   await page.locator("h2").filter({hasText:/^Cashier\ Shift\ \&\ Day\ Close$/}).first().waitFor({state:"visible",timeout:20000});
   await sleep(700);
 
-  const row=page.locator("table.data-table tbody tr").filter({hasText:"Me"}).filter({hasText:"OPEN"}).first();
+  const table=page.locator("table.data-table").first();
+  const row=table.locator("tbody tr").filter({hasText:"Me"}).filter({hasText:"OPEN"}).first();
   await row.waitFor({state:"visible",timeout:15000});
-  const expectedText=await row.locator("td").nth(6).innerText();
+
+  const headers=(await table.locator("thead th").allInnerTexts())
+    .map(text=>String(text||"").replace(/\s+/g," ").trim());
+  const expectedCol=headers.findIndex(text=>text.toLowerCase().startsWith("expected"));
+  if(expectedCol<0){
+    const error=new Error(`HARNESS: Shift Expected column not found. Headers=${JSON.stringify(headers)}`);
+    error.classification="HARNESS";
+    throw error;
+  }
+
+  const expectedText=await row.locator("td").nth(expectedCol).innerText();
   const expected=moneyNumber(expectedText);
   assert(Number.isFinite(expected)&&expected>=0,`${label}: cannot parse Expected Cash from ${expectedText}.`);
 
@@ -1294,6 +1344,8 @@ try{
   if(err?.classification==="APP_DEFECT" || message.startsWith("APP_DEFECT:")){
     report.classification="APP_DEFECT";
   }else if(
+    err?.classification==="HARNESS" ||
+    message.startsWith("HARNESS:") ||
     /strict mode violation|locator\.|waitFor|Timeout|expected exactly 1 element|browser has been closed/i.test(message)
   ){
     report.classification="HARNESS";
