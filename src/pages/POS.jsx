@@ -480,7 +480,27 @@ export default function POS(){
           type="button"
           className="secondary-button pos-v5h-clear"
           disabled={!cart.length}
-          onClick={()=>{setCart([]);pricingChanged();setMessage("Current bill cleared.");searchInputRef.current?.focus();}}
+          onClick={()=>{
+            sessionStorage.removeItem(cartStorageKey);
+            setCart([]);
+            setDiscount(0);
+            setPaymentMethod("CASH");
+            setPaymentReference("");
+            setCustomerId("");
+            setCustomerSummary(null);
+            setReasonCodeId("");
+            setReasonNote("");
+            clearApproval();
+            setCouponCode("");
+            setLoyaltyPoints(0);
+            setStoreCreditAmount(0);
+            setGiftVoucherCode("");
+            setQuote(null);
+            setUnknown("");
+            setSearch("");
+            setMessage("Current bill cleared.");
+            searchInputRef.current?.focus();
+          }}
         >
           Clear Bill
         </button>
