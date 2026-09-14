@@ -37,18 +37,48 @@ async function fill(locator,value,field){
   if(String(before)!==String(value)){await locator.fill(String(value));changed(field,before,value);}
 }
 async function waitInbox(page){
-  await page.locator("h2").filter({hasText:/^Invoice Inbox$/}).first().waitFor({state:"visible",timeout:30000});
-  const status=page.locator('select:has(option[value="RECEIVED"])').first();
-  if(await status.isVisible().catch(()=>false)) await status.selectOption("ALL");
-  await sleep(300);
+  const heading=page.locator("h2").filter({hasText:/^Invoice Inbox$/}).first();
+  await heading.waitFor({state:"visible",timeout:60000});
+
+  const year=page.getByLabel("Year",{exact:true});
+  const month=page.getByLabel("Month",{exact:true});
+  const status=page.getByLabel("Status",{exact:true});
+
+  if(await year.isVisible().catch(()=>false) && await year.inputValue()!=="2026")
+    await year.selectOption("2026");
+  if(await month.isVisible().catch(()=>false) && await month.inputValue()!=="9")
+    await month.selectOption("9");
+  if(await status.isVisible().catch(()=>false) && await status.inputValue()!=="ALL")
+    await status.selectOption("ALL");
+
+  await sleep(150);
 }
 async function open15983(page){
   await page.goto(`${BASE}/#/purchasing/invoices`,{waitUntil:"domcontentloaded"});
   await waitInbox(page);
   const row=page.locator("table.data-table tbody tr").filter({hasText:"15983"}).first();
-  assert(await row.isVisible().catch(()=>false),
-    "15983 ingestion is absent in current DEV. This resume-safe E2E will not invent/upload a different invoice file.");
+
+  let found=false;
+  const deadline=Date.now()+60000;
+  while(Date.now()<deadline){
+    if(await row.isVisible().catch(()=>false)){found=true;break;}
+    await sleep(250);
+  }
+
+  if(!found){
+    const countText=(await page.locator(".button-row.spread .muted-text").first()
+      .innerText().catch(()=>"unknown")).trim();
+    const shopText=(await page.locator(
+      ".shop-context-pill,.royal-v11-lockup,.shop-selector"
+    ).first().innerText().catch(()=>"unknown")).replace(/\s+/g," ").trim();
+    throw new Error(
+      `15983 not visible after 60s of hydrated Inbox waiting; `+
+      `shop=${shopText}; inbox=${countText}; url=${page.url()}`
+    );
+  }
+
   const text=(await row.innerText()).replace(/\s+/g," ").trim();
+  console.log(`[15983 HUMAN] Existing ingestion confirmed after hydrated Inbox load: ${text}`);
   if(/Completed/i.test(text)) return "COMPLETED";
 
   for(const rx of [/Continue Receive Stock/i,/Resume Review/i,/Start Review/i]){
@@ -290,10 +320,17 @@ try{
   });
   const page=await ctx.newPage();
   await page.goto(`${BASE}/#/purchasing/invoices`,{waitUntil:"domcontentloaded"});
-  if(!await page.locator("h2").filter({hasText:/^Invoice Inbox$/}).first().isVisible().catch(()=>false)){
-    console.log("[15983 HUMAN] Saved QA session expired. Sign in once in the visible DEV browser.");
-    await page.locator("h2").filter({hasText:/^Invoice Inbox$/}).first().waitFor({state:"visible",timeout:300000});
+
+  const inboxHeading=page.locator("h2").filter({hasText:/^Invoice Inbox$/}).first();
+
+  try{
+    await inboxHeading.waitFor({state:"visible",timeout:30000});
+  }catch{
+    console.log("[15983 HUMAN] QA login is actually required. Sign in once in the visible DEV browser.");
+    await inboxHeading.waitFor({state:"visible",timeout:300000});
   }
+
+  await ctx.storageState({path:AUTH});
   await page.locator('[data-environment-badge="QA-DEV-V5"]').waitFor({state:"visible",timeout:20000});
 
   const state=await open15983(page);
