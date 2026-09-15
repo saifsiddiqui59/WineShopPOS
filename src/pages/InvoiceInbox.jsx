@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { getInvoiceReadUrl } from "../lib/invoiceClient";
 import { formatDateIN, formatDateTimeIN } from "../lib/dateFormat";
+import { resolveInvoiceDisplayTotal } from "../lib/invoiceTotals";
 
 const REVIEW_KEY="wineshop_ocr_review_state";
 const STATUS_OPTIONS=["ALL","NEEDS_REVIEW","READY_TO_RECEIVE","POSSIBLE_DUPLICATE","DUPLICATE","RECEIVED","OCR_FAILED","FAILED","CANCELLED"];
@@ -20,6 +21,7 @@ const STATUS_META={
   CANCELLED:{label:"Cancelled",tone:"muted"}
 };
 const statusMeta=(value)=>STATUS_META[value]||{label:String(value||"Unknown").replaceAll("_"," "),tone:"neutral"};
+const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
 function monthRange(year,month){
   return{
@@ -56,8 +58,34 @@ export default function InvoiceInbox(){
 
     if(status!=="ALL")q=q.eq("review_status",status);
     const{data,error}=await q;
-    if(error)setMessage(error.message||"Unable to load invoice history.");
-    setRows(data||[]);
+    if(error){
+      setMessage(error.message||"Unable to load invoice history.");
+      setRows([]);
+      setBusy(false);
+      return;
+    }
+
+    const invoiceRows=data||[];
+    const purchaseIds=[...new Set(invoiceRows.map((row)=>row.purchase_id).filter(Boolean))];
+    let purchaseById={};
+
+    if(purchaseIds.length){
+      const{data:purchaseRows,error:purchaseError}=await supabase
+        .from("purchases")
+        .select("id,total,total_landed_cost")
+        .in("id",purchaseIds);
+
+      if(purchaseError){
+        setMessage(`Invoices loaded, but final posted totals could not be loaded: ${purchaseError.message}`);
+      }else{
+        purchaseById=Object.fromEntries((purchaseRows||[]).map((purchase)=>[purchase.id,purchase]));
+      }
+    }
+
+    setRows(invoiceRows.map((row)=>({
+      ...row,
+      _postedPurchase:row.purchase_id?purchaseById[row.purchase_id]||null:null,
+    })));
     setBusy(false);
   }
 
@@ -213,7 +241,7 @@ export default function InvoiceInbox(){
             <td>{row.extracted_supplier_name||"Pending OCR"}</td>
             <td>{row.source}</td>
             <td><span className={`invoice-status-badge ${statusMeta(row.review_status).tone}`}>{statusMeta(row.review_status).label}</span></td>
-            <td>{row.extracted_total==null?"—":new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(Number(row.extracted_total))}</td>
+            <td>{(()=>{const total=resolveInvoiceDisplayTotal(row,row._postedPurchase);return total.value==null?"—":money.format(total.value)})()}</td>
             <td>{row.review_draft?(row.review_draft.stage==="RECEIVE_STOCK"?"Receive Stock draft saved":"Review draft saved"):"—"}</td>
             <td>{row.purchase_id?<strong>Completed</strong>:"Not received"}</td>
             <td><div className="button-row">
