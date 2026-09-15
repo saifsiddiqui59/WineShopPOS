@@ -62,3 +62,9 @@ application SHA. That does **not** mean a newer frontend was deployed.
 Truth:
 
 `CURRENT SOURCE + CURRENT MIGRATIONS + VERIFIED LIVE STATE + VERIFIED TEST EVIDENCE > STALE DOCS > MEMORY`
+
+
+<!-- SINGLE_E2E_QA_DOC_REGISTER_20260915 -->
+### Combined QA business-E2E authority
+
+- `docs/versions/v5/testing/harness/SINGLE_E2E_QA_RUNNER_RULES_20260915.md` — clean-baseline, stale-shift and resume rules for combined invoice + stress + return + shift certification.

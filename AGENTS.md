@@ -73,3 +73,9 @@ DEV config, QA/UAT evidence and docs.
 
 Every completed version must publish a whole-version retrospective. The next
 version must read it before implementation planning.
+
+
+<!-- SINGLE_E2E_AGENT_RULE_20260915 -->
+## QA business-E2E instruction
+
+Before creating or resuming a business-mutating V5 QA certification runner, read `docs/versions/v5/testing/harness/SINGLE_E2E_QA_RUNNER_RULES_20260915.md`. Fresh combined QA E2E requires a verified clean transactional baseline. Never adopt an unrelated active shift; only a proven-empty stale QA shift may be closed through UI before a new E2E-owned shift is opened. Never replay a successful invoice, sale, return or shift merely to make a harness pass.

@@ -75,3 +75,9 @@ For unresolved V5 application/data/security defects, always start with:
 `DEF-####` numbers are reserved for real product defects. Test-harness and authentication-prerequisite issues are documented separately in:
 
 `docs/versions/v5/testing/harness/HARNESS_FAILURES.md`
+
+
+<!-- SINGLE_E2E_QA_RULES_20260915 -->
+## Single combined QA E2E — 2026-09-15
+
+Read `docs/versions/v5/testing/harness/SINGLE_E2E_QA_RUNNER_RULES_20260915.md` before any business-mutating combined QA certification. Fresh runs require a verified clean transactional baseline; stale active shifts are never silently adopted; completed mutations are revalidated instead of replayed.
