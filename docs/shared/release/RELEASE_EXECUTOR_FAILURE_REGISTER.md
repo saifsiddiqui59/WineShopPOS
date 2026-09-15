@@ -530,3 +530,134 @@ Permanent prevention:
   not rewritten by this release workaround;
 - handle long-term DEV migration-history normalization as a separate controlled
   maintenance task, not inside an OCR feature release.
+
+<!-- FINANCIAL_ALL10_FALSE_POLICY_ASSERTION_20260915 -->
+### 2026-09-15 — brittle failure-register phrase assertion caused a false safe stop
+
+Observed:
+The financial single-source executor correctly read the canonical failure
+register, then stopped because it required the invented exact phrase
+`ZERO-TOLERANCE CLEAN WORKTREE POLICY`. The register actually expresses the
+rule under `Dirty-tree rule:` and does not contain that heading.
+
+During correction, a second false-stop risk was identified: applying the older
+V3/main equality promotion preflight to the current `v5` PROD-main hotfix would
+also stop even though `docs/CURRENT_VERSION` identifies v5 as the current
+product line and V3 is an older branch.
+
+Root cause:
+The executor validated policy using brittle literal wording and did not first
+classify whether a historical promotion rule applied to the current release
+mode.
+
+Permanent prevention:
+- read the canonical failure register before every patch/resume/deployment;
+- validate safety rules semantically, not via invented heading text;
+- read `docs/CURRENT_VERSION` and current branch state before deciding whether
+  historical branch-promotion rules apply;
+- for a current-v5 PROD-main hotfix, record V3 state as evidence but do not
+  force V3/main equality unless the operation is explicitly a V3->PROD
+  promotion;
+- derive the candidate from the current fetched branch; do not hardcode a
+  previous-turn release SHA;
+- preserve unrelated dirt and block only release-owned target conflicts.
+
+Classification:
+Release/executor preflight defect. No application, database, Git-push, or
+deployment mutation was caused by the failed run.
+
+<!-- FINANCIAL_ALL10_SECURITY_POLICY_WRONG_SOURCE_20260915 -->
+### 2026-09-15 — SECURITY DEFINER validator checked the wrong policy source
+
+Observed:
+The corrected financial executor read the current failure register successfully,
+then stopped because it required the literal phrase `SECURITY DEFINER` to exist
+inside that register.
+
+The security rule is real, but the canonical evidence lives in:
+- `docs/security/SECURITY_MASTER_STATUS.md`;
+- `docs/security/V3_SECURITY_DEFINER_RPC_HARDENING.md`;
+- `supabase/migrations/20260904125419_v3_security_definer_rpc_privileges.sql`;
+- the security-definer privilege regression script.
+
+Root cause:
+The executor mixed release-failure knowledge with security-policy knowledge and
+required a valid security invariant to be present in the wrong document.
+
+Permanent prevention:
+- failure-register assertions must cover release/executor failure knowledge only;
+- security-policy assertions must be read from canonical security status,
+  hardening migrations and regression checks;
+- verify the fetched current financial ACL migration separately before staging;
+- do not weaken the SECURITY DEFINER rule merely to bypass a validator;
+- classify a wrong-source validator stop as an executor defect, not an
+  application/database/security failure.
+
+Classification:
+Release/executor preflight defect. The failed run stopped before migration
+fetch, source edits, Git commit/push or Azure deployment.
+
+<!-- FINANCIAL_ALL10_SECURITY_LITERAL_GREP_FALSE_STOP_20260915 -->
+### 2026-09-15 — literal `PUBLIC/anon` grep false-stopped valid security hardening
+
+Observed:
+The financial executor had already moved SECURITY DEFINER validation to the
+correct security-policy sources, but then required the exact text `PUBLIC/anon`
+inside the hardening migration. The migration actually enforces the stronger
+structural rule using:
+`revoke execute on function %s from public, anon`
+and self-verification through `has_function_privilege`.
+
+The repository already had a dedicated structural regression script for this
+policy, so the literal grep duplicated that logic incorrectly.
+
+Root cause:
+A semantic security invariant was reduced to an arbitrary documentation-string
+match instead of executing the existing regression.
+
+Permanent prevention:
+- when a repository already provides a regression for a safety invariant, run
+  that regression instead of reproducing it with grep;
+- validate SQL security behavior through structural statements and privilege
+  checks, not presentation wording;
+- keep an independent minimum structural assertion only as a second guard;
+- do not weaken PUBLIC/anon revocation to make a release executor pass.
+
+Classification:
+Release/executor validator defect. The failed run stopped before migration
+fetch, source edits, Git commit/push or Azure deployment.
+
+<!-- FINANCIAL_ALL10_MIGRATION_FETCH_DNS_20260915 -->
+### 2026-09-15 — linked migration fetch blocked by direct database DNS resolution
+
+Observed:
+The linked migration-history fetch reached the linked PROD project and then
+failed while resolving:
+`db.uiurgplnsgmawvxhjzzp.supabase.co`
+with:
+`getaddrinfo ENOTFOUND`.
+
+The application, REST API and live PROD database state were healthy. The
+failure was specific to the workstation's direct Postgres hostname resolution.
+
+Root cause:
+The executor depended on a direct-database CLI network path for source-history
+backfill even though the required backend migrations were already applied and
+independently verified.
+
+Permanent prevention:
+- direct-DB migration-history commands must preflight database hostname
+  resolution before expensive release stages;
+- do not repeatedly retry the same direct-host mechanism after a confirmed DNS
+  failure;
+- never substitute database push or migration-history repair merely to make
+  local history look aligned;
+- when runtime/backend state is already verified and the missing action is
+  source-history backfill only, record the exact live versions and classify the
+  Git body backfill as pending rather than replaying database changes;
+- later backfill exact migration bodies from verified remote history once the
+  direct database path is available.
+
+Classification:
+Release/executor network dependency failure. Not an application defect, not a
+database migration failure, and not a production data failure.

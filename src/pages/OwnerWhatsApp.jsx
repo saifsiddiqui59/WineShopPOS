@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/ui/PageHeader";
 
-const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0});
+const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",minimumFractionDigits:2,maximumFractionDigits:2});
 
 export default function OwnerWhatsApp(){
   const{profile}=useAuth();
@@ -18,40 +18,32 @@ export default function OwnerWhatsApp(){
     else{setS(data||{});setMsg("");}
     setBusy(false);
   }
-
-  useEffect(()=>{load()},[]);
+  useEffect(()=>{void load()},[]);
 
   const text=useMemo(()=>[
     "WineShopPOS — Business Summary",
     `Shop: ${profile?.shop_name||"Current Shop"}`,
     `Period: ${s.from||""} to ${s.to||""}`,
-    `Revenue: ${money.format(s.revenue||0)}`,
+    `Net Revenue: ${money.format(s.revenue||0)}`,
     `Bills: ${s.bills||0}`,
+    `Invoice Discounts: ${money.format(s.discounts||0)}`,
+    `Approved Returns: ${money.format(s.returns||0)}`,
+    `FIFO COGS: ${money.format(s.cogs||0)}`,
     `Gross Profit: ${money.format(s.gross_profit||0)}`,
     `Expenses: ${money.format(s.expenses||0)}`,
     `Operating Profit: ${money.format(s.operating_profit||0)}`,
-    `Returns: ${money.format(s.returns||0)}`,
+    `Current FIFO Inventory Cost: ${money.format(s.inventory_cost||0)}`,
     `Cash Variance: ${money.format(s.cash_variance||0)}`,
     `Low Stock SKUs: ${s.low_stock_count||0}`,
+    "Note: Net Revenue and profit already reflect invoice discounts and approved returns.",
   ].join("\n"),[s,profile]);
 
   function share(){window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,"_blank","noopener,noreferrer")}
-
-  async function copy(){
-    try{
-      await navigator.clipboard.writeText(text);
-      setMsg("Summary copied.");
-    }catch{
-      setMsg("Copy is unavailable in this browser. Use the preview text or Share with Owner.");
-    }
-  }
+  async function copy(){try{await navigator.clipboard.writeText(text);setMsg("Summary copied.");}catch{setMsg("Copy is unavailable in this browser. Use the preview text or Share with Owner.");}}
 
   return <div>
-    <PageHeader title="Owner WhatsApp Summary" subtitle="Generate a pre-written operating summary. Nothing is sent automatically." tier="PLUS"/>
-    <div className="panel filter-bar">
-      <button className="secondary-button" onClick={load} disabled={busy}>{busy?"Refreshing...":"Refresh Summary"}</button>
-      <button className="secondary-button" onClick={copy}>Copy Summary</button>
-    </div>
+    <PageHeader title="Owner WhatsApp Summary" subtitle="Generate a reconciled owner summary. Nothing is sent automatically." tier="PLUS"/>
+    <div className="panel filter-bar"><button className="secondary-button" onClick={load} disabled={busy}>{busy?"Refreshing...":"Refresh Summary"}</button><button className="secondary-button" onClick={copy}>Copy Summary</button></div>
     {msg?<div className="purchase-message">{msg}</div>:null}
     <div className="settings-grid" style={{marginTop:16}}>
       <section className="panel"><h3>Preview</h3><pre className="share-preview">{text}</pre><button className="primary-button" onClick={share}>Share with Owner</button></section>
