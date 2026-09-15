@@ -4,8 +4,11 @@ import { supabase } from "../lib/supabase";
 import { useShop } from "../context/ShopContext";
 import PageHeader from "../components/ui/PageHeader";
 import { DonutChartCard, LineChartCard } from "../components/charts/BusinessCharts";
+import { indiaDateKey, indiaMonthStartKey } from "../lib/businessDate";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0});
+const money2=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",minimumFractionDigits:2,maximumFractionDigits:2});
+const dayLabel=(date)=>new Date(`${date}T12:00:00`).toLocaleDateString("en-IN",{day:"numeric",month:"short"});
 
 function csvEscape(value){const s=String(value??"");return /[",\n]/.test(s)?`"${s.replaceAll('"','""')}"`:s}
 function downloadCsv(name,headers,rows){
@@ -19,41 +22,34 @@ function downloadCsv(name,headers,rows){
 
 export default function ReportsConsolidated(){
   const{sales,purchases,products,getStock,refreshAll}=useShop();
-  const now=new Date();
-  const[from,setFrom]=useState(new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10));
-  const[to,setTo]=useState(now.toISOString().slice(0,10));
+  const[from,setFrom]=useState(indiaMonthStartKey());
+  const[to,setTo]=useState(indiaDateKey());
   const[expenses,setExpenses]=useState([]);
+  const[analytics,setAnalytics]=useState({});
   const[message,setMessage]=useState("");
 
   async function load(){
-    const shopRefresh = await refreshAll();
-    const{data,error}=await supabase.from("expenses").select("expense_date,amount,description,payment_method,status,expense_categories(name)").gte("expense_date",from).lte("expense_date",to).order("expense_date",{ascending:false});
+    const[shopRefresh,analyticsResult,expenseResult]=await Promise.all([
+      refreshAll(),
+      supabase.rpc("business_analytics",{p_from:from,p_to:to}),
+      supabase.from("expenses").select("expense_date,amount,description,payment_method,status,expense_categories(name)").gte("expense_date",from).lte("expense_date",to).order("expense_date",{ascending:false}),
+    ]);
     const notices=[];
-    if(!shopRefresh?.ok) notices.push(shopRefresh?.message||"Unable to refresh shop transactions for report.");
-    else if(shopRefresh?.partial) notices.push(shopRefresh.message);
-    if(error) notices.push("Unable to load expenses for report."); else setExpenses(data||[]);
+    if(!shopRefresh?.ok)notices.push(shopRefresh?.message||"Unable to refresh shop transactions for report.");
+    else if(shopRefresh?.partial)notices.push(shopRefresh.message);
+    if(analyticsResult.error)notices.push("Unable to calculate reconciled report totals.");else setAnalytics(analyticsResult.data||{});
+    if(expenseResult.error)notices.push("Unable to load expenses for report.");else setExpenses(expenseResult.data||[]);
     setMessage(notices.join(" "));
   }
   useEffect(()=>{load()},[]);
 
-  const fs=sales.filter(s=>s.createdAt?.slice(0,10)>=from&&s.createdAt?.slice(0,10)<=to&&s.status!=="VOID");
+  const fs=sales.filter(s=>{const key=s.createdAt?indiaDateKey(new Date(s.createdAt)):"";return key>=from&&key<=to&&s.status!=="VOID";});
   const fp=purchases.filter(p=>p.invoiceDate>=from&&p.invoiceDate<=to);
-  const salesTotal=fs.reduce((a,s)=>a+s.grandTotal,0);
-  const purchaseTotal=fp.reduce((a,p)=>a+p.total,0);
-  const expenseTotal=expenses.filter(e=>e.status==="ACTIVE").reduce((a,e)=>a+Number(e.amount||0),0);
-  const inventoryValue=useMemo(()=>products.reduce((a,p)=>a+getStock(p.id)*p.purchasePrice,0),[products,getStock]);
+  const invoiceDiscountTotal=fs.reduce((a,s)=>a+Number(s.discount||0),0);
+  const invoiceTotal=fs.reduce((a,s)=>a+Number(s.grandTotal||0),0);
 
-  const trend=useMemo(()=>{
-    const map=new Map();
-    fs.forEach(s=>{const k=s.createdAt.slice(0,10);map.set(k,(map.get(k)||0)+Number(s.grandTotal||0))});
-    return [...map.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([date,value])=>({label:new Date(`${date}T12:00:00`).toLocaleDateString("en-IN",{day:"numeric",month:"short"}),value}));
-  },[fs]);
-
-  const paymentMix=useMemo(()=>{
-    const map={};
-    fs.forEach(s=>{const k=String(s.paymentMethod||"OTHER").toUpperCase();map[k]=(map[k]||0)+Number(s.grandTotal||0)});
-    return Object.entries(map).map(([label,value])=>({label,value}));
-  },[fs]);
+  const trend=useMemo(()=>(analytics.trend||[]).map(r=>({label:dayLabel(r.date),value:Number(r.value||0)})),[analytics.trend]);
+  const paymentMix=useMemo(()=>(analytics.payment_mix||[]).map(r=>({label:String(r.label||"OTHER"),value:Number(r.value||0)})).filter(r=>r.value!==0),[analytics.payment_mix]);
 
   async function exportAccountant(){
     setMessage("Preparing accountant ledger export...");
@@ -73,11 +69,11 @@ export default function ReportsConsolidated(){
         r.debit,r.credit,r.reference,r.narration,r.source_type,r.source_id
       ])
     );
-    setMessage("Accountant/Tally-ready ledger CSV downloaded. Ledger-name mapping should be confirmed by your accountant before import.");
+    setMessage("Accountant/Tally-ready ledger CSV downloaded. Approved returns are included as balanced Sales Return vouchers. Ledger-name mapping should still be confirmed by your accountant before import.");
   }
 
   return <div>
-    <PageHeader title="Reports & Exports" subtitle="Operational reporting plus balanced accountant/Tally-ready ledger exports."/>
+    <PageHeader title="Reports & Exports" subtitle="Reconciled operational reporting plus balanced accountant/Tally-ready ledger exports."/>
     <div className="panel filter-bar">
       <label>From<input type="date" value={from} onChange={(e)=>setFrom(e.target.value)}/></label>
       <label>To<input type="date" value={to} onChange={(e)=>setTo(e.target.value)}/></label>
@@ -87,32 +83,33 @@ export default function ReportsConsolidated(){
     {message?<div className="purchase-message">{message}</div>:null}
 
     <div className="metric-grid four" style={{marginTop:16}}>
-      <div className="metric-card metric-accent-blue"><span>Sales</span><strong>{money.format(salesTotal)}</strong></div>
-      <div className="metric-card metric-accent-indigo"><span>Purchases</span><strong>{money.format(purchaseTotal)}</strong></div>
-      <div className="metric-card metric-accent-orange"><span>Expenses</span><strong>{money.format(expenseTotal)}</strong></div>
-      <div className="metric-card metric-accent-green"><span>Inventory Cost</span><strong>{money.format(inventoryValue)}</strong></div>
+      <div className="metric-card metric-accent-blue"><span>Net Sales</span><strong>{money.format(analytics.revenue||0)}</strong><small>After approved returns</small></div>
+      <div className="metric-card metric-accent-indigo"><span>Purchases</span><strong>{money.format(analytics.purchases||0)}</strong><small>Received purchases only</small></div>
+      <div className="metric-card metric-accent-orange"><span>Expenses</span><strong>{money.format(analytics.expenses||0)}</strong><small>Active expenses</small></div>
+      <div className="metric-card metric-accent-green"><span>Inventory Cost</span><strong>{money.format(analytics.inventory_cost||0)}</strong><small>Remaining FIFO landed cost</small></div>
     </div>
 
     <div className="dashboard-chart-grid" style={{marginTop:16}}>
-      <LineChartCard title="Sales Trend" subtitle="Sales value across the selected report period" data={trend} formatValue={(v)=>money.format(v)}/>
-      <DonutChartCard title="Payment Mix" subtitle="Selected-period payment distribution" data={paymentMix} formatValue={(v)=>money.format(v)} centerLabel="Sales"/>
+      <LineChartCard title="Sales Trend" subtitle="Net sales after approved returns" data={trend} formatValue={(v)=>money.format(v)}/>
+      <DonutChartCard title="Payment Mix" subtitle="Net payment distribution after refunds" data={paymentMix} formatValue={(v)=>money.format(v)} centerLabel="Net Sales"/>
     </div>
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Export Center</h3>
       <div className="button-row wrap">
         <button className="primary-button" onClick={exportAccountant}>Export Accountant / Tally-ready Ledger</button>
-        <button className="secondary-button" onClick={()=>downloadCsv(`sales-${from}-${to}.csv`,["Invoice","Date","Payment","Subtotal","Discount","Total"],fs.map(s=>[s.invoiceNumber,s.createdAt,s.paymentMethod,s.subtotal,s.discount,s.grandTotal]))}>Export Sales CSV</button>
+        <button className="secondary-button" onClick={()=>downloadCsv(`sales-${from}-${to}.csv`,["Invoice","Date","Payment","Subtotal","Discount","Total","Status"],fs.map(s=>[s.invoiceNumber,s.createdAt,s.paymentMethod,s.subtotal,s.discount,s.grandTotal,s.status]))}>Export Sales CSV</button>
         <button className="secondary-button" onClick={()=>downloadCsv(`purchases-${from}-${to}.csv`,["Purchase","Invoice","Date","Supplier","Units","Total"],fp.map(p=>[p.purchaseNumber,p.invoiceNumber,p.invoiceDate,p.supplierName,p.totalUnits,p.total]))}>Export Purchases CSV</button>
-        <button className="secondary-button" onClick={()=>downloadCsv(`inventory-${new Date().toISOString().slice(0,10)}.csv`,["SKU","Barcode","Product","Category","Stock","Purchase Price","Selling Price"],products.map(p=>[p.sku,p.barcode,p.name,p.category,getStock(p.id),p.purchasePrice,p.price]))}>Export Inventory CSV</button>
+        <button className="secondary-button" onClick={()=>downloadCsv(`inventory-${indiaDateKey()}.csv`,["SKU","Barcode","Product","Category","Stock","Purchase Price","Selling Price"],products.map(p=>[p.sku,p.barcode,p.name,p.category,getStock(p.id),p.purchasePrice,p.price]))}>Export Inventory CSV</button>
         <button className="secondary-button" onClick={()=>downloadCsv(`expenses-${from}-${to}.csv`,["Date","Category","Description","Method","Amount","Status"],expenses.map(e=>[e.expense_date,e.expense_categories?.name,e.description,e.payment_method,e.amount,e.status]))}>Export Expenses CSV</button>
       </div>
-      <p className="muted-text">The accountant export is balanced and ledger-oriented. Exact Tally ledger names/configuration remain accountant-controlled; WineShopPOS does not claim a one-click import into every Tally setup.</p>
+      <p className="muted-text">The accountant export is balanced and ledger-oriented. Approved refunds are exported as Sales Return vouchers. Exact Tally ledger names/configuration remain accountant-controlled.</p>
     </section>
 
     <section className="panel" style={{marginTop:16}}>
       <h3>Sales Summary</h3>
-      <div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Invoice</th><th>Date</th><th>Payment</th><th>Discount</th><th>Total</th></tr></thead><tbody>{fs.slice(0,100).map(s=><tr key={s.id}><td>{s.invoiceNumber}</td><td>{new Date(s.createdAt).toLocaleString("en-IN")}</td><td>{s.paymentMethod}</td><td>{money.format(s.discount)}</td><td>{money.format(s.grandTotal)}</td></tr>)}</tbody></SortableTable></div>
+      <div className="data-table-wrapper"><SortableTable className="data-table"><thead><tr><th>Invoice</th><th>Date</th><th>Payment</th><th>Discount</th><th>Total</th></tr></thead><tbody>{fs.map(s=><tr key={s.id}><td>{s.invoiceNumber}</td><td>{new Date(s.createdAt).toLocaleString("en-IN")}</td><td>{s.paymentMethod}</td><td>{money2.format(s.discount||0)}</td><td>{money2.format(s.grandTotal||0)}</td></tr>)}</tbody><tfoot><tr><td></td><td><strong>Totals</strong></td><td><strong>{fs.length} bills</strong></td><td></td><td><strong>{money2.format(invoiceDiscountTotal)}</strong></td><td><strong>{money2.format(invoiceTotal)}</strong></td></tr></tfoot></SortableTable></div>
+      <p className="muted-text" style={{marginTop:10}}>Invoice footer totals are billed invoice totals. Approved returns {money2.format(analytics.returns||0)} are already deducted from Net Sales above.</p>
     </section>
   </div>
 }

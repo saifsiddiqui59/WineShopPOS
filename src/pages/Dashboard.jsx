@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
+import { indiaDateKey } from "../lib/businessDate";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -9,21 +11,23 @@ const money = new Intl.NumberFormat("en-IN", {
 });
 
 export default function Dashboard() {
-  const { products, sales, getStock, lowStockProducts, loadingData, dataError } = useShop();
+  const { sales, loadingData, dataError } = useShop();
   const { profile } = useAuth();
+  const today = indiaDateKey();
+  const [summary,setSummary]=useState(null);
+  const [summaryError,setSummaryError]=useState("");
 
-  const today = new Date().toISOString().slice(0,10);
-  const todaySales = sales.filter((s) => s.createdAt?.slice(0,10) === today);
-  const todayTotal = todaySales.reduce((sum,s) => sum + s.grandTotal,0);
-  const inventoryValue = products.reduce((sum,p) => sum + getStock(p.id) * p.purchasePrice,0);
+  useEffect(()=>{
+    let alive=true;
+    supabase.rpc("dashboard_summary",{p_date:today}).then(({data,error})=>{
+      if(!alive)return;
+      if(error){setSummaryError("Reconciled dashboard totals are temporarily unavailable.");setSummary(null);}
+      else{setSummary(data||{});setSummaryError("");}
+    });
+    return()=>{alive=false};
+  },[today,sales.length]);
 
-  const top = useMemo(() => {
-    const map = {};
-    sales.forEach((sale) => sale.items.forEach((item) => {
-      map[item.productName] = (map[item.productName] || 0) + item.quantity;
-    }));
-    return Object.entries(map).sort((a,b) => b[1]-a[1]).slice(0,5);
-  }, [sales]);
+  const top=useMemo(()=>(summary?.top_products||[]).map(r=>[r.label,Number(r.quantity||0)]),[summary]);
 
   if (loadingData) return <div className="panel">Loading Supabase data...</div>;
 
@@ -34,12 +38,13 @@ export default function Dashboard() {
       </div>
 
       {dataError && <div className="purchase-message error">{dataError}</div>}
+      {summaryError && <div className="purchase-message error">{summaryError}</div>}
 
       <div className="stats-grid">
-        <div className="stat-card"><span>Today's Sales</span><strong>{money.format(todayTotal)}</strong></div>
-        <div className="stat-card"><span>Bills Today</span><strong>{todaySales.length}</strong></div>
-        <div className="stat-card"><span>Low Stock</span><strong>{lowStockProducts.length}</strong></div>
-        <div className="stat-card"><span>Inventory Value</span><strong>{money.format(inventoryValue)}</strong></div>
+        <div className="stat-card"><span>Today's Net Sales</span><strong>{money.format(summary?.sales||0)}</strong></div>
+        <div className="stat-card"><span>Bills Today</span><strong>{summary?.bills||0}</strong></div>
+        <div className="stat-card"><span>Low Stock</span><strong>{summary?.low_stock_count||0}</strong></div>
+        <div className="stat-card"><span>Inventory Value</span><strong>{money.format(summary?.inventory_cost||0)}</strong><small>FIFO landed cost</small></div>
       </div>
 
       <div className="dashboard-grid">
@@ -47,18 +52,16 @@ export default function Dashboard() {
           <h3>Recent Sales</h3>
           {sales.slice(0,8).map((s) => (
             <div key={s.id} className="list-row">
-              <span>{s.invoiceNumber}</span><strong>{money.format(s.grandTotal)}</strong>
+              <span>{s.invoiceNumber}{s.status==="RETURNED"?" · RETURNED":s.status==="PARTIAL_RETURN"?" · PARTIAL RETURN":""}</span><strong>{money.format(s.grandTotal)}</strong>
             </div>
           ))}
         </section>
 
         <section className="panel">
-          <h3>Low Stock</h3>
-          {lowStockProducts.slice(0,8).map((p) => (
-            <div key={p.id} className="list-row">
-              <span>{p.name}</span><strong>{getStock(p.id)}</strong>
-            </div>
-          ))}
+          <h3>Daily Reconciliation</h3>
+          <div className="list-row"><span>Gross sales</span><strong>{money.format(summary?.gross_sales||0)}</strong></div>
+          <div className="list-row"><span>Approved returns</span><strong>-{money.format(summary?.returns||0)}</strong></div>
+          <div className="list-row"><span>Net sales</span><strong>{money.format(summary?.sales||0)}</strong></div>
         </section>
 
         <section className="panel">
