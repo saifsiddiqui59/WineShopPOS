@@ -2,25 +2,55 @@
 
 **START HERE IN A NEW CHAT.**
 
-Status: **PROD PROMOTION CANDIDATE — V5_29 QA runtime qualified; PROD NOT YET UPDATED**
+<!-- PROD_AUTHORITY_CHECKPOINT_20260915 -->
+## 2026-09-15 authoritative PROD checkpoint
+
+This checkpoint supersedes older candidate-only / “PROD not yet updated”
+statements later in this historical continuation document.
+
+- Current generation: **V5**
+- Current production source branch: `main`
+- Deployed application runtime SHA: `0ffe5335278c4075c81629e3807738bae702c66b`
+- Repository base inspected for this documentation update: `0ffe5335278c4075c81629e3807738bae702c66b`
+- PROD frontend: `https://wineshoppos.z29.web.core.windows.net/`
+- PROD Supabase ref: `uiurgplnsgmawvxhjzzp`
+- Financial SSoT all-10 release: **PASS**
+- Backend financial reconciliation: **PASS**
+- Azure/public artifact verification: **PASS**
+- Business transactions replayed by that release: **NONE**
+- Authenticated financial cross-page visual UAT: **PENDING**
+- Three already-live financial migration bodies in Git:
+  **PENDING_DNS / source-history only**
+- Canonical current tree:
+  `docs/versions/v5/reference/PROD_TREE_STRUCTURE_2026-09-15.md`
+
+Do not rerun completed purchase, sale, return, stress-sale, shift or stock
+certification transactions merely to reconfirm this checkpoint.
+
+
+
+Status: **DEPLOYED TO PROD — CURRENT APPLICATION RUNTIME `0ffe5335278c4075c81629e3807738bae702c66b`**
 
 ## Authority
 
 Use this order when deciding the current project state:
 
-1. current `V5` Git source;
-2. current migrations / Supabase schema;
-3. verified V5 QA deployment;
-4. this current-state document;
-5. older implementation/release documents only as historical context.
+1. current `main` Git source;
+2. current migrations / verified live Supabase state;
+3. deployed PROD application SHA recorded above;
+4. `docs/DOCUMENTATION_REGISTER.md`;
+5. `docs/versions/v5/reference/PROD_TREE_STRUCTURE_2026-09-15.md`;
+6. this continuation document;
+7. older V3/V4/V5 candidate documents only as historical context.
 
 Do **not** reset the project to old V3/V4 chapters.
+
 
 ## Repository and environment
 
 - Repository: `saifsiddiqui59/WineShopPOS`
-- Branch: `V5`
-- Current V5 baseline before V5_16: `d58098f4eecfc5c85729d4ac41f9c789bcf6e8ef`
+- Current PROD branch: `main`
+- Current deployed application runtime: `0ffe5335278c4075c81629e3807738bae702c66b`
 - V5 QA preview: `https://wspv5qa3a5e8018.z29.web.core.windows.net/`
 - DEV Supabase: `WineshopPOS_DEV`
 - DEV project ref: `juhcypzoacauzmtzqnwd`
@@ -28,8 +58,8 @@ Do **not** reset the project to old V3/V4 chapters.
 - PROD frontend: `https://wineshoppos.z29.web.core.windows.net/`
 - PROD Supabase ref: `uiurgplnsgmawvxhjzzp`
 
-V5 is PROD-derived code bound to DEV/QA runtime. Existing DEV business data is retained.
-PROD must remain untouched until explicit promotion authorization.
+V5 is now deployed to PROD. DEV/QA resources remain separate historical qualification surfaces and must not be copied into the PROD build.
+All future PROD changes must begin from current `main` and verified live state.
 
 ## Completed before V5_13
 
