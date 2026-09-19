@@ -839,3 +839,15 @@ The three 18-Sep pre-terminal sales are preserved unchanged and acknowledged as
 legacy terminal-less records in financial completeness; no fake terminal ID was
 assigned.
 <!-- /SIMPLE_SHIFT_DAY_CLOSE_UX_20260919 -->
+
+<!-- AUTOMATIC_DAILY_CLOSE_UI_20260919 -->
+## 2026-09-19 — No manual day close
+
+Final operator behavior:
+- 12:00 AM IST hard stop.
+- Closing Cash Check OFF → auto CLOSED, cash Not counted.
+- Closing Cash Check ON → CLOSE_REQUIRED, but next-day Start Shift remains allowed.
+- Owner does not manually close the financial day.
+- Database retries completed financial-day finalization automatically.
+- Reports → Daily Closing is read-only status/review.
+<!-- /AUTOMATIC_DAILY_CLOSE_UI_20260919 -->

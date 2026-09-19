@@ -1497,3 +1497,17 @@ Manager/Admin closes the whole shop business day under
 **Close Business Day** button and plain-language checks.
 Technical accounting states remain internal.
 <!-- /SIMPLE_SHIFT_DAY_CLOSE_UX_20260919 -->
+
+<!-- AUTOMATIC_DAILY_CLOSE_UI_20260919 -->
+### Automatic midnight and daily closing
+
+At 12:00 AM India time, the old shift stops automatically.
+
+If **Closing Cash Check is OFF**, the shift closes with **Cash not counted**.
+If the check is ON and cash was not entered, the old shift can require later
+reconciliation, but it does not block starting the new day's shift.
+
+The owner does not need to press a daily financial-close button. WineShopPOS
+closes clean completed days automatically. Use **Reports → Daily Closing** only
+to see status or issues that need attention.
+<!-- /AUTOMATIC_DAILY_CLOSE_UI_20260919 -->

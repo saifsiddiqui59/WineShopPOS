@@ -66,7 +66,7 @@ export const MODULE_TABS = {
   ],
   reports: [
     { path: "/reports", label: "Reports & Exports", roles: ["ADMIN", "MANAGER"] },
-    { path: "/reports/day-close", label: "Day Close", roles: ["ADMIN", "MANAGER"] },
+    { path: "/reports/day-close", label: "Daily Closing", roles: ["ADMIN", "MANAGER"] },
     { path: "/reports/compliance", label: "Liquor Compliance", roles: ["ADMIN", "MANAGER"] },
   ],
   admin: [

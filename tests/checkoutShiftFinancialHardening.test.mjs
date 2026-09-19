@@ -65,31 +65,34 @@ test("Closing Cash Check is managed in Settings like a device toggle",()=>{
   ])assert.ok(settings.includes(marker),`Settings missing ${marker}`);
 });
 
-test("Business Day Close lives under Reports and keeps technical states internal",()=>{
+test("Automatic Daily Closing lives under Reports and keeps technical states internal",()=>{
   const page=read("src/pages/BusinessDayClose.jsx");
   const app=read("src/App.jsx");
   const nav=read("src/config/navigation.js");
 
   for(const marker of [
-    "Close Business Day",
-    "Everything required for this day is clear.",
-    "begin_financial_day_close_v1",
-    "reconcile_financial_day_v1",
-    "finalize_financial_day_v1",
+    "Automatic Daily Closing",
+    "No daily button is required.",
+    "Closed automatically ✓",
+    "WineShopPOS retries automatically",
     "legacy_terminal_acknowledged_count",
-  ])assert.ok(page.includes(marker),`BusinessDayClose missing ${marker}`);
+  ])assert.ok(page.includes(marker),`Automatic Daily Closing missing ${marker}`);
 
   assert.ok(app.includes('path="day-close"'));
   assert.ok(nav.includes('/reports/day-close'));
-  assert.ok(nav.includes('label: "Day Close"'));
+  assert.ok(nav.includes('label: "Daily Closing"'));
 
-  for(const exposed of [
+  for(const forbidden of [
+    "Close Business Day",
+    "begin_financial_day_close_v1",
+    "reconcile_financial_day_v1",
+    "finalize_financial_day_v1",
     "Exception / Amendment Reason",
     ">Begin Close<",
     ">Reconcile<",
     ">Finalize Day<",
     ">Create FINAL Amendment<",
-  ])assert.ok(!page.includes(exposed),`technical control exposed: ${exposed}`);
+  ])assert.ok(!page.includes(forbidden),`manual/technical day-close control exposed: ${forbidden}`);
 });
 
 test("logout and shop switch remain guarded against unresolved checkout",()=>{

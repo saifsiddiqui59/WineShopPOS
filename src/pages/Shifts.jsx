@@ -309,7 +309,7 @@ export default function Shifts() {
       {historicalRequired.length ? (
         <div className="purchase-message error">
           {historicalRequired.length} older shift(s) ended without a completed close.
-          Finish them from Shift History below.
+          They do not block starting today's shift. Finish them from Shift History when convenient.
         </div>
       ) : null}
 
