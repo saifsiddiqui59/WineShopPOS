@@ -11,6 +11,7 @@ import SpiritualImageTile from "./SpiritualImageTile";
 import { watchThemePreference } from "../lib/theme";
 import { MAIN_MODULES } from "../config/navigation";
 import GlobalPhoneScannerHost from "./GlobalPhoneScannerHost";
+import PurchaseAlertCenter from "./PurchaseAlertCenter";
 
 const COLLAPSE_KEY = "wineshop_sidebar_collapsed_v1";
 
@@ -135,7 +136,7 @@ export default function Layout() {
           </div>
         </div>
         <div className="topbar-shop-hero"><ShopSelector/></div>
-        <div className="topbar-actions"><OfflineStatus/><UserMenu/></div>
+        <div className="topbar-actions"><PurchaseAlertCenter/><OfflineStatus/><UserMenu/></div>
       </header>
       <SaaSBanner/>
       <div className="page-area"><Outlet/></div>

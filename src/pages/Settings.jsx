@@ -22,6 +22,8 @@ export default function Settings() {
   const [demoResetBusy, setDemoResetBusy] = useState(false);
   const [closingCashRequired, setClosingCashRequired] = useState(true);
   const [shiftPolicyBusy, setShiftPolicyBusy] = useState(false);
+  const [purchaseAlertsEnabled, setPurchaseAlertsEnabled] = useState(false);
+  const [purchaseAlertBusy, setPurchaseAlertBusy] = useState(false);
 
   async function load() {
     setLoading(true); setMessage("");
@@ -50,6 +52,24 @@ export default function Settings() {
     setClosingCashRequired(data?.shift_closing_cash_required !== false);
   }
 
+  async function loadPurchaseAlertPolicy() {
+    const { data, error } = await supabase.rpc("purchase_alert_policy_v1");
+    if (error) { setMessage(error.message || "Unable to load Smart Purchase Alerts."); return; }
+    setPurchaseAlertsEnabled(Boolean(data?.enabled));
+  }
+
+  async function togglePurchaseAlerts() {
+    if (purchaseAlertBusy) return;
+    const next = !purchaseAlertsEnabled;
+    setPurchaseAlertBusy(true);
+    const { data, error } = await supabase.rpc("set_smart_purchase_alerts_v1", { p_enabled: next });
+    setPurchaseAlertBusy(false);
+    if (error) { setMessage(error.message || "Unable to update Smart Purchase Alerts."); return; }
+    const enabled = Boolean(data?.enabled);
+    setPurchaseAlertsEnabled(enabled);
+    setMessage(`Smart Purchase Alerts ${enabled ? "enabled" : "disabled"}.`);
+  }
+
   async function toggleClosingCashCheck() {
     if (shiftPolicyBusy) return;
     const next = !closingCashRequired;
@@ -72,6 +92,7 @@ export default function Settings() {
   useEffect(() => {
     void load();
     void loadShiftPolicy();
+    void loadPurchaseAlertPolicy();
   }, []);
 
   async function save(event) {
@@ -202,7 +223,17 @@ export default function Settings() {
         </div>
       </section>
 
-      {profile?.role === "ADMIN" ? <section className="panel settings-section" style={{marginTop:16,border:"1px solid currentColor"}}>
+      <section className="panel settings-section" style={{marginTop:16}}>
+        <div className="settings-section-heading"><div><h3>Smart Purchase Alerts</h3><p>Optional owner alerts from Purchase Intelligence and Inventory Intelligence.</p></div></div>
+        <div className="settings-inline-row">
+          <button type="button" className="secondary-button" disabled={purchaseAlertBusy} onClick={togglePurchaseAlerts}>Smart Purchase Alerts: {purchaseAlertsEnabled ? "ON" : "OFF"}</button>
+          <div><strong>{purchaseAlertsEnabled ? "Proactive purchase attention enabled" : "Proactive purchase attention disabled"}</strong>
+            <p className="muted-text" style={{margin:0}}>Uses the existing Purchase Coach with a fixed 4-day supplier delivery time and 2-day safety window. Alerts are grouped, owner-only, and remind at most once per hour unless snoozed for 1 or 2 days. Existing purchase orders are checked before an alert is shown.</p>
+          </div>
+        </div>
+      </section>
+
+      {profile?.role === "ADMIN" ? <section className="panel settings-section" style={{marginTop:16,border:"1px solid currentColor"}}> 
         <div className="settings-section-heading"><div><h3>Demo / Test Data Reset</h3><p>ADMIN only. Clears operational test data while preserving shop identity, users, settings, categories and Email sender mapping.</p></div></div>
         <div className="settings-fields">
           <label className="span-two">Type <strong>DELETE DEMO DATA</strong> to enable reset
