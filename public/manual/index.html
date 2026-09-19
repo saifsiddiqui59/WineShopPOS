@@ -1180,7 +1180,20 @@ needs correction or replacement.</p>
 </ul>
 <p>WineShopPOS uses the search only to find candidate invoices. The cashier or
 manager must still select the correct invoice before a return or void is submitted.</p>
-<!-- /RETURN_VOID_LOOKUP_V2_20260919 -->
+<!-- /RETURN_VOID_LOOKUP_V2_20260919 --><!-- CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
+<h3 id="terminal-safe-checkout-shifts-and-financial-day-close">Terminal-safe checkout, shifts and financial day close</h3>
+<p>Each POS browser has a stable terminal identity. Start each India business date
+with <strong>Start Today&#39;s Shift</strong> and the physical opening cash.</p>
+<p>An older shift can remain <strong>CLOSE_REQUIRED</strong> for reconciliation. It is kept
+visible and is not silently reused as today&#39;s cash drawer.</p>
+<p>If a checkout becomes <strong>UNKNOWN</strong>, do not repeat payment. Resolve the same
+checkout identity first. Logout and shop switching are blocked while checkout
+status is SUBMITTING/UNKNOWN.</p>
+<p>Manager/Admin can review financial-day completeness and use:</p>
+<p><code>OPEN -&gt; CLOSING -&gt; RECONCILED -&gt; FINAL</code></p>
+<p>A FINAL day is an immutable financial version. A later legitimate change requires
+an explicit FINAL amendment with a reason.</p>
+<!-- /CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
 </article>
     </div>
   </main>

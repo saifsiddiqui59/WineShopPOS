@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { probeBackendConnectivity } from "../lib/connectivity";
+import { assertSessionChangeSafe } from "../lib/checkoutSessionGuard";
 
 const AuthContext = createContext(null);
 const CACHE_KEY = "wineshop_auth_cache_v3";
@@ -98,7 +100,8 @@ export function AuthProvider({ children }) {
       if (sequence !== authSequence.current || !mounted.current) return;
 
       const fallback = readCacheForUser(userId);
-      if (!navigator.onLine && fallback?.profile && fallback?.access) {
+      const connectivity = await probeBackendConnectivity().catch(() => ({ reachable: false }));
+      if (!connectivity.reachable && fallback?.profile && fallback?.access) {
         setProfile(fallback.profile);
         setAccess(fallback.access);
         setOfflineAuth(true);
@@ -182,9 +185,13 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    await assertSessionChangeSafe({
+      shopId: profile?.shop_id,
+      userId: profile?.user_id || session?.user?.id,
+    });
     localStorage.removeItem(CACHE_KEY);
     sessionStorage.removeItem("wineshoppos_demo_workspace_v1");
-    await supabase.auth.signOut();
+    return supabase.auth.signOut();
   }
 
   return (

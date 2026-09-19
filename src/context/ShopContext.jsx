@@ -6,6 +6,7 @@ import { useSaaS } from "./SaaSContext";
 import { listOfflineSales, queueOfflineSale, removeOfflineSale, setOfflineSaleStatus } from "../lib/offlineQueue";
 import { productImageUrl, removeProductImage, uploadProductImage } from "../lib/productImages";
 import { purchaseIdentityIssues } from "../lib/purchaseIdentity";
+import { getTerminalId, nextTerminalSequence } from "../lib/terminalIdentity";
 
 const ShopContext = createContext(null);
 const DATA_CACHE_KEY = "wineshop_cloud_cache_v3";
@@ -329,6 +330,8 @@ export function ShopProvider({ children }) {
     giftVoucherCode=""
   }={}) {
     const clientSaleId=checkoutId||crypto.randomUUID();
+    const terminalId=getTerminalId();
+    const clientSequence=nextTerminalSequence();
     const items=cart.map((i)=>({
       product_id:i.product.id,
       quantity:Number(i.quantity),
@@ -341,12 +344,17 @@ export function ShopProvider({ children }) {
       Number(storeCreditAmount||0)>0||
       String(giftVoucherCode||"").trim();
 
-    if(!navigator.onLine){
+    const connectivity=await probeBackendConnectivity().catch(()=>({reachable:false}));
+
+    if(!connectivity.reachable){
       if(Number(discount||0)>0||hasPriceOverride||hasCommercial){
         return{ok:false,definitive:true,message:"Discounts, price overrides, loyalty, coupons and vouchers require an online authorization check."};
       }
+
       const payload={
         clientSaleId,
+        terminalId,
+        clientSequence,
         offlineCreatedAt:new Date().toISOString(),
         items:items.map(({product_id,quantity,unit_price})=>({product_id,quantity,unit_price})),
         paymentMethod,
@@ -358,6 +366,7 @@ export function ShopProvider({ children }) {
           unitPrice:Number(i.unitPrice ?? i.product.price)
         }))
       };
+
       try{
         await queueOfflineSale(payload);
         setInventory((current)=>{
@@ -379,12 +388,16 @@ export function ShopProvider({ children }) {
           }))
         };
         setSales((rows)=>[offlineSale,...rows]);
-        return{ok:true,offline:true,checkoutId:clientSaleId,sale:offlineSale,message:"Sale saved securely offline. Sync when internet returns."};
-      }catch(e){return{ok:false,definitive:true,message:e.message||String(e)}}
+        return{ok:true,offline:true,checkoutId:clientSaleId,sale:offlineSale,message:"Sale saved securely offline with frozen price/quantity economics. Sync when the backend is reachable."};
+      }catch(e){
+        return{ok:false,definitive:true,message:e.message||String(e)};
+      }
     }
 
     const rpcParams={
       p_checkout_id:clientSaleId,
+      p_terminal_id:terminalId,
+      p_client_sequence:clientSequence,
       p_items:items,
       p_payment_method:paymentMethod,
       p_discount:Number(discount||0),
@@ -400,20 +413,35 @@ export function ShopProvider({ children }) {
     };
 
     async function resolveCheckout(){
-      const{data,error}=await supabase.rpc("resolve_checkout_v1",{p_checkout_id:clientSaleId});
+      const{data,error}=await supabase.rpc("resolve_checkout_v2",{
+        p_checkout_id:clientSaleId,
+        p_terminal_id:terminalId
+      });
       if(error)return null;
       return data||null;
     }
 
+    async function markUnknown(message){
+      try{
+        await supabase.rpc("mark_checkout_unknown_v1",{
+          p_checkout_id:clientSaleId,
+          p_terminal_id:terminalId,
+          p_message:message||"Client could not establish transaction outcome."
+        });
+      }catch{
+        // Local UNKNOWN remains authoritative for the browser until server resolution succeeds.
+      }
+    }
+
     try{
-      const{data,error}=await supabase.rpc("complete_sale_safe_v1",rpcParams);
+      const{data,error}=await supabase.rpc("complete_sale_safe_v2",rpcParams);
 
       if(error){
         const message=error.message||String(error);
         const missing=error.code==="PGRST202"||error.code==="42883"||
-          /complete_sale_safe_v1|could not find the function|does not exist/i.test(message);
+          /complete_sale_safe_v2|could not find the function|does not exist/i.test(message);
         if(missing){
-          return{ok:false,definitive:true,backendRequired:true,checkoutId:clientSaleId,message:"Safe checkout backend is not active. Billing is blocked to avoid an ambiguous transaction."};
+          return{ok:false,definitive:true,backendRequired:true,checkoutId:clientSaleId,message:"Terminal-aware safe checkout backend is not active. Billing is blocked."};
         }
 
         const resolution=await resolveCheckout();
@@ -425,11 +453,12 @@ export function ShopProvider({ children }) {
           return{ok:false,definitive:true,checkoutId:clientSaleId,message:resolution.message||message};
         }
 
+        await markUnknown(message);
         return{
           ok:false,
           unknown:true,
           checkoutId:clientSaleId,
-          message:"Transaction status is unknown. Do not repeat payment. Retry the same checkout ID when connectivity is available."
+          message:"Transaction status is unknown. Do not repeat payment. Retry the same checkout ID when the backend is reachable."
         };
       }
 
@@ -458,24 +487,69 @@ export function ShopProvider({ children }) {
       if(resolution?.status==="FAILED"){
         return{ok:false,definitive:true,checkoutId:clientSaleId,message:resolution.message||e.message||String(e)};
       }
+
+      await markUnknown(e?.message||String(e));
       return{
         ok:false,
         unknown:true,
         checkoutId:clientSaleId,
-        message:"Transaction status is unknown. Do not repeat payment. Retry the same checkout ID when connectivity is available."
+        message:"Transaction status is unknown. Do not repeat payment. Retry the same checkout ID when the backend is reachable."
       };
     }
   }
+
   async function syncOfflineSales() {
-    if (!navigator.onLine) return {ok:false,message:"Internet is offline."};
-    const rows=await listOfflineSales(); let synced=0,conflicts=0;
+    const connectivity=await probeBackendConnectivity().catch(()=>({reachable:false}));
+    if(!connectivity.reachable)return{ok:false,message:"WineShopPOS backend is not reachable."};
+
+    const rows=await listOfflineSales();
+    let synced=0,conflicts=0;
+
     for(const row of rows.filter((r)=>r.status==="PENDING"||r.status==="CONFLICT")){
-      if(!row.payload){await setOfflineSaleStatus(row.id,"CONFLICT","Unable to decrypt local sale");conflicts++;continue;}
+      if(!row.payload){
+        await setOfflineSaleStatus(row.id,"CONFLICT","Unable to decrypt local sale");
+        conflicts++;
+        continue;
+      }
+
       const p=row.payload;
-      const {error}=await supabase.rpc("sync_offline_sale",{p_client_sale_id:p.clientSaleId,p_offline_created_at:p.offlineCreatedAt,p_items:p.items,p_payment_method:p.paymentMethod,p_discount:p.discount,p_payment_reference:p.paymentReference});
-      if(error){await setOfflineSaleStatus(row.id,"CONFLICT",error.message);conflicts++;}else{await removeOfflineSale(row.id);synced++;}
+      const terminalId=p.terminalId||getTerminalId();
+      const clientSequence=Number.isSafeInteger(Number(p.clientSequence))
+        ?Number(p.clientSequence)
+        :nextTerminalSequence();
+
+      const{data,error}=await supabase.rpc("sync_offline_sale_v2",{
+        p_terminal_id:terminalId,
+        p_client_sequence:clientSequence,
+        p_client_sale_id:p.clientSaleId,
+        p_offline_created_at:p.offlineCreatedAt,
+        p_items:p.items,
+        p_payment_method:p.paymentMethod,
+        p_discount:p.discount,
+        p_payment_reference:p.paymentReference
+      });
+
+      if(error){
+        await setOfflineSaleStatus(row.id,"CONFLICT",error.message);
+        conflicts++;
+      }else{
+        await removeOfflineSale(row.id);
+        synced++;
+        if(data?.reconciliation_required){
+          conflicts++;
+        }
+      }
     }
-    await refreshAll();return{ok:conflicts===0,synced,conflicts,message:`Synced ${synced}; conflicts ${conflicts}.`};
+
+    await refreshAll();
+    return{
+      ok:conflicts===0,
+      synced,
+      conflicts,
+      message:conflicts
+        ?`Synced ${synced}; ${conflicts} sale(s) need reconciliation review.`
+        :`Synced ${synced}; conflicts 0.`
+    };
   }
 
   async function receiveStock({supplierName,invoiceNumber,invoiceDate,items,notes="",charges={}}){

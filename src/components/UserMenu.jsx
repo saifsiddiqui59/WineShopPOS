@@ -9,6 +9,7 @@ import { APP_VERSION } from "../config/featureCatalog";
 export default function UserMenu() {
   const { profile, user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
   const ref = useRef(null);
   const navigate = useNavigate();
 
@@ -19,6 +20,16 @@ export default function UserMenu() {
   }, []);
 
   function go(path) { setOpen(false); navigate(path); }
+
+  async function logout() {
+    setMessage("");
+    try {
+      const result = await signOut();
+      if (result?.error) throw result.error;
+    } catch (error) {
+      setMessage(error?.message || "Logout is blocked until checkout safety is verified.");
+    }
+  }
 
   return <div className="user-menu" ref={ref}>
     <button className="user-menu-trigger" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
@@ -31,8 +42,9 @@ export default function UserMenu() {
       <button onClick={() => go("/account?tab=settings")}><Settings size={16}/> Account Settings</button>
       <button onClick={() => go("/account?tab=security")}><Shield size={16}/> Security</button>
       <button onClick={() => go("/account?tab=about")}><CircleHelp size={16}/> About <small>{APP_VERSION}</small></button>
+      {message ? <div className="purchase-message error" style={{margin:8}}>{message}</div> : null}
       <div className="user-menu-divider"/>
-      <button className="logout-menu-button" onClick={signOut}><LogOut size={16}/> Logout</button>
+      <button className="logout-menu-button" onClick={logout}><LogOut size={16}/> Logout</button>
     </div> : null}
   </div>;
 }

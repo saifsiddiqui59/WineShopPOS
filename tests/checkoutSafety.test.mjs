@@ -17,13 +17,16 @@ test("safe checkout migration enforces server idempotency and authoritative rece
   ]) assert.ok(s.includes(marker),`migration missing ${marker}`);
 });
 
-test("ShopContext never uses direct v4 for new online checkout",()=>{
+test("ShopContext uses terminal-aware safe checkout v2 and never direct v4",()=>{
   const s=read("src/context/ShopContext.jsx");
-  assert.ok(s.includes('supabase.rpc("complete_sale_safe_v1"'));
-  assert.ok(s.includes('supabase.rpc("resolve_checkout_v1"'));
+  assert.ok(s.includes('supabase.rpc("complete_sale_safe_v2"'));
+  assert.ok(s.includes('supabase.rpc("resolve_checkout_v2"'));
+  assert.ok(s.includes('supabase.rpc("mark_checkout_unknown_v1"'));
+  assert.ok(s.includes("p_terminal_id"));
+  assert.ok(s.includes("p_client_sequence"));
   assert.ok(s.includes("void refreshAll()"));
-  const safeStart=s.indexOf('supabase.rpc("complete_sale_safe_v1"');
-  assert.ok(safeStart>=0);
+  assert.ok(!s.includes('supabase.rpc("complete_sale_safe_v1"'));
+  assert.ok(!s.includes('supabase.rpc("resolve_checkout_v1"'));
 });
 
 test("POS persists checkout identity and has explicit unknown and confirmed states",()=>{

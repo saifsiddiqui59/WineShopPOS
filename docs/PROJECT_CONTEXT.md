@@ -772,3 +772,20 @@ barcode, invoice number, or product-name substring. Match priority is barcode,
 then invoice, then product name. The frontend search copy was updated to reflect
 all three supported modes.
 <!-- /RETURN_VOID_LOOKUP_V2_20260919 -->
+
+<!-- CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
+## 2026-09-19 — Terminal checkout / shift / financial-finalization hardening
+
+PROD backend hardening is live. The frontend uses stable terminal identity and
+client sequence, terminal-aware checkout v2, explicit UNKNOWN recovery, guarded
+logout/shop switching, frozen offline economics, and actual backend reachability
+instead of `navigator.onLine` for POS/shift transaction decisions.
+
+Current-day shift opening uses `open_shift_v2`. Historical `CLOSE_REQUIRED`
+shifts remain separately visible instead of being silently reused as today's
+physical drawer.
+
+Manager/Admin Shift & Day Close exposes completeness and the controlled financial
+day lifecycle `OPEN -> CLOSING -> RECONCILED -> FINAL`. FINAL snapshots are
+immutable versions; subsequent legitimate changes use an explicit amendment.
+<!-- /CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->

@@ -4,6 +4,8 @@ import { useShop } from "../context/ShopContext";
 import { useScanner } from "../context/ScannerContext";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { probeBackendConnectivity } from "../lib/connectivity";
+import { getTerminalId } from "../lib/terminalIdentity";
 import { findProductByBarcode, normalizeBarcode } from "../lib/barcode";
 import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPreference";
 import ProductThumb from "../components/ui/ProductThumb";
@@ -47,6 +49,7 @@ export default function POS(){
   const[shiftBusy,setShiftBusy]=useState(false);
   const[openingCash,setOpeningCash]=useState(0);
   const[shiftMessage,setShiftMessage]=useState("");
+  const[backendReachable,setBackendReachable]=useState(false);
   const[checkoutPhase,setCheckoutPhase]=useState("EDITING");
   const[activeCheckout,setActiveCheckout]=useState(null);
   const[postSale,setPostSale]=useState(null);
@@ -82,27 +85,23 @@ export default function POS(){
       return false;
     }
 
-    if(!navigator.onLine){
+    const connectivity=await probeBackendConnectivity().catch(()=>({reachable:false}));
+    setBackendReachable(Boolean(connectivity.reachable));
+
+    if(!connectivity.reachable){
       const cached=sessionStorage.getItem(shiftStorageKey);
       setShiftOpen(Boolean(cached));
       setShiftLoading(false);
       setShiftMessage(
         cached
-          ?"Using the shift verified earlier in this browser session."
-          :"Connect to the internet to verify or start your shift.",
+          ?"Backend is temporarily unreachable. Using the shift verified earlier in this browser session."
+          :"Connect to WineShopPOS backend to verify or start your shift.",
       );
       return Boolean(cached);
     }
 
     setShiftLoading(true);
-    const{data,error}=await supabase
-      .from("cashier_shifts")
-      .select("id,status,opened_at")
-      .eq("shop_id",profile.shop_id)
-      .eq("cashier_id",profile.user_id)
-      .eq("status","OPEN")
-      .order("opened_at",{ascending:false})
-      .limit(1);
+    const{data,error}=await supabase.rpc("current_shift_state_v2");
 
     if(error){
       setShiftOpen(false);
@@ -111,13 +110,22 @@ export default function POS(){
       return false;
     }
 
-    const current=data?.[0]||null;
-    setShiftOpen(Boolean(current));
-    setShiftMessage("");
-    if(current?.id)sessionStorage.setItem(shiftStorageKey,current.id);
+    const isOpen=data?.status==="OPEN";
+    setShiftOpen(isOpen);
+
+    if(data?.status==="CLOSE_REQUIRED"){
+      setShiftMessage("A previous-day shift still needs reconciliation. Start today's shift with the button below.");
+    }else if(data?.status==="CLOSE_REQUESTED"){
+      setShiftMessage("Your latest shift is awaiting manager close approval.");
+    }else{
+      setShiftMessage("");
+    }
+
+    if(isOpen&&data?.id)sessionStorage.setItem(shiftStorageKey,data.id);
     else sessionStorage.removeItem(shiftStorageKey);
+
     setShiftLoading(false);
-    return Boolean(current);
+    return isOpen;
   },[profile?.shop_id,profile?.user_id,shiftStorageKey]);
 
   useEffect(()=>{
@@ -133,10 +141,14 @@ export default function POS(){
   },[refreshShiftState]);
 
   async function startShiftFromPOS(){
-    if(!navigator.onLine){
-      setShiftMessage("Connect to the internet to start your shift.");
+    const connectivity=await probeBackendConnectivity().catch(()=>({reachable:false}));
+    setBackendReachable(Boolean(connectivity.reachable));
+
+    if(!connectivity.reachable){
+      setShiftMessage("WineShopPOS backend is not reachable. Connect before starting a shift.");
       return;
     }
+
     const amount=Number(openingCash||0);
     if(!Number.isFinite(amount)||amount<0){
       setShiftMessage("Opening Cash must be zero or a positive amount.");
@@ -145,9 +157,10 @@ export default function POS(){
 
     setShiftBusy(true);
     setShiftMessage("");
-    const{data,error}=await supabase.rpc("open_shift",{
+    const{data,error}=await supabase.rpc("open_shift_v2",{
       p_opening_cash:amount,
       p_notes:"Shift opened from POS billing gate.",
+      p_terminal_id:getTerminalId(),
     });
     setShiftBusy(false);
 
@@ -157,7 +170,8 @@ export default function POS(){
       return;
     }
 
-    if(data)sessionStorage.setItem(shiftStorageKey,data);
+    const shiftId=data?.shift_id||data?.id||data;
+    if(shiftId)sessionStorage.setItem(shiftStorageKey,String(shiftId));
     setShiftOpen(true);
     setShiftMessage("");
     setMessage("Shift opened. POS billing is ready.");
@@ -216,14 +230,19 @@ export default function POS(){
   },[search,active]);
 
   useEffect(()=>{
-    if(!navigator.onLine)return;
-    Promise.all([
-      supabase.from("customers").select("id,full_name,mobile").eq("active",true).order("full_name").limit(300),
-      supabase.from("reason_codes").select("id,category,code,label,requires_note").in("category",["DISCOUNT_OVERRIDE","PRICE_OVERRIDE"]).eq("active",true).order("sort_order")
-    ]).then(([c,r])=>{
+    let cancelled=false;
+    void (async()=>{
+      const connectivity=await probeBackendConnectivity().catch(()=>({reachable:false}));
+      if(cancelled||!connectivity.reachable)return;
+      const[c,r]=await Promise.all([
+        supabase.from("customers").select("id,full_name,mobile").eq("active",true).order("full_name").limit(300),
+        supabase.from("reason_codes").select("id,category,code,label,requires_note").in("category",["DISCOUNT_OVERRIDE","PRICE_OVERRIDE"]).eq("active",true).order("sort_order")
+      ]);
+      if(cancelled)return;
       setCustomers(c.data||[]);
       setReasons(r.data||[]);
-    });
+    })();
+    return()=>{cancelled=true};
   },[]);
 
   function clearApproval(){setApprovalRequestId("");setApprovalStatus("")}
@@ -500,8 +519,10 @@ export default function POS(){
       setRecoveryMessage("No recoverable checkout identity is available.");
       return;
     }
-    if(!navigator.onLine){
-      setRecoveryMessage("Reconnect before retrying this same checkout. Do not create a new payment.");
+    const connectivity=await probeBackendConnectivity().catch(()=>({reachable:false}));
+    setBackendReachable(Boolean(connectivity.reachable));
+    if(!connectivity.reachable){
+      setRecoveryMessage("Reconnect to the WineShopPOS backend before retrying this same checkout. Do not create a new payment.");
       return;
     }
     if(!activeCheckout.payload){
@@ -583,7 +604,10 @@ export default function POS(){
         setCheckoutPhase("RECOVERING");
         setRecoveryMessage("Checking the previous checkout before allowing another payment...");
 
-        const{data,error}=await supabase.rpc("resolve_checkout_v1",{p_checkout_id:saved.id});
+        const{data,error}=await supabase.rpc("resolve_checkout_v2",{
+          p_checkout_id:saved.id,
+          p_terminal_id:getTerminalId()
+        });
         if(cancelled)return;
 
         if(error){
@@ -649,30 +673,6 @@ export default function POS(){
     if(needsReason&&!reasonCodeId){setMessage("Select a standardized reason for this manual override.");return}
     const selected=reasons.find((r)=>r.id===reasonCodeId);
     if(needsReason&&selected?.requires_note&&!reasonNote.trim()){setMessage("This reason requires a note.");return}
-
-    if(!navigator.onLine){
-      setBusy(true);
-      const r=await completeSale(cart,paymentMethod,{
-        discount:disc,
-        paymentReference,
-        reasonCodeId:reasonCodeId||null,
-        reasonNote,
-        overrideRequestId:approvalRequestId||null,
-        customerId:customerId||null,
-        couponCode,
-        loyaltyPoints:Number(loyaltyPoints||0),
-        storeCreditAmount:Number(storeCreditAmount||0),
-        giftVoucherCode
-      });
-      setBusy(false);
-      if(!r.ok){errorBeep();setMessage(r.message);return}
-      if(r.offline){
-        clearDraftAfterCommit();
-        successBeep();
-        setMessage(r.message);
-      }
-      return;
-    }
 
     const checkoutId=crypto.randomUUID();
     const payload=checkoutJournalPayload();
@@ -783,7 +783,7 @@ export default function POS(){
   return <div className="pos-page pos-v5h">
     {!shiftOpen ? <ShiftRequiredDialog
       loading={shiftLoading}
-      online={navigator.onLine}
+      online={backendReachable}
       openingCash={openingCash}
       onOpeningCash={setOpeningCash}
       onStart={startShiftFromPOS}
@@ -793,7 +793,7 @@ export default function POS(){
     {checkoutPhase==="UNKNOWN"||checkoutPhase==="RECOVERING"?<div className="purchase-message error" style={{marginBottom:12}}>
       <strong>{checkoutPhase==="RECOVERING"?"Checking previous checkout":"CHECKOUT STATUS UNKNOWN"}</strong>
       <p>{recoveryMessage||"Do not repeat payment."}</p>
-      {checkoutPhase==="UNKNOWN"?<button type="button" className="primary-button" disabled={busy||!navigator.onLine} onClick={retryUnknownCheckout}>{busy?"Checking...":"Retry Same Checkout"}</button>:null}
+      {checkoutPhase==="UNKNOWN"?<button type="button" className="primary-button" disabled={busy||!backendReachable} onClick={retryUnknownCheckout}>{busy?"Checking...":"Retry Same Checkout"}</button>:null}
     </div>:null}
     <div className="page-heading pos-v5h-heading">
       <div>
@@ -845,7 +845,7 @@ export default function POS(){
         <div className="panel pos-v5h-search-dock">
           <div className="pos-v5h-search-meta">
             <div>
-              <span className={`pos-v5h-connection ${navigator.onLine?"online":"offline"}`}>{navigator.onLine?"ONLINE":"OFFLINE"}</span>
+              <span className={`pos-v5h-connection ${backendReachable?"online":"offline"}`}>{backendReachable?"BACKEND ONLINE":"BACKEND OFFLINE"}</span>
               <span className={`pos-v5h-connection ${stockSyncStatus==="LIVE"?"online":"offline"}`}>STOCK {stockSyncStatus}</span>
               <strong>Scan barcode or search product</strong>
             </div>
@@ -1104,7 +1104,7 @@ export default function POS(){
           </summary>
           <div className="pos-v5h-customer-body">
             <label>Customer
-              <select value={customerId} onChange={(e)=>loadCustomerSummary(e.target.value)} disabled={!navigator.onLine}>
+              <select value={customerId} onChange={(e)=>loadCustomerSummary(e.target.value)} disabled={!backendReachable}>
                 <option value="">Walk-in customer</option>
                 {customers.map((c)=><option key={c.id} value={c.id}>{c.full_name}{c.mobile?` · ${c.mobile}`:""}</option>)}
               </select>
@@ -1121,7 +1121,7 @@ export default function POS(){
               <label>Store Credit<input type="number" min="0" step="0.01" value={storeCreditAmount} onChange={(e)=>{setStoreCreditAmount(e.target.value);clearQuote()}} disabled={!customerId}/></label>
               <label>Gift Voucher<input value={giftVoucherCode} onChange={(e)=>{setGiftVoucherCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
             </div>
-            <button type="button" className="secondary-button" onClick={previewBenefits} disabled={!cart.length||busy||checkoutPhase!=="EDITING"||!navigator.onLine}>Preview Benefits</button>
+            <button type="button" className="secondary-button" onClick={previewBenefits} disabled={!cart.length||busy||checkoutPhase!=="EDITING"||!backendReachable}>Preview Benefits</button>
           </div>
         </details>
       </section>
@@ -1192,10 +1192,10 @@ export default function POS(){
 
           {paymentMethod!=="CASH"?<label>Payment Reference<input value={paymentReference} onChange={(e)=>setPaymentReference(e.target.value)} placeholder={`${paymentMethod} reference`}/></label>:null}
 
-          {needsReason&&!approvalRequestId?<button type="button" className="secondary-button pos-v5h-approval-button" disabled={!cart.length||busy||checkoutPhase!=="EDITING"||!navigator.onLine} onClick={requestApproval}>{busy?"Working...":"Request Approval (if required)"}</button>:null}
+          {needsReason&&!approvalRequestId?<button type="button" className="secondary-button pos-v5h-approval-button" disabled={!cart.length||busy||checkoutPhase!=="EDITING"||!backendReachable} onClick={requestApproval}>{busy?"Working...":"Request Approval (if required)"}</button>:null}
 
           <button type="button" className="primary-button pos-v5h-complete" disabled={!cart.length||busy||checkoutPhase!=="EDITING"} onClick={checkout}>
-            {busy?"Processing...":navigator.onLine?`Complete Sale · ${money.format(finalDue)}`:"Save Offline Sale"}
+            {busy?"Processing...":backendReachable?`Complete Sale · ${money.format(finalDue)}`:"Save Offline Sale"}
           </button>
         </div>
       </aside>

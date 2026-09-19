@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Store } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
+import { assertSessionChangeSafe } from "../lib/checkoutSessionGuard";
 
 function RoyalHero({ shopName, interactive = false, children }) {
   return (
@@ -39,13 +40,21 @@ export default function ShopSelector() {
   async function change(shopId) {
     if (!shopId || shopId === profile?.shop_id) return;
     setBusy(true);
-    const { error } = await supabase.rpc("switch_shop", { p_shop_id: shopId });
-    if (!error) {
+    try {
+      await assertSessionChangeSafe({
+        shopId: profile?.shop_id,
+        userId: profile?.user_id,
+      });
+      const { error } = await supabase.rpc("switch_shop", { p_shop_id: shopId });
+      if (error) throw error;
       await refreshAccess();
       window.location.assign("#/owner");
       window.location.reload();
+    } catch (error) {
+      window.alert(error?.message || "Shop switch is blocked until checkout safety is verified.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   const shopName = profile?.shop_name || "Shop";

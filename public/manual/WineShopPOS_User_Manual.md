@@ -1404,3 +1404,24 @@ The **Find Original Invoice** box accepts:
 WineShopPOS uses the search only to find candidate invoices. The cashier or
 manager must still select the correct invoice before a return or void is submitted.
 <!-- /RETURN_VOID_LOOKUP_V2_20260919 -->
+
+<!-- CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
+### Terminal-safe checkout, shifts and financial day close
+
+Each POS browser has a stable terminal identity. Start each India business date
+with **Start Today's Shift** and the physical opening cash.
+
+An older shift can remain **CLOSE_REQUIRED** for reconciliation. It is kept
+visible and is not silently reused as today's cash drawer.
+
+If a checkout becomes **UNKNOWN**, do not repeat payment. Resolve the same
+checkout identity first. Logout and shop switching are blocked while checkout
+status is SUBMITTING/UNKNOWN.
+
+Manager/Admin can review financial-day completeness and use:
+
+`OPEN -> CLOSING -> RECONCILED -> FINAL`
+
+A FINAL day is an immutable financial version. A later legitimate change requires
+an explicit FINAL amendment with a reason.
+<!-- /CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
