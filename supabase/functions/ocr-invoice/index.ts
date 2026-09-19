@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { normalizeDocumentIntelligenceResult } from "../_shared/invoiceDocument.js";
 import { resolveInvoiceExceptions } from "../_shared/invoiceResolutionFallback.js";
+import {
+  applySecondaryOcrConsensus,
+  buildVisionReadSummary,
+} from "../_shared/invoiceSecondaryOcr.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,22 +16,6 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-
-function fieldContent(field: any) {
-  return (
-    field?.content ??
-    field?.valueString ??
-    field?.valueNumber ??
-    field?.valueDate ??
-    null
-  );
-}
-
-function numberValue(field: any) {
-  const value = field?.valueNumber ?? field?.valueCurrency?.amount ?? field?.content;
-  const number = Number(String(value ?? "").replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(number) ? number : null;
-}
 
 function getSupabasePublicKey() {
   const legacyAnon = Deno.env.get("SUPABASE_ANON_KEY");
@@ -41,11 +29,105 @@ function getSupabasePublicKey() {
       const first = Object.values(parsed ?? {}).find((value) => typeof value === "string");
       if (first) return String(first);
     } catch {
-      // continue to the explicit error below
+      // continue to explicit configuration error
     }
   }
 
   throw new Error("Supabase publishable key is not available in Edge Function environment");
+}
+
+function decodeBase64(value: string) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+async function runDocumentIntelligence({
+  endpoint,
+  key,
+  contentBase64,
+}: {
+  endpoint: string;
+  key: string;
+  contentBase64: string;
+}) {
+  const analyzeUrl = `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze?_overload=analyzeDocument&api-version=2024-11-30&features=keyValuePairs`;
+  const analyze = await fetch(analyzeUrl, {
+    method: "POST",
+    headers: {
+      "Ocp-Apim-Subscription-Key": key,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ base64Source: contentBase64 }),
+  });
+
+  if (!analyze.ok) {
+    throw new Error(`Azure OCR analyze failed: ${analyze.status} ${await analyze.text()}`);
+  }
+
+  const operation = analyze.headers.get("operation-location");
+  if (!operation) throw new Error("Azure OCR did not return operation-location");
+
+  let result: any = null;
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const poll = await fetch(operation, {
+      headers: { "Ocp-Apim-Subscription-Key": key },
+    });
+    if (!poll.ok) throw new Error(`Azure OCR poll failed: ${poll.status}`);
+    result = await poll.json();
+    if (result.status === "succeeded") return result;
+    if (result.status === "failed") {
+      throw new Error(`Azure OCR analysis failed: ${JSON.stringify(result?.error || result)}`);
+    }
+  }
+  throw new Error("Azure OCR timed out");
+}
+
+async function runVisionRead({
+  endpoint,
+  key,
+  bytes,
+}: {
+  endpoint: string;
+  key: string;
+  bytes: Uint8Array;
+}) {
+  const submitUrl = `${endpoint}/vision/v3.2/read/analyze?readingOrder=natural`;
+  const submit = await fetch(submitUrl, {
+    method: "POST",
+    headers: {
+      "Ocp-Apim-Subscription-Key": key,
+      "Content-Type": "application/octet-stream",
+    },
+    body: bytes,
+  });
+
+  if (!submit.ok) {
+    throw new Error(`Azure Vision Read submit failed: ${submit.status} ${await submit.text()}`);
+  }
+
+  const operation = submit.headers.get("operation-location");
+  if (!operation) throw new Error("Azure Vision Read did not return operation-location");
+
+  let result: any = null;
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const poll = await fetch(operation, {
+      headers: { "Ocp-Apim-Subscription-Key": key },
+    });
+    if (!poll.ok) throw new Error(`Azure Vision Read poll failed: ${poll.status}`);
+    result = await poll.json();
+    const status = String(result?.status || "").toLowerCase();
+    if (status === "succeeded") return result;
+    if (status === "failed") {
+      throw new Error(`Azure Vision Read failed: ${JSON.stringify(result?.error || result)}`);
+    }
+  }
+  throw new Error("Azure Vision Read timed out");
 }
 
 Deno.serve(async (req) => {
@@ -83,10 +165,10 @@ Deno.serve(async (req) => {
       throw new Error("Manager or Admin role required");
     }
 
-    const endpoint = (Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") || "").replace(/\/$/, "");
-    const key = Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_KEY");
+    const diEndpoint = (Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") || "").replace(/\/$/, "");
+    const diKey = Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_KEY") || "";
 
-    if (!endpoint || !key) {
+    if (!diEndpoint || !diKey) {
       return json(
         {
           ok: false,
@@ -102,57 +184,64 @@ Deno.serve(async (req) => {
     const ingestionId = String(body?.ingestionId || "").trim() || null;
     if (!contentBase64) throw new Error("Document content is required");
 
-    // F0 supports up to 4 MB input. Base64 is larger than the binary input,
-    // so enforce an approximate decoded-size guard here as well as in React.
     const estimatedBytes = Math.floor((contentBase64.length * 3) / 4);
     if (estimatedBytes > 4 * 1024 * 1024) {
-      throw new Error("Document exceeds Azure Document Intelligence F0 4 MB limit");
+      throw new Error("Document exceeds the current 4 MB invoice OCR safety limit");
     }
 
-    const analyzeUrl = `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze?_overload=analyzeDocument&api-version=2024-11-30&features=keyValuePairs`;
+    const secondaryEnabled = Deno.env.get("WSP_SECONDARY_OCR_ENABLED") === "true";
+    const visionEndpoint = (Deno.env.get("AZURE_VISION_ENDPOINT") || "").replace(/\/$/, "");
+    const visionKey = Deno.env.get("AZURE_VISION_KEY") || "";
+    const bytes = decodeBase64(contentBase64);
 
-    const analyze = await fetch(analyzeUrl, {
-      method: "POST",
-      headers: {
-        "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ base64Source: contentBase64 }),
+    const primaryPromise = runDocumentIntelligence({
+      endpoint: diEndpoint,
+      key: diKey,
+      contentBase64,
     });
 
-    if (!analyze.ok) {
-      throw new Error(`Azure OCR analyze failed: ${analyze.status} ${await analyze.text()}`);
-    }
+    const secondaryPromise = secondaryEnabled && visionEndpoint && visionKey
+      ? runVisionRead({ endpoint: visionEndpoint, key: visionKey, bytes })
+          .then((payload) => ({ ok: true, payload, reason: null }))
+          .catch((error) => ({
+            ok: false,
+            payload: null,
+            reason: error instanceof Error ? error.message.slice(0, 180) : "VISION_READ_FAILED",
+          }))
+      : Promise.resolve({
+          ok: false,
+          payload: null,
+          reason: secondaryEnabled ? "VISION_NOT_CONFIGURED" : "VISION_DISABLED",
+        });
 
-    const operation = analyze.headers.get("operation-location");
-    if (!operation) throw new Error("Azure OCR did not return operation-location");
+    const [primaryResult, secondaryResult] = await Promise.all([
+      primaryPromise,
+      secondaryPromise,
+    ]);
 
-    let result: any = null;
-    for (let attempt = 0; attempt < 45; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    let invoice = normalizeDocumentIntelligenceResult(primaryResult);
 
-      const poll = await fetch(operation, {
-        headers: { "Ocp-Apim-Subscription-Key": key },
-      });
+    const secondaryOcr = secondaryResult.ok
+      ? buildVisionReadSummary(secondaryResult.payload, invoice)
+      : {
+          provider: "AZURE_VISION_READ_3_2",
+          status: secondaryResult.reason || "UNAVAILABLE",
+          lineCount: 0,
+          evidence: [],
+          dateCandidates: [],
+          invoiceNumberCandidates: [],
+          totalCandidates: [],
+          supplierCandidates: [],
+          itemBatches: {},
+          chosen: {},
+        };
 
-      if (!poll.ok) throw new Error(`Azure OCR poll failed: ${poll.status}`);
-
-      result = await poll.json();
-      if (result.status === "succeeded") break;
-      if (result.status === "failed") {
-        throw new Error(
-          `Azure OCR analysis failed: ${JSON.stringify(result?.error || result)}`,
-        );
-      }
-    }
-
-    if (result?.status !== "succeeded") throw new Error("Azure OCR timed out");
-
-    let invoice = normalizeDocumentIntelligenceResult(result);
+    invoice = applySecondaryOcrConsensus(invoice, secondaryOcr);
 
     try {
       invoice = await resolveInvoiceExceptions({
-        analyzeResult: result,
+        analyzeResult: primaryResult,
+        secondaryOcr,
         invoice,
         supabase: client,
         ingestionId,
@@ -161,9 +250,7 @@ Deno.serve(async (req) => {
           baseUrl: Deno.env.get("WSP_INVOICE_AI_BASE_URL") || "",
           apiKey: Deno.env.get("WSP_INVOICE_AI_API_KEY") || "",
           model: Deno.env.get("WSP_INVOICE_AI_MODEL") || "",
-          timeoutMs: Number(
-            Deno.env.get("WSP_INVOICE_AI_TIMEOUT_MS") || "10000",
-          ),
+          timeoutMs: Number(Deno.env.get("WSP_INVOICE_AI_TIMEOUT_MS") || "10000"),
         },
       });
     } catch (resolverError) {
@@ -178,7 +265,7 @@ Deno.serve(async (req) => {
       };
       console.error(
         "Invoice exception resolver failed safely",
-        String(resolverError?.message || resolverError).slice(0, 180),
+        String(resolverError instanceof Error ? resolverError.message : resolverError).slice(0, 180),
       );
     }
 
@@ -186,9 +273,16 @@ Deno.serve(async (req) => {
       ok: true,
       invoice,
       rawConfidence: invoice?.ocrQuality?.documentConfidence ?? null,
-      model: "prebuilt-invoice+semantic-table",
-      apiVersion: "2024-11-30",
-      features: ["keyValuePairs"],
+      model: "prebuilt-invoice+semantic-table+azure-vision-read-3.2",
+      apiVersion: "DI:2024-11-30|Vision:3.2",
+      features: ["keyValuePairs", "parallelSecondaryRead", "crossOcrConsensus"],
+      secondaryOcr: {
+        provider: secondaryOcr.provider,
+        status: secondaryOcr.status,
+        lineCount: secondaryOcr.lineCount,
+        crossOcrStatus: invoice?.crossOcr?.status || "UNAVAILABLE",
+        reviewTargetCount: invoice?.crossOcr?.reviewTargets?.length || 0,
+      },
     });
   } catch (error) {
     return json(
@@ -200,4 +294,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
