@@ -824,3 +824,18 @@ This source also records already-live migrations
 `20260919164746_shift_closing_cash_policy_v1`; this frontend release does not
 replay either migration.
 <!-- /SHIFT_CLOSING_CASH_POLICY_SIMPLE_DAY_CLOSE_20260919 -->
+
+<!-- SIMPLE_SHIFT_DAY_CLOSE_UX_20260919 -->
+## 2026-09-19 — Simple Shift UX and separate Day Close
+
+Shift is now an operational screen only: Start Shift, Close Shift, midnight
+recovery, history and approval. Closing Cash Check ON/OFF moved to ADMIN Shop
+Settings.
+
+Whole-shop end-of-day locking moved to Reports → Day Close and exposes one
+**Close Business Day** action. Internal financial states remain backend-only.
+
+The three 18-Sep pre-terminal sales are preserved unchanged and acknowledged as
+legacy terminal-less records in financial completeness; no fake terminal ID was
+assigned.
+<!-- /SIMPLE_SHIFT_DAY_CLOSE_UX_20260919 -->

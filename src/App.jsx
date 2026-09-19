@@ -49,6 +49,7 @@ import Recommendations from "./pages/Recommendations";
 import OwnerWhatsApp from "./pages/OwnerWhatsApp";
 import OwnerAI from "./pages/OwnerAI";
 import ReportsConsolidated from "./pages/ReportsConsolidated";
+import BusinessDayClose from "./pages/BusinessDayClose";
 import Compliance from "./pages/Compliance";
 import Users from "./pages/Users";
 import AccessControl from "./pages/AccessControl";
@@ -148,6 +149,7 @@ export default function App() {
         <Route element={<RequireRole roles={["ADMIN","MANAGER"]}/>}> 
           <Route path="reports" element={module("Reports & Compliance", "Operational exports plus a safe foundation for verified liquor-compliance requirements.", MODULE_TABS.reports)}>
             <Route index element={<ReportsConsolidated/>}/>
+            <Route path="day-close" element={<BusinessDayClose/>}/>
             <Route path="compliance" element={<Compliance/>}/>
           </Route>
         </Route>

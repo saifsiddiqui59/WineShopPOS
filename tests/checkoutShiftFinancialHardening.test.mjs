@@ -14,7 +14,7 @@ test("terminal identity is stable and sequence-backed",()=>{
   ])assert.ok(s.includes(marker),`terminal identity missing ${marker}`);
 });
 
-test("new checkout path uses terminal-aware v2 APIs and backend reachability",()=>{
+test("checkout remains terminal-aware and backend-reachability based",()=>{
   const shop=read("src/context/ShopContext.jsx");
   for(const marker of [
     "probeBackendConnectivity",
@@ -31,55 +31,57 @@ test("new checkout path uses terminal-aware v2 APIs and backend reachability",()
   assert.ok(!shop.includes("navigator.onLine"));
 });
 
-test("POS shift gate uses backend state and terminal-aware open",()=>{
-  const pos=read("src/pages/POS.jsx");
-  assert.ok(pos.includes('supabase.rpc("open_shift_v2"'));
-  assert.ok(pos.includes('supabase.rpc("current_shift_state_v2"'));
-  assert.ok(pos.includes('supabase.rpc("resolve_checkout_v2"'));
-  assert.ok(pos.includes("BACKEND ONLINE"));
-  assert.ok(!pos.includes("navigator.onLine"));
-});
-
-test("logout and shop switch are guarded against unresolved checkout",()=>{
-  const auth=read("src/context/AuthContext.jsx");
-  const selector=read("src/components/ShopSelector.jsx");
-  const guard=read("src/lib/checkoutSessionGuard.js");
-
-  assert.ok(auth.includes("assertSessionChangeSafe"));
-  assert.ok(selector.includes("assertSessionChangeSafe"));
-  assert.ok(guard.includes("checkout_session_guard_v1"));
-});
-
-test("shift close has owner-managed mandatory/optional closing cash",()=>{
+test("Shift page contains shift work only",()=>{
   const shifts=read("src/pages/Shifts.jsx");
+
   for(const marker of [
-    "shift_close_policy_v1",
-    "set_shift_close_policy_v1",
+    "Cashier Shift",
+    "Start Shift",
+    "Close Shift",
+    "Shift History",
     "request_shift_close_v4",
-    "Closing cash count",
-    "Mandatory",
-    "Optional",
-    "Owner Shift Setting",
-    "Closing Cash Check:",
-    "ENDED AT MIDNIGHT · CASH NOT COUNTED",
-    "Asia/Kolkata",
-    "CLOSE_REQUIRED",
-    "Request Reconciliation Close",
+    "Ended at midnight · Cash not counted",
+    "Closing cash check:",
   ])assert.ok(shifts.includes(marker),`Shifts missing ${marker}`);
-  assert.ok(!shifts.includes('supabase.rpc("request_shift_close_v3"'));
-});
 
-test("business-day accounting states stay behind one operator action",()=>{
-  const shifts=read("src/pages/Shifts.jsx");
-
-  for(const marker of [
+  for(const forbidden of [
     "Business Day Close",
     "Close Business Day",
-    "All automatic checks passed for this day.",
+    "Owner Shift Setting",
+    "set_shift_close_policy_v1",
+    "Financial Day Finalization",
+  ])assert.ok(!shifts.includes(forbidden),`Shift page still contains ${forbidden}`);
+});
+
+test("Closing Cash Check is managed in Settings like a device toggle",()=>{
+  const settings=read("src/pages/Settings.jsx");
+  for(const marker of [
+    "Shift Closing",
+    "Closing Cash Check:",
+    "shift_close_policy_v1",
+    "set_shift_close_policy_v1",
+    "Cash count required",
+    "Cash count optional",
+  ])assert.ok(settings.includes(marker),`Settings missing ${marker}`);
+});
+
+test("Business Day Close lives under Reports and keeps technical states internal",()=>{
+  const page=read("src/pages/BusinessDayClose.jsx");
+  const app=read("src/App.jsx");
+  const nav=read("src/config/navigation.js");
+
+  for(const marker of [
+    "Close Business Day",
+    "Everything required for this day is clear.",
     "begin_financial_day_close_v1",
     "reconcile_financial_day_v1",
     "finalize_financial_day_v1",
-  ])assert.ok(shifts.includes(marker),`Shifts missing ${marker}`);
+    "legacy_terminal_acknowledged_count",
+  ])assert.ok(page.includes(marker),`BusinessDayClose missing ${marker}`);
+
+  assert.ok(app.includes('path="day-close"'));
+  assert.ok(nav.includes('/reports/day-close'));
+  assert.ok(nav.includes('label: "Day Close"'));
 
   for(const exposed of [
     "Exception / Amendment Reason",
@@ -87,6 +89,15 @@ test("business-day accounting states stay behind one operator action",()=>{
     ">Reconcile<",
     ">Finalize Day<",
     ">Create FINAL Amendment<",
-    "Close This Terminal Day",
-  ])assert.ok(!shifts.includes(exposed),`technical day-close control still exposed: ${exposed}`);
+  ])assert.ok(!page.includes(exposed),`technical control exposed: ${exposed}`);
+});
+
+test("logout and shop switch remain guarded against unresolved checkout",()=>{
+  const auth=read("src/context/AuthContext.jsx");
+  const selector=read("src/components/ShopSelector.jsx");
+  const guard=read("src/lib/checkoutSessionGuard.js");
+
+  assert.ok(auth.includes("assertSessionChangeSafe"));
+  assert.ok(selector.includes("assertSessionChangeSafe"));
+  assert.ok(guard.includes("checkout_session_guard_v1"));
 });

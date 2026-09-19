@@ -1470,3 +1470,30 @@ date. WineShopPOS checks shifts, transaction uncertainty, pending returns,
 offline sales, terminal completeness, payment gap and stock exceptions before
 locking the day.
 <!-- /SHIFT_CLOSING_CASH_POLICY_SIMPLE_DAY_CLOSE_20260919 -->
+
+<!-- SIMPLE_SHIFT_DAY_CLOSE_UX_20260919 -->
+### Simple Shift screen
+
+The Shift screen is only for cashier shift work:
+
+1. Start Shift.
+2. Enter Closing Cash only when Closing Cash Check is ON.
+3. Close Shift.
+4. Manager/Admin approves the close.
+5. Review previous shifts in Shift History.
+
+If a shift reaches India midnight without closing, it is shown as
+**Ended at midnight · Cash not counted**.
+
+### Closing Cash Check
+
+Owner/Admin manages **Closing Cash Check: ON/OFF** under
+**Settings & Admin → Shop Settings → Shift Closing**.
+
+### Close Business Day
+
+Manager/Admin closes the whole shop business day under
+**Reports & Compliance → Day Close**. The screen shows one
+**Close Business Day** button and plain-language checks.
+Technical accounting states remain internal.
+<!-- /SIMPLE_SHIFT_DAY_CLOSE_UX_20260919 -->

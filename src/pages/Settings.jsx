@@ -20,6 +20,8 @@ export default function Settings() {
   const [message, setMessage] = useState("");
   const [demoConfirmation, setDemoConfirmation] = useState("");
   const [demoResetBusy, setDemoResetBusy] = useState(false);
+  const [closingCashRequired, setClosingCashRequired] = useState(true);
+  const [shiftPolicyBusy, setShiftPolicyBusy] = useState(false);
 
   async function load() {
     setLoading(true); setMessage("");
@@ -39,7 +41,38 @@ export default function Settings() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  async function loadShiftPolicy() {
+    const { data, error } = await supabase.rpc("shift_close_policy_v1");
+    if (error) {
+      setMessage(error.message || "Unable to load shift closing settings.");
+      return;
+    }
+    setClosingCashRequired(data?.shift_closing_cash_required !== false);
+  }
+
+  async function toggleClosingCashCheck() {
+    if (shiftPolicyBusy) return;
+    const next = !closingCashRequired;
+    setShiftPolicyBusy(true);
+    const { data, error } = await supabase.rpc("set_shift_close_policy_v1", {
+      p_shift_closing_cash_required: next,
+    });
+    setShiftPolicyBusy(false);
+
+    if (error) {
+      setMessage(error.message || "Unable to update Closing Cash Check.");
+      return;
+    }
+
+    const required = data?.shift_closing_cash_required !== false;
+    setClosingCashRequired(required);
+    setMessage(`Closing Cash Check ${required ? "enabled" : "disabled"}.`);
+  }
+
+  useEffect(() => {
+    void load();
+    void loadShiftPolicy();
+  }, []);
 
   async function save(event) {
     event.preventDefault(); setBusy(true); setMessage("");
@@ -140,6 +173,33 @@ export default function Settings() {
           <label>Tax Percentage<input type="number" min="0" step="0.01" disabled={!form.taxEnabled} value={form.taxPercentage} onChange={(e)=>setForm({...form,taxPercentage:e.target.value})}/></label>
         </div>
         <p className="muted-text">WineShopPOS does not invent state liquor/excise rules. Configure tax only from verified requirements.</p>
+      </section>
+
+      <section className="panel settings-section" style={{marginTop:16}}>
+        <div className="settings-section-heading">
+          <div>
+            <h3>Shift Closing</h3>
+            <p>Owner setting for whether the cashier must count physical cash before closing a shift.</p>
+          </div>
+        </div>
+        <div className="settings-inline-row">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={shiftPolicyBusy}
+            onClick={toggleClosingCashCheck}
+          >
+            Closing Cash Check: {closingCashRequired ? "ON" : "OFF"}
+          </button>
+          <div>
+            <strong>{closingCashRequired ? "Cash count required" : "Cash count optional"}</strong>
+            <p className="muted-text" style={{margin:0}}>
+              {closingCashRequired
+                ? "Cashier must enter the physical drawer count before requesting close."
+                : "Cashier may close without a cash count. Expected Cash is still calculated; Counted Cash stays Not counted."}
+            </p>
+          </div>
+        </div>
       </section>
 
       {profile?.role === "ADMIN" ? <section className="panel settings-section" style={{marginTop:16,border:"1px solid currentColor"}}>

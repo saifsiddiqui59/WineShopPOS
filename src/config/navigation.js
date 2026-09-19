@@ -49,7 +49,7 @@ export const MODULE_TABS = {
     { path: "/inventory/ageing", label: "Ageing & FIFO", roles: ["ADMIN", "MANAGER"], tier: "PRO" },
   ],
   operations: [
-    { path: "/operations/shifts", label: "Shift & Day Close", roles: ["ADMIN", "MANAGER", "CASHIER"] },
+    { path: "/operations/shifts", label: "Shift", roles: ["ADMIN", "MANAGER", "CASHIER"] },
     { path: "/operations/expenses", label: "Expenses", roles: ["ADMIN", "MANAGER"] },
     { path: "/operations/approvals", label: "Approvals", roles: ["ADMIN", "MANAGER"] },
     { path: "/operations/customers", label: "Customer & Credit", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
@@ -66,6 +66,7 @@ export const MODULE_TABS = {
   ],
   reports: [
     { path: "/reports", label: "Reports & Exports", roles: ["ADMIN", "MANAGER"] },
+    { path: "/reports/day-close", label: "Day Close", roles: ["ADMIN", "MANAGER"] },
     { path: "/reports/compliance", label: "Liquor Compliance", roles: ["ADMIN", "MANAGER"] },
   ],
   admin: [
