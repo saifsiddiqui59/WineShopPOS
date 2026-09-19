@@ -162,6 +162,12 @@ function packDone(state){
     .includes(String(state||""));
 }
 
+function batchDone(row){
+  if(!row?.batchReviewRequired)return true;
+  return ["HUMAN_CONFIRMED","OCR_AGREEMENT"]
+    .includes(String(row?.batchResolution?.state||""));
+}
+
 export function purchaseLineReviewReasons(
   row,
   product,
@@ -195,6 +201,10 @@ export function purchaseLineReviewReasons(
 
   if(!packDone(row?.packResolution?.state)){
     reasons.push("Pack review is not confirmed.");
+  }
+
+  if(!batchDone(row)){
+    reasons.push("Batch / Lot OCR conflict must be confirmed against the physical invoice.");
   }
 
   const purchasePrice=num(row?.purchasePrice);

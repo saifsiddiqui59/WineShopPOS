@@ -251,6 +251,31 @@ function diCellRegion(cell, pages) {
   return normalized ? { ...normalized, page } : null;
 }
 
+function diDocumentFieldRegion(primaryAnalyzeResult, fieldName) {
+  const pages = diPageDimensions(primaryAnalyzeResult);
+  const field = primaryAnalyzeResult?.analyzeResult?.documents?.[0]?.fields?.[fieldName];
+  const region = field?.boundingRegions?.[0];
+  if (!region?.polygon) return null;
+  const page = Number(region?.pageNumber || 1);
+  const dims = pages.get(page);
+  if (!dims?.width || !dims?.height) return null;
+  const normalized = polygonRegion(region.polygon, dims.width, dims.height);
+  return normalized ? { ...normalized, page } : null;
+}
+
+function visionLinesNearRegion(lines, region) {
+  if (!region) return [];
+  const padX = 0.05;
+  const padY = 0.025;
+  return (lines || []).filter((line) =>
+    Number(line.page) === Number(region.page) &&
+    line.xCenterNorm >= region.xMin - padX &&
+    line.xCenterNorm <= region.xMax + padX &&
+    line.yCenterNorm >= region.yMin - padY &&
+    line.yCenterNorm <= region.yMax + padY
+  );
+}
+
 function batchHeaderCell(cells) {
   return (cells || [])
     .filter((cell) => Number(cell?.rowIndex || 0) <= 10)
@@ -432,6 +457,33 @@ export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = 
   const totalCandidates = [];
   const supplierCandidates = [];
   const itemBatches = {};
+
+  const invoiceDateRegion = primaryAnalyzeResult
+    ? diDocumentFieldRegion(primaryAnalyzeResult, "InvoiceDate")
+    : null;
+
+  for (const line of visionLinesNearRegion(lines, invoiceDateRegion)) {
+    for (const date of datesInText(line.text)) {
+      const row = {
+        value: date.value,
+        raw: date.raw,
+        score: 260,
+        confidence: line.confidence,
+        evidenceId: `${line.id}:invoice-date-anchor:${dateCandidates.length}`,
+      };
+      dateCandidates.push(row);
+      evidence.push({
+        id: row.evidenceId,
+        source: "vision_date_anchor",
+        label: "DI InvoiceDate geometry",
+        rawValue: date.raw,
+        value: date.value,
+        dateValue: date.value,
+        confidence: line.confidence,
+        itemIndexes: [],
+      });
+    }
+  }
 
   for (const line of lines) {
     const text = line.text;
@@ -654,6 +706,7 @@ function publicSecondary(summary) {
     status: summary?.status || "UNAVAILABLE",
     lineCount: Number(summary?.lineCount || 0),
     chosen: summary?.chosen || {},
+    dateCandidates: (summary?.dateCandidates || []).slice(0, 6).map(publicCandidate).filter(Boolean),
     batchAlignment: summary?.batchAlignment || {
       mode: "UNAVAILABLE",
       geometryRegionCount: 0,

@@ -2900,3 +2900,167 @@ Safe continuation:
 Exact pushed source SHA `94a0514741366c4dcf65a8b041e9cbd452a58f6b`,
 then diagnostic-settings configuration, Supabase secret update and Edge
 Function deploy only.
+
+### 2026-09-19 — V6 OCR Safety Phase A V1 Purchase state-anchor false negative
+
+Marker: `V6_OCR_SAFETY_PHASE_A_V1_STATE_ANCHOR_20260919`
+
+Release/stage:
+V6 PROD OCR Safety Architecture Phase A V1 — isolated source patch stage.
+
+Symptom:
+The executor stopped with:
+`Purchases date review state: expected 1 marker, found 0`
+
+Impact:
+- original `/e/WineShopPOS` root working tree was untouched;
+- isolated executor worktree was removed by the pre-commit cleanup trap;
+- no commit or Git push occurred;
+- no PROD Supabase migration was applied;
+- no Edge Function was deployed;
+- no frontend was deployed;
+- QA/DEV were not used or modified.
+
+Root cause:
+The patcher searched for
+`const[invoiceNumber,...],[invoiceDate,...]` as though `invoiceNumber` began the
+React state declaration. In current `Purchases.jsx`, all state hooks are part of
+one declaration beginning earlier at `const[ingestionId,...]`; therefore the
+semantic fragment existed but the invented `const` prefix did not.
+
+Resolution:
+Patch the unique bounded fragment beginning directly at
+`,[invoiceDate,setInvoiceDate]=useState("")` instead of assuming where the
+larger state declaration begins.
+
+Permanent prevention:
+For compact/minified React state chains, do not invent a declaration boundary.
+Anchor on the smallest verified unique semantic fragment and preflight its
+cardinality against current `origin/main`.
+
+Safe continuation:
+Fresh isolated worktree from current PROD `origin/main`. No deploy-only
+continuation is needed because V1 failed before commit/push/cloud mutation.
+
+### 2026-09-19 — V6 OCR Safety Phase A V2 over-restricted AI evidence eligibility
+
+Marker: `V6_OCR_SAFETY_PHASE_A_V2_OVERSTRICT_AI_FILTER_20260919`
+
+Release/stage:
+V6 PROD OCR Safety Architecture Phase A V2 — focused regression-test stage.
+
+Symptom:
+The patch itself completed, but four existing OCR tests failed:
+- first-time misspelled finance label no longer reached AI as a suggestion;
+- provider-outage test observed zero AI calls instead of one for a novel label;
+- correlation/diagnostic tests for cross-OCR supplier conflict observed no AI call.
+
+Impact:
+- original `/e/WineShopPOS` root working tree remained untouched;
+- isolated executor worktree was removed by the pre-commit cleanup trap;
+- no commit or Git push occurred;
+- no PROD database migration was applied;
+- no Edge Function or frontend deployment occurred;
+- QA/DEV were not used or modified.
+
+Root cause:
+V2 made `aiCandidateCompatible()` require `KNOWN` finance semantics and excluded
+all `CROSS_OCR_*` issues from AI. That was stricter than necessary and removed
+two safe behaviors already protected elsewhere:
+1. NOVEL finance labels may be shown as AI suggestions but are never auto-applied.
+2. Cross-OCR conflicts may be sent to the judge for advisory diagnostics, but
+   `requiresHumanConfirmation=true` prevents automatic application.
+
+Resolution:
+Restore AI eligibility for `NOVEL` (but not `CONFLICT`) evidence and preserve
+cross-OCR advisory calls. Add a narrower structural block for intermediate
+finance labels such as Assessable/Subtotal/Gross, and force
+`needsReview=true` whenever an AI mapping belongs to a human-confirmation target.
+
+Permanent prevention:
+Do not solve an unsafe auto-apply concern by suppressing the entire evidence
+class. Separate candidate eligibility, advisory visibility, auto-apply
+authority, and server-side final receive authority.
+
+Safe continuation:
+Fresh isolated worktree from current PROD `origin/main`; no deploy-only
+continuation is required because V2 failed before commit/push/cloud mutation.
+
+### 2026-09-19 — V6 OCR Safety Phase A V3 Python regex escape anchor failure
+
+Marker: `V6_OCR_SAFETY_PHASE_A_V3_PYTHON_REGEX_ESCAPE_20260919`
+
+Release/stage:
+V6 PROD OCR Safety Architecture Phase A V3 — isolated source patch stage.
+
+Symptom:
+The executor stopped with:
+`intermediate finance label guard: expected 1 marker, found 0`
+
+Impact:
+- original `/e/WineShopPOS` root working tree remained untouched;
+- isolated executor worktree was removed by the pre-commit cleanup trap;
+- no commit or Git push occurred;
+- no PROD database migration was applied;
+- no Edge Function or frontend deployment occurred;
+- QA/DEV were not used or modified.
+
+Root cause:
+The V3 executor embedded a JavaScript regular expression containing `\b` inside
+a normal Python triple-quoted string used by the patcher. Python interpreted
+`\b` as a backspace character at runtime, so the exact source marker no longer
+matched the JavaScript file even though the source itself was correct.
+
+Resolution:
+Do not anchor on the regex body. Insert the new helper using the unique semantic
+function marker `function structuralEvidenceCompatible(...)`, and implement the
+intermediate-finance check without backslash regex escapes.
+
+Permanent prevention:
+Generated patchers must avoid language-escape collisions across shell, Python
+and JavaScript. Prefer small semantic markers and plain string predicates over
+large literal regex blocks when generating code from another language.
+
+Safe continuation:
+Fresh isolated worktree from current PROD `origin/main`; no deploy-only
+continuation is required because V3 failed before commit/push/cloud mutation.
+
+### 2026-09-19 — V6 OCR Safety Phase A V4 detached-worktree environment guard failure
+
+Marker: `V6_OCR_SAFETY_PHASE_A_V4_DETACHED_HEAD_ENV_GUARD_20260919`
+
+Release/stage:
+V6 PROD OCR Safety Architecture Phase A V4 — production build gate.
+
+Symptom:
+All 37 focused OCR tests passed, then `npm run build` stopped in
+`scripts/supabase-environment-policy.mjs` with:
+`ENVIRONMENT_ISOLATION_BLOCKED: unable to determine Git branch`
+
+Impact:
+- original `/e/WineShopPOS` root working tree remained untouched;
+- isolated executor worktree was removed by the pre-commit cleanup trap;
+- no commit or Git push occurred;
+- no PROD database migration was applied;
+- no Edge Function or frontend deployment occurred;
+- QA/DEV were not used or modified.
+
+Root cause:
+The release intentionally builds in a detached isolated Git worktree. The
+repository environment guard derives PROD/DEV from the Git branch name, and a
+detached HEAD has no branch name unless CI/release context is supplied.
+
+Resolution:
+For the isolated production build only, explicitly set `GITHUB_REF_NAME=main`
+and `BRANCH_NAME=main`. The guard still independently validates that the copied
+Supabase URL/project ref is the PROD ref, so this does not bypass environment
+isolation; it supplies the missing branch context.
+
+Permanent prevention:
+Any production build performed from a detached release worktree must provide an
+explicit main-branch context to the environment-isolation guard and must still
+allow the guard to validate the actual configured Supabase project.
+
+Safe continuation:
+Fresh isolated worktree from current PROD `origin/main`; no deploy-only
+continuation is required because V4 failed before commit/push/cloud mutation.

@@ -552,7 +552,7 @@ export function ShopProvider({ children }) {
     };
   }
 
-  async function receiveStock({supplierName,invoiceNumber,invoiceDate,items,notes="",charges={}}){
+  async function receiveStock({ingestionId=null,supplierName,invoiceNumber,invoiceDate,items,notes="",charges={}}){
     try{
       const supplier=String(supplierName||"").trim();
       if(!supplier)return{ok:false,message:"Supplier name is required."};
@@ -622,7 +622,8 @@ export function ShopProvider({ children }) {
       const requestedInvoiceRef=String(invoiceNumber||"").trim();
       const effectiveInvoiceRef=requestedInvoiceRef||`AUTO-${String(invoiceDate||new Date().toISOString().slice(0,10)).replaceAll("-","")}-${crypto.randomUUID().slice(0,8).toUpperCase()}`;
 
-      const{data,error}=await supabase.rpc("receive_purchase_v3",{
+      const rpcName=ingestionId?"receive_ocr_purchase_v1":"receive_purchase_v3";
+      const rpcArgs={
         p_supplier_name:supplier,
         p_invoice_number:effectiveInvoiceRef,
         p_invoice_date:invoiceDate||new Date().toISOString().slice(0,10),
@@ -635,12 +636,14 @@ export function ShopProvider({ children }) {
         p_supplier_discount_amount:Number(charges.supplierDiscountAmount||0),
         p_invoice_discount_amount:Number(charges.invoiceDiscountAmount||0),
         p_miscellaneous_amount:Number(charges.miscellaneousAmount||0),
-        p_rounding_adjustment:Number(charges.roundingAdjustment||0)
-      });
+        p_rounding_adjustment:Number(charges.roundingAdjustment||0),
+        ...(ingestionId?{p_ingestion_id:ingestionId}:{})
+      };
+      const{data,error}=await supabase.rpc(rpcName,rpcArgs);
 
       if(error){
         const missing=error.code==="PGRST202"||error.code==="42883"||
-          /receive_purchase_v3|could not find the function|does not exist/i.test(error.message||"");
+          /receive_purchase_v3|receive_ocr_purchase_v1|could not find the function|does not exist/i.test(error.message||"");
         if(missing)return{ok:false,message:"Atomic Purchase V3 database migration is not active yet. No Product Master, barcode, purchase or inventory change was committed."};
         throw error;
       }
@@ -649,6 +652,7 @@ export function ShopProvider({ children }) {
       return{
         ok:true,
         purchaseId:data,
+        ingestionLinked:Boolean(ingestionId),
         invoiceReference:effectiveInvoiceRef,
         message:requestedInvoiceRef
           ?"Stock received atomically. Prepared products/barcodes were committed with the receipt."

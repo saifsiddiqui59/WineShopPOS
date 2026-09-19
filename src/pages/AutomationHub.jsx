@@ -13,6 +13,8 @@ import {
 import { normalizeBeerOcrText } from "../lib/productInference";
 import { productImageUrl } from "../lib/productImages";
 import OcrProductImagePreview from "../components/OcrProductImagePreview";
+import IndianDateInput from "../components/IndianDateInput";
+import { formatIndiaDate } from "../lib/indiaDate";
 
 const STRONG_MATCH = 0.90;
 const OCR_COLUMN_OPTIONS = [["image","Image"],["size","Size (ml)"],["batch","Batch / Lot"],["mrp","MRP"],["product","Product Resolution"],["status","Status"],["rates","Rate / Price"],["amounts","Line Amounts"],["gap","Gap"]];
@@ -421,7 +423,21 @@ export default function AutomationHub() {
     [products],
   );
 
-  const invoiceDateCandidates = useMemo(() => extractDateCandidates(result?.invoiceDateRaw), [result?.invoiceDateRaw]);
+  const invoiceDateCandidates = useMemo(() => {
+    const rows = extractDateCandidates(result?.invoiceDateRaw);
+    const seen = new Set(rows.map((row) => row.iso));
+    for (const candidate of result?.secondaryOcr?.dateCandidates || []) {
+      const iso = String(candidate?.value || "");
+      if (!/^20\d{2}-\d{2}-\d{2}$/.test(iso) || seen.has(iso)) continue;
+      seen.add(iso);
+      rows.push({ iso, label: formatIndiaDate(iso) });
+    }
+    const chosen = String(result?.secondaryOcr?.chosen?.invoiceDate?.value || "");
+    if (/^20\d{2}-\d{2}-\d{2}$/.test(chosen) && !seen.has(chosen)) {
+      rows.push({ iso: chosen, label: formatIndiaDate(chosen) });
+    }
+    return rows.slice(0, 6);
+  }, [result?.invoiceDateRaw, result?.secondaryOcr]);
   const hiddenColumnClass = useMemo(() => Object.entries(ocrColumns).filter(([,visible])=>!visible).map(([key])=>`hide-col-${key}`).join(" "), [ocrColumns]);
 
   const supplierMatches = useMemo(() => {
@@ -1046,7 +1062,7 @@ export default function AutomationHub() {
   }
 
   function reviewIsReady() {
-    const dateReady = /^\d{4}-\d{2}-\d{2}$/.test(String(result?.invoiceDate || ""));
+    const dateReady = /^\d{4}-\d{2}-\d{2}$/.test(String(result?.invoiceDate || "")) && result?.invoiceDateReviewRequired !== true;
     return Boolean(
       ingestionId &&
       dateReady &&
@@ -1065,7 +1081,7 @@ export default function AutomationHub() {
     );
   }
 
-  async function persistReviewDraft({ silent = true, stage = "OCR_REVIEW", purchaseDraft = null, ready = reviewIsReady() } = {}) {
+  async function persistReviewDraft({ silent = true, stage = "OCR_REVIEW", purchaseDraft = null, ready = false } = {}) {
     if (!ingestionId || !result) return { ok: true, skipped: true };
     const { data, error } = await supabase.rpc("invoice_save_review_draft", {
       p_ingestion_id: ingestionId,
@@ -1333,16 +1349,16 @@ export default function AutomationHub() {
                 placeholder="Supplier invoice number"
               />
             </label>
-            <label>Invoice Date
-              <input
-                type="date"
+            <label>Invoice Date (DD/MM/YYYY)
+              <IndianDateInput
                 value={result.invoiceDate || ""}
-                onChange={(event) => setResult((current) => ({
+                onChange={(iso) => setResult((current) => ({
                   ...current,
-                  invoiceDate: event.target.value,
-                  invoiceDateReviewRequired: false,
-                  invoiceDateSource: "HUMAN_REVIEW",
+                  invoiceDate: iso,
+                  invoiceDateReviewRequired: !iso,
+                  invoiceDateSource: iso ? "HUMAN_REVIEW" : current.invoiceDateSource,
                 }))}
+                aria-label="Invoice Date DD/MM/YYYY"
               />
             </label>
           </div>
@@ -1353,7 +1369,7 @@ export default function AutomationHub() {
                 <div className="button-row" style={{marginTop:8}}>
                   <span className="muted-text">Detected date candidates:</span>
                   {invoiceDateCandidates.map((candidate)=>(
-                    <button key={candidate.iso} type="button" className="secondary-button" onClick={()=>setResult((current)=>({...current,invoiceDate:candidate.iso,invoiceDateReviewRequired:false,invoiceDateSource:"HUMAN_REVIEW_FROM_OCR_CANDIDATE"}))}>Use {candidate.label}</button>
+                    <button key={candidate.iso} type="button" className="secondary-button" onClick={()=>setResult((current)=>({...current,invoiceDate:candidate.iso,invoiceDateReviewRequired:false,invoiceDateSource:"HUMAN_REVIEW_FROM_OCR_CANDIDATE"}))}>Use {formatIndiaDate(candidate.iso)}</button>
                   ))}
                 </div>
               ):null}
