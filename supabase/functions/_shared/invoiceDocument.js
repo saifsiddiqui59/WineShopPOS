@@ -182,7 +182,14 @@ function findHeader(table) {
         roles,
         rateCol,
         combinedMrpDescriptionCol,
-        itemStartCol: Math.min(itemAnchor, roles.mrp ?? itemAnchor, roles.description ?? itemAnchor),
+        itemStartCol:
+          combinedMrpDescriptionCol != null
+            ? combinedMrpDescriptionCol
+            : roles.description != null
+              ? roles.description
+              : roles.mrp != null
+                ? Math.min(itemEndCol, roles.mrp + 1)
+                : itemAnchor,
         itemEndCol,
         score,
       };
@@ -269,6 +276,21 @@ function parseTable(table) {
       description = [split.descriptionRemainder, ...remaining].filter(Boolean).join(" ").trim();
     } else if (header.roles.description != null) {
       description = String(getCell(cells, ri, header.roles.description)?.content || "").trim();
+    }
+
+    // If Azure keeps the MRP header but merges this row's MRP and product
+    // text into the MRP data cell, recover only that cell's description tail.
+    // This path runs only when the normal structural description is empty.
+    if (!description && header.roles.description == null && header.roles.mrp != null && explicitMrpCell) {
+      const split = parseMrpLead(explicitMrpCell.content || "");
+      if (split.descriptionRemainder) {
+        description = split.descriptionRemainder;
+        if (!(mrp > 0) && split.mrp > 0) {
+          mrp = split.mrp;
+          mrpRaw = split.mrpRaw;
+          mrpReviewRequired = split.review;
+        }
+      }
     }
 
     description = normalizeOcrProductDescription(description);

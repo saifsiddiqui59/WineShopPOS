@@ -504,7 +504,7 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
   const printedTotalLabel =
     strongPrintedTotalLabel ||
     findLabeledAmount(analyzeResult, evidence, ["total"]);
-  const printedTotalLabelReliable = printedMoneyEvidenceIsReliable(
+  let printedTotalLabelReliable = printedMoneyEvidenceIsReliable(
     printedTotalLabel,
     lineProductValue,
   );
@@ -591,6 +591,39 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
     miscellaneousAmount - supplierDiscountAmount - invoiceDiscountAmount;
 
   const expectedBeforeRounding = Number((lineProductValue + knownAdjustment).toFixed(2));
+  // A labelled TOTAL can be syntactically valid yet still be a digit-group
+  // OCR corruption. Treat cross-field arithmetic as a confidence check, not
+  // as permission to manufacture a replacement printed total.
+  const postGrossDelta = Number(
+    (expectedBeforeRounding - calculatedGrossAmount).toFixed(2),
+  );
+
+  const printedTotalArithmeticStrong =
+    grossAmountValue > 0 &&
+    grossReconciliationStatus === "MATCH" &&
+    Math.abs(postGrossDelta - tcsAmount) <= 1;
+
+  const printedTotalParsed =
+    printedTotalLabelReliable
+      ? Math.abs(Number(printedTotalLabel?.value))
+      : null;
+
+  const printedTotalArithmeticTolerance = Math.max(
+    10,
+    Math.abs(expectedBeforeRounding) * 0.10,
+  );
+
+  const printedTotalArithmeticConflict = Boolean(
+    printedTotalArithmeticStrong &&
+    Number.isFinite(printedTotalParsed) &&
+    Math.abs(printedTotalParsed - expectedBeforeRounding) >
+      printedTotalArithmeticTolerance
+  );
+
+  if (printedTotalArithmeticConflict) {
+    printedTotalLabelReliable = false;
+  }
+
   const explicitTotal = Number(fieldNumber(fields.InvoiceTotal) || 0);
 
   // Prefer an explicitly labelled printed TOTAL when it is readable. If a
@@ -690,6 +723,10 @@ export function extractInvoiceFinancials(analyzeResult, fields = {}, items = [])
       grossDifference,
       grossReconciliationStatus,
       printedTotalRaw,
+      printedTotalArithmeticStrong,
+      printedTotalArithmeticConflict,
+      reconciledTotalCandidate:
+        printedTotalArithmeticStrong ? expectedBeforeRounding : null,
       printedTotalEvidenceStatus,
       cashDiscountAmount: supplierDiscountAmount,
       otherDeductionAmount: invoiceDiscountAmount,

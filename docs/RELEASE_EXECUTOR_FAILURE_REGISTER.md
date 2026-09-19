@@ -2758,3 +2758,64 @@ Idempotency guards for repeated field names must be scoped to the exact semantic
 
 Safe continuation:
 Rerun only this transport continuation. Do not rerun diagnostics, wipe PROD, re-upload 15983, or replay R11.
+
+### 2026-09-19 — V6 OCR V2 multiline patch-anchor failure
+
+Marker: `V6_OCR_V2_MULTILINE_ANCHOR_FAILURE_20260919`
+
+Release/stage:
+V6 global OCR consistency — isolated source patch stage.
+
+Symptom:
+The V2 executor created a clean detached worktree from current `origin/main`.
+Its first invoiceDocument edit succeeded, then the Node patcher stopped with:
+`Patch anchor missing: structural MRP fallback`.
+
+Impact:
+- original `/e/WineShopPOS` dirty working tree was untouched;
+- no commit or Git push occurred;
+- no Supabase Edge Function deployment occurred;
+- no database, purchase, inventory or stock mutation occurred;
+- only the executor-owned temporary worktree contained a partial edit.
+
+Root cause:
+A multiline exact-text replacement was used for a small semantic insertion point.
+
+Permanent prevention:
+Prefer unique durable single-line markers or bounded semantic regions over
+multiline exact-text anchors. Validate marker cardinality before writes.
+Failed isolated executors may clean only their own proven temporary worktree.
+
+Safe continuation:
+Fresh isolated worktree from latest fetched `origin/main`.
+
+### 2026-09-19 — V6 OCR V3 nested generated-test template failure
+
+Marker: `V6_OCR_V3_NESTED_TEMPLATE_LITERAL_FAILURE_20260919`
+
+Release/stage:
+V6 global OCR consistency — isolated patch generator stage.
+
+Symptom:
+Node failed before executing the patch body with:
+`SyntaxError: Unexpected identifier '$'`
+at the generated regression line containing a nested JavaScript template literal.
+
+Impact:
+- original `/e/WineShopPOS` tree was untouched;
+- the V3 trap removed its own uncommitted temporary worktree;
+- no commit or push occurred;
+- no Edge Function, database, purchase, inventory or stock mutation occurred.
+
+Root cause:
+The executor embedded a complete JavaScript test file inside another JavaScript
+template literal. The inner backticks/interpolation were parsed by the generator.
+
+Permanent prevention:
+Do not generate source containing JavaScript template literals from another
+JavaScript template literal. For release tests/source blocks, use a single-quoted
+shell heredoc or an external literal file. Run `bash -n` on the executor before
+any repository mutation.
+
+Safe continuation:
+Fresh isolated worktree from latest fetched `origin/main`.
