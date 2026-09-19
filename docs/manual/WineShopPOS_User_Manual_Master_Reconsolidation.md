@@ -1511,3 +1511,13 @@ The owner does not need to press a daily financial-close button. WineShopPOS
 closes clean completed days automatically. Use **Reports → Daily Closing** only
 to see status or issues that need attention.
 <!-- /AUTOMATIC_DAILY_CLOSE_UI_20260919 -->
+
+<!-- DAILY_CLOSING_OPERATIONS_20260920 -->
+### Daily Closing Status
+
+Open **Operations → Daily Closing** to view completed-day automatic closing
+status. It is not a reporting/compliance function.
+
+Normal clean days close automatically. Use this page only if WineShopPOS shows
+an end-of-day issue that needs attention.
+<!-- /DAILY_CLOSING_OPERATIONS_20260920 -->

@@ -105,8 +105,8 @@ export default function BusinessDayClose() {
     <div>
       <div className="page-heading">
         <div>
-          <h2>Automatic Daily Closing</h2>
-          <p>No daily button is required. WineShopPOS closes completed days automatically.</p>
+          <h2>Daily Closing Status</h2>
+          <p>Automatic end-of-day checks. Open this page only when a completed day needs attention.</p>
         </div>
       </div>
 

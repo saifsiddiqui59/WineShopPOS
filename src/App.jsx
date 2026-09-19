@@ -129,6 +129,7 @@ export default function App() {
           <Route path="offline" element={<OfflineQueue/>}/>
           <Route path="phone-scanner" element={<PhoneScannerSetup/>}/>
           <Route element={<RequireRole roles={["ADMIN","MANAGER"]}/>}> 
+            <Route path="daily-closing" element={<BusinessDayClose/>}/>
             <Route path="expenses" element={<Expenses/>}/>
             <Route path="approvals" element={<Approvals/>}/>
             <Route path="customers" element={<CustomerCredit/>}/>
@@ -149,7 +150,6 @@ export default function App() {
         <Route element={<RequireRole roles={["ADMIN","MANAGER"]}/>}> 
           <Route path="reports" element={module("Reports & Compliance", "Operational exports plus a safe foundation for verified liquor-compliance requirements.", MODULE_TABS.reports)}>
             <Route index element={<ReportsConsolidated/>}/>
-            <Route path="day-close" element={<BusinessDayClose/>}/>
             <Route path="compliance" element={<Compliance/>}/>
           </Route>
         </Route>
@@ -170,6 +170,7 @@ export default function App() {
         </Route>
 
         {/* Legacy route compatibility: preserve old bookmarks while moving navigation. */}
+        <Route path="reports/day-close" element={<Navigate to="/operations/daily-closing" replace/>}/>
         <Route path="shifts" element={<Navigate to="/operations/shifts" replace/>}/>
         <Route path="returns" element={<Navigate to="/pos/returns" replace/>}/>
         <Route path="sales" element={<Navigate to="/pos/sales" replace/>}/>

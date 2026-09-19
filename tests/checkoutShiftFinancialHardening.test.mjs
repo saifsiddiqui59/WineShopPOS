@@ -65,21 +65,23 @@ test("Closing Cash Check is managed in Settings like a device toggle",()=>{
   ])assert.ok(settings.includes(marker),`Settings missing ${marker}`);
 });
 
-test("Automatic Daily Closing lives under Reports and keeps technical states internal",()=>{
+test("Automatic Daily Closing lives under Operations and keeps technical states internal",()=>{
   const page=read("src/pages/BusinessDayClose.jsx");
   const app=read("src/App.jsx");
   const nav=read("src/config/navigation.js");
 
   for(const marker of [
-    "Automatic Daily Closing",
-    "No daily button is required.",
+    "Daily Closing Status",
+    "Automatic end-of-day checks.",
     "Closed automatically ✓",
     "WineShopPOS retries automatically",
     "legacy_terminal_acknowledged_count",
   ])assert.ok(page.includes(marker),`Automatic Daily Closing missing ${marker}`);
 
-  assert.ok(app.includes('path="day-close"'));
-  assert.ok(nav.includes('/reports/day-close'));
+  assert.ok(app.includes('path="daily-closing"'));
+  assert.ok(app.includes('path="reports/day-close" element={<Navigate to="/operations/daily-closing" replace/>}'));
+  assert.ok(nav.includes('/operations/daily-closing'));
+  assert.ok(!nav.includes('/reports/day-close'));
   assert.ok(nav.includes('label: "Daily Closing"'));
 
   for(const forbidden of [

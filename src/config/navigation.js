@@ -50,6 +50,7 @@ export const MODULE_TABS = {
   ],
   operations: [
     { path: "/operations/shifts", label: "Shift", roles: ["ADMIN", "MANAGER", "CASHIER"] },
+    { path: "/operations/daily-closing", label: "Daily Closing", roles: ["ADMIN", "MANAGER"] },
     { path: "/operations/expenses", label: "Expenses", roles: ["ADMIN", "MANAGER"] },
     { path: "/operations/approvals", label: "Approvals", roles: ["ADMIN", "MANAGER"] },
     { path: "/operations/customers", label: "Customer & Credit", roles: ["ADMIN", "MANAGER"], tier: "PLUS" },
@@ -66,7 +67,6 @@ export const MODULE_TABS = {
   ],
   reports: [
     { path: "/reports", label: "Reports & Exports", roles: ["ADMIN", "MANAGER"] },
-    { path: "/reports/day-close", label: "Daily Closing", roles: ["ADMIN", "MANAGER"] },
     { path: "/reports/compliance", label: "Liquor Compliance", roles: ["ADMIN", "MANAGER"] },
   ],
   admin: [

@@ -851,3 +851,13 @@ Final operator behavior:
 - Database retries completed financial-day finalization automatically.
 - Reports → Daily Closing is read-only status/review.
 <!-- /AUTOMATIC_DAILY_CLOSE_UI_20260919 -->
+
+<!-- DAILY_CLOSING_OPERATIONS_20260920 -->
+## 2026-09-20 — Daily Closing moved to Operations
+
+Daily Closing is now under Operations, not Reports & Compliance.
+
+Backend midnight rollover v4 also closes stale previous-day terminal watermarks.
+19-Sep legacy pre-terminal sales were acknowledged without fabricating terminal
+IDs. 19-Sep is FINAL with zero open shifts and zero open terminal blockers.
+<!-- /DAILY_CLOSING_OPERATIONS_20260920 -->

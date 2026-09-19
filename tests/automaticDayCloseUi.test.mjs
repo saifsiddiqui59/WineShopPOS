@@ -9,8 +9,8 @@ test("Daily Closing is automatic and read-only",()=>{
   const nav=read("src/config/navigation.js");
 
   for(const marker of [
-    "Automatic Daily Closing",
-    "No daily button is required.",
+    "Daily Closing Status",
+    "Automatic end-of-day checks.",
     "Closed automatically ✓",
     "WineShopPOS retries automatically",
     "Automatic Checks",
@@ -23,6 +23,8 @@ test("Daily Closing is automatic and read-only",()=>{
     "finalize_financial_day_v1",
   ])assert.ok(!page.includes(forbidden),`manual close remains: ${forbidden}`);
 
+  assert.ok(nav.includes('/operations/daily-closing'));
+  assert.ok(!nav.includes('/reports/day-close'));
   assert.ok(nav.includes('label: "Daily Closing"'));
 });
 
