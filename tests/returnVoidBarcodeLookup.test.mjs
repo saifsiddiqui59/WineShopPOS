@@ -56,3 +56,16 @@ test("Products does not expose a missing-image maintenance button", () => {
     "One-time image maintenance must not become a permanent Product Master button.",
   );
 });
+
+test("Return/Void lookup v2 supports product-name search and UI labels all search modes", () => {
+  const page = read("src/pages/Returns.jsx");
+  const migration = read(
+    "supabase/migrations/20260919114726_return_void_product_name_lookup_v2.sql",
+  );
+
+  assert.ok(page.includes("Scan barcode or search invoice / product name"));
+  assert.ok(page.includes("invoice number or product"));
+  assert.ok(migration.includes("si.product_name_snapshot ilike"));
+  assert.ok(migration.includes("'PRODUCT_NAME'"));
+  assert.ok(migration.includes("when 'BARCODE' then 1 when 'INVOICE' then 2 else 3"));
+});

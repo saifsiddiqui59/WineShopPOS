@@ -762,3 +762,13 @@ Product images were completed as a one-time background maintenance task.
 Current PROD catalogue verification: 39 active products, 39 with image, 0 missing.
 No permanent missing-image maintenance button is exposed in Product Master.
 <!-- /OCR_RETURN_VOID_IMAGES_20260919 -->
+
+<!-- RETURN_VOID_LOOKUP_V2_20260919 -->
+## 2026-09-19 — Return/Void product-name lookup hotfix
+
+PROD migration `20260919114726_return_void_product_name_lookup_v2` extends
+`return_void_invoice_lookup_v1` so candidate invoices can be found by exact
+barcode, invoice number, or product-name substring. Match priority is barcode,
+then invoice, then product name. The frontend search copy was updated to reflect
+all three supported modes.
+<!-- /RETURN_VOID_LOOKUP_V2_20260919 -->

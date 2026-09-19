@@ -1391,3 +1391,16 @@ PROD catalogue. There is no permanent bulk-image button in Product Master.
 Use normal **Edit Product** image controls only when a specific product image
 needs correction or replacement.
 <!-- /OCR_RETURN_VOID_IMAGES_20260919 -->
+
+<!-- RETURN_VOID_LOOKUP_V2_20260919 -->
+### Return/Void search options
+
+The **Find Original Invoice** box accepts:
+
+- scan the product barcode;
+- enter all or part of the invoice number;
+- enter all or part of the product name.
+
+WineShopPOS uses the search only to find candidate invoices. The cashier or
+manager must still select the correct invoice before a return or void is submitted.
+<!-- /RETURN_VOID_LOOKUP_V2_20260919 -->

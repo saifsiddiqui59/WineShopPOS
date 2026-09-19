@@ -85,7 +85,7 @@ export default function Returns() {
 
     if (value.length < 3) {
       setMatches([]);
-      setMessage("Scan a product barcode or enter at least 3 invoice characters.");
+      setMessage("Scan a barcode or enter at least 3 invoice / product characters.");
       if (fromScanner) errorBeep();
       return;
     }
@@ -108,7 +108,7 @@ export default function Returns() {
       setMatches(next);
 
       if (!next.length) {
-        setMessage(`No accessible invoice contains ${value}.`);
+        setMessage(`No accessible invoice or product match found for ${value}.`);
         if (fromScanner) errorBeep();
       } else {
         setMessage(
@@ -118,7 +118,7 @@ export default function Returns() {
       }
     } catch (error) {
       setMatches([]);
-      setMessage(error?.message || "Unable to find invoices for this barcode.");
+      setMessage(error?.message || "Unable to find matching invoices.");
       if (fromScanner) errorBeep();
     } finally {
       setLookupBusy(false);
@@ -329,9 +329,9 @@ export default function Returns() {
         <h3>1. Find Original Invoice</h3>
 
         <p className="muted-text">
-          Scan the bottle/can barcode. You can also enter part of an invoice
-          number. Scanning only finds candidate invoices; it never changes
-          stock or money.
+          Scan the bottle/can barcode, or search by invoice number or product
+          name. Search only finds candidate invoices; it never changes stock
+          or money.
         </p>
 
         <div className="button-row wrap">
@@ -345,7 +345,7 @@ export default function Returns() {
                 void findInvoices();
               }
             }}
-            placeholder="Scan product barcode or enter invoice number"
+            placeholder="Scan barcode or search invoice / product name"
             style={{ width: "100%", maxWidth: 520 }}
             autoFocus
           />

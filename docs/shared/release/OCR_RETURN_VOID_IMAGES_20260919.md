@@ -53,3 +53,21 @@ The one-time maintenance path was closed after completion. Temporary HTTP helper
 extensions used only to invoke the one-time background task were removed again.
 
 Normal Edit Product image replacement/correction remains available.
+
+## Return / Void lookup v2 hotfix
+
+PROD migration:
+
+`20260919114726_return_void_product_name_lookup_v2`
+
+The Return/Void candidate lookup now accepts:
+
+- exact product barcode;
+- invoice number / partial invoice number;
+- product name / partial product name.
+
+Match priority is Barcode -> Invoice -> Product Name, with newest matching invoices first.
+
+This fixes the case where an invoice visibly contained a product such as
+`DYNAMITE XXX FORTIFIED WINE` but typing the product name returned no candidate
+because the original v1 RPC only checked barcode and invoice number.
