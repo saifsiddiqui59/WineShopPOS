@@ -2858,3 +2858,45 @@ independently.
 Safe continuation:
 Fresh isolated worktree from latest fetched `origin/main`. No deploy-only
 continuation is needed because V2 failed before commit/push/cloud mutation.
+
+### 2026-09-19 — V6 OCR observability V3 ARM resource-ID MSYS path conversion failure
+
+Marker: `V6_OCR_OBSERVABILITY_V3_ARM_ID_MSYS_PATHCONV_20260919`
+
+Release/stage:
+V6 OCR observability + efficient judge — Azure diagnostic-settings configuration
+after source commit/push.
+
+Symptom:
+The source commit pushed successfully, then Azure CLI stopped at diagnostic
+category discovery with:
+`ERROR: usage error: --resource ID | --resource NAME --resource-group NAME --resource-type TYPE ...`
+
+Impact:
+- OCR source commit `94a0514741366c4dcf65a8b041e9cbd452a58f6b`
+  was already pushed to `main`;
+- Azure diagnostic settings were not created;
+- the Supabase AI timeout secret was not changed;
+- `ocr-invoice` was not redeployed by that run;
+- the exact committed continuation worktree was preserved.
+
+Root cause:
+Git Bash/MSYS path conversion rewrote the ARM resource ID beginning with
+`/subscriptions/...` before Azure CLI received `--resource`. The CLI supports a
+full resource ID, but on Git Bash ARM IDs must cross the native-Windows CLI
+boundary with MSYS path conversion disabled.
+
+Resolution:
+Continue from the exact pushed commit only. Use `MSYS_NO_PATHCONV=1` for every
+`az monitor diagnostic-settings ... --resource <ARM-ID>` command, including
+category discovery, create and verification. Do not replay the source patch.
+
+Permanent prevention:
+Any Azure CLI command carrying an ARM resource ID that starts with `/` from
+Git Bash must explicitly disable MSYS path conversion for that command. Treat
+ARM IDs as opaque Azure identifiers, not local filesystem paths.
+
+Safe continuation:
+Exact pushed source SHA `94a0514741366c4dcf65a8b041e9cbd452a58f6b`,
+then diagnostic-settings configuration, Supabase secret update and Edge
+Function deploy only.
