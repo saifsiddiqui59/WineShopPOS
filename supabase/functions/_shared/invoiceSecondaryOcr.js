@@ -74,14 +74,50 @@ function avgConfidence(words) {
 }
 
 function bboxStats(box) {
-  const values = Array.isArray(box) ? box.map(Number).filter(Number.isFinite) : [];
-  if (values.length < 8) return { x: 0, y: 0, h: 0 };
-  const xs = [values[0], values[2], values[4], values[6]];
-  const ys = [values[1], values[3], values[5], values[7]];
+  let values = [];
+  if (Array.isArray(box)) {
+    if (box.length && typeof box[0] === "object") {
+      values = box.flatMap((point) => [Number(point?.x), Number(point?.y)]);
+    } else {
+      values = box.map(Number);
+    }
+  }
+  values = values.filter(Number.isFinite);
+  if (values.length < 8) {
+    return {
+      x: 0,
+      y: 0,
+      w: 0,
+      h: 0,
+      xMin: 0,
+      xMax: 0,
+      yMin: 0,
+      yMax: 0,
+      xCenter: 0,
+      yCenter: 0,
+    };
+  }
+  const xs = [];
+  const ys = [];
+  for (let index = 0; index + 1 < values.length; index += 2) {
+    xs.push(values[index]);
+    ys.push(values[index + 1]);
+  }
+  const xMin = Math.min(...xs);
+  const xMax = Math.max(...xs);
+  const yMin = Math.min(...ys);
+  const yMax = Math.max(...ys);
   return {
-    x: Math.min(...xs),
-    y: ys.reduce((sum, value) => sum + value, 0) / ys.length,
-    h: Math.max(...ys) - Math.min(...ys),
+    x: xMin,
+    y: (yMin + yMax) / 2,
+    w: xMax - xMin,
+    h: yMax - yMin,
+    xMin,
+    xMax,
+    yMin,
+    yMax,
+    xCenter: (xMin + xMax) / 2,
+    yCenter: (yMin + yMax) / 2,
   };
 }
 
@@ -90,15 +126,26 @@ function flattenVisionLines(payload) {
   return pages.flatMap((page, pageIndex) =>
     (page?.lines || []).map((line, lineIndex) => {
       const box = bboxStats(line?.boundingBox);
+      const pageWidth = Number(page?.width || 0);
+      const pageHeight = Number(page?.height || 0);
+      const safeWidth = pageWidth > 0 ? pageWidth : 1;
+      const safeHeight = pageHeight > 0 ? pageHeight : 1;
       return {
         id: `vision:p${pageIndex + 1}:l${lineIndex + 1}`,
-        page: pageIndex + 1,
-        pageHeight: Number(page?.height || 0),
+        page: Number(page?.page || pageIndex + 1),
+        pageWidth,
+        pageHeight,
         text: String(line?.text || "").trim(),
         confidence: avgConfidence(line?.words),
         x: box.x,
         y: box.y,
         h: box.h,
+        xMinNorm: box.xMin / safeWidth,
+        xMaxNorm: box.xMax / safeWidth,
+        yMinNorm: box.yMin / safeHeight,
+        yMaxNorm: box.yMax / safeHeight,
+        xCenterNorm: box.xCenter / safeWidth,
+        yCenterNorm: box.yCenter / safeHeight,
       };
     }),
   ).filter((line) => line.text);
@@ -168,7 +215,216 @@ function publicCandidate(candidate) {
   };
 }
 
-export function buildVisionReadSummary(payload, invoice) {
+function polygonRegion(polygon, pageWidth, pageHeight) {
+  const box = bboxStats(polygon);
+  const safeWidth = Number(pageWidth || 0) > 0 ? Number(pageWidth) : 1;
+  const safeHeight = Number(pageHeight || 0) > 0 ? Number(pageHeight) : 1;
+  if (!(box.w > 0) || !(box.h > 0)) return null;
+  return {
+    xMin: box.xMin / safeWidth,
+    xMax: box.xMax / safeWidth,
+    yMin: box.yMin / safeHeight,
+    yMax: box.yMax / safeHeight,
+  };
+}
+
+function diPageDimensions(primaryAnalyzeResult) {
+  const pages = primaryAnalyzeResult?.analyzeResult?.pages || [];
+  return new Map(
+    pages.map((page, index) => [
+      Number(page?.pageNumber || index + 1),
+      {
+        width: Number(page?.width || 0),
+        height: Number(page?.height || 0),
+      },
+    ]),
+  );
+}
+
+function diCellRegion(cell, pages) {
+  const region = cell?.boundingRegions?.[0];
+  if (!region?.polygon) return null;
+  const page = Number(region?.pageNumber || 1);
+  const dims = pages.get(page);
+  if (!dims?.width || !dims?.height) return null;
+  const normalized = polygonRegion(region.polygon, dims.width, dims.height);
+  return normalized ? { ...normalized, page } : null;
+}
+
+function batchHeaderCell(cells) {
+  return (cells || [])
+    .filter((cell) => Number(cell?.rowIndex || 0) <= 10)
+    .filter((cell) => /\b(batch|lot)\b/i.test(norm(cell?.content || "")))
+    .sort(
+      (a, b) =>
+        Number(a?.rowIndex || 0) - Number(b?.rowIndex || 0) ||
+        Number(a?.columnIndex || 0) - Number(b?.columnIndex || 0),
+    )[0] || null;
+}
+
+function rowText(cells, rowIndex) {
+  return (cells || [])
+    .filter((cell) => Number(cell?.rowIndex || 0) === Number(rowIndex))
+    .sort((a, b) => Number(a?.columnIndex || 0) - Number(b?.columnIndex || 0))
+    .map((cell) => String(cell?.content || "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function numericEvidenceScore(item, text) {
+  const values = moneyTokens(text).map((token) => Number(token.value));
+  let bonus = 0;
+  const amount = Number(item?.amount || 0);
+  const rate = Number(item?.ratePerCase || item?.unitPrice || 0);
+  const mrp = Number(item?.mrp || 0);
+  if (amount > 0 && values.some((value) => Math.abs(value - amount) <= 1)) bonus += 0.35;
+  if (rate > 0 && values.some((value) => Math.abs(value - rate) <= 0.1)) bonus += 0.2;
+  if (mrp > 0 && values.some((value) => Math.abs(value - mrp) <= 0.1)) bonus += 0.1;
+  return bonus;
+}
+
+function buildDiBatchRegions(primaryAnalyzeResult, invoice) {
+  const ar = primaryAnalyzeResult?.analyzeResult || {};
+  const pages = diPageDimensions(primaryAnalyzeResult);
+  const items = Array.isArray(invoice?.items) ? invoice.items : [];
+  if (!items.length || !pages.size) return {};
+
+  let best = { quality: -1, mapping: {} };
+
+  for (const [tableIndex, table] of (ar.tables || []).entries()) {
+    const cells = Array.isArray(table?.cells) ? table.cells : [];
+    const header = batchHeaderCell(cells);
+    if (!header) continue;
+
+    const headerRow = Number(header.rowIndex || 0);
+    const batchColumn = Number(header.columnIndex || 0);
+    const rowIndexes = [...new Set(
+      cells
+        .map((cell) => Number(cell?.rowIndex || 0))
+        .filter((rowIndex) => rowIndex > headerRow),
+    )].sort((a, b) => a - b);
+
+    const rows = rowIndexes
+      .map((rowIndex) => {
+        const batchCell = cells.find(
+          (cell) =>
+            Number(cell?.rowIndex || 0) === rowIndex &&
+            Number(cell?.columnIndex || 0) === batchColumn,
+        );
+        const region = diCellRegion(batchCell, pages);
+        if (!region) return null;
+        return {
+          tableIndex,
+          rowIndex,
+          region,
+          text: rowText(cells, rowIndex),
+        };
+      })
+      .filter(Boolean);
+
+    if (!rows.length) continue;
+
+    const mapping = {};
+    let scoreSum = 0;
+
+    if (rows.length === items.length) {
+      rows.forEach((row, itemIndex) => {
+        mapping[itemIndex] = {
+          ...row.region,
+          tableIndex,
+          rowIndex: row.rowIndex,
+          alignment: "DI_GEOMETRY_ORDER",
+        };
+        scoreSum += 1;
+      });
+    } else {
+      const candidates = [];
+      items.forEach((item, itemIndex) => {
+        rows.forEach((row) => {
+          const description = String(item?.description || item?.productName || "");
+          const score =
+            overlapScore(description, row.text) +
+            numericEvidenceScore(item, row.text);
+          if (score >= 0.25) {
+            candidates.push({ itemIndex, row, score });
+          }
+        });
+      });
+
+      candidates.sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.itemIndex - b.itemIndex ||
+          a.row.rowIndex - b.row.rowIndex,
+      );
+
+      const usedItems = new Set();
+      const usedRows = new Set();
+      for (const candidate of candidates) {
+        const rowKey = `${candidate.row.tableIndex}:${candidate.row.rowIndex}`;
+        if (usedItems.has(candidate.itemIndex) || usedRows.has(rowKey)) continue;
+        usedItems.add(candidate.itemIndex);
+        usedRows.add(rowKey);
+        mapping[candidate.itemIndex] = {
+          ...candidate.row.region,
+          tableIndex,
+          rowIndex: candidate.row.rowIndex,
+          alignment: "DI_GEOMETRY_MATCHED",
+          matchScore: Number(candidate.score.toFixed(4)),
+        };
+        scoreSum += candidate.score;
+      }
+    }
+
+    const assigned = Object.keys(mapping).length;
+    const quality = assigned * 1000 + scoreSum - Math.abs(rows.length - items.length) * 5;
+    if (quality > best.quality) best = { quality, mapping };
+  }
+
+  return best.mapping;
+}
+
+function overlapLength(a1, a2, b1, b2) {
+  return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
+}
+
+function visionLinesInDiRegion(lines, region) {
+  const width = Math.max(0.001, region.xMax - region.xMin);
+  const height = Math.max(0.001, region.yMax - region.yMin);
+  const padX = Math.max(0.003, Math.min(0.02, width * 0.2));
+  const padY = Math.max(0.002, Math.min(0.012, height * 0.4));
+
+  return (lines || [])
+    .filter((line) => Number(line.page) === Number(region.page))
+    .filter((line) => {
+      const yInside =
+        line.yCenterNorm >= region.yMin - padY &&
+        line.yCenterNorm <= region.yMax + padY;
+      if (!yInside) return false;
+
+      const xOverlap = overlapLength(
+        line.xMinNorm,
+        line.xMaxNorm,
+        region.xMin - padX,
+        region.xMax + padX,
+      );
+      const xCenterInside =
+        line.xCenterNorm >= region.xMin - padX &&
+        line.xCenterNorm <= region.xMax + padX;
+      return xCenterInside || xOverlap > 0;
+    })
+    .sort((a, b) => a.xMinNorm - b.xMinNorm);
+}
+
+function averageLineConfidence(lines) {
+  const values = (lines || [])
+    .map((line) => Number(line?.confidence))
+    .filter(Number.isFinite);
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = null) {
   const lines = flattenVisionLines(payload);
   const evidence = [];
   const dateCandidates = [];
@@ -276,7 +532,46 @@ export function buildVisionReadSummary(payload, invoice) {
     }
   }
 
+  const diBatchRegions = primaryAnalyzeResult
+    ? buildDiBatchRegions(primaryAnalyzeResult, invoice)
+    : {};
+
   for (const [itemIndex, item] of (invoice?.items || []).entries()) {
+    const geometryRegion = diBatchRegions[itemIndex] || null;
+
+    if (primaryAnalyzeResult) {
+      if (!geometryRegion) continue;
+      const regionLines = visionLinesInDiRegion(lines, geometryRegion);
+      const regionText = regionLines.map((line) => line.text).join(" ");
+      const candidates = batchCandidates(regionText);
+      if (!candidates.length) continue;
+
+      const confidence = averageLineConfidence(regionLines);
+      itemBatches[itemIndex] = candidates.map((value, batchIndex) => {
+        const evidenceId = `vision:item:${itemIndex}:batch:${batchIndex}`;
+        evidence.push({
+          id: evidenceId,
+          source: "vision_batch",
+          label: "Batch",
+          rawValue: value,
+          value,
+          confidence,
+          itemIndexes: [itemIndex],
+        });
+        return {
+          value,
+          raw: value,
+          score: 100,
+          confidence,
+          evidenceId,
+          alignment: geometryRegion.alignment,
+        };
+      });
+      continue;
+    }
+
+    // Legacy/offline fallback only. Production passes the raw DI result and
+    // therefore uses DI row + Batch-cell geometry instead of same-Y guessing.
     const description = String(item?.description || item?.productName || "").trim();
     if (!description) continue;
 
@@ -289,13 +584,13 @@ export function buildVisionReadSummary(payload, invoice) {
     if (!best) continue;
 
     const tolerance = Math.max(8, Number(best.line.h || 0) * 1.75);
-    const rowText = lines
+    const nearbyText = lines
       .filter((line) => line.page === best.line.page && Math.abs(line.y - best.line.y) <= tolerance)
       .sort((a, b) => a.x - b.x)
       .map((line) => line.text)
       .join(" ");
 
-    const candidates = batchCandidates(rowText);
+    const candidates = batchCandidates(nearbyText);
     if (!candidates.length) continue;
 
     itemBatches[itemIndex] = candidates.map((value, batchIndex) => {
@@ -315,6 +610,7 @@ export function buildVisionReadSummary(payload, invoice) {
         score: Math.round(best.score * 100),
         confidence: best.line.confidence,
         evidenceId,
+        alignment: "LEGACY_DESCRIPTION_FALLBACK",
       };
     });
   }
@@ -334,6 +630,11 @@ export function buildVisionReadSummary(payload, invoice) {
     totalCandidates,
     supplierCandidates,
     itemBatches,
+    batchAlignment: {
+      mode: primaryAnalyzeResult ? "DI_GEOMETRY" : "LEGACY_DESCRIPTION_FALLBACK",
+      geometryRegionCount: Object.keys(diBatchRegions).length,
+      candidateItemCount: Object.keys(itemBatches).length,
+    },
     chosen: {
       invoiceDate: publicCandidate(chosenDate),
       invoiceNumber: publicCandidate(chosenInvoiceNumber),
@@ -353,6 +654,11 @@ function publicSecondary(summary) {
     status: summary?.status || "UNAVAILABLE",
     lineCount: Number(summary?.lineCount || 0),
     chosen: summary?.chosen || {},
+    batchAlignment: summary?.batchAlignment || {
+      mode: "UNAVAILABLE",
+      geometryRegionCount: 0,
+      candidateItemCount: 0,
+    },
     itemBatchCandidates: Object.fromEntries(
       Object.entries(summary?.itemBatches || {}).map(([index, rows]) => [
         index,

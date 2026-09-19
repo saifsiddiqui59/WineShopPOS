@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
     let invoice = normalizeDocumentIntelligenceResult(primaryResult);
 
     const secondaryOcr = secondaryResult.ok
-      ? buildVisionReadSummary(secondaryResult.payload, invoice)
+      ? buildVisionReadSummary(secondaryResult.payload, invoice, primaryResult)
       : {
           provider: "AZURE_VISION_READ_3_2",
           status: secondaryResult.reason || "UNAVAILABLE",
