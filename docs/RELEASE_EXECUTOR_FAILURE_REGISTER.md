@@ -2819,3 +2819,42 @@ any repository mutation.
 
 Safe continuation:
 Fresh isolated worktree from latest fetched `origin/main`.
+
+### 2026-09-19 — V6 OCR observability V2 duplicate poll-anchor cardinality failure
+
+Marker: `V6_OCR_OBSERVABILITY_V2_DUPLICATE_POLL_ANCHOR_20260919`
+
+Release/stage:
+V6 OCR observability + efficient Shop-AI judge — isolated source patch stage.
+
+Symptom:
+The executor stopped with:
+`DI poll correlation header: expected 1 marker, found 2`
+
+Impact:
+- original `/e/WineShopPOS` working tree remained untouched;
+- no source commit or Git push occurred;
+- no Azure diagnostic setting was created;
+- no Supabase secret was changed;
+- no Edge Function deployment occurred;
+- the executor-owned uncommitted worktree was removed by its trap.
+
+Root cause:
+Document Intelligence and Vision Read used the same exact poll-fetch source
+fragment. The patcher attempted a global exact-marker replacement while
+incorrectly requiring cardinality 1.
+
+Resolution:
+Patch Document Intelligence and Vision independently inside bounded semantic
+function regions (`runDocumentIntelligence` and `runVisionRead`) rather than
+using one global duplicate text anchor.
+
+Permanent prevention:
+When two provider functions intentionally share boilerplate, never use a global
+`replace_once` cardinality assertion on that shared boilerplate. Scope source
+mutation to a unique function/semantic region, then validate each region
+independently.
+
+Safe continuation:
+Fresh isolated worktree from latest fetched `origin/main`. No deploy-only
+continuation is needed because V2 failed before commit/push/cloud mutation.

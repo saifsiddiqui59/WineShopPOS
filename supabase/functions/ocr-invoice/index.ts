@@ -49,10 +49,12 @@ async function runDocumentIntelligence({
   endpoint,
   key,
   contentBase64,
+  correlationId,
 }: {
   endpoint: string;
   key: string;
   contentBase64: string;
+  correlationId: string;
 }) {
   const analyzeUrl = `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze?_overload=analyzeDocument&api-version=2024-11-30&features=keyValuePairs`;
   const analyze = await fetch(analyzeUrl, {
@@ -60,6 +62,7 @@ async function runDocumentIntelligence({
     headers: {
       "Ocp-Apim-Subscription-Key": key,
       "Content-Type": "application/json",
+      "x-ms-client-request-id": correlationId,
     },
     body: JSON.stringify({ base64Source: contentBase64 }),
   });
@@ -75,7 +78,10 @@ async function runDocumentIntelligence({
   for (let attempt = 0; attempt < 45; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const poll = await fetch(operation, {
-      headers: { "Ocp-Apim-Subscription-Key": key },
+      headers: {
+        "Ocp-Apim-Subscription-Key": key,
+        "x-ms-client-request-id": correlationId,
+      },
     });
     if (!poll.ok) throw new Error(`Azure OCR poll failed: ${poll.status}`);
     result = await poll.json();
@@ -91,10 +97,12 @@ async function runVisionRead({
   endpoint,
   key,
   bytes,
+  correlationId,
 }: {
   endpoint: string;
   key: string;
   bytes: Uint8Array;
+  correlationId: string;
 }) {
   const submitUrl = `${endpoint}/vision/v3.2/read/analyze?readingOrder=natural`;
   const submit = await fetch(submitUrl, {
@@ -102,6 +110,7 @@ async function runVisionRead({
     headers: {
       "Ocp-Apim-Subscription-Key": key,
       "Content-Type": "application/octet-stream",
+      "x-ms-client-request-id": correlationId,
     },
     body: bytes,
   });
@@ -117,7 +126,10 @@ async function runVisionRead({
   for (let attempt = 0; attempt < 45; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const poll = await fetch(operation, {
-      headers: { "Ocp-Apim-Subscription-Key": key },
+      headers: {
+        "Ocp-Apim-Subscription-Key": key,
+        "x-ms-client-request-id": correlationId,
+      },
     });
     if (!poll.ok) throw new Error(`Azure Vision Read poll failed: ${poll.status}`);
     result = await poll.json();
@@ -182,6 +194,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const contentBase64 = String(body?.contentBase64 || "");
     const ingestionId = String(body?.ingestionId || "").trim() || null;
+    const correlationId = ingestionId || crypto.randomUUID();
     if (!contentBase64) throw new Error("Document content is required");
 
     const estimatedBytes = Math.floor((contentBase64.length * 3) / 4);
@@ -198,10 +211,16 @@ Deno.serve(async (req) => {
       endpoint: diEndpoint,
       key: diKey,
       contentBase64,
+      correlationId,
     });
 
     const secondaryPromise = secondaryEnabled && visionEndpoint && visionKey
-      ? runVisionRead({ endpoint: visionEndpoint, key: visionKey, bytes })
+      ? runVisionRead({
+          endpoint: visionEndpoint,
+          key: visionKey,
+          bytes,
+          correlationId,
+        })
           .then((payload) => ({ ok: true, payload, reason: null }))
           .catch((error) => ({
             ok: false,
@@ -250,7 +269,8 @@ Deno.serve(async (req) => {
           baseUrl: Deno.env.get("WSP_INVOICE_AI_BASE_URL") || "",
           apiKey: Deno.env.get("WSP_INVOICE_AI_API_KEY") || "",
           model: Deno.env.get("WSP_INVOICE_AI_MODEL") || "",
-          timeoutMs: Number(Deno.env.get("WSP_INVOICE_AI_TIMEOUT_MS") || "10000"),
+          timeoutMs: Number(Deno.env.get("WSP_INVOICE_AI_TIMEOUT_MS") || "18000"),
+          correlationId,
         },
       });
     } catch (resolverError) {
@@ -269,8 +289,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log(JSON.stringify({
+      event: "WSP_OCR_TRACE",
+      correlationId,
+      ingestionId,
+      secondaryStatus: secondaryOcr?.status || "UNAVAILABLE",
+      crossOcrStatus: invoice?.crossOcr?.status || "UNAVAILABLE",
+      reviewTargetCount: invoice?.crossOcr?.reviewTargets?.length || 0,
+      aiCalled: Boolean(invoice?.resolutionAssist?.aiCalled),
+      aiReason: invoice?.resolutionAssist?.aiReason || null,
+      aiProviderStatus: invoice?.resolutionAssist?.aiDiagnostics?.providerStatus || null,
+      aiInputTokens: invoice?.resolutionAssist?.aiDiagnostics?.inputTokens ?? null,
+      aiReasoningTokens: invoice?.resolutionAssist?.aiDiagnostics?.reasoningTokens ?? null,
+      aiOutputTokens: invoice?.resolutionAssist?.aiDiagnostics?.outputTokens ?? null,
+    }));
+
     return json({
       ok: true,
+      correlationId,
       invoice,
       rawConfidence: invoice?.ocrQuality?.documentConfidence ?? null,
       model: "prebuilt-invoice+semantic-table+azure-vision-read-3.2",
