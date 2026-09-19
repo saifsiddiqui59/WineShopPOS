@@ -1348,3 +1348,46 @@ This safety rule applies to products originating from Purchase/OCR. The normal
 Product Master **Add Product** screen remains available for deliberate master-data
 administration outside a purchase.
 <!-- /V5_23A_PURCHASE_PREPARE_PRODUCT_USER_GUIDE_20260909 -->
+
+<!-- OCR_RETURN_VOID_IMAGES_20260919 -->
+## OCR spelling correction and barcode-first Returns / Voids
+
+### OCR product spelling normalization
+
+WineShopPOS applies these deterministic OCR corrections before invoice product
+resolution:
+
+- `KFULTRA` becomes `KF ULTRA`.
+- `STORNG` becomes `STRONG`.
+
+These are exact-token corrections only. Normal invoice review and confirmation
+rules remain in place.
+
+### Returns and Voids — scan the product first
+
+Open **POS & Billing → Returns**.
+
+1. Scan the bottle/can barcode in **Scan product barcode or enter invoice number**.
+2. WineShopPOS lists accessible invoices containing that product.
+3. Review Invoice, Business Date, Sold, Returned, Pending and Available quantities.
+4. Select the correct invoice.
+5. WineShopPOS loads all invoice lines and shows the remaining returnable quantity.
+6. Enter return quantity and reason, then submit the return request.
+7. Manager/Admin approval remains required before returned stock is restored.
+8. Manager/Admin may use **Void Entire Sale** only when WineShopPOS marks the
+   selected invoice as a clean completed sale with no pending/approved return activity.
+
+A barcode scan is only an invoice lookup. It never returns stock, refunds money
+or voids a sale automatically.
+
+Cashiers are limited to their allowed own-sale scope. Manager/Admin can search
+the current shop.
+
+### Product images
+
+Product image completion was performed once in the background for the current
+PROD catalogue. There is no permanent bulk-image button in Product Master.
+
+Use normal **Edit Product** image controls only when a specific product image
+needs correction or replacement.
+<!-- /OCR_RETURN_VOID_IMAGES_20260919 -->

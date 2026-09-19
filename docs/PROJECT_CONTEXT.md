@@ -745,3 +745,20 @@ Planned/implemented together:
 - Preview index SHA-256: `90ed3aef21dfa9fe8829213aaac1debf8d7ac46f8d9ded9a180a6e5e5c119e1a`
 - Production frontend was not deployed.
 - Manual authenticated Stock Count/POS visual UAT remains pending.
+
+<!-- OCR_RETURN_VOID_IMAGES_20260919 -->
+## 2026-09-19 — OCR spelling, barcode Return/Void lookup and one-time image completion
+
+PROD OCR normalization applies deterministic exact-token corrections
+`KFULTRA -> KF ULTRA` and `STORNG -> STRONG` in both manual OCR and
+automation-ingest normalization paths.
+
+PROD migration `20260919110955_return_void_barcode_lookup_v1` adds barcode/invoice
+lookup for Returns/Voids plus authoritative remaining-return quantity context.
+Cashier lookup/context is own-sale scoped; Manager/Admin is shop scoped. Scan is
+lookup-only; existing return approval and `void_sale` remain mutation authority.
+
+Product images were completed as a one-time background maintenance task.
+Current PROD catalogue verification: 39 active products, 39 with image, 0 missing.
+No permanent missing-image maintenance button is exposed in Product Master.
+<!-- /OCR_RETURN_VOID_IMAGES_20260919 -->

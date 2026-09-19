@@ -11,6 +11,19 @@ function numberValue(field) {
 function normalize(value) {
   return String(value || "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
 }
+const OCR_PRODUCT_DESCRIPTION_RULES = [
+  [/\bKFULTRA\b/gi, "KF ULTRA"],
+  [/\bSTORNG\b/gi, "STRONG"],
+];
+
+export function normalizeOcrProductDescription(value) {
+  let text = String(value || "").trim();
+  for (const [pattern, replacement] of OCR_PRODUCT_DESCRIPTION_RULES) {
+    text = text.replace(pattern, replacement);
+  }
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function compact(value) {
   return normalize(value).replace(/\s+/g, "");
 }
@@ -258,6 +271,8 @@ function parseTable(table) {
       description = String(getCell(cells, ri, header.roles.description)?.content || "").trim();
     }
 
+    description = normalizeOcrProductDescription(description);
+
     const descNorm = normalize(description);
     if (!description || !/[a-z]/i.test(description) || /^(scheme details|total|subtotal|gross amount|assessable value|bank details)$/.test(descNorm)) continue;
 
@@ -432,7 +447,7 @@ export function normalizeDocumentIntelligenceResult(result) {
   const rawItems = (fields.Items?.valueArray || []).map((row) => {
     const item = row?.valueObject || {};
     return {
-      description: String(fieldContent(item.Description) || fieldContent(item.ProductCode) || ""),
+      description: normalizeOcrProductDescription(fieldContent(item.Description) || fieldContent(item.ProductCode) || ""),
       productCode: String(fieldContent(item.ProductCode) || ""),
       quantity: numberValue(item.Quantity),
       unitText: String(fieldContent(item.Unit) || fieldContent(item.Units) || ""),
