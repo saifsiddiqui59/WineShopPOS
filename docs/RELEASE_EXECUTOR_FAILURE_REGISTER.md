@@ -3064,3 +3064,94 @@ allow the guard to validate the actual configured Supabase project.
 Safe continuation:
 Fresh isolated worktree from current PROD `origin/main`; no deploy-only
 continuation is required because V4 failed before commit/push/cloud mutation.
+
+### 2026-09-19 — V6 OCR Safety Phase B V1 Azure account-key flag + cleanup failure
+
+Marker: `V6_OCR_SAFETY_PHASE_B_V1_AZURE_ACCOUNT_NAME_FLAG_20260919`
+
+Release/stage:
+V6 PROD OCR Safety Phase B frontend finish — Azure target verification before any
+frontend blob upload.
+
+Symptom:
+The exact release frontend built successfully, then Azure CLI stopped while
+retrieving the production storage account key. The command used
+`az storage account keys list --name <account> ...`; Azure CLI printed command
+usage instead of returning a key. The summary also reported
+`WORKTREE: REMOVE_FAILED`.
+
+Impact:
+- no frontend asset or production entrypoint was uploaded;
+- no rollback was required;
+- the PROD DB migration and OCR Edge version 23 had already succeeded and must
+  not be replayed;
+- QA/DEV were untouched.
+
+Root cause:
+1. Azure CLI's supported long parameter for `az storage account keys list` is
+   `--account-name` (short form `-n`), not `--name`.
+2. EXIT cleanup attempted to remove the isolated worktree while the shell's
+   current directory was still inside that worktree. Windows can prevent the
+   directory removal in that state.
+
+Resolution / permanent prevention:
+- use `--account-name` for Storage account-key lookup;
+- never print/persist the key; keep it only in memory/environment for the exact
+  data-plane operation and unset it afterward;
+- `cd` outside an executor-owned worktree before `git worktree remove --force`;
+- capture the error tail before printing the final summary so the summary does
+  not duplicate itself;
+- because no frontend write occurred, continue from frontend deployment only.
+
+Safe continuation:
+Exact application source SHA
+`739f85e1cb6e35b6fa6484aa1b1ad29d100b2159`. Do not replay the DB migration
+or OCR Edge deployment.
+
+### 2026-09-19 — Connected Supabase V6 migration history timestamp alignment
+
+Marker: `V6_OCR_SAFETY_CONNECTED_MIGRATION_VERSION_ALIGNMENT_20260919`
+
+Release/stage:
+V6 PROD OCR Safety Phase B — migration-history verification after connected
+Supabase migration application.
+
+Observed:
+The repository migration is
+`20260919223000_v6_ocr_receive_guard_v1.sql`, while the connected migration
+action initially registered the successfully-applied migration as version
+`20260919204351` with the same name and exact statements.
+
+Impact:
+The server functions were live/correct, but leaving the generated timestamp
+would make repository and PROD migration history disagree.
+
+Resolution:
+The exact single migration-history row was verified, canonical version
+`20260919223000` was verified absent, and only the migration-history version was
+aligned from `20260919204351` to `20260919223000`. The DDL was NOT replayed.
+Post-alignment verification returned exactly:
+`20260919223000 | v6_ocr_receive_guard_v1`.
+
+Permanent prevention:
+When a connected migration action assigns its own timestamp, verify exact
+migration name/statements and canonical-version absence, then align only the
+history row to the repository filename. Never replay DDL merely to repair
+history metadata.
+
+### 2026-09-19 — GitHub connector write unavailable for release-register update
+
+Marker: `V6_RELEASE_REGISTER_GITHUB_CONNECTOR_WRITE_403_20260919`
+
+Observed:
+A connected GitHub `update_file` attempt to append these release incidents
+returned HTTP 403 `Resource not accessible by integration`.
+
+Impact:
+No GitHub file or commit was changed by that connector attempt.
+
+Resolution / permanent prevention:
+Do not depend on connector write permission for WineShopPOS release bookkeeping.
+Use the user's authenticated local Git path with an isolated clean worktree,
+exact allowlisted documentation change, race-check current `origin/main`, and
+push the documentation-only commit before the next deployment write.
