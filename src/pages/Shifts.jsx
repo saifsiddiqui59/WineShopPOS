@@ -8,7 +8,6 @@ import {
   getTerminalId,
   indiaBusinessDate,
   nextTerminalSequence,
-  peekTerminalSequence,
 } from "../lib/terminalIdentity";
 
 const money = new Intl.NumberFormat("en-IN", {
@@ -17,9 +16,33 @@ const money = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 });
 
+const indiaDateTime = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+});
+
+function formatIndiaDateTime(value) {
+  if (!value) return "-";
+  return indiaDateTime.format(new Date(value));
+}
+
+function shiftStatusLabel(shift) {
+  if (shift?.status === "CLOSE_REQUIRED") {
+    return "ENDED AT MIDNIGHT · CASH NOT COUNTED";
+  }
+  return shift?.status || "-";
+}
+
 export default function Shifts() {
   const { profile } = useAuth();
   const manager = ["ADMIN", "MANAGER"].includes(profile?.role);
+  const ownerAdmin = profile?.role === "ADMIN";
 
   const [shifts, setShifts] = useState([]);
   const [opening, setOpening] = useState(0);
@@ -34,12 +57,15 @@ export default function Shifts() {
     conflict: 0,
   });
 
+  const [closingCashRequired, setClosingCashRequired] = useState(true);
+  const [policyBusy, setPolicyBusy] = useState(false);
+
   const [dayDate, setDayDate] = useState(() => indiaBusinessDate(-1));
   const [dayView, setDayView] = useState(null);
-  const [dayReason, setDayReason] = useState("");
   const [dayBusy, setDayBusy] = useState(false);
 
   const today = indiaBusinessDate(0);
+  const latestClosableDay = indiaBusinessDate(-1);
 
   const myRows = useMemo(
     () => shifts.filter((shift) => shift.cashier_id === profile?.user_id),
@@ -57,6 +83,17 @@ export default function Shifts() {
       shift.business_date < today &&
       ["CLOSE_REQUIRED", "CLOSE_REQUESTED"].includes(shift.status),
   );
+
+  async function loadPolicy() {
+    const { data, error } = await supabase.rpc("shift_close_policy_v1");
+    if (error) {
+      setMessage(error.message);
+      return null;
+    }
+    const required = data?.shift_closing_cash_required !== false;
+    setClosingCashRequired(required);
+    return required;
+  }
 
   async function load() {
     const connectivity = await probeBackendConnectivity().catch(() => ({
@@ -76,14 +113,16 @@ export default function Shifts() {
       return;
     }
 
-    // Server refreshes India-business-date rollover before we read the shift list.
     await supabase.rpc("current_shift_state_v2");
 
-    const { data, error } = await supabase
-      .from("cashier_shifts")
-      .select("*")
-      .order("opened_at", { ascending: false })
-      .limit(100);
+    const [{ data, error }] = await Promise.all([
+      supabase
+        .from("cashier_shifts")
+        .select("*")
+        .order("opened_at", { ascending: false })
+        .limit(100),
+      loadPolicy(),
+    ]);
 
     if (error) setMessage(error.message);
     else setShifts(data || []);
@@ -99,6 +138,28 @@ export default function Shifts() {
       window.removeEventListener("focus", refresh);
     };
   }, []);
+
+  async function updateClosingCashPolicy(required) {
+    if (!ownerAdmin || policyBusy) return;
+
+    setPolicyBusy(true);
+    const { data, error } = await supabase.rpc("set_shift_close_policy_v1", {
+      p_shift_closing_cash_required: required,
+    });
+    setPolicyBusy(false);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setClosingCashRequired(data?.shift_closing_cash_required !== false);
+    setMessage(
+      required
+        ? "Closing cash count is now mandatory for shift close."
+        : "Closing cash count is now optional for shift close.",
+    );
+  }
 
   async function open() {
     const connectivity = await probeBackendConnectivity().catch(() => ({
@@ -138,10 +199,16 @@ export default function Shifts() {
 
     setMessage(
       historicalRequired.length
-        ? "Today's shift opened. Older CLOSE_REQUIRED shifts remain visible for reconciliation."
+        ? "Today's shift opened. Older unresolved shifts remain visible separately."
         : "Shift opened.",
     );
     await load();
+  }
+
+  function parseActualCash(raw) {
+    if (raw === "" || raw === null || raw === undefined) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : Number.NaN;
   }
 
   async function requestClose(shift = currentShift, actualValue = actual) {
@@ -164,34 +231,46 @@ export default function Shifts() {
       return false;
     }
 
-    const cash = Number(actualValue);
-    if (actualValue === "" || !Number.isFinite(cash) || cash < 0) {
-      setMessage(
-        "Enter the real physical Actual Cash for this shift before requesting close. Do not copy Expected Cash unless it is genuinely the counted amount.",
-      );
+    const cash = parseActualCash(actualValue);
+
+    if (closingCashRequired && cash === null) {
+      setMessage("Closing cash is mandatory. Enter the physical cash count before requesting close.");
       return false;
     }
 
-    const { error } = await supabase.rpc("request_shift_close_v3", {
+    if (Number.isNaN(cash) || (cash !== null && cash < 0)) {
+      setMessage("Closing cash must be blank, zero, or a positive amount.");
+      return false;
+    }
+
+    const { data, error } = await supabase.rpc("request_shift_close_v4", {
       p_shift_id: shift.id,
       p_terminal_id: getTerminalId(),
       p_client_sequence: nextTerminalSequence(),
       p_actual_cash: cash,
       p_notes:
         shift.business_date < today
-          ? "Historical CLOSE_REQUIRED shift reconciliation requested from Shift & Day Close."
-          : "Actual cash physically counted before close request.",
+          ? "Historical shift reconciliation requested from Shift & Day Close."
+          : cash === null
+            ? "Shift close requested with optional closing cash policy."
+            : "Actual cash physically counted before close request.",
     });
 
     if (error) {
-      setMessage(error.message);
+      const friendly =
+        String(error.message || "").includes("CLOSING_CASH_REQUIRED")
+          ? "Closing cash is mandatory for this shop. Enter the physical cash count first."
+          : error.message;
+      setMessage(friendly);
       return false;
     }
 
     setMessage(
       shift.business_date < today
-        ? `Historical shift ${shift.business_date} moved to CLOSE_REQUESTED. Manager/Admin must review the variance and approve close.`
-        : "Close request sent to manager.",
+        ? `Historical shift ${shift.business_date} moved to CLOSE_REQUESTED.`
+        : data?.actual_cash == null
+          ? "Close request sent. Closing cash was optional and left blank."
+          : "Close request sent to manager.",
     );
 
     setActual("");
@@ -228,9 +307,11 @@ export default function Shifts() {
   }
 
   async function approve(shift) {
+    const hasDifference = shift.cash_difference !== null && shift.cash_difference !== undefined;
     const difference = Number(shift.cash_difference || 0);
 
     if (
+      hasDifference &&
       Math.abs(difference) > 0.009 &&
       !window.confirm(
         `Cash variance is ${money.format(difference)}. Approve and close this shift with this variance?`,
@@ -241,7 +322,10 @@ export default function Shifts() {
 
     const { error } = await supabase.rpc("approve_shift_close", {
       p_shift_id: shift.id,
-      p_notes: "Approved from Shift screen",
+      p_notes:
+        shift.actual_cash == null
+          ? "Approved from Shift screen; closing cash was optional."
+          : "Approved from Shift screen",
     });
 
     setMessage(error ? error.message : "Shift closed.");
@@ -266,75 +350,158 @@ export default function Shifts() {
     setDayView(data || null);
   }
 
-  async function runDayAction(rpc, success, requireReason = false) {
-    if (!manager || dayBusy) return;
+  function dayIssues(view) {
+    const completeness = view?.snapshot?.completeness || {};
+    const metrics = view?.snapshot?.metrics || {};
+    const issues = [];
 
-    if (requireReason && !dayReason.trim()) {
-      setMessage("Enter an explicit amendment reason first.");
-      return;
+    const add = (count, label) => {
+      const value = Number(count || 0);
+      if (value > 0) issues.push(`${value} ${label}`);
+    };
+
+    add(completeness.unresolved_checkout_count, "checkout(s) still need resolution");
+    add(completeness.pending_return_count, "return(s) are waiting for approval");
+    add(completeness.active_shift_count, "shift(s) are still open or waiting for close");
+    add(completeness.open_terminal_count, "terminal day(s) are still open");
+    add(completeness.unattributed_sale_count, "sale(s) need terminal attribution review");
+    add(completeness.open_inventory_exception_count, "stock reconciliation issue(s) remain");
+    add(completeness.late_after_terminal_close_count, "late sale(s) arrived after terminal close");
+
+    const paymentGap = Math.abs(Number(metrics.payment_gap || 0));
+    if (paymentGap > 0.01) {
+      issues.push(`payments differ from net revenue by ${money.format(paymentGap)}`);
     }
 
-    const label =
-      rpc === "finalize_financial_day_v1"
-        ? "FINALIZE"
-        : rpc === "create_financial_day_amendment_v1"
-          ? "AMEND FINAL"
-          : rpc === "reconcile_financial_day_v1"
-            ? "RECONCILE"
-            : "BEGIN CLOSE";
-
-    if (!window.confirm(`${label} financial day ${dayDate}?`)) return;
-
-    setDayBusy(true);
-
-    let params = { p_business_date: dayDate };
-
-    if (
-      rpc === "reconcile_financial_day_v1" ||
-      rpc === "finalize_financial_day_v1"
-    ) {
-      params.p_exception_reason = dayReason.trim() || null;
-    }
-
-    if (rpc === "create_financial_day_amendment_v1") {
-      params = {
-        p_business_date: dayDate,
-        p_reason: dayReason.trim(),
-      };
-    }
-
-    const { error } = await supabase.rpc(rpc, params);
-    setDayBusy(false);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setMessage(success);
-    await loadDay();
+    return issues;
   }
 
-  async function closeSelectedTerminalDay() {
-    if (!manager) return;
-
-    if (!window.confirm(`Close this terminal watermark for ${dayDate}?`)) return;
-
-    setDayBusy(true);
-    const { error } = await supabase.rpc("close_terminal_day_v1", {
-      p_terminal_id: getTerminalId(),
+  async function readDayView() {
+    const { data, error } = await supabase.rpc("financial_day_snapshot_read_v1", {
       p_business_date: dayDate,
-      p_client_sequence: peekTerminalSequence(),
     });
-    setDayBusy(false);
+    if (error) throw error;
+    setDayView(data || null);
+    return data || null;
+  }
 
-    if (error) {
-      setMessage(error.message);
+  async function closeBusinessDay() {
+    if (!manager || dayBusy) return;
+
+    if (dayDate >= today) {
+      setMessage(
+        "Today's business day is still in progress. Close today's cashier shifts now; the whole business day can be locked after the India date ends.",
+      );
       return;
     }
 
-    setMessage(`This terminal is marked closed for ${dayDate}.`);
-    await loadDay();
+    const connectivity = await probeBackendConnectivity().catch(() => ({
+      reachable: false,
+    }));
+    setBackendReachable(Boolean(connectivity.reachable));
+
+    if (!connectivity.reachable) {
+      setMessage("WineShopPOS backend is not reachable. Business day close was not attempted.");
+      return;
+    }
+
+    if (offlineCounts.pending || offlineCounts.conflict) {
+      setMessage(
+        `Cannot close business day: offline sales still need attention. Pending ${offlineCounts.pending}, conflicts ${offlineCounts.conflict}.`,
+      );
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Close business day ${dayDate}? WineShopPOS will check everything first and only lock the day if all checks pass.`,
+      )
+    ) {
+      return;
+    }
+
+    setDayBusy(true);
+
+    try {
+      let view = await readDayView();
+      let status = view?.status || "OPEN";
+
+      if (status === "FINAL") {
+        setMessage(`Business day ${dayDate} is already closed and locked.`);
+        return;
+      }
+
+      let issues = dayIssues(view);
+      if (issues.length) {
+        setMessage(`Cannot close ${dayDate}: ${issues.join("; ")}.`);
+        return;
+      }
+
+      if (status === "OPEN") {
+        const { error } = await supabase.rpc("begin_financial_day_close_v1", {
+          p_business_date: dayDate,
+        });
+        if (error) throw error;
+      }
+
+      view = await readDayView();
+      issues = dayIssues(view);
+      if (issues.length) {
+        setMessage(`Close paused for ${dayDate}: ${issues.join("; ")}.`);
+        return;
+      }
+      status = view?.status || status;
+
+      if (status === "CLOSING") {
+        const { error } = await supabase.rpc("reconcile_financial_day_v1", {
+          p_business_date: dayDate,
+          p_exception_reason: null,
+        });
+        if (error) throw error;
+      }
+
+      view = await readDayView();
+      issues = dayIssues(view);
+      if (issues.length) {
+        setMessage(`Close paused for ${dayDate}: ${issues.join("; ")}.`);
+        return;
+      }
+      status = view?.status || status;
+
+      if (status === "RECONCILED") {
+        const { error } = await supabase.rpc("finalize_financial_day_v1", {
+          p_business_date: dayDate,
+          p_exception_reason: null,
+        });
+        if (error) throw error;
+      }
+
+      view = await readDayView();
+
+      if (view?.status !== "FINAL") {
+        throw new Error("Business day did not reach the final closed state.");
+      }
+
+      setMessage(
+        `Business day ${dayDate} closed successfully. Its financial totals are now locked.`,
+      );
+    } catch (error) {
+      const raw = String(error?.message || error || "").trim();
+      const friendly =
+        raw.includes("FINANCIAL_DAY_HARD_BLOCKERS")
+          ? "Some transactions or shifts still need attention before this day can close."
+          : raw.includes("FINANCIAL_DAY_EXCEPTION_REASON_REQUIRED")
+            ? "WineShopPOS found a reconciliation exception. Resolve the displayed issue before closing the day."
+            : raw.includes("FINANCIAL_DAY_CHANGED_RECONCILE_AGAIN")
+              ? "Financial data changed during the close check. Press Close Business Day again to re-check safely."
+              : raw.includes("BUSINESS_DAY_NOT_ENDED")
+                ? "This India business date has not ended yet. Close it after midnight."
+                : raw || "Business day close could not be completed.";
+      setMessage(friendly);
+      await loadDay();
+    } finally {
+      setDayBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -351,10 +518,7 @@ export default function Shifts() {
       <div className="page-heading">
         <div>
           <h2>Cashier Shift & Day Close</h2>
-          <p>
-            Terminal-aware shifts, physical cash close and financial-day
-            finalization.
-          </p>
+          <p>Simple shift close with safe financial-day locking.</p>
         </div>
       </div>
 
@@ -362,23 +526,20 @@ export default function Shifts() {
 
       {!backendReachable ? (
         <div className="purchase-message error">
-          WineShopPOS backend is currently unreachable. No shift/day-close write
-          will be attempted.
+          WineShopPOS backend is currently unreachable. No shift/day-close write will be attempted.
         </div>
       ) : null}
 
       {historicalRequired.length ? (
         <div className="purchase-message error">
-          {historicalRequired.length} older shift(s) remain CLOSE_REQUIRED /
-          CLOSE_REQUESTED. They do not silently disappear and do not prevent a
-          fresh India-business-date shift.
+          {historicalRequired.length} older shift(s) still need reconciliation.
         </div>
       ) : null}
 
       {offlineCounts.pending > 0 || offlineCounts.conflict > 0 ? (
         <div className="purchase-message error">
-          Offline queue must be cleared before shift close. Pending{" "}
-          {offlineCounts.pending} · Conflicts {offlineCounts.conflict}
+          Offline queue must be cleared before shift close. Pending {offlineCounts.pending} ·
+          Conflicts {offlineCounts.conflict}
         </div>
       ) : null}
 
@@ -406,42 +567,34 @@ export default function Shifts() {
               >
                 Start Today's Shift
               </button>
-              <p className="muted-text">
-                Older unresolved shifts remain separately visible for
-                reconciliation; they are not reused as today's physical cash
-                drawer.
-              </p>
             </>
           ) : (
             <>
-              <p>
-                Status: <strong>{currentShift.status}</strong>
-              </p>
-              <p>
-                Business date: <strong>{currentShift.business_date}</strong>
-              </p>
-              <p>
-                Opened: {new Date(currentShift.opened_at).toLocaleString("en-IN")}
-              </p>
+              <p>Status: <strong>{currentShift.status}</strong></p>
+              <p>Business date: <strong>{currentShift.business_date}</strong></p>
+              <p>Opened (IST): {formatIndiaDateTime(currentShift.opened_at)}</p>
               <p>Opening Cash: {money.format(currentShift.opening_cash)}</p>
 
               {["OPEN", "CLOSE_REQUIRED"].includes(currentShift.status) ? (
                 <>
                   <label>
-                    Actual cash physically counted in drawer
+                    {closingCashRequired ? "Actual cash physically counted in drawer" : "Closing cash (optional)"}
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={actual}
-                      placeholder="Required before close"
+                      placeholder={closingCashRequired ? "Required before close" : "Optional"}
                       onChange={(event) => setActual(event.target.value)}
                     />
                   </label>
+
                   <p className="muted-text">
-                    Actual Cash is the physical count. Expected Cash is
-                    calculated by the server.
+                    {closingCashRequired
+                      ? "Owner setting: the physical cash count is mandatory before shift close."
+                      : "Owner setting: closing cash is optional. Leave blank if the shop does not require a drawer count."}
                   </p>
+
                   <button
                     className="primary-button"
                     disabled={
@@ -458,8 +611,7 @@ export default function Shifts() {
 
               {currentShift.status === "CLOSE_REQUESTED" ? (
                 <div className="purchase-message">
-                  Close requested. Correct Actual Cash in Shift History before
-                  approval if required.
+                  Close requested. Manager/Admin can review and approve it below.
                 </div>
               ) : null}
             </>
@@ -467,35 +619,55 @@ export default function Shifts() {
         </section>
 
         <section className="panel">
-          <h3>Close Rule</h3>
-          <p>Expected Cash = opening cash + cash sales - cash refunds.</p>
-          <p>Manager/Admin approves final shift close and any variance.</p>
+          <h3>Owner Shift Setting</h3>
+
           <p>
-            Offline sales must be synchronized or explicitly reconciled before
-            close.
+            Closing cash count:{" "}
+            <strong>{closingCashRequired ? "Mandatory" : "Optional"}</strong>
           </p>
-          <p>
-            Terminal: <code>{getTerminalId().slice(0, 8)}</code> · sequence{" "}
-            <strong>{peekTerminalSequence()}</strong>
+
+          {ownerAdmin ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={policyBusy || !backendReachable}
+              onClick={() => void updateClosingCashPolicy(!closingCashRequired)}
+            >
+              Closing Cash Check: {closingCashRequired ? "ON" : "OFF"}
+            </button>
+          ) : (
+            <p className="muted-text">
+              Only Owner/Admin can change this setting.
+            </p>
+          )}
+
+          <p className="muted-text" style={{ marginTop: 10 }}>
+            ON = physical closing cash is mandatory. OFF = cashier may close with
+            cash not counted; Expected Cash is still calculated and Actual/Difference stay blank.
+          </p>
+
+          <p className="muted-text">
+            Midnight rule: at 12:00 AM India time the shift is switched OFF automatically.
+            If it was not manually closed, it becomes
+            <strong> Ended at midnight · Cash not counted</strong>. No fake cash value is created.
           </p>
         </section>
       </div>
 
       {manager ? (
         <section className="panel" style={{ marginTop: 16 }}>
-          <h3>Financial Day Finalization</h3>
+          <h3>Business Day Close</h3>
           <p className="muted-text">
-            LIVE can change. FINAL is an immutable version; later corrections
-            require an explicit amendment version.
+            One action checks shifts, payments, returns, offline sales and stock issues.
           </p>
 
           <div className="button-row wrap">
             <label>
-              Business Date
+              Day to close
               <input
                 type="date"
                 value={dayDate}
-                max={today}
+                max={latestClosableDay}
                 onChange={(event) => setDayDate(event.target.value)}
               />
             </label>
@@ -506,154 +678,74 @@ export default function Shifts() {
               disabled={dayBusy}
               onClick={loadDay}
             >
-              Refresh
-            </button>
-
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={dayBusy}
-              onClick={closeSelectedTerminalDay}
-            >
-              Close This Terminal Day
+              Refresh Check
             </button>
           </div>
 
           <p>
-            State: <strong>{dayStatus}</strong>
-            {dayView?.mode ? (
-              <>
-                {" "}
-                · View: <strong>{dayView.mode}</strong>
-              </>
-            ) : null}
-            {dayView?.version ? (
-              <>
-                {" "}
-                · Version: <strong>{dayView.version}</strong>
-              </>
-            ) : null}
+            Status:{" "}
+            <strong>
+              {dayStatus === "FINAL"
+                ? "Closed ✓"
+                : dayStatus === "OPEN"
+                  ? "Open"
+                  : "Close in progress"}
+            </strong>
           </p>
 
           {snapshot ? (
-            <div className="settings-grid">
-              <div>
-                <strong>Financial snapshot</strong>
-                <p>Net Revenue: {money.format(Number(metrics.net_revenue || 0))}</p>
-                <p>COGS: {money.format(Number(metrics.cogs || 0))}</p>
-                <p>
-                  Gross Profit: {money.format(Number(metrics.gross_profit || 0))}
-                </p>
-                <p>Expenses: {money.format(Number(metrics.expenses || 0))}</p>
-                <p>
-                  Operating Profit:{" "}
-                  {money.format(Number(metrics.operating_profit || 0))}
-                </p>
-                <p>
-                  Payment Gap: {money.format(Number(metrics.payment_gap || 0))}
-                </p>
-              </div>
+            <>
+              {dayIssues(dayView).length === 0 ? (
+                <div className="purchase-message">
+                  All automatic checks passed for this day.
+                </div>
+              ) : (
+                <div className="purchase-message error">
+                  <strong>Needs attention before closing:</strong>
+                  <ul style={{ marginBottom: 0 }}>
+                    {dayIssues(dayView).map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              <div>
-                <strong>Completeness</strong>
-                <p>
-                  Hard blockers: {Number(completeness.hard_blocker_count || 0)}
-                </p>
-                <p>
-                  Exception gaps: {Number(completeness.exception_gap_count || 0)}
-                </p>
-                <p>
-                  Unresolved checkout:{" "}
-                  {Number(completeness.unresolved_checkout_count || 0)}
-                </p>
-                <p>
-                  Pending returns:{" "}
-                  {Number(completeness.pending_return_count || 0)}
-                </p>
-                <p>
-                  Active shifts: {Number(completeness.active_shift_count || 0)}
-                </p>
-                <p>
-                  Open terminal watermarks:{" "}
-                  {Number(completeness.open_terminal_count || 0)}
-                </p>
-                <p>
-                  Inventory exceptions:{" "}
-                  {Number(completeness.open_inventory_exception_count || 0)}
-                </p>
+              <div className="settings-grid">
+                <div>
+                  <strong>Day summary</strong>
+                  <p>Net Revenue: {money.format(Number(metrics.net_revenue || 0))}</p>
+                  <p>Returns: {money.format(Number(metrics.returns || 0))}</p>
+                  <p>Expenses: {money.format(Number(metrics.expenses || 0))}</p>
+                  <p>Operating Profit: {money.format(Number(metrics.operating_profit || 0))}</p>
+                </div>
+                <div>
+                  <strong>Automatic checks</strong>
+                  <p>Open shifts: {Number(completeness.active_shift_count || 0)}</p>
+                  <p>Unknown checkouts: {Number(completeness.unresolved_checkout_count || 0)}</p>
+                  <p>Pending returns: {Number(completeness.pending_return_count || 0)}</p>
+                  <p>Offline queue: {offlineCounts.pending + offlineCounts.conflict}</p>
+                  <p>Stock issues: {Number(completeness.open_inventory_exception_count || 0)}</p>
+                </div>
               </div>
-            </div>
+            </>
           ) : null}
 
-          <label>
-            Exception / Amendment Reason
-            <textarea
-              value={dayReason}
-              onChange={(event) => setDayReason(event.target.value)}
-              placeholder="Required for explicit exceptions or FINAL amendment"
-            />
-          </label>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={dayBusy || dayStatus === "FINAL" || dayDate > latestClosableDay}
+            onClick={closeBusinessDay}
+          >
+            {dayBusy
+              ? "Checking & Closing..."
+              : dayStatus === "FINAL"
+                ? "Business Day Closed ✓"
+                : "Close Business Day"}
+          </button>
 
-          <div className="button-row wrap">
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={dayBusy || dayStatus !== "OPEN"}
-              onClick={() =>
-                runDayAction(
-                  "begin_financial_day_close_v1",
-                  `Financial day ${dayDate} moved to CLOSING.`,
-                )
-              }
-            >
-              Begin Close
-            </button>
-
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={dayBusy || dayStatus !== "CLOSING"}
-              onClick={() =>
-                runDayAction(
-                  "reconcile_financial_day_v1",
-                  `Financial day ${dayDate} is RECONCILED.`,
-                )
-              }
-            >
-              Reconcile
-            </button>
-
-            <button
-              type="button"
-              className="primary-button"
-              disabled={
-                dayBusy || dayStatus !== "RECONCILED" || dayDate >= today
-              }
-              onClick={() =>
-                runDayAction(
-                  "finalize_financial_day_v1",
-                  `Financial day ${dayDate} is FINAL.`,
-                )
-              }
-            >
-              Finalize Day
-            </button>
-
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={dayBusy || dayStatus !== "FINAL"}
-              onClick={() =>
-                runDayAction(
-                  "create_financial_day_amendment_v1",
-                  `A new FINAL amendment version was created for ${dayDate}.`,
-                  true,
-                )
-              }
-            >
-              Create FINAL Amendment
-            </button>
-          </div>
+          <p className="muted-text" style={{ marginTop: 8 }}>
+            A closed day is locked for audit. Technical accounting states stay internal.
+          </p>
         </section>
       ) : null}
 
@@ -691,15 +783,13 @@ export default function Shifts() {
                 return (
                   <tr key={shift.id}>
                     <td>{shift.business_date || "-"}</td>
-                    <td>
-                      {new Date(shift.opened_at).toLocaleString("en-IN")}
-                    </td>
+                    <td>{formatIndiaDateTime(shift.opened_at)}</td>
                     <td>
                       {shift.cashier_id === profile?.user_id
                         ? "Me"
                         : shift.cashier_id.slice(0, 8)}
                     </td>
-                    <td>{shift.status}</td>
+                    <td>{shiftStatusLabel(shift)}</td>
                     <td>{money.format(shift.cash_sales)}</td>
                     <td>{money.format(shift.upi_sales)}</td>
                     <td>{money.format(shift.card_sales)}</td>
@@ -709,11 +799,7 @@ export default function Shifts() {
                         ? "-"
                         : money.format(shift.actual_cash)}
                     </td>
-                    <td
-                      className={
-                        Number(shift.cash_difference) < 0 ? "negative" : ""
-                      }
-                    >
+                    <td className={Number(shift.cash_difference) < 0 ? "negative" : ""}>
                       {shift.cash_difference == null
                         ? "-"
                         : money.format(shift.cash_difference)}
@@ -722,23 +808,26 @@ export default function Shifts() {
                       {canRequestHistoricalClose ? (
                         <div className="button-row wrap">
                           <label style={{ minWidth: 150 }}>
-                            Historical Actual Cash
+                            {closingCashRequired
+                              ? "Historical Actual Cash"
+                              : "Historical Closing Cash (optional)"}
                             <input
                               type="number"
                               min="0"
                               step="0.01"
                               value={historicalActuals[shift.id] ?? ""}
-                              placeholder="Physical count"
+                              placeholder={closingCashRequired ? "Physical count" : "Optional"}
                               onChange={(event) =>
                                 setHistoricalActuals((current) => ({
                                   ...current,
                                   [shift.id]: event.target.value,
                                 }))
                               }
-                              aria-label={`Actual cash for historical shift ${shift.business_date}`}
+                              aria-label={`Closing cash for historical shift ${shift.business_date}`}
                               style={{ maxWidth: 140 }}
                             />
                           </label>
+
                           <button
                             type="button"
                             className="primary-button"
@@ -759,10 +848,6 @@ export default function Shifts() {
                           >
                             Request Reconciliation Close
                           </button>
-                          <span className="muted-text">
-                            Enter the physical cash counted for that old drawer.
-                            Do not auto-copy Expected Cash.
-                          </span>
                         </div>
                       ) : null}
 
@@ -790,7 +875,7 @@ export default function Shifts() {
                             className="secondary-button"
                             onClick={() => reviseActual(shift)}
                           >
-                            Update Actual
+                            {shift.actual_cash == null ? "Add Actual Cash" : "Update Actual"}
                           </button>
                         </div>
                       ) : null}
@@ -809,8 +894,7 @@ export default function Shifts() {
                       {shift.status === "CLOSE_REQUIRED" &&
                       !canRequestHistoricalClose ? (
                         <div className="muted-text">
-                          Historical shift remains explicitly unresolved. Only the
-                          owning cashier or Manager/Admin can request its reconciliation close.
+                          Only the owning cashier or Manager/Admin can request close.
                         </div>
                       ) : null}
                     </td>

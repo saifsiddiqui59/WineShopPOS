@@ -50,24 +50,43 @@ test("logout and shop switch are guarded against unresolved checkout",()=>{
   assert.ok(guard.includes("checkout_session_guard_v1"));
 });
 
-test("shift page supports historical CLOSE_REQUIRED and financial-day lifecycle",()=>{
+test("shift close has owner-managed mandatory/optional closing cash",()=>{
+  const shifts=read("src/pages/Shifts.jsx");
+  for(const marker of [
+    "shift_close_policy_v1",
+    "set_shift_close_policy_v1",
+    "request_shift_close_v4",
+    "Closing cash count",
+    "Mandatory",
+    "Optional",
+    "Owner Shift Setting",
+    "Closing Cash Check:",
+    "ENDED AT MIDNIGHT · CASH NOT COUNTED",
+    "Asia/Kolkata",
+    "CLOSE_REQUIRED",
+    "Request Reconciliation Close",
+  ])assert.ok(shifts.includes(marker),`Shifts missing ${marker}`);
+  assert.ok(!shifts.includes('supabase.rpc("request_shift_close_v3"'));
+});
+
+test("business-day accounting states stay behind one operator action",()=>{
   const shifts=read("src/pages/Shifts.jsx");
 
   for(const marker of [
-    "CLOSE_REQUIRED",
-    "open_shift_v2",
-    "request_shift_close_v3",
-    "close_terminal_day_v1",
-    "financial_day_snapshot_read_v1",
+    "Business Day Close",
+    "Close Business Day",
+    "All automatic checks passed for this day.",
     "begin_financial_day_close_v1",
     "reconcile_financial_day_v1",
     "finalize_financial_day_v1",
-    "create_financial_day_amendment_v1",
-    "Start Today's Shift",
-    "Historical Actual Cash",
-    "Request Reconciliation Close",
-    "canRequestHistoricalClose",
   ])assert.ok(shifts.includes(marker),`Shifts missing ${marker}`);
 
-  assert.ok(!shifts.includes("navigator.onLine"));
+  for(const exposed of [
+    "Exception / Amendment Reason",
+    ">Begin Close<",
+    ">Reconcile<",
+    ">Finalize Day<",
+    ">Create FINAL Amendment<",
+    "Close This Terminal Day",
+  ])assert.ok(!shifts.includes(exposed),`technical day-close control still exposed: ${exposed}`);
 });

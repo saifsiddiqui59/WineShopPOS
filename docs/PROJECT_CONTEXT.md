@@ -801,3 +801,26 @@ uses the existing approval action to reach `CLOSED`.
 
 Actual Cash is never automatically copied from Expected Cash.
 <!-- /HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->
+
+<!-- SHIFT_CLOSING_CASH_POLICY_SIMPLE_DAY_CLOSE_20260919 -->
+## 2026-09-19 — Owner closing-cash policy + simplified Business Day Close
+
+PROD/QA backend now support an owner-controlled `shift_closing_cash_required`
+policy. ADMIN can choose Mandatory or Optional. The Shift UI uses
+`request_shift_close_v4`; when the policy is Optional, blank Actual Cash is
+preserved as NULL and no fake variance is created.
+
+At exactly 12:00 AM India time, the scheduled backend rollover switches any
+unfinished old shift out of OPEN into `CLOSE_REQUIRED`. The UI labels this
+**Ended at midnight · Cash not counted**. No fake Actual Cash or variance is
+created, and the shift cannot accept new-day sales.
+
+Financial-day backend states remain `OPEN -> CLOSING -> RECONCILED -> FINAL`,
+while the operator UI exposes one **Close Business Day** action with automatic
+checks.
+
+This source also records already-live migrations
+`20260919162130_allow_historical_close_requested_with_current_open_v1` and
+`20260919164746_shift_closing_cash_policy_v1`; this frontend release does not
+replay either migration.
+<!-- /SHIFT_CLOSING_CASH_POLICY_SIMPLE_DAY_CLOSE_20260919 -->

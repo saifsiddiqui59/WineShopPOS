@@ -1204,7 +1204,28 @@ then reviews Expected Cash, Actual Cash and Difference and selects <strong>Appro
 Close</strong> to move the shift to <code>CLOSED</code>.</p>
 <p>Do not copy Expected Cash into Actual Cash unless that is genuinely the physical
 count. If the historical physical count is no longer known, do not guess.</p>
-<!-- /HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->
+<!-- /HISTORICAL_CLOSE_REQUIRED_UI_20260919 --><!-- SHIFT_CLOSING_CASH_POLICY_SIMPLE_DAY_CLOSE_20260919 -->
+<h3 id="closing-cash-mandatory-or-optional">Closing cash: Mandatory or Optional</h3>
+<p>On <strong>Shift &amp; Day Close</strong>, Owner/Admin can control <strong>Closing cash count</strong>:</p>
+<ul>
+<li><strong>Mandatory</strong> — cashier must enter the physical cash count before requesting close.</li>
+<li><strong>Optional</strong> — cashier may request close with the closing cash field blank.</li>
+</ul>
+<p>Expected Cash is always calculated by WineShopPOS. If closing cash is Optional
+and left blank, Actual Cash and Difference remain blank; WineShopPOS does not
+invent a zero balance.</p>
+<p>Managers/Admins still approve the close request.</p>
+<h3 id="midnight-shift-behavior">Midnight shift behavior</h3>
+<p>At 12:00 AM India time, WineShopPOS automatically switches an unfinished shift
+out of OPEN. The UI shows <strong>Ended at midnight · Cash not counted</strong>. The database
+keeps this as <code>CLOSE_REQUIRED</code> so the missing cash count remains explicit instead
+of being invented.</p>
+<h3 id="simple-business-day-close">Simple Business Day Close</h3>
+<p>Manager/Admin uses one <strong>Close Business Day</strong> action for a completed business
+date. WineShopPOS checks shifts, transaction uncertainty, pending returns,
+offline sales, terminal completeness, payment gap and stock exceptions before
+locking the day.</p>
+<!-- /SHIFT_CLOSING_CASH_POLICY_SIMPLE_DAY_CLOSE_20260919 -->
 </article>
     </div>
   </main>
