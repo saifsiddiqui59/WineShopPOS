@@ -9,6 +9,14 @@ import { getReceiptAutoPrint, setReceiptAutoPrint } from "../lib/receiptPrintPre
 import ProductThumb from "../components/ui/ProductThumb";
 import ShiftRequiredDialog from "../components/ui/ShiftRequiredDialog";
 import MobileBarcodeScanner from "../components/MobileBarcodeScanner";
+import Receipt80mm from "../components/Receipt80mm";
+import { loadAuthoritativeReceipt } from "../lib/receipt";
+import {
+  loadActiveCheckoutAttempt,
+  removeCheckoutAttempt,
+  saveCheckoutAttempt,
+  updateCheckoutAttempt,
+} from "../lib/checkoutJournal";
 
 const money=new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2});
 
@@ -39,6 +47,10 @@ export default function POS(){
   const[shiftBusy,setShiftBusy]=useState(false);
   const[openingCash,setOpeningCash]=useState(0);
   const[shiftMessage,setShiftMessage]=useState("");
+  const[checkoutPhase,setCheckoutPhase]=useState("EDITING");
+  const[activeCheckout,setActiveCheckout]=useState(null);
+  const[postSale,setPostSale]=useState(null);
+  const[recoveryMessage,setRecoveryMessage]=useState("");
 
   const[customers,setCustomers]=useState([]);
   const[customerId,setCustomerId]=useState("");
@@ -57,6 +69,7 @@ export default function POS(){
   const[quote,setQuote]=useState(null);
 
   const active=products.filter((p)=>p.active);
+  const checkoutUserId=profile?.user_id||profile?.id||"";
   const shiftStorageKey=useMemo(
     ()=>`wineshop_open_shift_v1_${profile?.shop_id||"shop"}_${profile?.user_id||"user"}`,
     [profile?.shop_id,profile?.user_id],
@@ -230,6 +243,7 @@ export default function POS(){
   }
 
   function add(p){
+    if(checkoutPhase!=="EDITING"||postSale){setMessage("Checkout is locked until the current transaction is resolved.");return false;}
     if(!requireOpenShift())return false;
     if(Number(p.price)<=0){errorBeep();setMessage(`${p.name} has no selling price. Edit the product before billing.`);return false;}
     const stock=getStock(p.id);
@@ -252,6 +266,10 @@ export default function POS(){
   }
 
   function processBarcode(code){
+    if(checkoutPhase!=="EDITING"||postSale){
+      setMessage("Finish the current checkout confirmation before scanning the next customer.");
+      return {ok:false,status:"CHECKOUT_LOCKED",message:"Checkout confirmation is active."};
+    }
     const normalized=normalizeBarcode(code);
     const p=findProductByBarcode(active,normalized);
     if(!p){
@@ -292,11 +310,13 @@ export default function POS(){
   },[lastScan?.id]);
 
   function removeItem(id){
+    if(checkoutPhase!=="EDITING")return;
     pricingChanged();setCart((rows)=>rows.filter((x)=>x.product.id!==id));
     setMessage("Product removed from current bill.");
   }
 
   function change(id,d){
+    if(checkoutPhase!=="EDITING")return;
     const item=cart.find((x)=>x.product.id===id);
     if(!item)return;
     const next=item.quantity+d;
@@ -307,6 +327,7 @@ export default function POS(){
   }
 
   function setUnitPrice(id,value){
+    if(checkoutPhase!=="EDITING")return;
     pricingChanged();
     setCart((rows)=>rows.map((x)=>x.product.id===id?{...x,unitPrice:Math.max(0,Number(value||0))}:x));
   }
@@ -384,29 +405,317 @@ export default function POS(){
     setMessage("Rewards and tender preview calculated. Final values are revalidated by the database at checkout.");
   }
 
+  function clearDraftAfterCommit(){
+    sessionStorage.removeItem(cartStorageKey);
+    setCart([]);
+    setDiscount(0);
+    setPaymentMethod("CASH");
+    setPaymentReference("");
+    setCustomerId("");
+    setCustomerSummary(null);
+    setReasonCodeId("");
+    setReasonNote("");
+    clearApproval();
+    setCouponCode("");
+    setLoyaltyPoints(0);
+    setStoreCreditAmount(0);
+    setGiftVoucherCode("");
+    setQuote(null);
+    setUnknown("");
+    setSearch("");
+  }
+
+  function savedCartRows(saved){
+    const rows=saved?.payload?.cart||[];
+    return rows.map((row)=>{
+      const product=products.find((candidate)=>candidate.id===row.productId&&candidate.active);
+      if(!product)return null;
+      return{
+        product,
+        quantity:Number(row.quantity),
+        unitPrice:Number(row.unitPrice ?? product.price)
+      };
+    }).filter(Boolean);
+  }
+
+  function checkoutJournalPayload(){
+    return{
+      cart:cart.map((item)=>({
+        productId:item.product.id,
+        quantity:Number(item.quantity),
+        unitPrice:Number(item.unitPrice ?? item.product.price)
+      })),
+      paymentMethod,
+      options:{
+        discount:disc,
+        paymentReference,
+        reasonCodeId:reasonCodeId||null,
+        reasonNote,
+        overrideRequestId:approvalRequestId||null,
+        customerId:customerId||null,
+        couponCode,
+        loyaltyPoints:Number(loyaltyPoints||0),
+        storeCreditAmount:Number(storeCreditAmount||0),
+        giftVoucherCode
+      }
+    };
+  }
+
+  async function showConfirmedSale(saleId,checkoutId,{autoPrintRequested=false,recovered=false}={}){
+    let receipt=null;
+    let receiptError="";
+    try{
+      receipt=await loadAuthoritativeReceipt(saleId);
+    }catch(error){
+      receiptError=error?.message||"Receipt details are temporarily unavailable.";
+    }
+
+    try{
+      await updateCheckoutAttempt(checkoutId,{
+        status:"CONFIRMED",
+        saleId,
+        lastError:receiptError||null
+      });
+    }catch{
+      // Server confirmation is authoritative even if local recovery metadata cannot update.
+    }
+
+    clearDraftAfterCommit();
+    setActiveCheckout((current)=>current?{...current,status:"CONFIRMED",saleId}:current);
+    setCheckoutPhase("CONFIRMED");
+    setPostSale({
+      checkoutId,
+      saleId,
+      receipt,
+      receiptError,
+      autoPrintRequested:Boolean(autoPrintRequested),
+      recovered:Boolean(recovered)
+    });
+    setBusy(false);
+    successBeep();
+  }
+
+  async function retryUnknownCheckout(){
+    if(!activeCheckout?.id){
+      setRecoveryMessage("No recoverable checkout identity is available.");
+      return;
+    }
+    if(!navigator.onLine){
+      setRecoveryMessage("Reconnect before retrying this same checkout. Do not create a new payment.");
+      return;
+    }
+    if(!activeCheckout.payload){
+      setRecoveryMessage("Encrypted checkout payload cannot be read. Keep this checkout blocked and resolve it from Sales/manager review.");
+      return;
+    }
+
+    const retryCart=savedCartRows(activeCheckout);
+    if(retryCart.length!==(activeCheckout.payload.cart||[]).length){
+      setRecoveryMessage("A product from the saved checkout is unavailable. Do not create a new payment; resolve this checkout first.");
+      return;
+    }
+
+    setBusy(true);
+    setCheckoutPhase("SUBMITTING");
+    const saved=activeCheckout.payload;
+    const r=await completeSale(retryCart,saved.paymentMethod,{
+      ...(saved.options||{}),
+      checkoutId:activeCheckout.id
+    });
+
+    if(r.ok&&!r.offline){
+      await showConfirmedSale(r.sale.id,activeCheckout.id,{
+        autoPrintRequested:Boolean(activeCheckout.autoPrintRequested),
+        recovered:true
+      });
+      return;
+    }
+
+    setBusy(false);
+    if(r.unknown){
+      setCheckoutPhase("UNKNOWN");
+      setRecoveryMessage(r.message);
+      await updateCheckoutAttempt(activeCheckout.id,{status:"UNKNOWN",lastError:r.message}).catch(()=>null);
+      return;
+    }
+
+    const restored=savedCartRows(activeCheckout);
+    if(restored.length) setCart(restored);
+    const options=saved.options||{};
+    setPaymentMethod(saved.paymentMethod||"CASH");
+    setDiscount(options.discount||0);
+    setPaymentReference(options.paymentReference||"");
+    setReasonCodeId(options.reasonCodeId||"");
+    setReasonNote(options.reasonNote||"");
+    setApprovalRequestId(options.overrideRequestId||"");
+    setCustomerId(options.customerId||"");
+    setCouponCode(options.couponCode||"");
+    setLoyaltyPoints(options.loyaltyPoints||0);
+    setStoreCreditAmount(options.storeCreditAmount||0);
+    setGiftVoucherCode(options.giftVoucherCode||"");
+    setCheckoutPhase("EDITING");
+    setRecoveryMessage(r.message||"The previous checkout was definitively rejected. Review the cart before paying again.");
+    await removeCheckoutAttempt(activeCheckout.id).catch(()=>null);
+    setActiveCheckout(null);
+  }
+
+  async function startNewSale(){
+    const id=postSale?.checkoutId;
+    if(id)await removeCheckoutAttempt(id).catch(()=>null);
+    setPostSale(null);
+    setActiveCheckout(null);
+    setCheckoutPhase("EDITING");
+    setRecoveryMessage("");
+    setMessage("Scanner ready");
+    window.setTimeout(()=>searchInputRef.current?.focus(),0);
+  }
+
+  useEffect(()=>{
+    if(!profile?.shop_id||!checkoutUserId)return undefined;
+    let cancelled=false;
+
+    void (async()=>{
+      try{
+        const saved=await loadActiveCheckoutAttempt(profile.shop_id,checkoutUserId);
+        if(!saved||cancelled)return;
+
+        setActiveCheckout(saved);
+        setCheckoutPhase("RECOVERING");
+        setRecoveryMessage("Checking the previous checkout before allowing another payment...");
+
+        const{data,error}=await supabase.rpc("resolve_checkout_v1",{p_checkout_id:saved.id});
+        if(cancelled)return;
+
+        if(error){
+          setCheckoutPhase("UNKNOWN");
+          setRecoveryMessage("Previous checkout status could not be verified. Do not repeat payment; retry the same checkout.");
+          return;
+        }
+
+        if(data?.status==="CONFIRMED"&&data?.sale_id){
+          await showConfirmedSale(data.sale_id,saved.id,{
+            autoPrintRequested:Boolean(saved.autoPrintRequested),
+            recovered:true
+          });
+          return;
+        }
+
+        if(data?.status==="FAILED"){
+          setCheckoutPhase("EDITING");
+          setRecoveryMessage(data.message||"Previous checkout was rejected before a sale was committed.");
+          await removeCheckoutAttempt(saved.id).catch(()=>null);
+          setActiveCheckout(null);
+          return;
+        }
+
+        setCheckoutPhase("UNKNOWN");
+        setRecoveryMessage("A previous checkout is unresolved. Retry the same checkout ID before starting another sale.");
+      }catch(error){
+        if(cancelled)return;
+        setCheckoutPhase("UNKNOWN");
+        setRecoveryMessage(error?.message||"Previous checkout recovery failed. Do not repeat payment.");
+      }
+    })();
+
+    return()=>{cancelled=true};
+  },[profile?.shop_id,checkoutUserId]);
+
+  useEffect(()=>{
+    if(!postSale?.receipt||!autoPrint||postSale.autoPrintRequested)return undefined;
+    let cancelled=false;
+
+    void (async()=>{
+      try{
+        await updateCheckoutAttempt(postSale.checkoutId,{autoPrintRequested:true});
+      }catch{
+        if(!cancelled)setMessage("Automatic print was skipped because the print request could not be safely recorded. Use Print Receipt manually.");
+        return;
+      }
+      if(cancelled)return;
+      setPostSale((current)=>current?{...current,autoPrintRequested:true}:current);
+      window.setTimeout(()=>window.print(),350);
+    })();
+
+    return()=>{cancelled=true};
+  },[postSale?.checkoutId,postSale?.receipt,postSale?.autoPrintRequested,autoPrint]);
+
   async function checkout(){
+    if(checkoutPhase!=="EDITING"){
+      setMessage("Resolve the current checkout before taking another payment.");
+      return;
+    }
     if(!requireOpenShift())return;
     if(cart.some((i)=>Number(i.unitPrice??i.product.price)<=0)){setMessage("Cart contains a product with no selling price. Remove it or edit the product first.");return;}
     if(needsReason&&!reasonCodeId){setMessage("Select a standardized reason for this manual override.");return}
     const selected=reasons.find((r)=>r.id===reasonCodeId);
     if(needsReason&&selected?.requires_note&&!reasonNote.trim()){setMessage("This reason requires a note.");return}
 
+    if(!navigator.onLine){
+      setBusy(true);
+      const r=await completeSale(cart,paymentMethod,{
+        discount:disc,
+        paymentReference,
+        reasonCodeId:reasonCodeId||null,
+        reasonNote,
+        overrideRequestId:approvalRequestId||null,
+        customerId:customerId||null,
+        couponCode,
+        loyaltyPoints:Number(loyaltyPoints||0),
+        storeCreditAmount:Number(storeCreditAmount||0),
+        giftVoucherCode
+      });
+      setBusy(false);
+      if(!r.ok){errorBeep();setMessage(r.message);return}
+      if(r.offline){
+        clearDraftAfterCommit();
+        successBeep();
+        setMessage(r.message);
+      }
+      return;
+    }
+
+    const checkoutId=crypto.randomUUID();
+    const payload=checkoutJournalPayload();
+    let saved;
+
+    try{
+      saved=await saveCheckoutAttempt({
+        id:checkoutId,
+        shopId:profile.shop_id,
+        userId:checkoutUserId,
+        payload
+      });
+    }catch(error){
+      setMessage(error?.message||"Secure checkout recovery storage is unavailable. Billing is blocked for safety.");
+      errorBeep();
+      return;
+    }
+
+    setActiveCheckout(saved);
+    setCheckoutPhase("SUBMITTING");
+    setRecoveryMessage("");
     setBusy(true);
+
     const r=await completeSale(cart,paymentMethod,{
-      discount:disc,
-      paymentReference,
-      reasonCodeId:reasonCodeId||null,
-      reasonNote,
-      overrideRequestId:approvalRequestId||null,
-      customerId:customerId||null,
-      couponCode,
-      loyaltyPoints:Number(loyaltyPoints||0),
-      storeCreditAmount:Number(storeCreditAmount||0),
-      giftVoucherCode
+      ...payload.options,
+      checkoutId
     });
 
     if(!r.ok){
       setBusy(false);
+      if(r.unknown){
+        setCheckoutPhase("UNKNOWN");
+        setRecoveryMessage(r.message);
+        setMessage(r.message);
+        await updateCheckoutAttempt(checkoutId,{status:"UNKNOWN",lastError:r.message}).catch(()=>null);
+        errorBeep();
+        return;
+      }
+
+      await removeCheckoutAttempt(checkoutId).catch(()=>null);
+      setActiveCheckout(null);
+      setCheckoutPhase("EDITING");
+
       if(/SHIFT_REQUIRED/i.test(r.message||"")){
         setShiftOpen(false);
         sessionStorage.removeItem(shiftStorageKey);
@@ -427,25 +736,18 @@ export default function POS(){
       errorBeep();setMessage(r.message);return;
     }
 
-    setBusy(false);
-    successBeep();
-    sessionStorage.removeItem(cartStorageKey);
-    setCart([]);
-    setDiscount(0);
-    setPaymentReference("");
-    setCustomerId("");
-    setCustomerSummary(null);
-    setReasonCodeId("");
-    setReasonNote("");
-    clearApproval();
-    setCouponCode("");
-    setLoyaltyPoints(0);
-    setStoreCreditAmount(0);
-    setGiftVoucherCode("");
-    setQuote(null);
+    if(r.offline){
+      await removeCheckoutAttempt(checkoutId).catch(()=>null);
+      setActiveCheckout(null);
+      setCheckoutPhase("EDITING");
+      clearDraftAfterCommit();
+      setBusy(false);
+      successBeep();
+      setMessage(r.message);
+      return;
+    }
 
-    if(r.offline){setMessage(r.message);return}
-    navigate(autoPrint?`/sales/${r.sale.id}?print=1`:`/sales/${r.sale.id}`);
+    await showConfirmedSale(r.sale.id,checkoutId);
   }
 
   const finalDue=quote?Number(quote.external_payment_due||0):manualTotal;
@@ -459,6 +761,25 @@ export default function POS(){
   const displayProducts=search.trim()?results:quickProducts;
   const cartUnits=cart.reduce((sum,item)=>sum+Number(item.quantity||0),0);
 
+  if(postSale){
+    return <div className="invoice-page pos-page">
+      <div className="page-heading no-print">
+        <div>
+          <h2>✓ SALE COMPLETED</h2>
+          <p>{postSale.recovered?"Recovered safely from the saved checkout identity.":"The server committed this sale."} Printer or receipt problems do not change sale status.</p>
+        </div>
+        <div className="button-row">
+          <button type="button" className="secondary-button" onClick={()=>navigate("/pos/sales")}>View Sales</button>
+          {postSale.receipt?<button type="button" className="secondary-button" onClick={()=>window.print()}>Print Receipt</button>:null}
+          <button type="button" className="primary-button" onClick={startNewSale}>New Sale</button>
+        </div>
+      </div>
+      {postSale.receipt
+        ?<Receipt80mm sale={postSale.receipt}/>
+        :<div className="panel"><h3>Sale confirmed</h3><p>{postSale.receiptError||"Receipt details are temporarily unavailable."}</p><p><strong>Do not repeat payment.</strong></p></div>}
+    </div>;
+  }
+
   return <div className="pos-page pos-v5h">
     {!shiftOpen ? <ShiftRequiredDialog
       loading={shiftLoading}
@@ -469,6 +790,11 @@ export default function POS(){
       busy={shiftBusy}
       message={shiftMessage}
     /> : null}
+    {checkoutPhase==="UNKNOWN"||checkoutPhase==="RECOVERING"?<div className="purchase-message error" style={{marginBottom:12}}>
+      <strong>{checkoutPhase==="RECOVERING"?"Checking previous checkout":"CHECKOUT STATUS UNKNOWN"}</strong>
+      <p>{recoveryMessage||"Do not repeat payment."}</p>
+      {checkoutPhase==="UNKNOWN"?<button type="button" className="primary-button" disabled={busy||!navigator.onLine} onClick={retryUnknownCheckout}>{busy?"Checking...":"Retry Same Checkout"}</button>:null}
+    </div>:null}
     <div className="page-heading pos-v5h-heading">
       <div>
         <h2>Fast POS Billing</h2>
@@ -479,7 +805,7 @@ export default function POS(){
         <button
           type="button"
           className="secondary-button pos-v5h-clear"
-          disabled={!cart.length}
+          disabled={!cart.length||checkoutPhase!=="EDITING"}
           onClick={()=>{
             sessionStorage.removeItem(cartStorageKey);
             setCart([]);
@@ -532,6 +858,7 @@ export default function POS(){
             onChange={(e)=>setSearch(e.target.value)}
             placeholder="Scan barcode, or type product name / brand / SKU..."
             autoComplete="off"
+            disabled={checkoutPhase!=="EDITING"}
             aria-label="Scan barcode or search products"
           />
           <div className="pos-v5h-status-line" role="status">{message}</div>
@@ -567,7 +894,7 @@ export default function POS(){
                       type="button"
                       key={product.id}
                       className={`pos-v5h-product-tile${stock <= 0 ? " sold-out" : ""}`}
-                      disabled={stock <= 0}
+                      disabled={stock <= 0||checkoutPhase!=="EDITING"}
                       onClick={() => {
                         if (add(product)) {
                           setSearch("");
@@ -656,7 +983,7 @@ export default function POS(){
                         type="button"
                         key={product.id}
                         className={`pos-v5h-product-tile${stock <= 0 ? " sold-out" : ""}`}
-                        disabled={stock <= 0}
+                        disabled={stock <= 0||checkoutPhase!=="EDITING"}
                         onClick={() => {
                           if (add(product)) {
                             setSearch("");
@@ -709,7 +1036,7 @@ export default function POS(){
               <strong>Scan Product</strong>
               <span>Choose how you want to scan. The normal barcode scanner stays active all the time.</span>
             </div>
-            <span className="pos-scanner-ready-dot">SCANNER READY</span>
+            <span className="pos-scanner-ready-dot">{checkoutPhase==="EDITING"?"SCANNER READY":"SCANNER LOCKED"}</span>
           </div>
 
           <div className="pos-scanner-tabs" role="tablist" aria-label="Barcode scanning methods">
@@ -794,7 +1121,7 @@ export default function POS(){
               <label>Store Credit<input type="number" min="0" step="0.01" value={storeCreditAmount} onChange={(e)=>{setStoreCreditAmount(e.target.value);clearQuote()}} disabled={!customerId}/></label>
               <label>Gift Voucher<input value={giftVoucherCode} onChange={(e)=>{setGiftVoucherCode(e.target.value);clearQuote()}} placeholder="Optional"/></label>
             </div>
-            <button type="button" className="secondary-button" onClick={previewBenefits} disabled={!cart.length||busy||!navigator.onLine}>Preview Benefits</button>
+            <button type="button" className="secondary-button" onClick={previewBenefits} disabled={!cart.length||busy||checkoutPhase!=="EDITING"||!navigator.onLine}>Preview Benefits</button>
           </div>
         </details>
       </section>
@@ -865,9 +1192,9 @@ export default function POS(){
 
           {paymentMethod!=="CASH"?<label>Payment Reference<input value={paymentReference} onChange={(e)=>setPaymentReference(e.target.value)} placeholder={`${paymentMethod} reference`}/></label>:null}
 
-          {needsReason&&!approvalRequestId?<button type="button" className="secondary-button pos-v5h-approval-button" disabled={!cart.length||busy||!navigator.onLine} onClick={requestApproval}>{busy?"Working...":"Request Approval (if required)"}</button>:null}
+          {needsReason&&!approvalRequestId?<button type="button" className="secondary-button pos-v5h-approval-button" disabled={!cart.length||busy||checkoutPhase!=="EDITING"||!navigator.onLine} onClick={requestApproval}>{busy?"Working...":"Request Approval (if required)"}</button>:null}
 
-          <button type="button" className="primary-button pos-v5h-complete" disabled={!cart.length||busy} onClick={checkout}>
+          <button type="button" className="primary-button pos-v5h-complete" disabled={!cart.length||busy||checkoutPhase!=="EDITING"} onClick={checkout}>
             {busy?"Processing...":navigator.onLine?`Complete Sale · ${money.format(finalDue)}`:"Save Offline Sale"}
           </button>
         </div>

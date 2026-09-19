@@ -316,6 +316,7 @@ export function ShopProvider({ children }) {
   const deactivateProduct=(id)=>setProductStatus(id,false); const activateProduct=(id)=>setProductStatus(id,true);
 
   async function completeSale(cart,paymentMethod,{
+    checkoutId=null,
     discount=0,
     paymentReference="",
     reasonCodeId=null,
@@ -327,7 +328,7 @@ export function ShopProvider({ children }) {
     storeCreditAmount=0,
     giftVoucherCode=""
   }={}) {
-    const clientSaleId=crypto.randomUUID();
+    const clientSaleId=checkoutId||crypto.randomUUID();
     const items=cart.map((i)=>({
       product_id:i.product.id,
       quantity:Number(i.quantity),
@@ -342,18 +343,19 @@ export function ShopProvider({ children }) {
 
     if(!navigator.onLine){
       if(Number(discount||0)>0||hasPriceOverride||hasCommercial){
-        return{ok:false,message:"Discounts, price overrides, loyalty, coupons and vouchers require an online authorization check."};
+        return{ok:false,definitive:true,message:"Discounts, price overrides, loyalty, coupons and vouchers require an online authorization check."};
       }
       const payload={
         clientSaleId,
         offlineCreatedAt:new Date().toISOString(),
-        items:items.map(({product_id,quantity})=>({product_id,quantity})),
+        items:items.map(({product_id,quantity,unit_price})=>({product_id,quantity,unit_price})),
         paymentMethod,
         discount:0,
         paymentReference:String(paymentReference||"").trim()||null,
         cartSnapshot:cart.map((i)=>({
           product:{id:i.product.id,name:i.product.name,barcode:i.product.barcode,price:i.product.price},
-          quantity:Number(i.quantity)
+          quantity:Number(i.quantity),
+          unitPrice:Number(i.unitPrice ?? i.product.price)
         }))
       };
       try{
@@ -363,7 +365,7 @@ export function ShopProvider({ children }) {
           for(const item of cart)next[item.product.id]=Math.max(0,num(next[item.product.id])-Number(item.quantity));
           return next;
         });
-        const subtotal=cart.reduce((sum,i)=>sum+Number(i.product.price)*Number(i.quantity),0);
+        const subtotal=cart.reduce((sum,i)=>sum+Number(i.unitPrice ?? i.product.price)*Number(i.quantity),0);
         const offlineSale={
           id:`offline-${clientSaleId}`,
           invoiceNumber:`OFFLINE-${clientSaleId.slice(0,8).toUpperCase()}`,
@@ -372,35 +374,97 @@ export function ShopProvider({ children }) {
           subtotal,discount:0,grandTotal:subtotal,status:"OFFLINE_PENDING",
           items:cart.map((i)=>({
             productId:i.product.id,productName:i.product.name,barcode:i.product.barcode,
-            quantity:i.quantity,unitPrice:i.product.price,lineTotal:i.product.price*i.quantity
+            quantity:i.quantity,unitPrice:Number(i.unitPrice ?? i.product.price),
+            lineTotal:Number(i.unitPrice ?? i.product.price)*i.quantity
           }))
         };
         setSales((rows)=>[offlineSale,...rows]);
-        return{ok:true,offline:true,sale:offlineSale,message:"Sale saved securely offline. Sync when internet returns."};
-      }catch(e){return{ok:false,message:e.message||String(e)}}
+        return{ok:true,offline:true,checkoutId:clientSaleId,sale:offlineSale,message:"Sale saved securely offline. Sync when internet returns."};
+      }catch(e){return{ok:false,definitive:true,message:e.message||String(e)}}
+    }
+
+    const rpcParams={
+      p_checkout_id:clientSaleId,
+      p_items:items,
+      p_payment_method:paymentMethod,
+      p_discount:Number(discount||0),
+      p_payment_reference:String(paymentReference||"").trim()||null,
+      p_reason_code_id:reasonCodeId||null,
+      p_reason_note:String(reasonNote||"").trim()||null,
+      p_override_request_id:overrideRequestId||null,
+      p_customer_id:customerId||null,
+      p_coupon_code:String(couponCode||"").trim()||null,
+      p_loyalty_points_to_redeem:Number(loyaltyPoints||0),
+      p_store_credit_amount:Number(storeCreditAmount||0),
+      p_gift_voucher_code:String(giftVoucherCode||"").trim()||null
+    };
+
+    async function resolveCheckout(){
+      const{data,error}=await supabase.rpc("resolve_checkout_v1",{p_checkout_id:clientSaleId});
+      if(error)return null;
+      return data||null;
     }
 
     try{
-      const{data,error}=await supabase.rpc("complete_sale_v4",{
-        p_items:items,
-        p_payment_method:paymentMethod,
-        p_discount:Number(discount||0),
-        p_payment_reference:String(paymentReference||"").trim()||null,
-        p_client_sale_id:clientSaleId,
-        p_offline_created_at:null,
-        p_reason_code_id:reasonCodeId||null,
-        p_reason_note:String(reasonNote||"").trim()||null,
-        p_override_request_id:overrideRequestId||null,
-        p_customer_id:customerId||null,
-        p_coupon_code:String(couponCode||"").trim()||null,
-        p_loyalty_points_to_redeem:Number(loyaltyPoints||0),
-        p_store_credit_amount:Number(storeCreditAmount||0),
-        p_gift_voucher_code:String(giftVoucherCode||"").trim()||null
-      });
-      if(error)throw error;
-      await refreshAll();
-      return{ok:true,sale:{id:data}};
-    }catch(e){return{ok:false,message:e.message||String(e)}}
+      const{data,error}=await supabase.rpc("complete_sale_safe_v1",rpcParams);
+
+      if(error){
+        const message=error.message||String(error);
+        const missing=error.code==="PGRST202"||error.code==="42883"||
+          /complete_sale_safe_v1|could not find the function|does not exist/i.test(message);
+        if(missing){
+          return{ok:false,definitive:true,backendRequired:true,checkoutId:clientSaleId,message:"Safe checkout backend is not active. Billing is blocked to avoid an ambiguous transaction."};
+        }
+
+        const resolution=await resolveCheckout();
+        if(resolution?.status==="CONFIRMED"&&resolution?.sale_id){
+          void refreshAll();
+          return{ok:true,recovered:true,checkoutId:clientSaleId,sale:{id:resolution.sale_id}};
+        }
+        if(resolution?.status==="FAILED"){
+          return{ok:false,definitive:true,checkoutId:clientSaleId,message:resolution.message||message};
+        }
+
+        return{
+          ok:false,
+          unknown:true,
+          checkoutId:clientSaleId,
+          message:"Transaction status is unknown. Do not repeat payment. Retry the same checkout ID when connectivity is available."
+        };
+      }
+
+      if(!data?.ok){
+        return{
+          ok:false,
+          definitive:true,
+          checkoutId:clientSaleId,
+          message:data?.message||"Checkout was rejected before a sale was committed."
+        };
+      }
+
+      void refreshAll();
+      return{
+        ok:true,
+        checkoutId:clientSaleId,
+        reused:Boolean(data.reused),
+        sale:{id:data.sale_id}
+      };
+    }catch(e){
+      const resolution=await resolveCheckout().catch(()=>null);
+      if(resolution?.status==="CONFIRMED"&&resolution?.sale_id){
+        void refreshAll();
+        return{ok:true,recovered:true,checkoutId:clientSaleId,sale:{id:resolution.sale_id}};
+      }
+      if(resolution?.status==="FAILED"){
+        return{ok:false,definitive:true,checkoutId:clientSaleId,message:resolution.message||e.message||String(e)};
+      }
+      return{
+        ok:false,
+        unknown:true,
+        checkoutId:clientSaleId,
+        message:"Transaction status is unknown. Do not repeat payment. Retry the same checkout ID when connectivity is available."
+      };
+    }
   }
   async function syncOfflineSales() {
     if (!navigator.onLine) return {ok:false,message:"Internet is offline."};
