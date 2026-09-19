@@ -789,3 +789,15 @@ Manager/Admin Shift & Day Close exposes completeness and the controlled financia
 day lifecycle `OPEN -> CLOSING -> RECONCILED -> FINAL`. FINAL snapshots are
 immutable versions; subsequent legitimate changes use an explicit amendment.
 <!-- /CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
+
+<!-- HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->
+## 2026-09-19 — Historical CLOSE_REQUIRED reconciliation UI
+
+Shift History now exposes an Actual Cash input and **Request Reconciliation
+Close** action for an authorized historical `CLOSE_REQUIRED` shift. The action
+calls `request_shift_close_v3` with that exact shift ID. On success the row moves
+to `CLOSE_REQUESTED`; Manager/Admin then reviews Expected vs Actual variance and
+uses the existing approval action to reach `CLOSED`.
+
+Actual Cash is never automatically copied from Expected Cash.
+<!-- /HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->

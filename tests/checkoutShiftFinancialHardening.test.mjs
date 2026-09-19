@@ -64,6 +64,9 @@ test("shift page supports historical CLOSE_REQUIRED and financial-day lifecycle"
     "finalize_financial_day_v1",
     "create_financial_day_amendment_v1",
     "Start Today's Shift",
+    "Historical Actual Cash",
+    "Request Reconciliation Close",
+    "canRequestHistoricalClose",
   ])assert.ok(shifts.includes(marker),`Shifts missing ${marker}`);
 
   assert.ok(!shifts.includes("navigator.onLine"));

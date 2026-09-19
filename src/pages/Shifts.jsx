@@ -24,6 +24,7 @@ export default function Shifts() {
   const [shifts, setShifts] = useState([]);
   const [opening, setOpening] = useState(0);
   const [actual, setActual] = useState("");
+  const [historicalActuals, setHistoricalActuals] = useState({});
   const [corrections, setCorrections] = useState({});
   const [message, setMessage] = useState("");
   const [backendReachable, setBackendReachable] = useState(false);
@@ -144,7 +145,7 @@ export default function Shifts() {
   }
 
   async function requestClose(shift = currentShift, actualValue = actual) {
-    if (!shift) return;
+    if (!shift) return false;
 
     const connectivity = await probeBackendConnectivity().catch(() => ({
       reachable: false,
@@ -153,22 +154,22 @@ export default function Shifts() {
 
     if (!connectivity.reachable) {
       setMessage("WineShopPOS backend is not reachable. Shift close was not requested.");
-      return;
+      return false;
     }
 
     if (offlineCounts.pending || offlineCounts.conflict) {
       setMessage(
         `Sync/resolve offline sales before closing shift. Pending ${offlineCounts.pending}, conflicts ${offlineCounts.conflict}.`,
       );
-      return;
+      return false;
     }
 
     const cash = Number(actualValue);
     if (actualValue === "" || !Number.isFinite(cash) || cash < 0) {
       setMessage(
-        "Count the physical cash in the drawer and enter Actual Cash before requesting close.",
+        "Enter the real physical Actual Cash for this shift before requesting close. Do not copy Expected Cash unless it is genuinely the counted amount.",
       );
-      return;
+      return false;
     }
 
     const { error } = await supabase.rpc("request_shift_close_v3", {
@@ -176,15 +177,26 @@ export default function Shifts() {
       p_terminal_id: getTerminalId(),
       p_client_sequence: nextTerminalSequence(),
       p_actual_cash: cash,
-      p_notes: "Actual cash physically counted before close request.",
+      p_notes:
+        shift.business_date < today
+          ? "Historical CLOSE_REQUIRED shift reconciliation requested from Shift & Day Close."
+          : "Actual cash physically counted before close request.",
     });
 
-    setMessage(error ? error.message : "Close request sent to manager.");
-
-    if (!error) {
-      setActual("");
-      await load();
+    if (error) {
+      setMessage(error.message);
+      return false;
     }
+
+    setMessage(
+      shift.business_date < today
+        ? `Historical shift ${shift.business_date} moved to CLOSE_REQUESTED. Manager/Admin must review the variance and approve close.`
+        : "Close request sent to manager.",
+    );
+
+    setActual("");
+    await load();
+    return true;
   }
 
   async function reviseActual(shift) {
@@ -667,6 +679,11 @@ export default function Shifts() {
 
             <tbody>
               {shifts.map((shift) => {
+                const canRequestHistoricalClose =
+                  shift.business_date < today &&
+                  shift.status === "CLOSE_REQUIRED" &&
+                  (manager || shift.cashier_id === profile?.user_id);
+
                 const canRevise =
                   shift.status === "CLOSE_REQUESTED" &&
                   (manager || shift.cashier_id === profile?.user_id);
@@ -702,6 +719,53 @@ export default function Shifts() {
                         : money.format(shift.cash_difference)}
                     </td>
                     <td>
+                      {canRequestHistoricalClose ? (
+                        <div className="button-row wrap">
+                          <label style={{ minWidth: 150 }}>
+                            Historical Actual Cash
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={historicalActuals[shift.id] ?? ""}
+                              placeholder="Physical count"
+                              onChange={(event) =>
+                                setHistoricalActuals((current) => ({
+                                  ...current,
+                                  [shift.id]: event.target.value,
+                                }))
+                              }
+                              aria-label={`Actual cash for historical shift ${shift.business_date}`}
+                              style={{ maxWidth: 140 }}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="primary-button"
+                            disabled={!backendReachable}
+                            onClick={async () => {
+                              const ok = await requestClose(
+                                shift,
+                                historicalActuals[shift.id] ?? "",
+                              );
+                              if (ok) {
+                                setHistoricalActuals((current) => {
+                                  const next = { ...current };
+                                  delete next[shift.id];
+                                  return next;
+                                });
+                              }
+                            }}
+                          >
+                            Request Reconciliation Close
+                          </button>
+                          <span className="muted-text">
+                            Enter the physical cash counted for that old drawer.
+                            Do not auto-copy Expected Cash.
+                          </span>
+                        </div>
+                      ) : null}
+
                       {canRevise ? (
                         <div className="button-row wrap">
                           <input
@@ -742,11 +806,11 @@ export default function Shifts() {
                         </button>
                       ) : null}
 
-                      {shift.cashier_id === profile?.user_id &&
-                      shift.status === "CLOSE_REQUIRED" ? (
+                      {shift.status === "CLOSE_REQUIRED" &&
+                      !canRequestHistoricalClose ? (
                         <div className="muted-text">
-                          Historical shift remains explicitly unresolved. Do not
-                          reuse it as today's shift.
+                          Historical shift remains explicitly unresolved. Only the
+                          owning cashier or Manager/Admin can request its reconciliation close.
                         </div>
                       ) : null}
                     </td>

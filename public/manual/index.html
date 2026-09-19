@@ -1193,7 +1193,18 @@ status is SUBMITTING/UNKNOWN.</p>
 <p><code>OPEN -&gt; CLOSING -&gt; RECONCILED -&gt; FINAL</code></p>
 <p>A FINAL day is an immutable financial version. A later legitimate change requires
 an explicit FINAL amendment with a reason.</p>
-<!-- /CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
+<!-- /CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 --><!-- HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->
+<h3 id="closing-a-historical-close-required-shift">Closing a historical CLOSE_REQUIRED shift</h3>
+<p>In <strong>Shift &amp; Day Close → Shift History</strong>, a historical <code>CLOSE_REQUIRED</code> shift now
+shows <strong>Historical Actual Cash</strong> and <strong>Request Reconciliation Close</strong> for the
+owning cashier or Manager/Admin.</p>
+<p>Enter the real physical cash count that belonged to that old drawer and submit
+the reconciliation close. The shift moves to <code>CLOSE_REQUESTED</code>. Manager/Admin
+then reviews Expected Cash, Actual Cash and Difference and selects <strong>Approve
+Close</strong> to move the shift to <code>CLOSED</code>.</p>
+<p>Do not copy Expected Cash into Actual Cash unless that is genuinely the physical
+count. If the historical physical count is no longer known, do not guess.</p>
+<!-- /HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->
 </article>
     </div>
   </main>

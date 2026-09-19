@@ -1425,3 +1425,19 @@ Manager/Admin can review financial-day completeness and use:
 A FINAL day is an immutable financial version. A later legitimate change requires
 an explicit FINAL amendment with a reason.
 <!-- /CHECKOUT_SHIFT_FINANCIAL_HARDENING_20260919 -->
+
+<!-- HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->
+### Closing a historical CLOSE_REQUIRED shift
+
+In **Shift & Day Close → Shift History**, a historical `CLOSE_REQUIRED` shift now
+shows **Historical Actual Cash** and **Request Reconciliation Close** for the
+owning cashier or Manager/Admin.
+
+Enter the real physical cash count that belonged to that old drawer and submit
+the reconciliation close. The shift moves to `CLOSE_REQUESTED`. Manager/Admin
+then reviews Expected Cash, Actual Cash and Difference and selects **Approve
+Close** to move the shift to `CLOSED`.
+
+Do not copy Expected Cash into Actual Cash unless that is genuinely the physical
+count. If the historical physical count is no longer known, do not guess.
+<!-- /HISTORICAL_CLOSE_REQUIRED_UI_20260919 -->
