@@ -54,7 +54,12 @@ test("OCR resolver preserves V5 server-authoritative ingestion handoff and fail-
   const callBlock = analyzeBlock.slice(callStart, callEnd + 2);
   assert.match(callBlock, /nextIngestionId/);
 
-  assert.match(automation, /p_normalized_invoice: data\.invoice/);
+  assert.match(automation, /const reviewInvoice = applyShopAiVisualPrefills\(data\.invoice\);/);
+  assert.match(automation, /p_supplier_name: data\.invoice\?\.supplierName/);
+  assert.match(automation, /p_invoice_number: data\.invoice\?\.invoiceNumber/);
+  assert.match(automation, /p_invoice_date: data\.invoice\?\.invoiceDate/);
+  assert.match(automation, /p_total: data\.invoice\?\.total/);
+  assert.match(automation, /p_normalized_invoice: reviewInvoice/);
   assert.match(automation, /purchasing\/receive\?ingestion=\$\{ingestionId\}/);
   assert.doesNotMatch(automation, /purchaseDraftWithAssist/);
   assert.match(ocr, /normalizeDocumentIntelligenceResult\(primaryResult\)/);

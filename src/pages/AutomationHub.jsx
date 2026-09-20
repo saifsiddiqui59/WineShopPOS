@@ -98,6 +98,11 @@ function shopAiFieldSuggestion(review, fieldId) {
   };
 }
 
+function shopAiAutoPrefillSuggestion(review, fieldId) {
+  const suggestion = shopAiFieldSuggestion(review, fieldId);
+  return suggestion?.confidence === "HIGH" ? suggestion : null;
+}
+
 function applyShopAiVisualPrefills(invoice) {
   if (!invoice || invoice?.shopAiReview?.status !== "COMPLETED") return invoice;
 
@@ -108,7 +113,7 @@ function applyShopAiVisualPrefills(invoice) {
   };
   const prefilledFields = [];
 
-  const supplier = shopAiFieldSuggestion(review, "header:supplier_name");
+  const supplier = shopAiAutoPrefillSuggestion(review, "header:supplier_name");
   if (supplier?.value) {
     next.supplierOriginalValue = next.supplierOriginalValue ?? next.supplierName ?? "";
     next.supplierName = supplier.value;
@@ -118,17 +123,7 @@ function applyShopAiVisualPrefills(invoice) {
     prefilledFields.push("supplier");
   }
 
-  const invoiceNumber = shopAiFieldSuggestion(review, "header:invoice_number");
-  if (invoiceNumber?.value) {
-    next.invoiceNumberOriginalValue = next.invoiceNumberOriginalValue ?? next.invoiceNumber ?? "";
-    next.invoiceNumber = invoiceNumber.value;
-    next.invoiceNumberSource = "SHOPAI_VISUAL_SUGGESTION";
-    next.invoiceNumberReviewRequired = true;
-    next.invoiceNumberSuggestionReason = invoiceNumber.reason || "";
-    prefilledFields.push("invoice number");
-  }
-
-  const date = shopAiFieldSuggestion(review, "header:invoice_date");
+  const date = shopAiAutoPrefillSuggestion(review, "header:invoice_date");
   const dateIso = normalizeSuggestedInvoiceDate(date?.value);
   if (dateIso) {
     next.invoiceDateOriginalValue = next.invoiceDateOriginalValue ?? next.invoiceDate ?? "";
@@ -140,7 +135,7 @@ function applyShopAiVisualPrefills(invoice) {
   }
 
   next.items = next.items.map((item, index) => {
-    const batch = shopAiFieldSuggestion(review, `item:${index}:batch_number`);
+    const batch = shopAiAutoPrefillSuggestion(review, `item:${index}:batch_number`);
     if (!batch?.value) return item;
     prefilledFields.push(`batch ${index + 1}`);
     return {
@@ -655,9 +650,20 @@ export default function AutomationHub() {
 
     return {
       ...suggestion,
-      existingMatch: ranked[0]?.score >= 35 ? ranked[0] : null,
+      existingMatch: ranked[0]?.score >= 80 ? ranked[0] : null,
     };
   }, [result?.shopAiReview, suppliers]);
+
+
+  const shopAiInvoiceNumberSuggestion = useMemo(() => {
+    const suggestion = shopAiFieldSuggestion(
+      result?.shopAiReview,
+      "header:invoice_number",
+    );
+    if (!suggestion?.value) return null;
+    if (normalize(suggestion.value) === normalize(result?.invoiceNumber)) return null;
+    return suggestion;
+  }, [result?.shopAiReview, result?.invoiceNumber]);
 
   const supplierMatches = useMemo(() => {
     if (!result?.supplierName) return [];
@@ -982,12 +988,26 @@ export default function AutomationHub() {
       }
       duplicateStatus = metadata?.review_status || duplicateStatus || "";
 
+      const aiSupplierSuggestion = shopAiFieldSuggestion(
+        reviewInvoice?.shopAiReview,
+        "header:supplier_name",
+      );
+      const aiSupplierField = (reviewInvoice?.shopAiReview?.fields || []).find(
+        (field) => field?.fieldId === "header:supplier_name",
+      );
+      const aiSupplierNeedsReview = Boolean(
+        aiSupplierField?.ownerConfirmationRequired ||
+        aiSupplierSuggestion?.value
+      );
+      const supplierMatchText =
+        aiSupplierSuggestion?.value || reviewInvoice.supplierName;
+
       const ranked = suppliers
         .filter((supplier) => supplier.active !== false)
         .map((supplier) => ({
           ...supplier,
           score: supplierScore(
-            reviewInvoice.supplierName,
+            supplierMatchText,
             supplier.supplier_name,
           ),
         }))
@@ -998,8 +1018,13 @@ export default function AutomationHub() {
         reviewInvoice?.supplierSource === "SHOPAI_VISUAL_SUGGESTION";
       let autoConfirmedSupplier = null;
 
-      if (aiSupplierPrefilled) {
-        if (ranked[0]?.score >= 80) setSupplierId(ranked[0].id);
+      if (aiSupplierNeedsReview || aiSupplierPrefilled) {
+        if (
+          aiSupplierSuggestion?.value &&
+          ranked[0]?.score >= 80
+        ) {
+          setSupplierId(ranked[0].id);
+        }
       } else if (exactMatches.length === 1) {
         autoConfirmedSupplier = exactMatches[0];
         setSupplierId(autoConfirmedSupplier.id);
@@ -1564,10 +1589,9 @@ export default function AutomationHub() {
       setMessage("Complete OCR first so the stored invoice can open in Purchase Receiving Workspace.");
       return;
     }
-    if (!shopAiOwnerReady()) {
-      setMessage("Complete the invoice verification step before continuing to Purchase Receiving.");
-      return;
-    }
+    // Preparation/navigation is allowed before final ShopAI owner approval.
+    // Purchase Receiving and the authoritative DB receive guard still block
+    // inventory posting until all final review gates pass.
 
     setBusy(true);
     try {
@@ -1690,11 +1714,25 @@ export default function AutomationHub() {
               />
             </label>
           </div>
-          {result.invoiceNumberSource === "SHOPAI_VISUAL_SUGGESTION" ? (
+          {shopAiInvoiceNumberSuggestion ? (
             <div className="ocr-smart-suggestion" style={{ marginBottom: 12 }}>
               <strong>Smart suggestion — check</strong>
-              <span>Invoice / Reference: {result.invoiceNumber || "—"}</span>
-              <span>AI prefilled this value from the original invoice image. Edit it above if needed.</span>
+              <span>Invoice / Reference: {shopAiInvoiceNumberSuggestion.value}</span>
+              <span>AI read this from the original invoice. It is not applied until you confirm it.</span>
+              <div className="button-row" style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={busy}
+                  onClick={() => setResult((current) => ({
+                    ...current,
+                    invoiceNumber: shopAiInvoiceNumberSuggestion.value,
+                    invoiceNumberSource: "HUMAN_CONFIRMED_SHOPAI_VISUAL",
+                  }))}
+                >
+                  Use suggestion
+                </button>
+              </div>
             </div>
           ) : null}
           {result.invoiceDateReviewRequired ? (
@@ -1767,7 +1805,7 @@ export default function AutomationHub() {
                 <div className="ocr-smart-suggestion" style={{ marginBottom: 12 }}>
                   <strong>Smart suggestion — check</strong>
                   <span>Supplier: {shopAiSupplierSuggestion.value}</span>
-                  <span>AI prefilled the supplier after checking the original invoice. Confirm the existing supplier before continuing.</span>
+                  <span>AI visually suggested this supplier from the original invoice. Confirm the existing supplier before continuing.</span>
                   {shopAiSupplierSuggestion.existingMatch ? (
                     <div className="button-row" style={{ marginTop: 8 }}>
                       <button

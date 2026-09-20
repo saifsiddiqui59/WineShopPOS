@@ -617,6 +617,13 @@ export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = 
           confidence,
           evidenceId,
           alignment: geometryRegion.alignment,
+          region: {
+            page: Number(geometryRegion.page || 1),
+            xMinNorm: Number(geometryRegion.xMin || 0),
+            xMaxNorm: Number(geometryRegion.xMax || 0),
+            yMinNorm: Number(geometryRegion.yMin || 0),
+            yMaxNorm: Number(geometryRegion.yMax || 0),
+          },
         };
       });
       continue;

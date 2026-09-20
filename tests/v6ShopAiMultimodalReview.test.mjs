@@ -85,34 +85,18 @@ test("matrix includes all core fields, finance coverage and line fields",()=>{
   ]) assert.equal(ids.has(id),true,id);
 });
 
-test("image request is one multimodal judge request with raw Vision context",()=>{
-  const built=buildShopAiRequest({
-    model:"gpt-5-mini",
-    contentBase64:"YWJj",
-    contentType:"image/jpeg",
-    fileName:"invoice.jpg",
-    documentPageCount:1,
-    ...sample(),
-  });
+test("image request is targeted blind visual adjudication",()=>{
+  const built=buildShopAiRequest({model:"gpt-5-mini",contentBase64:"YWJj",contentType:"image/jpeg",fileName:"invoice.jpg",documentPageCount:1,...sample()});
   assert.equal(built.ok,true);
   const content=built.request.input[0].content;
-  assert.equal(content[0].type,"input_text");
-  assert.equal(content[1].type,"input_image");
-  assert.equal(content[1].detail,"high");
-  assert.match(content[1].image_url,/^data:image\/jpeg;base64,/);
-  const input=JSON.parse(content[0].text);
-  assert.equal(input.vision_ocr_lines.length,2);
-  assert.equal(input.deterministic_context.document_page_count,1);
-  assert.ok(input.field_matrix.length>10);
-  assert.equal(built.request.store,false);
-  assert.equal(built.request.reasoning.effort,"minimal");
-  assert.equal(built.request.max_output_tokens,6000);
-  assert.ok(built.request.text.format.schema.required.includes("coverage_complete"));
-  assert.equal("reviewed_field_count" in built.request.text.format.schema.properties,false);
-  assert.ok(built.request.text.format.schema.required.includes("too_many_findings"));
-  assert.equal("matched_field_ids" in built.request.text.format.schema.properties,false);
+  assert.equal(content[0].type,"input_text");assert.equal(content[1].type,"input_image");assert.equal(content[1].detail,"high");
+  const input=JSON.parse(content[0].text),serialized=JSON.stringify(input);
+  assert.equal(input.mode,"TARGETED_BLIND_VISUAL_ADJUDICATION_V2");assert.equal(input.candidate_values_withheld,true);
+  assert.equal("field_matrix" in input,false);assert.equal("vision_ocr_lines" in input,false);assert.ok(input.target_fields.length<built.matrix.length);
+  assert.doesNotMatch(serialized,/ROYAL 21/);assert.doesNotMatch(serialized,/KAPIL ALCOTECH/);assert.doesNotMatch(serialized,/2021-07-19/);assert.doesNotMatch(serialized,/2020-04-19/);
+  assert.equal(built.request.max_output_tokens,3500);assert.deepEqual(built.request.text.format.schema.properties.findings.items.properties.verdict.enum,["INFERRED_VISUAL","UNREADABLE","MISMATCH"]);
+  assert.match(built.request.instructions,/EXCLUDE TP Date/);assert.match(built.request.instructions,/NEVER return buyer/i);
 });
-
 test("PDF request uses Responses API input_file data URI",()=>{
   const built=buildShopAiRequest({
     model:"gpt-5-mini",
@@ -351,6 +335,8 @@ test("owner UI keeps the authoritative ShopAI gate behind the existing operator 
   assert.match(source,/invoiceDateSource\s*=\s*"SHOPAI_VISUAL_SUGGESTION"/);
   assert.match(source,/batchSuggestionSource:\s*"SHOPAI_VISUAL_SUGGESTION"/);
   assert.match(source,/const aiSupplierPrefilled/);
+  assert.match(source,/aiSupplierNeedsReview/);
+  assert.match(source,/shopAiInvoiceNumberSuggestion/);
   assert.doesNotMatch(source,/<span>Product name: \{suggestedProductName\(item\)\}<\/span>/);
 
   // Developer diagnostics are no longer exposed as the normal shop-operator UI.
@@ -373,6 +359,8 @@ test("Purchase Receiving and Inbox use authoritative ShopAI state",()=>{
   assert.match(purchases,/Confirm Batch/);
   assert.match(purchases,/batchSuggestionSource/);
   assert.match(purchases,/SHOPAI_VISUAL_SUGGESTION/);
+  assert.match(purchases,/confirmShopAiReviewInReceiving/);
+  assert.match(purchases,/Confirm Invoice Review/);
   assert.match(inbox,/normalized_invoice,shopai_review/);
   assert.match(inbox,/shopAiReview:row\.shopai_review/);
 });

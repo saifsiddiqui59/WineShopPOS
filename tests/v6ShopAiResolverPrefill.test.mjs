@@ -4,193 +4,94 @@ import fs from "node:fs";
 
 import {
   buildShopAiFieldMatrix,
+  buildShopAiTargetMatrix,
+  buildShopAiRequest,
   validateShopAiReview,
   runShopAiReview,
 } from "../supabase/functions/_shared/invoiceShopAiReview.js";
 
-function sample() {
-  const primaryInvoice = {
-    supplierName: "ROYAL 21 BEER AND WINE SHOPEE KOKANWADI",
-    invoiceNumber: "19185",
-    invoiceDate: "2021-07-19",
-    subtotal: 83944,
-    total: 70185,
-    amountDue: 70185,
-    financialAdjustments: {
-      lineProductValue: 83944,
-      otherDeductionAmount: 15740,
-      freightCartingAmount: 600,
-      stampDutyAmount: 5,
-      tcsAmount: 1376,
-      printedInvoiceTotal: 70185,
-      calculatedInvoiceTotal: 70185,
-      reconciliationStatus: "MATCH",
-    },
-    items: [{
-      description: "LETS GO GIMLET FORTIFIED WINE PREMIUM QUALITY",
-      packing: "180 ML",
-      mrp: 60,
-      batchNumber: "GM19 Se-2006",
-      caseCount: 1,
-      ratePerCase: 2662,
-      amount: 2662,
-    }],
+function sample(){
+  const primaryInvoice={
+    supplierName:"ROYAL 21",
+    invoiceNumber:"19185",
+    invoiceDate:"2021-07-19",
+    total:70185,
+    amountDue:70185,
+    financialAdjustments:{printedInvoiceTotal:70185,calculatedInvoiceTotal:70185,reconciliationStatus:"MATCH"},
+    items:[{description:"DR KHATA KHAT PREMIUM QUALITY FORTIFIED WINE",packing:"180 ML",batchNumber:"KK21 Aug-21136",amount:2573}],
   };
-
-  const secondaryOcr = {
-    chosen: {
-      supplierName: { value: "KAPIL ALCOTECH LLP" },
-      invoiceDate: { value: "2020-04-19" },
-      invoiceTotal: { value: 70185 },
-    },
-    itemBatches: { 0: [{ value: "GM19 Sep-2026" }] },
-    textLines: [
-      { page: 1, text: "KAPIL ALCOTECH LLP", confidence: .95 },
-      { page: 1, text: "Invoice Date 19-09-2026", confidence: .95 },
-      { page: 1, text: "GM19 Sep-2026", confidence: .92 },
-    ],
+  const secondaryOcr={
+    chosen:{supplierName:{value:"KAPIL ALCOTECH LLP"},invoiceDate:{value:"2020-04-19"},invoiceTotal:{value:70185}},
+    itemBatches:{0:[{value:"KK21 Aug-2026",region:{page:1,xMinNorm:.62,xMaxNorm:.79,yMinNorm:.48,yMaxNorm:.53}}]},
   };
-
-  const invoice = structuredClone(primaryInvoice);
-  invoice.invoiceDateReviewRequired = true;
-  return { primaryInvoice, secondaryOcr, invoice };
+  const invoice=structuredClone(primaryInvoice);
+  invoice.invoiceDateReviewRequired=true;
+  invoice.items[0].batchReviewRequired=true;
+  invoice.crossOcr={status:"REVIEW_REQUIRED",reviewTargets:[{targetId:"header:supplier_name"},{targetId:"header:invoice_date"},{targetId:"item:0:batch_number"}]};
+  return{primaryInvoice,secondaryOcr,invoice};
 }
 
-function finding(field_id, verdict, suggested_value, confidence = "HIGH", reason = "visual check") {
-  return { field_id, verdict, suggested_value, confidence, reason };
+function visual(field_id,suggested_value,confidence="HIGH",verdict="INFERRED_VISUAL"){
+  return{field_id,verdict,suggested_value,confidence,reason:"Visible on original invoice."};
 }
 
-test("same-value duplicate supplier observations merge and preserve date/batch", () => {
-  const matrix = buildShopAiFieldMatrix(sample());
-  const out = validateShopAiReview({
-    recommendation: "REVIEW",
-    summary: "role-aware visual resolution",
-    coverage_complete: true,
-    too_many_findings: false,
-    findings: [
-      finding("header:supplier_name", "PREFER_VISION", "KAPIL ALCOTECH LLP"),
-      finding("header:supplier_name", "INFERRED_VISUAL", "KAPIL ALCOTECH LLP", "MEDIUM"),
-      finding("header:invoice_date", "INFERRED_VISUAL", "2026-09-19"),
-      finding("item:0:batch_number", "PREFER_VISION", "GM19 Sep-2026"),
-    ],
-  }, matrix);
+function targeted(){const s=sample(),matrix=buildShopAiFieldMatrix(s),targets=buildShopAiTargetMatrix({matrix,invoice:s.invoice});return{s,matrix,targets};}
 
-  assert.equal(out.ok, true);
-  assert.equal(out.status, "COMPLETED");
-  assert.deepEqual(out.duplicateFindingFieldIds, ["header:supplier_name"]);
-  assert.equal(out.fields.find(x => x.fieldId === "header:supplier_name").suggestedValue, "KAPIL ALCOTECH LLP");
-  assert.equal(out.fields.find(x => x.fieldId === "header:invoice_date").suggestedValue, "2026-09-19");
-  assert.equal(out.fields.find(x => x.fieldId === "item:0:batch_number").suggestedValue, "GM19 Sep-2026");
+test("targeted request withholds OCR field candidates",()=>{
+  const s=sample();
+  const built=buildShopAiRequest({model:"gpt-5-mini",contentBase64:"YWJj",contentType:"image/jpeg",fileName:"invoice.jpg",documentPageCount:1,...s});
+  assert.equal(built.ok,true);
+  const payload=JSON.parse(built.request.input[0].content[0].text),serialized=JSON.stringify(payload);
+  assert.equal(payload.mode,"TARGETED_BLIND_VISUAL_ADJUDICATION_V2");
+  assert.equal(payload.candidate_values_withheld,true);
+  for(const value of ["ROYAL 21","KAPIL ALCOTECH LLP","2021-07-19","2020-04-19","KK21 Aug-21136","KK21 Aug-2026"])assert.equal(serialized.includes(value),false,`candidate leaked: ${value}`);
+  assert.ok(payload.target_fields.find(x=>x.field_id==="header:invoice_date")?.region_hint);
+  assert.ok(payload.target_fields.find(x=>x.field_id==="item:0:batch_number")?.region_hint);
 });
 
-test("conflicting duplicate supplier observations isolate supplier only", () => {
-  const matrix = buildShopAiFieldMatrix(sample());
-  const out = validateShopAiReview({
-    recommendation: "GO",
-    summary: "conflicting supplier observations",
-    coverage_complete: true,
-    too_many_findings: false,
-    findings: [
-      finding("header:supplier_name", "PREFER_VISION", "KAPIL ALCOTECH LLP"),
-      finding("header:supplier_name", "INFERRED_VISUAL", "ROYAL 21"),
-      finding("header:invoice_date", "INFERRED_VISUAL", "2026-09-19"),
-    ],
-  }, matrix);
-
-  assert.equal(out.ok, true);
-  const supplier = out.fields.find(x => x.fieldId === "header:supplier_name");
-  const date = out.fields.find(x => x.fieldId === "header:invoice_date");
-  assert.equal(supplier.verdict, "MISMATCH");
-  assert.equal(supplier.suggestedValue, "");
-  assert.equal(date.suggestedValue, "2026-09-19");
-  assert.equal(out.recommendation, "REVIEW");
+test("duplicate visual observations are field-local",()=>{
+  const{matrix,targets}=targeted();
+  const out=validateShopAiReview({recommendation:"REVIEW",summary:"visual",coverage_complete:true,too_many_findings:false,findings:[visual("document:line_coverage","1 product row"),visual("header:supplier_name","KAPIL ALCOTECH LLP"),visual("header:supplier_name","KAPIL ALCOTECH LLP","MEDIUM"),visual("header:invoice_date","2026-09-19"),visual("item:0:batch_number","KK21 Aug-2026")]},matrix,targets);
+  assert.equal(out.ok,true);
+  assert.equal(out.fields.find(x=>x.fieldId==="document:line_coverage").verdict,"MATCH");
+  assert.deepEqual(out.duplicateFindingFieldIds,["header:supplier_name"]);
+  assert.equal(out.fields.find(x=>x.fieldId==="header:supplier_name").verdict,"PREFER_VISION");
+  assert.equal(out.fields.find(x=>x.fieldId==="header:invoice_date").suggestedValue,"2026-09-19");
 });
 
-test("incomplete model coverage keeps valid visual suggestions and never fabricates MATCH", () => {
-  const matrix = buildShopAiFieldMatrix(sample());
-  const out = validateShopAiReview({
-    recommendation: "REVIEW",
-    summary: "partial visual resolution",
-    coverage_complete: false,
-    too_many_findings: false,
-    findings: [
-      finding("header:invoice_date", "INFERRED_VISUAL", "2026-09-19"),
-    ],
-  }, matrix);
-
-  assert.equal(out.ok, true);
-  assert.equal(out.coverageComplete, false);
-  assert.equal(out.fields.find(x => x.fieldId === "header:invoice_date").suggestedValue, "2026-09-19");
-  assert.equal(out.fields.find(x => x.fieldId === "header:invoice_number").verdict, "NOT_JUDGED");
-  assert.equal(out.recommendation, "NO_GO");
+test("missing target fails closed",()=>{
+  const{matrix,targets}=targeted();
+  const out=validateShopAiReview({recommendation:"REVIEW",summary:"partial",coverage_complete:true,too_many_findings:false,findings:[visual("document:line_coverage","1"),visual("header:supplier_name","KAPIL ALCOTECH LLP"),visual("header:invoice_date","2026-09-19")]},matrix,targets);
+  assert.equal(out.fields.find(x=>x.fieldId==="item:0:batch_number").verdict,"NOT_JUDGED");
+  assert.equal(out.coverageComplete,false);
+  assert.equal(out.recommendation,"NO_GO");
 });
 
-test("completed provider response survives semantic duplicate end-to-end", async () => {
-  const s = sample();
-  const out = await runShopAiReview({
-    config: {
-      enabled: true,
-      baseUrl: "https://unit.invalid",
-      apiKey: "x",
-      model: "gpt-5-mini",
-      timeoutMs: 60000,
-    },
-    contentBase64: "YWJj",
-    contentType: "image/jpeg",
-    fileName: "invoice.jpg",
-    documentPageCount: 1,
-    ...s,
-    fetchImpl: async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        id: "resp_test",
-        model: "gpt-5-mini",
-        status: "completed",
-        output_text: JSON.stringify({
-          recommendation: "REVIEW",
-          summary: "visual resolution",
-          coverage_complete: true,
-          too_many_findings: false,
-          findings: [
-            finding("header:supplier_name", "PREFER_VISION", "KAPIL ALCOTECH LLP"),
-            finding("header:supplier_name", "INFERRED_VISUAL", "KAPIL ALCOTECH LLP", "MEDIUM"),
-            finding("header:invoice_date", "INFERRED_VISUAL", "2026-09-19"),
-            finding("item:0:batch_number", "PREFER_VISION", "GM19 Sep-2026"),
-          ],
-        }),
-        usage: {
-          input_tokens: 1000,
-          output_tokens: 400,
-          output_tokens_details: { reasoning_tokens: 0 },
-        },
-      }),
-    }),
-  });
-
-  assert.equal(out.status, "COMPLETED");
-  assert.equal(out.version, 4);
-  assert.equal(out.diagnostics.timeoutMs, 60000);
-  assert.equal(out.fields.find(x => x.fieldId === "header:invoice_date").suggestedValue, "2026-09-19");
-  assert.equal(out.fields.find(x => x.fieldId === "item:0:batch_number").suggestedValue, "GM19 Sep-2026");
+test("provider NO_GO cannot be weakened",()=>{
+  const{matrix,targets}=targeted();
+  const out=validateShopAiReview({recommendation:"NO_GO",summary:"unsafe",coverage_complete:true,too_many_findings:false,findings:[visual("document:line_coverage","1"),visual("header:supplier_name","KAPIL ALCOTECH LLP"),visual("header:invoice_date","2026-09-19"),visual("item:0:batch_number","KK21 Aug-2026")]},matrix,targets);
+  assert.equal(out.recommendation,"NO_GO");
 });
 
-test("frontend has automatic visual prefill markers without auto-confirming supplier/batch", () => {
-  const automation = fs.readFileSync(new URL("../src/pages/AutomationHub.jsx", import.meta.url), "utf8");
-  const purchases = fs.readFileSync(new URL("../src/pages/Purchases.jsx", import.meta.url), "utf8");
-
-  assert.match(automation, /applyShopAiVisualPrefills/);
-  assert.match(automation, /supplierSource\s*=\s*"SHOPAI_VISUAL_SUGGESTION"/);
-  assert.match(automation, /invoiceDateSource\s*=\s*"SHOPAI_VISUAL_SUGGESTION"/);
-  assert.match(automation, /batchSuggestionSource:\s*"SHOPAI_VISUAL_SUGGESTION"/);
-  assert.match(automation, /invoiceDateReviewRequired\s*=\s*true/);
-  assert.match(automation, /supplierReviewRequired\s*=\s*true/);
-  assert.match(automation, /const aiSupplierPrefilled/);
-  assert.match(automation, /if \(aiSupplierPrefilled\)[\s\S]*else if \(exactMatches\.length === 1\)/);
-
-  assert.match(purchases, /batchSuggestionSource/);
-  assert.match(purchases, /SHOPAI_VISUAL_SUGGESTION/);
-  assert.match(purchases, /Confirm Batch/);
-  assert.match(purchases, /HUMAN_CONFIRMED/);
+test("targeted run completes end-to-end",async()=>{
+  const s=sample();
+  const out=await runShopAiReview({config:{enabled:true,baseUrl:"https://unit.invalid",apiKey:"x",model:"gpt-5-mini",timeoutMs:60000},contentBase64:"YWJj",contentType:"image/jpeg",fileName:"invoice.jpg",documentPageCount:1,...s,fetchImpl:async()=>({ok:true,status:200,json:async()=>({id:"r",model:"gpt-5-mini",status:"completed",output_text:JSON.stringify({recommendation:"REVIEW",summary:"visual",coverage_complete:true,too_many_findings:false,findings:[visual("document:line_coverage","1"),visual("header:supplier_name","KAPIL ALCOTECH LLP"),visual("header:invoice_date","2026-09-19"),visual("item:0:batch_number","KK21 Aug-2026")]}),usage:{input_tokens:800,output_tokens:250,output_tokens_details:{reasoning_tokens:0}}})})});
+  assert.equal(out.status,"COMPLETED");
+  assert.equal(out.version,5);
+  assert.equal(out.mode,"TARGETED_BLIND_VISUAL_ADJUDICATION_V2");
+  assert.equal(out.candidateValuesWithheld,true);
+  assert.equal(out.diagnostics.timeoutMs,60000);
 });
 
+test("frontend keeps safe prefill and complete Prepare-to-Receive verification flow",()=>{
+  const automation=fs.readFileSync(new URL("../src/pages/AutomationHub.jsx",import.meta.url),"utf8");
+  const purchases=fs.readFileSync(new URL("../src/pages/Purchases.jsx",import.meta.url),"utf8");
+  const block=automation.slice(automation.indexOf("function applyShopAiVisualPrefills"),automation.indexOf("const MACHINE_PACK_SOURCES"));
+  assert.match(block,/header:supplier_name/);assert.match(block,/header:invoice_date/);assert.match(block,/batch_number/);assert.doesNotMatch(block,/header:invoice_number/);
+  assert.match(automation,/existingMatch: ranked\[0\]\?\.score >= 80/);
+  assert.match(automation,/aiSupplierNeedsReview \|\| aiSupplierPrefilled/);
+  const send=automation.slice(automation.indexOf("async function sendDraft()"),automation.indexOf("const supplierDefaults"));
+  assert.doesNotMatch(send,/shopAiOwnerReady\(\)/);assert.match(send,/ready: false/);
+  assert.match(purchases,/function confirmShopAiReviewInReceiving/);assert.match(purchases,/Confirm Invoice Review/);
+  assert.match(purchases,/financialReady&&shopAiReady/);assert.match(purchases,/disabled=\{busy\|\|!ready\}/);
+});

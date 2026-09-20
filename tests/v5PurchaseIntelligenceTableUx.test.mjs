@@ -27,8 +27,8 @@ test("data RPC contract is unchanged",()=>{
     "supplier_intelligence",
     "supplier_performance_scores",
     "purchase_coach_v2",
-    "supplier_price_comparison",
-    "purchase_price_history",
+    "supplier_price_comparison_v2",
+    "purchase_price_history_v2",
   ]) {
     assert.ok(
       source.includes(`supabase.rpc("${rpc}"`),
