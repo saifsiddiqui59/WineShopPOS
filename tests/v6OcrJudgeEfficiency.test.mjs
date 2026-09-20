@@ -167,7 +167,9 @@ test("Edge source correlates DI, Vision and Shop AI without request/response log
     "utf8",
   );
 
-  assert.match(source, /const correlationId = ingestionId \|\| crypto\.randomUUID\(\)/);
+  assert.match(source, /if \(!ingestionId\) throw new Error\("Stored invoice ingestion ID is required"\)/);
+  assert.match(source, /const correlationId = ingestionId;/);
+  assert.doesNotMatch(source, /ingestionId \|\| crypto\.randomUUID/);
   assert.ok(
     (source.match(/"x-ms-client-request-id": correlationId/g) || []).length >= 2,
     "DI/Vision request headers must carry the correlation id",

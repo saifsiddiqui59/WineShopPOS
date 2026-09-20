@@ -676,6 +676,11 @@ export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = 
     provider: "AZURE_VISION_READ_3_2",
     status: "SUCCEEDED",
     lineCount: lines.length,
+    textLines: lines.slice(0, 180).map((line) => ({
+      page: Number(line.page || 1),
+      text: String(line.text || "").slice(0, 220),
+      confidence: Number.isFinite(Number(line.confidence)) ? Number(line.confidence) : null,
+    })),
     evidence: evidence.slice(0, 160),
     dateCandidates,
     invoiceNumberCandidates,

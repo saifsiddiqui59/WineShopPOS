@@ -5,7 +5,7 @@ import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import { useGlobalError } from "../context/GlobalErrorContext";
 import SupplierEditor from "../components/SupplierEditor";
-import { storeManualInvoice } from "../lib/invoiceClient";
+import { getInvoiceReadUrl, storeManualInvoice } from "../lib/invoiceClient";
 import {
   inferInvoiceSizeMl,
   resolveInvoiceUnitsPerCase,
@@ -407,6 +407,7 @@ export default function AutomationHub() {
   const [charges, setCharges] = useState(emptyCharges());
   const [financeWarning, setFinanceWarning] = useState(null);
   const [analysisTiming, setAnalysisTiming] = useState(null);
+  const [shopAiOwnerDecision, setShopAiOwnerDecision] = useState(null);
   const [ocrColumns, setOcrColumns] = useState(() => Object.fromEntries(OCR_COLUMN_OPTIONS.map(([key]) => [key, true])));
 
   const [supplierId, setSupplierId] = useState("");
@@ -438,6 +439,37 @@ export default function AutomationHub() {
     }
     return rows.slice(0, 6);
   }, [result?.invoiceDateRaw, result?.secondaryOcr]);
+  const shopAiReviewFingerprint = useMemo(() => JSON.stringify({
+    header: {
+      invoiceNumber: result?.invoiceNumber || "",
+      invoiceDate: result?.invoiceDate || "",
+      supplierName: result?.supplierName || "",
+      confirmedSupplierId: confirmedSupplier?.id || "",
+      confirmedSupplierName: confirmedSupplier?.supplier_name || "",
+    },
+    charges,
+    items: (result?.items || []).map((item) => ({
+      description: item?.description || "",
+      packing: item?.packing || "",
+      mrp: Number(item?.mrp || 0),
+      batchNumber: item?.batchNumber || "",
+      caseCount: Number(item?.caseCount ?? item?.quantity ?? 0),
+      ratePerCase: Number(item?.ratePerCase || item?.unitPrice || 0),
+      amount: Number(item?.amount || 0),
+    })),
+    resolution: Object.entries(resolution || {})
+      .sort(([a],[b]) => Number(a) - Number(b))
+      .map(([index,row]) => ({
+        index,
+        productId: row?.productId || "",
+        status: row?.status || "",
+        caseCount: Number(row?.caseCount || 0),
+        unitsPerCase: Number(row?.unitsPerCase || 0),
+        looseBottles: Number(row?.looseBottles || 0),
+        quantity: Number(row?.quantity || 0),
+        purchasePrice: Number(row?.purchasePrice || 0),
+      })),
+  }), [result, confirmedSupplier, charges, resolution]);
   const hiddenColumnClass = useMemo(() => Object.entries(ocrColumns).filter(([,visible])=>!visible).map(([key])=>`hide-col-${key}`).join(" "), [ocrColumns]);
 
   const supplierMatches = useMemo(() => {
@@ -470,6 +502,7 @@ export default function AutomationHub() {
         setIngestionId(state.ingestionId || null);
         setSourceFileName(state.sourceFileName || "");
         setCharges({ ...emptyCharges(), ...(state.charges || chargesFromInvoice(state.result)) });
+        setShopAiOwnerDecision(state.shopAiOwnerDecision || null);
       }
 
       const created = sessionStorage.getItem(CREATED_KEY);
@@ -557,9 +590,10 @@ export default function AutomationHub() {
         ingestionId,
         sourceFileName,
         charges,
+        shopAiOwnerDecision,
       }),
     );
-  }, [result, matches, resolution, supplierId, confirmedSupplier, ingestionId, sourceFileName, charges]);
+  }, [result, matches, resolution, supplierId, confirmedSupplier, ingestionId, sourceFileName, charges, shopAiOwnerDecision]);
 
   function toBase64(nextFile) {
     return new Promise((resolve, reject) => {
@@ -653,6 +687,7 @@ export default function AutomationHub() {
     setIngestionId(null);setSourceFileName("");
     setCharges(emptyCharges());setFinanceWarning(null);
     setAnalysisTiming(null);
+    setShopAiOwnerDecision(null);
 
     if (file.size > 4 * 1024 * 1024) {
       setMessage(
@@ -1034,6 +1069,7 @@ export default function AutomationHub() {
         ingestionId,
         sourceFileName,
         charges,
+        shopAiOwnerDecision,
       }),
     );
 
@@ -1056,6 +1092,7 @@ export default function AutomationHub() {
       ingestionId,
       sourceFileName,
       charges,
+      shopAiOwnerDecision,
       purchaseDraft,
       updatedAt: new Date().toISOString(),
     };
@@ -1226,9 +1263,93 @@ export default function AutomationHub() {
   const reconciliationMatches =
     reconciliationDifference == null || Math.abs(reconciliationDifference) <= 1;
 
+  function shopAiOwnerReady() {
+    const review = result?.shopAiReview;
+    if (!review) return true;
+    const sameReview = String(shopAiOwnerDecision?.reviewGeneratedAt || "") === String(review?.generatedAt || "");
+    const sameFingerprint = String(shopAiOwnerDecision?.reviewFingerprint || "") === shopAiReviewFingerprint;
+    if (!sameReview || !sameFingerprint) return false;
+    if (review.status === "UNAVAILABLE") {
+      return shopAiOwnerDecision?.decision === "MANUAL_GO";
+    }
+    if (review.status !== "COMPLETED") return false;
+    return shopAiOwnerDecision?.decision === "GO";
+  }
+
+  async function viewOriginalInvoice() {
+    if (!ingestionId) {
+      setMessage("Stored invoice evidence is not available yet.");
+      return;
+    }
+    try {
+      const response = await getInvoiceReadUrl({
+        token: session?.access_token,
+        ingestionId,
+      });
+      window.open(response.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      raiseSystemError(error, "Unable to open original invoice");
+    }
+  }
+
+  function recordShopAiOwnerGo() {
+    const review = result?.shopAiReview;
+    if (!review) return;
+    const reviewGeneratedAt = String(review?.generatedAt || "");
+
+    if (review.status === "UNAVAILABLE") {
+      const reason = window.prompt(
+        "ShopAI is unavailable. Enter the reason you are continuing with manual verification:",
+        "Verified manually against the original invoice.",
+      );
+      if (reason === null || reason.trim().length < 4) return;
+      setShopAiOwnerDecision({
+        decision: "MANUAL_GO",
+        manualReason: reason.trim(),
+        recommendation: "UNAVAILABLE",
+        reviewGeneratedAt,
+        reviewFingerprint: shopAiReviewFingerprint,
+        at: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (review.status !== "COMPLETED") {
+      setMessage("ShopAI review is still processing. Analyze the invoice again before continuing.");
+      return;
+    }
+
+    let overrideReason = "";
+    if (review.recommendation !== "GO") {
+      const reason = window.prompt(
+        `ShopAI recommends ${review.recommendation || "REVIEW"}. Enter why you are overriding this recommendation after checking the original invoice:`,
+        "",
+      );
+      if (reason === null || reason.trim().length < 4) return;
+      overrideReason = reason.trim();
+    }
+
+    setShopAiOwnerDecision({
+      decision: "GO",
+      recommendation: review.recommendation || "REVIEW",
+      ...(overrideReason ? { overrideReason } : {}),
+      reviewGeneratedAt,
+      reviewFingerprint: shopAiReviewFingerprint,
+      at: new Date().toISOString(),
+    });
+  }
+
   async function sendDraft() {
     if (!result || !ingestionId) {
       setMessage("Complete OCR first so the stored invoice can open in Purchase Receiving Workspace.");
+      return;
+    }
+    if (!shopAiOwnerReady()) {
+      setMessage(
+        result?.shopAiReview?.status === "UNAVAILABLE"
+          ? "Record Manual GO after reviewing the original invoice, or choose NO-GO."
+          : "Review the complete ShopAI field table and record Owner GO before continuing.",
+      );
       return;
     }
 
@@ -1444,6 +1565,96 @@ export default function AutomationHub() {
               </div>
             </>
           )}
+        </section>
+      ) : null}
+
+      {result?.shopAiReview ? (
+        <section className="panel" style={{ marginTop: 16 }}>
+          <div className="button-row spread">
+            <div>
+              <h3>ShopAI Invoice Judge</h3>
+              <p className="muted-text">
+                One stored invoice was checked using Document Intelligence, Azure Vision and the actual invoice visual. Matching fields stay visible for owner verification.
+              </p>
+            </div>
+            <strong>
+              Recommendation: {result.shopAiReview.recommendation || result.shopAiReview.status || "REVIEW"}
+            </strong>
+          </div>
+
+          <div className="metric-grid four">
+            <div className="metric-card"><span>Fields</span><strong>{result.shopAiReview.fieldCount || result.shopAiReview.fields?.length || 0}</strong></div>
+            <div className="metric-card"><span>Matched</span><strong>{result.shopAiReview.matchedCount || 0}</strong></div>
+            <div className="metric-card"><span>Needs Attention</span><strong>{result.shopAiReview.findingCount || 0}</strong></div>
+            <div className="metric-card"><span>Visual Evidence</span><strong>{result.shopAiReview.visualEvidenceUsed ? "YES" : "MANUAL"}</strong></div>
+          </div>
+
+          {result.shopAiReview.status === "UNAVAILABLE" ? (
+            <div className="purchase-message" style={{ marginTop: 12 }}>
+              ShopAI visual review is unavailable ({result.shopAiReview.reason || "provider unavailable"}). The full manual OCR review remains available; continuing requires Manual GO with a reason.
+            </div>
+          ) : null}
+
+          {result.shopAiReview.summary ? <p>{result.shopAiReview.summary}</p> : null}
+          <p className="muted-text">
+            Vision shows deterministically mapped values where available; ShopAI also received the independent raw Azure Vision OCR text for the full invoice. ShopAI suggestions never auto-apply.
+          </p>
+
+          <div className="data-table-wrapper" style={{ marginTop: 12, maxHeight: 560, overflow: "auto" }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Doc Intel</th>
+                  <th>Vision</th>
+                  <th>ShopAI</th>
+                  <th>Verdict</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(result.shopAiReview.fields || []).map((row) => (
+                  <tr key={row.fieldId}>
+                    <td><strong>{row.label || row.fieldId}</strong></td>
+                    <td>{row.diValue || "—"}</td>
+                    <td>{row.visionValue || "—"}</td>
+                    <td>{row.verdict === "MATCH" ? (row.systemValue || row.diValue || row.visionValue || "—") : (row.suggestedValue || "—")}</td>
+                    <td>
+                      <strong>{row.verdict || "NOT_JUDGED"}</strong>
+                      {row.confidence ? <div className="muted-text">{row.confidence}</div> : null}
+                    </td>
+                    <td>{row.reason || "Owner review required."}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="button-row" style={{ marginTop: 12 }}>
+            <button type="button" className="secondary-button" onClick={viewOriginalInvoice}>
+              View Original Invoice
+            </button>
+            <button type="button" className="primary-button" onClick={recordShopAiOwnerGo}>
+              {result.shopAiReview.status === "UNAVAILABLE" ? "Manual GO" : "Owner GO"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setShopAiOwnerDecision({ decision: "REVIEW", at: new Date().toISOString() })}
+            >
+              Needs Correction
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setShopAiOwnerDecision({ decision: "NO_GO", at: new Date().toISOString() })}
+            >
+              NO-GO
+            </button>
+            <span className="muted-text">
+              Owner decision: <strong>{shopAiOwnerDecision?.decision || "PENDING"}</strong>. GO never bypasses date, finance, product, pack, batch, quantity or server checks.
+            </span>
+          </div>
         </section>
       ) : null}
 

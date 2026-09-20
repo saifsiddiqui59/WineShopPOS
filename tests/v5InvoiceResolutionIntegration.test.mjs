@@ -17,7 +17,10 @@ const failureRegister = fs.readFileSync(
 test("manual correction remains for header, line, finance and printed total", () => {
   assert.match(purchases, /Supplier<input/);
   assert.match(purchases, /Invoice Number<input/);
-  assert.match(purchases, /Invoice Date<input/);
+  assert.match(purchases, /IndianDateInput/);
+  assert.match(purchases, /aria-label="Invoice Date DD\/MM\/YYYY"/);
+  assert.match(purchases, /value=\{invoiceDate\}/);
+  assert.match(purchases, /setInvoiceDateReviewRequired\(!iso\)/);
   assert.match(purchases, /value=\{r\.caseCount\}/);
   assert.match(purchases, /value=\{r\.unitsPerCase/);
   assert.match(purchases, /value=\{r\.ratePerCase\}/);
@@ -54,7 +57,7 @@ test("OCR resolver preserves V5 server-authoritative ingestion handoff and fail-
   assert.match(automation, /p_normalized_invoice: data\.invoice/);
   assert.match(automation, /purchasing\/receive\?ingestion=\$\{ingestionId\}/);
   assert.doesNotMatch(automation, /purchaseDraftWithAssist/);
-  assert.match(ocr, /normalizeDocumentIntelligenceResult\(result\)/);
+  assert.match(ocr, /normalizeDocumentIntelligenceResult\(primaryResult\)/);
   assert.match(ocr, /resolveInvoiceExceptions/);
   assert.match(ocr, /RESOLVER_FAIL_OPEN_TO_MANUAL_REVIEW/);
 });

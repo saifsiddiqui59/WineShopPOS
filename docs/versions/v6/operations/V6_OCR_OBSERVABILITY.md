@@ -19,24 +19,27 @@ by this release.
 
 ## Correlation
 
-`ocr-invoice` uses the ingestion UUID as the correlation ID when available,
-otherwise a random UUID. The same `x-ms-client-request-id` is sent to Document
-Intelligence, Vision Read and the Shop-AI judge request.
+`ocr-invoice` requires the already-stored ingestion UUID and uses that UUID as
+the correlation ID. Requests without a stored ingestion ID are rejected so OCR,
+Blob evidence and ShopAI audit cannot drift onto different document identities.
+The same `x-ms-client-request-id` is sent to Document Intelligence, Vision Read
+and the ShopAI multimodal judge request.
 
 The Edge Function emits one compact `WSP_OCR_TRACE` event containing only:
 status, conflict counts, provider status and token counts.
 
 ## Shop-AI judge
 
-`gpt-5-mini` remains an evidence judge, not a document generator.
+`gpt-5-mini` remains an evidence judge, not an inventory authority.
 
-- one AI call maximum;
+- one multimodal AI call maximum per stored invoice;
 - `reasoning.effort = minimal`;
-- maximum two compatible candidates per unresolved target;
-- primary/DI and Vision candidates are both retained when available;
-- no invented money/date/text value;
-- conflicting OCR remains human-review unless deterministic validation resolves it;
-- stock receiving stays fail-closed.
+- the actual hash-verified invoice visual, DI values, Azure Vision evidence and deterministic calculations are supplied together;
+- all business-critical fields stay owner-visible, including MATCH fields;
+- `INFERRED_VISUAL` is allowed only as an advisory suggestion when the pixels support it and OCR does not;
+- ShopAI never silently applies a suggestion; Owner GO / manual override remains explicit;
+- unknown or over-budget PDFs fall back to manual review instead of an unbounded visual request;
+- stock receiving stays fail-closed behind deterministic server validation.
 
 ## Cost verification
 

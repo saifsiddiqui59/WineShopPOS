@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { normalizeDocumentIntelligenceResult } from "../_shared/invoiceDocument.js";
 import { resolveInvoiceExceptions } from "../_shared/invoiceResolutionFallback.js";
+import { buildShopAiFieldMatrix, estimatePdfPageCount, runShopAiReview } from "../_shared/invoiceShopAiReview.js";
 import {
   applySecondaryOcrConsensus,
   buildVisionReadSummary,
@@ -43,6 +44,141 @@ function decodeBase64(value: string) {
     bytes[index] = binary.charCodeAt(index);
   }
   return bytes;
+}
+
+function encodeBase64(bytes: Uint8Array) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, Math.min(bytes.length, offset + chunkSize));
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+async function sha256Hex(bytes: Uint8Array) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function persistAuthoritativeShopAiReview(
+  serviceClient: any,
+  ingestionId: string,
+  shopId: string,
+  review: any,
+) {
+  const { data, error } = await serviceClient
+    .from("invoice_ingestions")
+    .update({
+      shopai_review: review,
+      shopai_review_updated_at: new Date().toISOString(),
+    })
+    .eq("id", ingestionId)
+    .eq("shop_id", shopId)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data?.id) {
+    throw new Error("SHOPAI_AUTHORITATIVE_PERSIST_FAILED");
+  }
+}
+
+async function resolveCanonicalInvoiceDocument({
+  client,
+  ingestionId,
+  requestContentBase64,
+  requestContentType,
+  authHeader,
+  shopId,
+}: {
+  client: any;
+  ingestionId: string;
+  requestContentBase64: string;
+  requestContentType: string;
+  authHeader: string;
+  shopId: string;
+}) {
+  const { data: stored, error: storedError } = await client
+    .from("invoice_ingestions")
+    .select("id,sha256,content_type,size_bytes,original_file_name")
+    .eq("id", ingestionId)
+    .eq("shop_id", shopId)
+    .single();
+
+  if (storedError || !stored) {
+    throw new Error("Stored invoice audit record is unavailable");
+  }
+
+  const expectedHash = String(stored.sha256 || "").trim().toLowerCase();
+  if (!expectedHash) throw new Error("Stored invoice SHA-256 is unavailable");
+
+  const requestBytes = requestContentBase64
+    ? decodeBase64(requestContentBase64)
+    : new Uint8Array();
+
+  if (requestBytes.length) {
+    if (requestBytes.length > 4 * 1024 * 1024) {
+      throw new Error("Document exceeds the current 4 MB invoice OCR safety limit");
+    }
+    const requestHash = await sha256Hex(requestBytes);
+    if (requestHash === expectedHash) {
+      return {
+        bytes: requestBytes,
+        contentBase64: requestContentBase64,
+        contentType: String(stored.content_type || requestContentType || "application/octet-stream"),
+        fileName: String(stored.original_file_name || "invoice"),
+        sha256: expectedHash,
+        source: "REQUEST_HASH_MATCH",
+      };
+    }
+  }
+
+  const storageApi = String(Deno.env.get("WSP_INVOICE_STORAGE_API_URL") || "")
+    .replace(/\/+$/, "");
+  if (!storageApi) {
+    throw new Error("Canonical Blob fallback is not configured");
+  }
+
+  const readUrlResponse = await fetch(`${storageApi}/api/invoice/read-url`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: authHeader,
+    },
+    body: JSON.stringify({ ingestion_id: ingestionId }),
+  });
+  if (!readUrlResponse.ok) {
+    throw new Error(`Stored invoice read authorization failed: ${readUrlResponse.status}`);
+  }
+
+  const readPayload = await readUrlResponse.json();
+  const privateReadUrl = String(readPayload?.url || "");
+  if (!privateReadUrl) throw new Error("Stored invoice read URL was not returned");
+
+  const blobResponse = await fetch(privateReadUrl);
+  if (!blobResponse.ok) {
+    throw new Error(`Stored invoice Blob fetch failed: ${blobResponse.status}`);
+  }
+
+  const bytes = new Uint8Array(await blobResponse.arrayBuffer());
+  if (!bytes.length || bytes.length > 4 * 1024 * 1024) {
+    throw new Error("Stored invoice Blob size is outside the OCR safety limit");
+  }
+  const blobHash = await sha256Hex(bytes);
+  if (blobHash !== expectedHash) {
+    throw new Error("Stored invoice Blob hash verification failed");
+  }
+
+  return {
+    bytes,
+    contentBase64: encodeBase64(bytes),
+    contentType: String(stored.content_type || requestContentType || "application/octet-stream"),
+    fileName: String(stored.original_file_name || "invoice"),
+    sha256: expectedHash,
+    source: "AZURE_BLOB_HASH_VERIFIED",
+  };
 }
 
 async function runDocumentIntelligence({
@@ -177,6 +313,12 @@ Deno.serve(async (req) => {
       throw new Error("Manager or Admin role required");
     }
 
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+
     const diEndpoint = (Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") || "").replace(/\/$/, "");
     const diKey = Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_KEY") || "";
 
@@ -192,20 +334,42 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const contentBase64 = String(body?.contentBase64 || "");
-    const ingestionId = String(body?.ingestionId || "").trim() || null;
-    const correlationId = ingestionId || crypto.randomUUID();
-    if (!contentBase64) throw new Error("Document content is required");
+    const requestContentBase64 = String(body?.contentBase64 || "");
+    const requestContentType = String(body?.contentType || "application/octet-stream");
+    const ingestionId = String(body?.ingestionId || "").trim();
+    if (!ingestionId) throw new Error("Stored invoice ingestion ID is required");
+    const correlationId = ingestionId;
 
-    const estimatedBytes = Math.floor((contentBase64.length * 3) / 4);
-    if (estimatedBytes > 4 * 1024 * 1024) {
-      throw new Error("Document exceeds the current 4 MB invoice OCR safety limit");
-    }
+    const canonicalDocument = await resolveCanonicalInvoiceDocument({
+      client,
+      ingestionId,
+      requestContentBase64,
+      requestContentType,
+      authHeader,
+      shopId: profile.shop_id,
+    });
+    const contentBase64 = canonicalDocument.contentBase64;
+    const contentType = canonicalDocument.contentType;
+    const fileName = canonicalDocument.fileName;
+    const bytes = canonicalDocument.bytes;
+
+    await persistAuthoritativeShopAiReview(
+      serviceClient,
+      ingestionId,
+      profile.shop_id,
+      {
+        version: 1,
+        status: "PROCESSING",
+        generatedAt: new Date().toISOString(),
+        correlationId,
+        documentSha256: canonicalDocument.sha256,
+        canonicalDocumentSource: canonicalDocument.source,
+      },
+    );
 
     const secondaryEnabled = Deno.env.get("WSP_SECONDARY_OCR_ENABLED") === "true";
     const visionEndpoint = (Deno.env.get("AZURE_VISION_ENDPOINT") || "").replace(/\/$/, "");
     const visionKey = Deno.env.get("AZURE_VISION_KEY") || "";
-    const bytes = decodeBase64(contentBase64);
 
     const primaryPromise = runDocumentIntelligence({
       endpoint: diEndpoint,
@@ -238,7 +402,8 @@ Deno.serve(async (req) => {
       secondaryPromise,
     ]);
 
-    let invoice = normalizeDocumentIntelligenceResult(primaryResult);
+    const primaryInvoice = normalizeDocumentIntelligenceResult(primaryResult);
+    let invoice = structuredClone(primaryInvoice);
 
     const secondaryOcr = secondaryResult.ok
       ? buildVisionReadSummary(secondaryResult.payload, invoice, primaryResult)
@@ -252,6 +417,7 @@ Deno.serve(async (req) => {
           totalCandidates: [],
           supplierCandidates: [],
           itemBatches: {},
+          textLines: [],
           chosen: {},
         };
 
@@ -271,6 +437,7 @@ Deno.serve(async (req) => {
           model: Deno.env.get("WSP_INVOICE_AI_MODEL") || "",
           timeoutMs: Number(Deno.env.get("WSP_INVOICE_AI_TIMEOUT_MS") || "18000"),
           correlationId,
+          skipAi: true,
         },
       });
     } catch (resolverError) {
@@ -289,6 +456,69 @@ Deno.serve(async (req) => {
       );
     }
 
+    let shopAiReview: any;
+    try {
+      shopAiReview = await runShopAiReview({
+        config: {
+          enabled: Deno.env.get("WSP_INVOICE_AI_ENABLED") === "true",
+          baseUrl: Deno.env.get("WSP_INVOICE_AI_BASE_URL") || "",
+          apiKey: Deno.env.get("WSP_INVOICE_AI_API_KEY") || "",
+          model: Deno.env.get("WSP_INVOICE_AI_MODEL") || "",
+          timeoutMs: Number(Deno.env.get("WSP_INVOICE_AI_VISUAL_TIMEOUT_MS") || "30000"),
+          correlationId,
+        },
+        contentBase64,
+        contentType,
+        fileName,
+        primaryInvoice,
+        secondaryOcr,
+        invoice,
+        documentPageCount: estimatePdfPageCount({ bytes, contentType, fileName, diPageCount: Number(primaryResult?.analyzeResult?.pages?.length || 1) }),
+      });
+    } catch (shopAiError) {
+      const fallbackFields = buildShopAiFieldMatrix({ primaryInvoice, secondaryOcr, invoice })
+        .map((field) => ({
+          ...field,
+          verdict: "NOT_JUDGED",
+          suggestedValue: "",
+          confidence: "LOW",
+          reason: "ShopAI visual review failed safely; verify manually.",
+          ownerConfirmationRequired: true,
+        }));
+      shopAiReview = {
+        version: 1,
+        status: "UNAVAILABLE",
+        reason: "SHOP_AI_FAIL_OPEN_TO_MANUAL_REVIEW",
+        requiresOwnerConfirmation: true,
+        fields: fallbackFields,
+        fieldCount: fallbackFields.length,
+        matchedCount: 0,
+        findingCount: fallbackFields.length,
+        visualEvidenceUsed: false,
+      };
+      console.error(
+        "ShopAI multimodal judge failed safely",
+        String(shopAiError instanceof Error ? shopAiError.message : shopAiError).slice(0, 180),
+      );
+    }
+
+    const authoritativeShopAiReview = {
+      ...shopAiReview,
+      version: Number(shopAiReview?.version || 1),
+      generatedAt: String(shopAiReview?.generatedAt || new Date().toISOString()),
+      correlationId,
+      documentSha256: canonicalDocument.sha256,
+      canonicalDocumentSource: canonicalDocument.source,
+    };
+
+    await persistAuthoritativeShopAiReview(
+      serviceClient,
+      ingestionId,
+      profile.shop_id,
+      authoritativeShopAiReview,
+    );
+    invoice = { ...invoice, shopAiReview: authoritativeShopAiReview };
+
     console.log(JSON.stringify({
       event: "WSP_OCR_TRACE",
       correlationId,
@@ -302,6 +532,13 @@ Deno.serve(async (req) => {
       aiInputTokens: invoice?.resolutionAssist?.aiDiagnostics?.inputTokens ?? null,
       aiReasoningTokens: invoice?.resolutionAssist?.aiDiagnostics?.reasoningTokens ?? null,
       aiOutputTokens: invoice?.resolutionAssist?.aiDiagnostics?.outputTokens ?? null,
+      shopAiStatus: invoice?.shopAiReview?.status || "UNAVAILABLE",
+      shopAiRecommendation: invoice?.shopAiReview?.recommendation || null,
+      shopAiFieldCount: invoice?.shopAiReview?.fieldCount ?? null,
+      shopAiFindingCount: invoice?.shopAiReview?.findingCount ?? null,
+      shopAiInputTokens: invoice?.shopAiReview?.diagnostics?.inputTokens ?? null,
+      shopAiOutputTokens: invoice?.shopAiReview?.diagnostics?.outputTokens ?? null,
+      canonicalDocumentSource: canonicalDocument.source,
     }));
 
     return json({
@@ -311,7 +548,7 @@ Deno.serve(async (req) => {
       rawConfidence: invoice?.ocrQuality?.documentConfidence ?? null,
       model: "prebuilt-invoice+semantic-table+azure-vision-read-3.2",
       apiVersion: "DI:2024-11-30|Vision:3.2",
-      features: ["keyValuePairs", "parallelSecondaryRead", "crossOcrConsensus"],
+      features: ["keyValuePairs", "parallelSecondaryRead", "crossOcrConsensus", "canonicalBlobHash", "multimodalShopAiJudge"],
       secondaryOcr: {
         provider: secondaryOcr.provider,
         status: secondaryOcr.status,

@@ -50,7 +50,7 @@ export default function InvoiceInbox(){
     setMessage("");
     const{start,end}=monthRange(Number(year),Number(month));
     let q=supabase.from("invoice_ingestions")
-      .select("id,shop_id,purchase_id,source,source_identity,original_file_name,stored_file_name,blob_path,content_type,size_bytes,received_at,ocr_status,review_status,extracted_supplier_name,extracted_invoice_number,extracted_invoice_date,extracted_total,normalized_invoice,possible_duplicate_purchase_id,processing_error,review_draft,review_draft_updated_at,review_cancel_reason,review_cancelled_at")
+      .select("id,shop_id,purchase_id,source,source_identity,original_file_name,stored_file_name,blob_path,content_type,size_bytes,received_at,ocr_status,review_status,extracted_supplier_name,extracted_invoice_number,extracted_invoice_date,extracted_total,normalized_invoice,shopai_review,possible_duplicate_purchase_id,processing_error,review_draft,review_draft_updated_at,review_cancel_reason,review_cancelled_at")
       .eq("shop_id",profile.shop_id)
       .gte("received_at",start)
       .lt("received_at",end)
@@ -124,12 +124,13 @@ export default function InvoiceInbox(){
     if(draft?.stage==="OCR_REVIEW"){
       sessionStorage.setItem(REVIEW_KEY,JSON.stringify({
         ...draft,
+        result:draft.result?{...draft.result,shopAiReview:row.shopai_review||draft.result?.shopAiReview||null}:draft.result,
         ingestionId:row.id,
         sourceFileName:draft.sourceFileName||row.stored_file_name,
       }));
     }else{
       sessionStorage.setItem(REVIEW_KEY,JSON.stringify({
-        result:row.normalized_invoice,
+        result:row.normalized_invoice?{...row.normalized_invoice,shopAiReview:row.shopai_review||row.normalized_invoice?.shopAiReview||null}:row.normalized_invoice,
         matches:{},
         resolution:{},
         supplierId:"",

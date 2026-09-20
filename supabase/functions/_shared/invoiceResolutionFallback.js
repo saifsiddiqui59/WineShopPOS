@@ -1968,7 +1968,7 @@ export async function resolveInvoiceExceptions({
     mappings: [],
   };
 
-  if (aiIssues.length) {
+  if (aiIssues.length && config?.skipAi !== true) {
     aiResult = await requestAiMappings({
       config,
       supplierName,
@@ -1977,6 +1977,13 @@ export async function resolveInvoiceExceptions({
       evidence,
       fetchImpl,
     });
+  } else if (aiIssues.length) {
+    aiResult = {
+      ok: false,
+      called: false,
+      reason: "AI_DEFERRED_TO_MULTIMODAL_JUDGE",
+      mappings: [],
+    };
   }
 
   const aiMappings = aiResult.ok
@@ -2147,7 +2154,9 @@ export async function resolveInvoiceExceptions({
         allMappings.length > 0 ||
         unresolved.length > 0,
       costPolicy:
-        "MEMORY_FIRST_ONE_AI_CALL_MAX_DUAL_OCR_TEXT",
+        config?.skipAi
+          ? "MEMORY_DETERMINISTIC_THEN_ONE_MULTIMODAL_JUDGE"
+          : "MEMORY_FIRST_ONE_AI_CALL_MAX_DUAL_OCR_TEXT",
     },
   };
 }
