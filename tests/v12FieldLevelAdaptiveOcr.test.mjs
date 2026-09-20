@@ -439,3 +439,57 @@ test("MEDIUM adaptive evidence becomes a suggestion only when Vision and high-re
   assert.equal(merged.suggestions[0].suggestedValue, "2026-09-19");
   assert.equal(merged.suggestions[0].confidence, "MEDIUM");
 });
+
+
+test("disputed invoice date ignores the DI InvoiceDate box and rescues from semantic header context", () => {
+  const current = invoice();
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primaryResult(),
+    primaryInvoice: current,
+    secondaryOcr: secondary(),
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+
+  assert.equal(plan.headerRescuePolicy, "SEMANTIC_HEADER_CONTEXT_ON_REVIEW");
+
+  const date = plan.fieldChecks.find((row) => row.fieldId === "header:invoice_date");
+  assert.ok(date);
+  assert.equal(date.status, "RESCUE");
+  assert.ok(date.region);
+  assert.equal(date.region.page, 1);
+  assert.equal(date.region.xMin, 0);
+  assert.equal(date.region.xMax, 1);
+  assert.equal(date.region.yMin, 0);
+  assert.equal(date.region.yMax, 0.42);
+
+  const group = plan.rescueGroups.find((row) =>
+    (row.fields || []).some((field) => field.fieldId === "header:invoice_date")
+  );
+  assert.ok(group);
+  assert.equal(group.page, 1);
+  assert.equal(group.region.xMin, 0);
+  assert.equal(group.region.xMax, 1);
+  assert.equal(group.region.yMin, 0);
+  assert.equal(group.region.yMax, 0.44);
+});
+
+test("review-required supplier also uses semantic header context instead of disputed DI VendorName geometry", () => {
+  const current = invoice();
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primaryResult(),
+    primaryInvoice: current,
+    secondaryOcr: secondary(),
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+
+  const supplier = plan.fieldChecks.find((row) => row.fieldId === "header:supplier_name");
+  assert.ok(supplier);
+  assert.equal(supplier.status, "RESCUE");
+  assert.ok(supplier.reasons.includes("SUPPLIER_MATCHES_RECEIVING_SHOP"));
+  assert.equal(supplier.region.xMin, 0);
+  assert.equal(supplier.region.xMax, 1);
+  assert.equal(supplier.region.yMin, 0);
+  assert.equal(supplier.region.yMax, 0.42);
+});

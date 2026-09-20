@@ -456,7 +456,15 @@ export function buildAdaptiveOcrPlan({
     const status = reasons.length ? "RESCUE" : "PASS";
 
     let region = directRegion;
-    if (!region && (base.scope === "HEADER" || base.scope === "DOCUMENT")) {
+
+    // A disputed header field must be rescued from semantic header context,
+    // not from the DI field box that produced the disputed value. This is
+    // especially important for invoice date/vendor, where DI may point at a
+    // TP/transport date or the receiving shop. Geometry locates evidence;
+    // semantic ownership decides the value.
+    if (status === "RESCUE" && base.scope === "HEADER") {
+      region = fallbackRegion(base, table.rowRegions, table.tableRegion);
+    } else if (!region && base.scope === "DOCUMENT") {
       region = fallbackRegion(base, table.rowRegions, table.tableRegion);
     }
 
@@ -511,6 +519,7 @@ export function buildAdaptiveOcrPlan({
     maxRescueGroups: MAX_RESCUE_GROUPS,
     highResolutionPolicy: "ONLY_AFTER_DERIVATIVE_VISION_REMAINS_UNCERTAIN",
     derivativePolicy: "BROWSER_MEMORY_ONLY_NOT_STORED",
+    headerRescuePolicy: "SEMANTIC_HEADER_CONTEXT_ON_REVIEW",
     fieldChecks: checks,
     rescueGroups,
     manualOnlyFieldIds,
