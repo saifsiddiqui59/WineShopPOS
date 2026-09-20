@@ -98,6 +98,42 @@ function shopAiFieldSuggestion(review, fieldId) {
   };
 }
 
+const MACHINE_PACK_SOURCES = new Set([
+  "PRODUCT_MASTER",
+  "PRODUCT_MASTER_CONFIRMED",
+  "PRODUCT_MASTER_VS_PACK_PRIOR",
+  "PRICE_MRP_AUTO_SUGGESTED",
+  "PRIOR_330ML_BOTTLE_24",
+  "PRIOR_500ML_24",
+  "PRIOR_650ML_BOTTLE_12",
+  "PRIOR_750ML_BOTTLE_12",
+]);
+
+function isMachinePackSuggestion(source) {
+  const value = String(source || "");
+  return MACHINE_PACK_SOURCES.has(value) || value.startsWith("PRIOR_");
+}
+
+function friendlyPackSuggestion(row, item, priceSanity) {
+  const source = String(row?.unitsPerCaseSource || "");
+  const pack = Number(row?.unitsPerCase || 0);
+
+  if (source === "PRICE_MRP_AUTO_SUGGESTED") {
+    return row?.packAutoWarning ||
+      `Suggested ${pack} bottles/case from the price/MRP safety check. Verify before Confirm Line.`;
+  }
+  if (source.startsWith("PRODUCT_MASTER")) {
+    return `Suggested ${pack} bottles/case from a similar/known Product Master pack. Verify against the invoice/product before Confirm Line.`;
+  }
+  if (source.startsWith("PRIOR_")) {
+    return `Suggested ${pack} bottles/case from the existing size/package rules. Verify before Confirm Line.`;
+  }
+  if (priceSanity?.impossible) {
+    return `Current pack makes Price/Bottle ₹${priceSanity.pricePerBottle.toFixed(2)} reach/exceed MRP ₹${priceSanity.mrp.toFixed(2)}. Check the suggested pack before Confirm Line.`;
+  }
+  return `Suggested ${pack || "review"} bottles/case. Check before Confirm Line.`;
+}
+
 function linePriceSanity(item, row) {
   const mrp = Math.max(0, Number(item?.mrp || 0));
   const pricePerBottle = Math.max(0, Number(row?.purchasePrice || 0));
@@ -1572,22 +1608,38 @@ export default function AutomationHub() {
                 <div className="button-row" style={{marginTop:8}}>
                   <span className="muted-text">Invoice date options:</span>
                   {invoiceDateCandidates.map((candidate)=>(
-                    <button
-                      key={`${candidate.source || "OCR"}-${candidate.iso}`}
-                      type="button"
-                      className={candidate.suggested ? "primary-button" : "secondary-button"}
-                      title={candidate.reason || ""}
-                      onClick={()=>setResult((current)=>({
-                        ...current,
-                        invoiceDate:candidate.iso,
-                        invoiceDateReviewRequired:false,
-                        invoiceDateSource:candidate.suggested
-                          ? "HUMAN_CONFIRMED_SHOPAI_VISUAL"
-                          : "HUMAN_REVIEW_FROM_OCR_CANDIDATE",
-                      }))}
-                    >
-                      {candidate.suggested ? `Suggested ${formatIndiaDate(candidate.iso)}` : `Use ${formatIndiaDate(candidate.iso)}`}
-                    </button>
+                    candidate.suggested ? (
+                      <div key={`${candidate.source}-${candidate.iso}`} className="ocr-smart-suggestion ocr-smart-suggestion--compact" title={candidate.reason || ""}>
+                        <strong>Smart suggestion — check</strong>
+                        <span>Invoice date: {formatIndiaDate(candidate.iso)}</span>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={()=>setResult((current)=>({
+                            ...current,
+                            invoiceDate:candidate.iso,
+                            invoiceDateReviewRequired:false,
+                            invoiceDateSource:"HUMAN_CONFIRMED_SHOPAI_VISUAL",
+                          }))}
+                        >
+                          Use suggestion
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        key={`${candidate.source || "OCR"}-${candidate.iso}`}
+                        type="button"
+                        className="secondary-button"
+                        onClick={()=>setResult((current)=>({
+                          ...current,
+                          invoiceDate:candidate.iso,
+                          invoiceDateReviewRequired:false,
+                          invoiceDateSource:"HUMAN_REVIEW_FROM_OCR_CANDIDATE",
+                        }))}
+                      >
+                        Use {formatIndiaDate(candidate.iso)}
+                      </button>
+                    )
                   ))}
                 </div>
               ):null}
@@ -1615,32 +1667,25 @@ export default function AutomationHub() {
           ) : (
             <>
               {shopAiSupplierSuggestion ? (
-                <div className="purchase-message" style={{ marginBottom: 12 }}>
-                  <div>
-                    <strong>Suggested supplier from invoice: {shopAiSupplierSuggestion.value}</strong>
-                    <div className="muted-text">
-                      Visual confidence: {shopAiSupplierSuggestion.confidence}
-                      {shopAiSupplierSuggestion.reason ? ` · ${shopAiSupplierSuggestion.reason}` : ""}
-                    </div>
-                  </div>
+                <div className="ocr-smart-suggestion" style={{ marginBottom: 12 }}>
+                  <strong>Smart suggestion — check</strong>
+                  <span>Supplier: {shopAiSupplierSuggestion.value}</span>
                   {shopAiSupplierSuggestion.existingMatch ? (
                     <div className="button-row" style={{ marginTop: 8 }}>
                       <button
                         type="button"
-                        className="primary-button"
+                        className="secondary-button"
                         disabled={busy}
                         onClick={() => confirmSupplierById(shopAiSupplierSuggestion.existingMatch.id)}
                       >
                         Use {shopAiSupplierSuggestion.existingMatch.supplier_name}
                       </button>
-                      <span className="muted-text">
+                      <span>
                         Existing supplier match · {shopAiSupplierSuggestion.existingMatch.score}%
                       </span>
                     </div>
                   ) : (
-                    <div className="muted-text" style={{ marginTop: 8 }}>
-                      No reliable existing supplier match. Review the suggestion before creating a supplier.
-                    </div>
+                    <span>No reliable existing supplier match. Check before creating a supplier.</span>
                   )}
                 </div>
               ) : null}
@@ -1869,20 +1914,25 @@ export default function AutomationHub() {
                             {best?.product_name || "Product Master item"}
                           </div>
                         ) : row.source === "ALIAS" && reliableBest ? (
-                          <div className="purchase-message success">
-                            Learned alias match: <strong>{best.product_name}</strong>
+                          <div className="ocr-smart-suggestion">
+                            <strong>Smart suggestion — check</strong>
+                            <span>Learned product match: {best.product_name}</span>
                           </div>
                         ) : reliableBest ? (
-                          <div className="muted-text">
-                            Reliable Product Master match: <strong>{best.product_name}</strong>
-                            {" · "}{Math.round(bestScore * 100)}%
+                          <div className="ocr-smart-suggestion">
+                            <strong>Smart suggestion — check</strong>
+                            <span>Product match: {best.product_name} · {Math.round(bestScore * 100)}%</span>
                           </div>
                         ) : (
                           <div>
-                            <div className="ocr-suggested-product-name"><small>Suggested Product Name</small><strong>{suggestedProductName(item)}</strong></div>
-                            <div className="muted-text">
-                              <strong>No reliable Product Master match.</strong>
-                              {best ? ` Closest score ${Math.round(bestScore * 100)}% was not selected.` : ""}
+                            <div className="ocr-smart-suggestion">
+                              <strong>Smart suggestion — check</strong>
+                              <span>Product name: {suggestedProductName(item)}</span>
+                              {best ? (
+                                <span>Closest known product: {best.product_name} · {Math.round(bestScore * 100)}% · not selected</span>
+                              ) : (
+                                <span>No close Product Master product was found.</span>
+                              )}
                             </div>
                             <div style={{margin:"8px 0"}}>
                               <div className="verification-guidance verification-guidance--neutral">
@@ -1951,21 +2001,16 @@ export default function AutomationHub() {
                             )
                           }
                         />
-                        <div className="muted-text">{row.unitsPerCaseSource || "Review"}</div>
-                        {row.packAutoSuggested || priceSanity.impossible ? (
-                          <div className="ocr-pack-auto-warning">
-                            <strong>
-                              {row.packAutoSuggested
-                                ? `Auto-suggested ${row.unitsPerCase} bottles/case`
-                                : "Pack review required"}
-                            </strong>
-                            <span>
-                              {row.packAutoWarning ||
-                                `Current pack makes Price/Bottle ₹${priceSanity.pricePerBottle.toFixed(2)} reach/exceed MRP ₹${priceSanity.mrp.toFixed(2)}. Suggested pack: ${priceSanity.suggestedPack || "review invoice"}.`}
-                            </span>
-                            <span>Verify or change Bottles/Case, then Confirm Line.</span>
+                        {row.unitsPerCaseSource === "PRINTED_BOTTLE_TOTAL" ? (
+                          <div className="muted-text">From invoice OCR</div>
+                        ) : isMachinePackSuggestion(row.unitsPerCaseSource) || row.packAutoSuggested || priceSanity.impossible ? (
+                          <div className="ocr-pack-auto-warning ocr-smart-suggestion ocr-smart-suggestion--compact">
+                            <strong>Smart suggestion — check</strong>
+                            <span>{friendlyPackSuggestion(row, item, priceSanity)}</span>
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="muted-text">Check Bottles/Case</div>
+                        )}
                         {row.packConflict ? (
                           <div className="purchase-message">Pack conflict: invoice {row.invoiceUnitsPerCase} vs Product Master {row.productUnitsPerCase}</div>
                         ) : null}

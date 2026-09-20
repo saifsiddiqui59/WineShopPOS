@@ -7467,3 +7467,45 @@ html[data-theme="dark"] .global-phone-setup p { color:#d1d5db; }
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* V6_SMART_SUGGESTION_GOLDEN_20260920 */
+.ocr-smart-suggestion {
+  display: grid;
+  gap: 4px;
+  margin-top: 7px;
+  padding: 9px 11px;
+  border: 1px solid rgba(212, 175, 55, .72);
+  border-radius: 8px;
+  background: rgba(212, 175, 55, .10);
+  color: inherit;
+  box-shadow: inset 3px 0 0 rgba(212, 175, 55, .9);
+}
+
+.ocr-smart-suggestion strong {
+  color: #f0cf67;
+  font-size: 12px;
+  letter-spacing: .01em;
+}
+
+.ocr-smart-suggestion span {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.ocr-smart-suggestion--compact {
+  padding: 7px 9px;
+  min-width: 145px;
+}
+
+[data-theme="light"] .ocr-smart-suggestion,
+.light .ocr-smart-suggestion {
+  background: #fff8df;
+  border-color: #c99b22;
+  box-shadow: inset 3px 0 0 #c99b22;
+}
+
+[data-theme="light"] .ocr-smart-suggestion strong,
+.light .ocr-smart-suggestion strong {
+  color: #765400;
+}

@@ -108,7 +108,7 @@ test("image request is one multimodal judge request with raw Vision context",()=
   assert.equal(built.request.reasoning.effort,"minimal");
   assert.equal(built.request.max_output_tokens,6000);
   assert.ok(built.request.text.format.schema.required.includes("coverage_complete"));
-  assert.ok(built.request.text.format.schema.required.includes("reviewed_field_count"));
+  assert.equal("reviewed_field_count" in built.request.text.format.schema.properties,false);
   assert.ok(built.request.text.format.schema.required.includes("too_many_findings"));
   assert.equal("matched_field_ids" in built.request.text.format.schema.properties,false);
 });
@@ -133,13 +133,37 @@ test("DI/Vision conflict cannot be hidden as MATCH",()=>{
     recommendation:"GO",
     summary:"all good",
     coverage_complete:true,
-    reviewed_field_count:matrix.length,
     too_many_findings:false,
     findings:[],
   },matrix);
   const date=result.fields.find(x=>x.fieldId==="header:invoice_date");
   assert.equal(date.verdict,"MISMATCH");
   assert.equal(date.ownerConfirmationRequired,true);
+  assert.equal(result.recommendation,"REVIEW");
+});
+
+test("ShopAI useful findings survive without model self-count and omitted OCR conflicts stay manual",()=>{
+  const matrix=buildShopAiFieldMatrix(sample());
+  const dateId="header:invoice_date";
+  const result=validateShopAiReview({
+    recommendation:"REVIEW",
+    summary:"date visually corrected; other conflicts remain for owner",
+    coverage_complete:true,
+    too_many_findings:false,
+    findings:[{
+      field_id:dateId,
+      verdict:"INFERRED_VISUAL",
+      suggested_value:"2026-09-19",
+      confidence:"HIGH",
+      reason:"Printed date visually reads 19-09-2026.",
+    }],
+  },matrix);
+
+  assert.equal(result.ok,true);
+  assert.equal(result.fields.find(x=>x.fieldId===dateId).suggestedValue,"2026-09-19");
+  const supplier=result.fields.find(x=>x.fieldId==="header:supplier_name");
+  assert.equal(supplier.verdict,"MISMATCH");
+  assert.equal(supplier.ownerConfirmationRequired,true);
   assert.equal(result.recommendation,"REVIEW");
 });
 
@@ -150,7 +174,6 @@ test("visual inference is suggestion-only and forces REVIEW",()=>{
     recommendation:"GO",
     summary:"date visible",
     coverage_complete:true,
-    reviewed_field_count:matrix.length,
     too_many_findings:false,
     findings:[{
       field_id:dateId,
@@ -173,7 +196,6 @@ test("compact coverage contract fails closed and line coverage issue forces NO_G
     recommendation:"REVIEW",
     summary:"not all fields reviewed",
     coverage_complete:false,
-    reviewed_field_count:matrix.length-1,
     too_many_findings:false,
     findings:[],
   },matrix);
@@ -185,7 +207,6 @@ test("compact coverage contract fails closed and line coverage issue forces NO_G
     recommendation:"REVIEW",
     summary:"coverage mismatch",
     coverage_complete:true,
-    reviewed_field_count:matrix.length,
     too_many_findings:false,
     findings:[{
       field_id:coverage,
@@ -199,7 +220,7 @@ test("compact coverage contract fails closed and line coverage issue forces NO_G
   assert.equal(result.ok,true);
   assert.equal(result.recommendation,"NO_GO");
   assert.equal(result.coverageComplete,true);
-  assert.equal(result.reviewedFieldCount,matrix.length);
+  assert.equal("reviewedFieldCount" in result,false);
 });
 
 test("octet-stream visual type is inferred from filename",()=>{
@@ -314,8 +335,10 @@ test("owner UI keeps the authoritative ShopAI gate behind the existing operator 
   assert.match(source,/Open Purchase Receiving Workspace/);
   assert.match(source,/shopAiFieldSuggestion/);
   assert.match(source,/HUMAN_CONFIRMED_SHOPAI_VISUAL/);
-  assert.match(source,/Suggested supplier from invoice/);
+  assert.match(source,/Smart suggestion — check/);
   assert.match(source,/confirmSupplierById/);
+  assert.match(source,/friendlyPackSuggestion/);
+  assert.match(source,/From invoice OCR/);
 
   // Developer diagnostics are no longer exposed as the normal shop-operator UI.
   assert.doesNotMatch(source,/ShopAI Invoice Judge/);
