@@ -199,8 +199,10 @@ test("compact coverage contract fails closed and line coverage issue forces NO_G
     too_many_findings:false,
     findings:[],
   },matrix);
-  assert.equal(incomplete.ok,false);
-  assert.equal(incomplete.reason,"SHOP_AI_COVERAGE_INCOMPLETE");
+  assert.equal(incomplete.ok,true);
+  assert.equal(incomplete.coverageComplete,false);
+  assert.equal(incomplete.recommendation,"NO_GO");
+  assert.equal(incomplete.fields.find(x=>x.fieldId==="header:invoice_number").verdict,"NOT_JUDGED");
 
   const coverage="document:line_coverage";
   const result=validateShopAiReview({
@@ -344,6 +346,11 @@ test("owner UI keeps the authoritative ShopAI gate behind the existing operator 
   assert.match(source,/`item:\$\{index\}:batch_number`/);
   assert.match(source,/Batch \/ Lot:/);
   assert.match(source,/OCR product:/);
+  assert.match(source,/applyShopAiVisualPrefills/);
+  assert.match(source,/supplierSource\s*=\s*"SHOPAI_VISUAL_SUGGESTION"/);
+  assert.match(source,/invoiceDateSource\s*=\s*"SHOPAI_VISUAL_SUGGESTION"/);
+  assert.match(source,/batchSuggestionSource:\s*"SHOPAI_VISUAL_SUGGESTION"/);
+  assert.match(source,/const aiSupplierPrefilled/);
   assert.doesNotMatch(source,/<span>Product name: \{suggestedProductName\(item\)\}<\/span>/);
 
   // Developer diagnostics are no longer exposed as the normal shop-operator UI.
@@ -364,6 +371,8 @@ test("Purchase Receiving and Inbox use authoritative ShopAI state",()=>{
   assert.match(purchases,/shopAiReviewSuggestion/);
   assert.match(purchases,/`item:\$\{i\}:batch_number`/);
   assert.match(purchases,/Confirm Batch/);
+  assert.match(purchases,/batchSuggestionSource/);
+  assert.match(purchases,/SHOPAI_VISUAL_SUGGESTION/);
   assert.match(inbox,/normalized_invoice,shopai_review/);
   assert.match(inbox,/shopAiReview:row\.shopai_review/);
 });

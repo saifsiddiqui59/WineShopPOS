@@ -267,6 +267,7 @@ Compact output contract:
 - Set coverage_complete=true only after you have reviewed every field_id in field_matrix against the actual invoice and supplied evidence.
 - Do not count or echo reviewed fields. The server owns canonical field counting.
 - findings contains ONLY fields that need attention.
+- Return each field_id at most once. Never duplicate a field_id.
 - If more than 80 fields need attention, set too_many_findings=true, recommendation=NO_GO and return at most the first 80 findings.
 - If all fields are acceptable, findings is an empty array.
 - A DI/Vision conflict is never silently treated as a match. Return a finding when the visual resolves it; if you omit it, the server will keep that field in manual review.
@@ -288,7 +289,7 @@ Important rules:
 - For line fields, keep row identity aligned. Do not copy a batch/MRP/amount from another product row.
 - Never infer bottles/case, loose bottles or printed bottle quantity from customary packaging. WineShopPOS has separate deterministic pack rules; ShopAI must only judge what is actually printed/visually supported.
 - If DI and Vision disagree, inspect the actual visual. Prefer a source only when the document supports it; otherwise use INFERRED_VISUAL, UNREADABLE, or MISMATCH.
-- For supplier, distinguish the invoice vendor/supplier from the buyer/receiving shop. Do not suggest the buyer/shop name as the supplier merely because it is prominent.
+- For supplier, distinguish the invoice vendor/supplier from the buyer/receiving shop. Return exactly ONE final supplier/vendor judgment when attention is needed. Never return the buyer/receiving shop as supplier merely because it is prominent.
 - recommendation GO means you found no material issue after visually reviewing all fields. REVIEW means owner correction/confirmation is needed. NO_GO means the document/coverage is unsafe to continue without resolving a material problem.
 - Keep reasons concise and specific.
 `.trim();
@@ -460,27 +461,98 @@ export function validateShopAiReview(payload, matrix) {
   if (!Array.isArray(payload?.findings)) {
     return { ok: false, reason: "SHOP_AI_RESPONSE_SHAPE_INVALID" };
   }
-  if (payload?.coverage_complete !== true) {
-    return { ok: false, reason: "SHOP_AI_COVERAGE_INCOMPLETE" };
-  }
 
-  if (payload?.too_many_findings === true) {
-    return { ok: false, reason: "SHOP_AI_TOO_MANY_FINDINGS" };
-  }
-  if (payload.findings.length > MAX_FINDINGS) {
-    return { ok: false, reason: "SHOP_AI_TOO_MANY_FINDINGS" };
-  }
+  const modelCoverageComplete = payload?.coverage_complete === true;
+  const tooManyFindings =
+    payload?.too_many_findings === true ||
+    payload.findings.length > MAX_FINDINGS;
+  const trustedOmissionCoverage = modelCoverageComplete && !tooManyFindings;
 
   const byId = new Map(matrix.map((field) => [field.fieldId, field]));
-  const findingById = new Map();
+  const grouped = new Map();
+  const unknownFindingFieldIds = [];
 
-  for (const finding of payload.findings) {
+  for (const finding of payload.findings.slice(0, MAX_FINDINGS)) {
     const id = String(finding?.field_id || "");
-    if (!byId.has(id)) return { ok: false, reason: `SHOP_AI_UNKNOWN_FINDING_FIELD:${id}` };
-    if (findingById.has(id)) {
-      return { ok: false, reason: `SHOP_AI_DUPLICATE_FIELD_COVERAGE:${id}` };
+    if (!byId.has(id)) {
+      if (id) unknownFindingFieldIds.push(id);
+      continue;
     }
-    findingById.set(id, finding);
+    const list = grouped.get(id) || [];
+    list.push(finding);
+    grouped.set(id, list);
+  }
+
+  const confidenceRank = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+  const findingById = new Map();
+  const duplicateFindingFieldIds = [];
+  const conflictingDuplicateFieldIds = [];
+
+  for (const [id, list] of grouped.entries()) {
+    if (list.length === 1) {
+      findingById.set(id, list[0]);
+      continue;
+    }
+
+    duplicateFindingFieldIds.push(id);
+    const field = byId.get(id);
+    const effective = list.map((finding) => effectiveFinding(field, finding));
+    const normalized = effective.map((finding) =>
+      normComparable(finding.suggestedValue)
+    );
+    const nonBlank = normalized.filter(Boolean);
+    const uniqueNonBlank = new Set(nonBlank);
+
+    if (nonBlank.length === effective.length && uniqueNonBlank.size === 1) {
+      const strongest = effective
+        .slice()
+        .sort((a, b) =>
+          (confidenceRank[b.confidence] || 0) -
+          (confidenceRank[a.confidence] || 0)
+        )[0];
+
+      const suggestion =
+        strongest?.suggestedValue ||
+        effective[0]?.suggestedValue ||
+        "";
+
+      let verdict = "INFERRED_VISUAL";
+      if (normComparable(suggestion) === normComparable(field.diValue)) {
+        verdict = "PREFER_DI";
+      } else if (
+        normComparable(suggestion) === normComparable(field.visionValue)
+      ) {
+        verdict = "PREFER_VISION";
+      }
+
+      findingById.set(id, {
+        field_id: id,
+        verdict,
+        suggested_value: suggestion,
+        confidence: strongest?.confidence || "MEDIUM",
+        reason:
+          strongest?.reason ||
+          "Duplicate ShopAI observations agreed on the same visual value.",
+      });
+      continue;
+    }
+
+    conflictingDuplicateFieldIds.push(id);
+    const allUnreadable = effective.every(
+      (finding) =>
+        finding.verdict === "UNREADABLE" &&
+        !normComparable(finding.suggestedValue)
+    );
+
+    findingById.set(id, {
+      field_id: id,
+      verdict: allUnreadable ? "UNREADABLE" : "MISMATCH",
+      suggested_value: "",
+      confidence: "LOW",
+      reason: allUnreadable
+        ? "ShopAI could not read this field reliably; owner review is required."
+        : "ShopAI returned conflicting visual observations for this field; owner review is required.",
+    });
   }
 
   const fields = matrix.map((field) => {
@@ -494,7 +566,20 @@ export function validateShopAiReview(payload, matrix) {
         verdict: "MISMATCH",
         suggestedValue: "",
         confidence: "LOW",
-        reason: "Document Intelligence and Azure Vision disagree; explicit visual confirmation is required.",
+        reason:
+          "Document Intelligence and Azure Vision disagree; explicit visual confirmation is required.",
+        ownerConfirmationRequired: true,
+      };
+    }
+
+    if (!trustedOmissionCoverage) {
+      return {
+        ...field,
+        verdict: "NOT_JUDGED",
+        suggestedValue: "",
+        confidence: "LOW",
+        reason:
+          "Automatic visual coverage was incomplete; verify this field manually.",
         ownerConfirmationRequired: true,
       };
     }
@@ -502,22 +587,39 @@ export function validateShopAiReview(payload, matrix) {
     return {
       ...field,
       verdict: "MATCH",
-      suggestedValue: field.systemValue || field.diValue || field.visionValue || "",
+      suggestedValue:
+        field.systemValue ||
+        field.diValue ||
+        field.visionValue ||
+        "",
       confidence: "HIGH",
-      reason: "ShopAI completed visual coverage and found no material discrepancy for this field.",
+      reason:
+        "ShopAI completed visual coverage and found no material discrepancy for this field.",
       ownerConfirmationRequired: false,
     };
   });
 
   const material = fields.filter((field) => field.verdict !== "MATCH");
-  const coverage = fields.find((field) => field.fieldId === "document:line_coverage");
-  const providerRecommendation = ["GO", "REVIEW", "NO_GO"].includes(String(payload?.recommendation))
+  const lineCoverage = fields.find(
+    (field) => field.fieldId === "document:line_coverage"
+  );
+  const providerRecommendation = ["GO", "REVIEW", "NO_GO"].includes(
+    String(payload?.recommendation)
+  )
     ? String(payload.recommendation)
     : "REVIEW";
 
-  let recommendation = providerRecommendation;
-  if (coverage && coverage.verdict !== "MATCH") recommendation = "NO_GO";
-  else if (material.length && recommendation === "GO") recommendation = "REVIEW";
+  let recommendation = "GO";
+  if (!lineCoverage || lineCoverage.verdict !== "MATCH") {
+    recommendation = "NO_GO";
+  } else if (
+    material.length ||
+    unknownFindingFieldIds.length ||
+    conflictingDuplicateFieldIds.length ||
+    !trustedOmissionCoverage
+  ) {
+    recommendation = "REVIEW";
+  }
 
   return {
     ok: true,
@@ -527,14 +629,18 @@ export function validateShopAiReview(payload, matrix) {
     summary: text(payload?.summary || "", MAX_SUMMARY_CHARS),
     fields,
     fieldCount: fields.length,
-    coverageComplete: true,
+    coverageComplete: trustedOmissionCoverage,
+    modelCoverageComplete,
+    tooManyFindings,
     matchedCount: fields.length - material.length,
     findingCount: material.length,
     requiresOwnerConfirmation: true,
     visualEvidenceUsed: true,
+    duplicateFindingFieldIds,
+    conflictingDuplicateFieldIds,
+    unknownFindingFieldIds: [...new Set(unknownFindingFieldIds)],
   };
 }
-
 function safeToken(value) {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
@@ -632,7 +738,7 @@ export async function runShopAiReview({
     };
   }
 
-  const timeoutMs = Math.max(5000, Math.min(45000, Number(config.timeoutMs || 30000)));
+  const timeoutMs = Math.max(5000, Math.min(90000, Number(config.timeoutMs || 60000)));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -749,7 +855,7 @@ export async function runShopAiReview({
     }
 
     return {
-      version: 3,
+      version: 4,
       ...validated,
       generatedAt: new Date().toISOString(),
       diagnostics: {

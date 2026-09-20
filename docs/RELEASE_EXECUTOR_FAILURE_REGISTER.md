@@ -3424,3 +3424,43 @@ Safe continuation:
 Do not re-upload the invoice. Retry Analyze Invoice on the already-stored
 ingestion after source-history synchronization. Do not receive stock until the
 new multimodal result has been inspected.
+
+
+### 2026-09-20 — V6 ShopAI visual-prefill V1 regression assertion shape mismatch
+
+Marker: `V6_SHOPAI_PREFILL_V1_STATIC_ASSERTION_SHAPE_20260920`
+
+Release/stage:
+V6 ShopAI Visual Resolver + Prefill PROD V1 — regression-tests.
+
+Symptom:
+The isolated candidate reached the regression suite and `v6ShopAiMultimodalReview.test.mjs`
+failed before commit, push, Edge deployment, frontend deployment, DB mutation, or QA/DEV mutation.
+
+Root cause:
+The new source correctly assigned review provenance after cloning the invoice, for example
+`next.supplierSource = "SHOPAI_VISUAL_SUGGESTION"`, but the generated static tests searched
+for object-literal syntax such as `supplierSource: "SHOPAI_VISUAL_SUGGESTION"`.
+The new test also required a literal `!aiSupplierPrefilled` even though the implementation
+used the safer positive branch `if (aiSupplierPrefilled) { ... } else if (...)`.
+The validator was testing the generator's imagined source spelling rather than the actual
+business invariant.
+
+Resolution:
+Keep the application candidate design, but assert the real assignment syntax and the
+actual no-auto-confirm branch ordering. Re-run from a fresh isolated worktree before
+any production write.
+
+Permanent prevention:
+- Static source regressions must assert the business/security invariant and the actual
+  implementation form produced by the patch.
+- When a patch uses post-clone assignments, do not assert object-literal `key:` syntax.
+- For a negative safety property such as "AI-prefilled supplier is not auto-confirmed",
+  assert branch structure/behavior rather than requiring an arbitrary negation token.
+- Candidate qualification must stay before commit/deploy so this class of failure remains
+  a production no-op.
+
+Safe continuation:
+Current PROD/main source is unchanged by V1. Rebuild the candidate from current
+`origin/main`, apply corrected assertions, run the focused suite and PROD build, and only
+then commit/deploy.

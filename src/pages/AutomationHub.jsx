@@ -98,6 +98,67 @@ function shopAiFieldSuggestion(review, fieldId) {
   };
 }
 
+function applyShopAiVisualPrefills(invoice) {
+  if (!invoice || invoice?.shopAiReview?.status !== "COMPLETED") return invoice;
+
+  const review = invoice.shopAiReview;
+  const next = {
+    ...invoice,
+    items: (invoice.items || []).map((item) => ({ ...item })),
+  };
+  const prefilledFields = [];
+
+  const supplier = shopAiFieldSuggestion(review, "header:supplier_name");
+  if (supplier?.value) {
+    next.supplierOriginalValue = next.supplierOriginalValue ?? next.supplierName ?? "";
+    next.supplierName = supplier.value;
+    next.supplierSource = "SHOPAI_VISUAL_SUGGESTION";
+    next.supplierReviewRequired = true;
+    next.supplierSuggestionReason = supplier.reason || "";
+    prefilledFields.push("supplier");
+  }
+
+  const invoiceNumber = shopAiFieldSuggestion(review, "header:invoice_number");
+  if (invoiceNumber?.value) {
+    next.invoiceNumberOriginalValue = next.invoiceNumberOriginalValue ?? next.invoiceNumber ?? "";
+    next.invoiceNumber = invoiceNumber.value;
+    next.invoiceNumberSource = "SHOPAI_VISUAL_SUGGESTION";
+    next.invoiceNumberReviewRequired = true;
+    next.invoiceNumberSuggestionReason = invoiceNumber.reason || "";
+    prefilledFields.push("invoice number");
+  }
+
+  const date = shopAiFieldSuggestion(review, "header:invoice_date");
+  const dateIso = normalizeSuggestedInvoiceDate(date?.value);
+  if (dateIso) {
+    next.invoiceDateOriginalValue = next.invoiceDateOriginalValue ?? next.invoiceDate ?? "";
+    next.invoiceDate = dateIso;
+    next.invoiceDateSource = "SHOPAI_VISUAL_SUGGESTION";
+    next.invoiceDateReviewRequired = true;
+    next.invoiceDateSuggestionReason = date?.reason || "";
+    prefilledFields.push("invoice date");
+  }
+
+  next.items = next.items.map((item, index) => {
+    const batch = shopAiFieldSuggestion(review, `item:${index}:batch_number`);
+    if (!batch?.value) return item;
+    prefilledFields.push(`batch ${index + 1}`);
+    return {
+      ...item,
+      batchOriginalValue: item.batchOriginalValue ?? item.batchNumber ?? "",
+      batchNumber: batch.value,
+      batchReviewRequired: true,
+      batchSuggestionSource: "SHOPAI_VISUAL_SUGGESTION",
+      batchSuggestionReason: batch.reason || "",
+    };
+  });
+
+  return {
+    ...next,
+    shopAiPrefilledFields: [...new Set(prefilledFields)],
+  };
+}
+
 const MACHINE_PACK_SOURCES = new Set([
   "PRODUCT_MASTER",
   "PRODUCT_MASTER_CONFIRMED",
@@ -897,8 +958,9 @@ export default function AutomationHub() {
       );
       timing.ocrMs = Math.round(performance.now() - stageStarted);
 
-      setResult(data.invoice);
-      setCharges(chargesFromInvoice(data.invoice));
+      const reviewInvoice = applyShopAiVisualPrefills(data.invoice);
+      setResult(reviewInvoice);
+      setCharges(chargesFromInvoice(reviewInvoice));
 
       stageStarted = performance.now();
       const { data: metadata, error: metadataError } = await supabase.rpc(
@@ -909,7 +971,7 @@ export default function AutomationHub() {
           p_invoice_number: data.invoice?.invoiceNumber || null,
           p_invoice_date: data.invoice?.invoiceDate || null,
           p_total: data.invoice?.total ?? null,
-          p_normalized_invoice: data.invoice,
+          p_normalized_invoice: reviewInvoice,
         },
       );
       timing.metadataMs = Math.round(performance.now() - stageStarted);
@@ -925,21 +987,25 @@ export default function AutomationHub() {
         .map((supplier) => ({
           ...supplier,
           score: supplierScore(
-            data.invoice.supplierName,
+            reviewInvoice.supplierName,
             supplier.supplier_name,
           ),
         }))
         .sort((a, b) => b.score - a.score);
 
       const exactMatches = ranked.filter((supplier) => supplier.score === 100);
+      const aiSupplierPrefilled =
+        reviewInvoice?.supplierSource === "SHOPAI_VISUAL_SUGGESTION";
       let autoConfirmedSupplier = null;
 
-      if (exactMatches.length === 1) {
+      if (aiSupplierPrefilled) {
+        if (ranked[0]?.score >= 80) setSupplierId(ranked[0].id);
+      } else if (exactMatches.length === 1) {
         autoConfirmedSupplier = exactMatches[0];
         setSupplierId(autoConfirmedSupplier.id);
 
         stageStarted = performance.now();
-        await resolveProductLines(data.invoice, autoConfirmedSupplier.id);
+        await resolveProductLines(reviewInvoice, autoConfirmedSupplier.id);
         timing.productMatchMs = Math.round(performance.now() - stageStarted);
 
         setConfirmedSupplier(autoConfirmedSupplier);
@@ -950,6 +1016,10 @@ export default function AutomationHub() {
       if (duplicateStatus === "POSSIBLE_DUPLICATE") {
         setMessage(
           "OCR complete, but this looks like a possible duplicate. Resolve it in Invoice Inbox before Receive Stock.",
+        );
+      } else if (reviewInvoice?.shopAiPrefilledFields?.length) {
+        setMessage(
+          `AI visually prefilled ${reviewInvoice.shopAiPrefilledFields.length} field(s). Check the golden suggestions and confirm them before stock receipt.`,
         );
       } else if (autoConfirmedSupplier) {
         setMessage(
@@ -1620,6 +1690,13 @@ export default function AutomationHub() {
               />
             </label>
           </div>
+          {result.invoiceNumberSource === "SHOPAI_VISUAL_SUGGESTION" ? (
+            <div className="ocr-smart-suggestion" style={{ marginBottom: 12 }}>
+              <strong>Smart suggestion — check</strong>
+              <span>Invoice / Reference: {result.invoiceNumber || "—"}</span>
+              <span>AI prefilled this value from the original invoice image. Edit it above if needed.</span>
+            </div>
+          ) : null}
           {result.invoiceDateReviewRequired ? (
             <div className="purchase-message">
               <div>Invoice date needs review. Azure raw value: {result.invoiceDateRaw || "not resolved"}. Confirm the physical invoice date before receiving stock.</div>
@@ -1641,7 +1718,7 @@ export default function AutomationHub() {
                             invoiceDateSource:"HUMAN_CONFIRMED_SHOPAI_VISUAL",
                           }))}
                         >
-                          Use suggestion
+                          Confirm AI suggestion
                         </button>
                       </div>
                     ) : (
@@ -1669,7 +1746,8 @@ export default function AutomationHub() {
           </p>
           {!confirmedSupplier ? (
             <p>
-              OCR Supplier: <strong>{result.supplierName || "Not detected"}</strong>
+              {result.supplierSource === "SHOPAI_VISUAL_SUGGESTION" ? "Supplier" : "OCR Supplier"}:{" "}
+              <strong>{result.supplierName || "Not detected"}</strong>
             </p>
           ) : null}
           {result.vendorTaxId ? (
@@ -1689,6 +1767,7 @@ export default function AutomationHub() {
                 <div className="ocr-smart-suggestion" style={{ marginBottom: 12 }}>
                   <strong>Smart suggestion — check</strong>
                   <span>Supplier: {shopAiSupplierSuggestion.value}</span>
+                  <span>AI prefilled the supplier after checking the original invoice. Confirm the existing supplier before continuing.</span>
                   {shopAiSupplierSuggestion.existingMatch ? (
                     <div className="button-row" style={{ marginTop: 8 }}>
                       <button
@@ -1906,6 +1985,8 @@ export default function AutomationHub() {
                     result?.shopAiReview,
                     `item:${index}:batch_number`,
                   );
+                  const batchAiPrefilled =
+                    item?.batchSuggestionSource === "SHOPAI_VISUAL_SUGGESTION";
                   const showBatchSmartSuggestion=Boolean(
                     batchSmartSuggestion?.value &&
                     normalize(batchSmartSuggestion.value) !== normalize(item?.batchNumber),
@@ -1933,7 +2014,13 @@ export default function AutomationHub() {
                       <td><strong>{resolvedSizeMl>0?`${resolvedSizeMl} ml`:"Review"}</strong></td>
                       <td>
                         <strong>{item.batchNumber || "—"}</strong>
-                        {showBatchSmartSuggestion ? (
+                        {batchAiPrefilled ? (
+                          <div className="ocr-smart-suggestion ocr-smart-suggestion--compact">
+                            <strong>Smart suggestion — check</strong>
+                            <span>Batch / Lot: {item.batchNumber || "—"}</span>
+                            <span>AI prefilled this value from the original invoice. Confirm it against the invoice in Purchase Receiving.</span>
+                          </div>
+                        ) : showBatchSmartSuggestion ? (
                           <div className="ocr-smart-suggestion ocr-smart-suggestion--compact">
                             <strong>Smart suggestion — check</strong>
                             <span>Batch / Lot: {batchSmartSuggestion.value}</span>
