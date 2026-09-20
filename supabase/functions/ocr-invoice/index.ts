@@ -6,6 +6,11 @@ import {
   applySecondaryOcrConsensus,
   buildVisionReadSummary,
 } from "../_shared/invoiceSecondaryOcr.js";
+import {
+  analyzeAdaptiveRescueGroup,
+  buildAdaptiveOcrPlan,
+  mergeAdaptiveRescueResults,
+} from "../_shared/invoiceAdaptiveOcr.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -186,90 +191,70 @@ async function runDocumentIntelligence({
   key,
   contentBase64,
   correlationId,
+  modelId = "prebuilt-invoice",
+  features = ["keyValuePairs"],
 }: {
   endpoint: string;
   key: string;
   contentBase64: string;
   correlationId: string;
+  modelId?: string;
+  features?: string[];
 }) {
-  const featureAttempts = [
-    ["keyValuePairs", "ocrHighResolution"],
-    ["keyValuePairs"],
-  ];
+  const enabledFeatures = [...new Set((features || []).filter(Boolean))];
+  const featureQuery = enabledFeatures.length
+    ? `&features=${enabledFeatures.join(",")}`
+    : "";
+  const analyzeUrl =
+    `${endpoint}/documentintelligence/documentModels/${modelId}:analyze` +
+    `?_overload=analyzeDocument&api-version=2024-11-30${featureQuery}`;
 
-  let lastSubmitError = "";
+  const analyze = await fetch(analyzeUrl, {
+    method: "POST",
+    headers: {
+      "Ocp-Apim-Subscription-Key": key,
+      "Content-Type": "application/json",
+      "x-ms-client-request-id": correlationId,
+    },
+    body: JSON.stringify({ base64Source: contentBase64 }),
+  });
 
-  for (let featureIndex = 0; featureIndex < featureAttempts.length; featureIndex += 1) {
-    const enabledFeatures = featureAttempts[featureIndex];
-    const analyzeUrl =
-      `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze` +
-      `?_overload=analyzeDocument&api-version=2024-11-30&features=${enabledFeatures.join(",")}`;
-
-    const analyze = await fetch(analyzeUrl, {
-      method: "POST",
-      headers: {
-        "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": "application/json",
-        "x-ms-client-request-id": correlationId,
-      },
-      body: JSON.stringify({ base64Source: contentBase64 }),
-    });
-
-    if (!analyze.ok) {
-      const body = await analyze.text();
-      lastSubmitError = `${analyze.status} ${body}`;
-
-      const optionalFeatureRejected =
-        featureIndex === 0 &&
-        [400, 404, 422].includes(Number(analyze.status || 0));
-
-      if (optionalFeatureRejected) {
-        console.warn(
-          "Document Intelligence ocrHighResolution was rejected; retrying safely with keyValuePairs only",
-          String(body || "").slice(0, 180),
-        );
-        continue;
-      }
-
-      throw new Error(`Azure OCR analyze failed: ${lastSubmitError}`);
-    }
-
-    const operation = analyze.headers.get("operation-location");
-    if (!operation) throw new Error("Azure OCR did not return operation-location");
-
-    let result: any = null;
-    for (let attempt = 0; attempt < 45; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const poll = await fetch(operation, {
-        headers: {
-          "Ocp-Apim-Subscription-Key": key,
-          "x-ms-client-request-id": correlationId,
-        },
-      });
-      if (!poll.ok) throw new Error(`Azure OCR poll failed: ${poll.status}`);
-      result = await poll.json();
-
-      if (result.status === "succeeded") {
-        return {
-          ...result,
-          wspDocumentFeatures: enabledFeatures,
-          wspHighResolution: enabledFeatures.includes("ocrHighResolution"),
-        };
-      }
-
-      if (result.status === "failed") {
-        throw new Error(
-          `Azure OCR analysis failed: ${JSON.stringify(result?.error || result)}`,
-        );
-      }
-    }
-
-    throw new Error("Azure OCR timed out");
+  if (!analyze.ok) {
+    const body = await analyze.text();
+    throw new Error(
+      `Azure OCR analyze failed (${modelId}): ${analyze.status} ${body}`,
+    );
   }
 
-  throw new Error(
-    `Azure OCR analyze failed after high-resolution fallback: ${lastSubmitError || "unknown error"}`,
-  );
+  const operation = analyze.headers.get("operation-location");
+  if (!operation) throw new Error("Azure OCR did not return operation-location");
+
+  let result: any = null;
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const poll = await fetch(operation, {
+      headers: {
+        "Ocp-Apim-Subscription-Key": key,
+        "x-ms-client-request-id": correlationId,
+      },
+    });
+    if (!poll.ok) throw new Error(`Azure OCR poll failed: ${poll.status}`);
+    result = await poll.json();
+    if (result.status === "succeeded") {
+      return {
+        ...result,
+        wspDocumentModel: modelId,
+        wspDocumentFeatures: enabledFeatures,
+        wspHighResolution: enabledFeatures.includes("ocrHighResolution"),
+      };
+    }
+    if (result.status === "failed") {
+      throw new Error(
+        `Azure OCR analysis failed (${modelId}): ${JSON.stringify(result?.error || result)}`,
+      );
+    }
+  }
+  throw new Error(`Azure OCR timed out (${modelId})`);
 }
 
 async function runVisionRead({
@@ -319,6 +304,132 @@ async function runVisionRead({
     }
   }
   throw new Error("Azure Vision Read timed out");
+}
+
+async function runAdaptiveOcrRescue({
+  derivatives,
+  diEndpoint,
+  diKey,
+  visionEndpoint,
+  visionKey,
+  secondaryEnabled,
+  correlationId,
+}: {
+  derivatives: any[];
+  diEndpoint: string;
+  diKey: string;
+  visionEndpoint: string;
+  visionKey: string;
+  secondaryEnabled: boolean;
+  correlationId: string;
+}) {
+  const safeDerivatives = Array.isArray(derivatives)
+    ? derivatives.slice(0, 6)
+    : [];
+  const standardGroups: any[] = [];
+  const highResolutionGroups: any[] = [];
+  let visionRequestCount = 0;
+  let highResolutionRequestCount = 0;
+
+  for (const [index, derivative] of safeDerivatives.entries()) {
+    const group = derivative?.group;
+    const contentBase64 = String(derivative?.contentBase64 || "");
+    const contentType = String(derivative?.contentType || "").toLowerCase();
+    if (!group?.groupId || !Array.isArray(group?.fields) || !group.fields.length) continue;
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(contentType)) continue;
+    if (!contentBase64 || contentBase64.length > 1_900_000) continue;
+
+    const derivativeBytes = decodeBase64(contentBase64);
+    if (!derivativeBytes.length || derivativeBytes.length > 1_350_000) continue;
+    const groupCorrelationId = `${correlationId}-adaptive-${index + 1}`;
+
+    let standard = {
+      groupId: group.groupId,
+      source: "VISION_DERIVATIVE",
+      lineCount: 0,
+      fieldResults: (group.fields || []).map((field: any) => ({
+        fieldId: field.fieldId,
+        label: field.label,
+        scope: field.scope,
+        kind: field.kind,
+        source: "VISION_DERIVATIVE",
+        suggestedValue: "",
+        confidence: "LOW",
+        reason: "VISION_DERIVATIVE_UNAVAILABLE",
+        requiresHumanConfirmation: true,
+      })),
+      unresolvedFieldIds: (group.fields || []).map((field: any) => field.fieldId),
+    };
+
+    if (secondaryEnabled && visionEndpoint && visionKey) {
+      try {
+        visionRequestCount += 1;
+        const visionPayload = await runVisionRead({
+          endpoint: visionEndpoint,
+          key: visionKey,
+          bytes: derivativeBytes,
+          correlationId: groupCorrelationId,
+        });
+        standard = analyzeAdaptiveRescueGroup({
+          payload: visionPayload,
+          group,
+          source: "VISION_DERIVATIVE",
+        });
+      } catch (error) {
+        console.warn(
+          "Adaptive derivative Vision failed safely",
+          String(error instanceof Error ? error.message : error).slice(0, 180),
+        );
+      }
+    }
+    standardGroups.push(standard);
+
+    if (!standard.unresolvedFieldIds?.length) continue;
+    if (highResolutionRequestCount >= 3) continue;
+
+    const highGroup = {
+      ...group,
+      fields: (group.fields || []).filter((field: any) =>
+        standard.unresolvedFieldIds.includes(field.fieldId)
+      ),
+    };
+    if (!highGroup.fields.length) continue;
+
+    try {
+      highResolutionRequestCount += 1;
+      const highResult = await runDocumentIntelligence({
+        endpoint: diEndpoint,
+        key: diKey,
+        contentBase64,
+        correlationId: `${groupCorrelationId}-highres`,
+        modelId: "prebuilt-layout",
+        features: ["ocrHighResolution"],
+      });
+      highResolutionGroups.push(
+        analyzeAdaptiveRescueGroup({
+          payload: highResult,
+          group: highGroup,
+          source: "HIGH_RES_LAYOUT_DERIVATIVE",
+        }),
+      );
+    } catch (error) {
+      console.warn(
+        "Adaptive high-resolution Layout failed safely",
+        String(error instanceof Error ? error.message : error).slice(0, 180),
+      );
+    }
+  }
+
+  return {
+    ...mergeAdaptiveRescueResults(standardGroups, highResolutionGroups),
+    visionRequestCount,
+    highResolutionRequestCount,
+    highResolutionRequestLimit: 3,
+    derivativeCount: safeDerivatives.length,
+    derivativeStored: false,
+    highResolutionModel: "prebuilt-layout",
+    highResolutionFeature: "ocrHighResolution",
+  };
 }
 
 Deno.serve(async (req) => {
@@ -384,6 +495,10 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
+    const mode = String(body?.mode || "standard");
+    const rescueDerivatives = Array.isArray(body?.rescueDerivatives)
+      ? body.rescueDerivatives
+      : [];
     const requestContentBase64 = String(body?.contentBase64 || "");
     const requestContentType = String(body?.contentType || "application/octet-stream");
     const ingestionId = String(body?.ingestionId || "").trim();
@@ -403,6 +518,29 @@ Deno.serve(async (req) => {
     const fileName = canonicalDocument.fileName;
     const bytes = canonicalDocument.bytes;
 
+    const secondaryEnabled = Deno.env.get("WSP_SECONDARY_OCR_ENABLED") === "true";
+    const visionEndpoint = (Deno.env.get("AZURE_VISION_ENDPOINT") || "").replace(/\/$/, "");
+    const visionKey = Deno.env.get("AZURE_VISION_KEY") || "";
+
+    if (mode === "adaptive_rescue") {
+      const rescue = await runAdaptiveOcrRescue({
+        derivatives: rescueDerivatives,
+        diEndpoint,
+        diKey,
+        visionEndpoint,
+        visionKey,
+        secondaryEnabled,
+        correlationId,
+      });
+      return json({
+        ok: true,
+        mode: "ADAPTIVE_RESCUE",
+        correlationId,
+        canonicalDocumentSha256: canonicalDocument.sha256,
+        rescue,
+      });
+    }
+
     await persistAuthoritativeShopAiReview(
       serviceClient,
       ingestionId,
@@ -417,15 +555,13 @@ Deno.serve(async (req) => {
       },
     );
 
-    const secondaryEnabled = Deno.env.get("WSP_SECONDARY_OCR_ENABLED") === "true";
-    const visionEndpoint = (Deno.env.get("AZURE_VISION_ENDPOINT") || "").replace(/\/$/, "");
-    const visionKey = Deno.env.get("AZURE_VISION_KEY") || "";
-
     const primaryPromise = runDocumentIntelligence({
       endpoint: diEndpoint,
       key: diKey,
       contentBase64,
       correlationId,
+      modelId: "prebuilt-invoice",
+      features: ["keyValuePairs"],
     });
 
     const secondaryPromise = secondaryEnabled && visionEndpoint && visionKey
@@ -481,6 +617,14 @@ Deno.serve(async (req) => {
       secondaryOcr,
       { currentShopName: receivingShopName },
     );
+
+    invoice.adaptiveOcr = buildAdaptiveOcrPlan({
+      primaryResult,
+      primaryInvoice,
+      secondaryOcr,
+      invoice,
+      receivingShopName,
+    });
 
     try {
       invoice = await resolveInvoiceExceptions({
@@ -604,6 +748,10 @@ Deno.serve(async (req) => {
       canonicalDocumentSource: canonicalDocument.source,
       documentIntelligenceFeatures: primaryResult?.wspDocumentFeatures || [],
       highResolutionOcr: Boolean(primaryResult?.wspHighResolution),
+      adaptiveFieldCheckCount: invoice?.adaptiveOcr?.fieldCheckCount || 0,
+      adaptiveRescueFieldCount: invoice?.adaptiveOcr?.rescueFieldCount || 0,
+      adaptiveRescueGroupCount: invoice?.adaptiveOcr?.rescueGroupCount || 0,
+      adaptiveHighResolutionPolicy: invoice?.adaptiveOcr?.highResolutionPolicy || null,
       receivingShopContext: Boolean(receivingShopName),
     }));
 
@@ -616,12 +764,14 @@ Deno.serve(async (req) => {
       apiVersion: "DI:2024-11-30|Vision:3.2",
       features: [
         "keyValuePairs",
-        ...(primaryResult?.wspHighResolution ? ["ocrHighResolution"] : []),
         "parallelSecondaryRead",
         "crossOcrConsensus",
         "canonicalBlobHash",
         "multimodalShopAiJudge",
         "semanticPartyDateResolver",
+        "fieldLevelAdaptiveOcr",
+        "browserMemoryDerivative",
+        "conditionalHighResolutionLayoutRescue",
       ],
       secondaryOcr: {
         provider: secondaryOcr.provider,

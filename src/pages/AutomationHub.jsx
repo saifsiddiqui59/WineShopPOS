@@ -16,6 +16,10 @@ import { buildOcrReceivingPurchaseDraft } from "../lib/ocrReceivingDraft";
 import OcrProductImagePreview from "../components/OcrProductImagePreview";
 import IndianDateInput from "../components/IndianDateInput";
 import { formatIndiaDate } from "../lib/indiaDate";
+import {
+  canCreateAdaptiveOcrDerivative,
+  createAdaptiveOcrDerivatives,
+} from "../lib/ocrDerivative";
 
 const STRONG_MATCH = 0.90;
 const OCR_COLUMN_OPTIONS = [["image","Image"],["size","Size (ml)"],["batch","Batch / Lot"],["mrp","MRP"],["product","Product Resolution"],["status","Status"],["rates","Rate / Price"],["amounts","Line Amounts"],["gap","Gap"]];
@@ -574,6 +578,21 @@ export default function AutomationHub() {
     const rows = [];
     const seen = new Set();
 
+    for (const rescue of result?.adaptiveOcrRescue?.suggestions || []) {
+      if (rescue?.fieldId !== "header:invoice_date") continue;
+      const iso = normalizeSuggestedInvoiceDate(rescue?.suggestedValue);
+      if (!iso || seen.has(iso)) continue;
+      seen.add(iso);
+      rows.push({
+        iso,
+        label: formatIndiaDate(iso),
+        source: "ADAPTIVE_OCR",
+        suggested: true,
+        confidence: rescue?.confidence || "MEDIUM",
+        reason: "Temporary derivative OCR suggestion. Check the physical invoice before confirming.",
+      });
+    }
+
     const shopAi = shopAiFieldSuggestion(result?.shopAiReview, "header:invoice_date");
     const suggestedIso = normalizeSuggestedInvoiceDate(shopAi?.value);
     if (suggestedIso && !shopAi?.diVisionConflict) {
@@ -617,7 +636,7 @@ export default function AutomationHub() {
       rows.push({ iso: chosen, label: formatIndiaDate(chosen), source: "VISION", suggested: false });
     }
     return rows.slice(0, 6);
-  }, [result?.invoiceDateRaw, result?.secondaryOcr, result?.shopAiReview]);
+  }, [result?.invoiceDateRaw, result?.secondaryOcr, result?.shopAiReview, result?.adaptiveOcrRescue]);
   const shopAiReviewFingerprint = useMemo(() => JSON.stringify({
     header: {
       invoiceNumber: result?.invoiceNumber || "",
@@ -691,6 +710,14 @@ export default function AutomationHub() {
     if (normalize(suggestion.value) === normalize(result?.invoiceNumber)) return null;
     return suggestion;
   }, [result?.shopAiReview, result?.invoiceNumber]);
+
+  const adaptiveOcrSuggestions = useMemo(
+    () => (result?.adaptiveOcrRescue?.suggestions || []).map((row) => ({
+      ...row,
+      value: String(row?.suggestedValue || ""),
+    })),
+    [result?.adaptiveOcrRescue],
+  );
 
   const supplierMatches = useMemo(() => {
     if (!result?.supplierName) return [];
@@ -888,6 +915,21 @@ export default function AutomationHub() {
     throw new Error("OCR failed after retry.");
   }
 
+  async function invokeAdaptiveOcrRescue(ingestionId, derivatives) {
+    if (!ingestionId || !derivatives?.length) return null;
+    const { data, error } = await supabase.functions.invoke("ocr-invoice", {
+      body: {
+        mode: "adaptive_rescue",
+        ingestionId,
+        contentBase64: "",
+        contentType: file?.type || "application/octet-stream",
+        rescueDerivatives: derivatives,
+      },
+    });
+    if (error || !data?.ok) return null;
+    return data?.rescue || null;
+  }
+
   async function analyze() {
     if (!file) return;
     // V5F1_REBUILT_OCR_TIMING_EXACT_SUPPLIER_AUTO_CONFIRM
@@ -992,6 +1034,32 @@ export default function AutomationHub() {
       timing.ocrMs = Math.round(performance.now() - stageStarted);
 
       const reviewInvoice = applyShopAiVisualPrefills(data.invoice);
+      const rescueGroups = data.invoice?.adaptiveOcr?.rescueGroups || [];
+      if (
+        rescueGroups.length &&
+        canCreateAdaptiveOcrDerivative(file)
+      ) {
+        try {
+          const derivatives = await createAdaptiveOcrDerivatives(file, rescueGroups);
+          const rescue = await invokeAdaptiveOcrRescue(nextIngestionId, derivatives);
+          if (rescue) {
+            reviewInvoice.adaptiveOcrRescue = rescue;
+            reviewInvoice.adaptiveOcr = {
+              ...(reviewInvoice?.adaptiveOcr || data.invoice?.adaptiveOcr || {}),
+              rescueStatus: "COMPLETED",
+              derivativeStored: false,
+              derivativeCount: Number(rescue?.derivativeCount || derivatives.length),
+              highResolutionRequestCount: Number(rescue?.highResolutionRequestCount || 0),
+            };
+          }
+        } catch (adaptiveError) {
+          console.warn(
+            "Adaptive OCR derivative failed safely",
+            adaptiveError,
+          );
+        }
+      }
+
       setResult(reviewInvoice);
       setCharges(chargesFromInvoice(reviewInvoice));
 
@@ -1819,7 +1887,9 @@ export default function AutomationHub() {
                             invoiceDateSource:
                               candidate.source === "SHOPAI_VISUAL"
                                 ? "HUMAN_CONFIRMED_SHOPAI_VISUAL"
-                                : "HUMAN_CONFIRMED_VISION_SEMANTIC",
+                                : candidate.source === "ADAPTIVE_OCR"
+                                  ? "HUMAN_CONFIRMED_ADAPTIVE_OCR"
+                                  : "HUMAN_CONFIRMED_VISION_SEMANTIC",
                           }))}
                         >
                           Confirm suggestion
@@ -1955,6 +2025,38 @@ export default function AutomationHub() {
               </div>
             </>
           )}
+        </section>
+      ) : null}
+
+
+      {result?.adaptiveOcr ? (
+        <section className="panel" style={{ marginTop: 16 }}>
+          <div className="section-row">
+            <div>
+              <h3>Adaptive OCR Field Check</h3>
+              <p className="muted-text">
+                Standard OCR checked {result.adaptiveOcr.fieldCheckCount || 0} fields. Only uncertain/conflicting fields were sent to temporary derivative OCR. Derivatives are not stored.
+              </p>
+            </div>
+            <strong>
+              {result.adaptiveOcr.rescueFieldCount || 0} field(s) needed rescue
+            </strong>
+          </div>
+          {adaptiveOcrSuggestions.length ? (
+            <div className="verification-guidance verification-guidance--review">
+              <strong>Smart suggestions — check</strong>
+              {adaptiveOcrSuggestions.map((suggestion) => (
+                <div key={`${suggestion.fieldId}-${suggestion.source}`}>
+                  {suggestion.label || suggestion.fieldId}: <strong>{suggestion.value}</strong>
+                  {suggestion.source ? ` · ${suggestion.source}` : ""}
+                  {suggestion.confidence ? ` · ${suggestion.confidence}` : ""}
+                </div>
+              ))}
+              <div className="muted-text">Suggestions never overwrite invoice values automatically. Confirm against the physical invoice.</div>
+            </div>
+          ) : result?.adaptiveOcrRescue ? (
+            <p className="muted-text">No unique safe derivative suggestion was produced; manual review remains authoritative.</p>
+          ) : null}
         </section>
       ) : null}
 

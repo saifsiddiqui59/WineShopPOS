@@ -1,0 +1,333 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+
+import {
+  analyzeAdaptiveRescueGroup,
+  buildAdaptiveOcrPlan,
+  mergeAdaptiveRescueResults,
+} from "../supabase/functions/_shared/invoiceAdaptiveOcr.js";
+
+function bound(x1, y1, x2, y2, pageNumber = 1) {
+  return [{
+    pageNumber,
+    polygon: [
+      { x: x1, y: y1 }, { x: x2, y: y1 },
+      { x: x2, y: y2 }, { x: x1, y: y2 },
+    ],
+  }];
+}
+
+function primaryResult() {
+  return {
+    analyzeResult: {
+      pages: [{ pageNumber: 1, width: 1000, height: 1000 }],
+      documents: [{
+        fields: {
+          VendorName: { boundingRegions: bound(30, 40, 380, 80) },
+          InvoiceId: { boundingRegions: bound(620, 40, 790, 75) },
+          InvoiceDate: { boundingRegions: bound(620, 85, 900, 120) },
+          InvoiceTotal: { boundingRegions: bound(700, 820, 930, 860) },
+          AmountDue: { boundingRegions: bound(700, 865, 930, 905) },
+        },
+      }],
+      tables: [{
+        cells: [
+          { rowIndex: 0, columnIndex: 0, content: "Description", boundingRegions: bound(30, 300, 350, 340) },
+          { rowIndex: 0, columnIndex: 1, content: "Packing", boundingRegions: bound(350, 300, 470, 340) },
+          { rowIndex: 0, columnIndex: 2, content: "Batch", boundingRegions: bound(470, 300, 600, 340) },
+          { rowIndex: 0, columnIndex: 3, content: "Cases", boundingRegions: bound(600, 300, 680, 340) },
+          { rowIndex: 0, columnIndex: 4, content: "Rate", boundingRegions: bound(680, 300, 790, 340) },
+          { rowIndex: 0, columnIndex: 5, content: "Amount", boundingRegions: bound(790, 300, 940, 340) },
+          { rowIndex: 1, columnIndex: 0, content: "KINGFISHER STRONG", boundingRegions: bound(30, 350, 350, 390) },
+          { rowIndex: 1, columnIndex: 1, content: "650 ML", boundingRegions: bound(350, 350, 470, 390) },
+          { rowIndex: 1, columnIndex: 2, content: "AB12 SEP-2026", boundingRegions: bound(470, 350, 600, 390) },
+          { rowIndex: 1, columnIndex: 3, content: "10", boundingRegions: bound(600, 350, 680, 390) },
+          { rowIndex: 1, columnIndex: 4, content: "1080", boundingRegions: bound(680, 350, 790, 390) },
+          { rowIndex: 1, columnIndex: 5, content: "10800", boundingRegions: bound(790, 350, 940, 390) },
+        ],
+      }],
+    },
+  };
+}
+
+function invoice() {
+  return {
+    supplierName: "ROYAL 21 BEER AND WINE SHOPEE KOKANWADI",
+    vendorName: "ROYAL 21 BEER AND WINE SHOPEE KOKANWADI",
+    supplierReviewRequired: true,
+    invoiceNumber: "19185",
+    invoiceDate: "2021-07-19",
+    invoiceDateReviewRequired: true,
+    total: 70185,
+    amountDue: 70185,
+    items: [{
+      description: "KINGFISHER STRONG",
+      packing: "650 ML",
+      mrp: 180,
+      batchNumber: "GAJI SEP-2001",
+      batchReviewRequired: true,
+      caseCount: 10,
+      ratePerCase: 1080,
+      amount: 10800,
+      confidence: 0.93,
+    }],
+    financialAdjustments: {
+      reconciliationStatus: "MATCH",
+      grossReconciliationStatus: "MATCH",
+      printedInvoiceTotal: 70185,
+      calculatedInvoiceTotal: 70185,
+    },
+    crossOcr: {
+      reviewTargets: [
+        { targetId: "header:supplier_name" },
+        { targetId: "header:invoice_date" },
+        { targetId: "item:0:batch_number" },
+      ],
+    },
+  };
+}
+
+function secondary() {
+  return {
+    chosen: {
+      supplierName: { value: "KAPIL ALCOTECH LLP" },
+      invoiceDate: { value: "2020-04-19" },
+      invoiceNumber: null,
+      invoiceTotal: { value: 70185 },
+    },
+    itemBatches: { 0: [{ value: "AB12 SEP-2026" }] },
+  };
+}
+
+test("field-level quality engine checks every ShopAI matrix field but rescues only uncertain fields", () => {
+  const current = invoice();
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primaryResult(),
+    primaryInvoice: current,
+    secondaryOcr: secondary(),
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+
+  assert.equal(plan.mode, "FIELD_LEVEL_ADAPTIVE_OCR_V1");
+  assert.ok(plan.fieldCheckCount > 10);
+  assert.ok(plan.passCount > 0);
+  assert.ok(plan.rescueFieldCount >= 3);
+  assert.ok(plan.rescueGroupCount >= 2);
+  assert.ok(plan.rescueGroupCount <= 6);
+  assert.equal(plan.highResolutionPolicy, "ONLY_AFTER_DERIVATIVE_VISION_REMAINS_UNCERTAIN");
+  assert.equal(plan.derivativePolicy, "BROWSER_MEMORY_ONLY_NOT_STORED");
+
+  const supplier = plan.fieldChecks.find((row) => row.fieldId === "header:supplier_name");
+  const date = plan.fieldChecks.find((row) => row.fieldId === "header:invoice_date");
+  const batch = plan.fieldChecks.find((row) => row.fieldId === "item:0:batch_number");
+  const amount = plan.fieldChecks.find((row) => row.fieldId === "item:0:amount");
+  assert.equal(supplier.status, "RESCUE");
+  assert.ok(supplier.reasons.includes("SUPPLIER_MATCHES_RECEIVING_SHOP"));
+  assert.equal(date.status, "RESCUE");
+  assert.equal(batch.status, "RESCUE");
+  assert.equal(amount.status, "PASS");
+});
+
+function visionPayload(lines) {
+  return {
+    analyzeResult: {
+      readResults: [{
+        page: 1,
+        width: 1000,
+        height: 1000,
+        lines: lines.map((row, index) => ({
+          text: row.text,
+          boundingBox: row.box || [20, 20 + index * 50, 950, 20 + index * 50, 950, 55 + index * 50, 20, 55 + index * 50],
+          words: [{ confidence: row.confidence ?? 0.96 }],
+        })),
+      }],
+    },
+  };
+}
+
+test("adaptive header rescue rejects TP date and receiver, then finds invoice date and legal vendor", () => {
+  const group = {
+    groupId: "adaptive:1:header",
+    receivingShopName: "Royal 21",
+    fields: [
+      { fieldId: "header:supplier_name", label: "Supplier", scope: "HEADER", kind: "TEXT" },
+      { fieldId: "header:invoice_date", label: "Invoice date", scope: "HEADER", kind: "DATE" },
+      { fieldId: "header:invoice_number", label: "Invoice number", scope: "HEADER", kind: "TEXT" },
+    ],
+  };
+  const payload = visionPayload([
+    { text: "ROYAL 21 BEER AND WINE SHOPEE KOKANWADI" },
+    { text: "KAPIL ALCOTECH LLP" },
+    { text: "TP Date 19-04-2020" },
+    { text: "Invoice Date 19-09-2026" },
+    { text: "Invoice No 19185" },
+  ]);
+  const result = analyzeAdaptiveRescueGroup({ payload, group, source: "VISION_DERIVATIVE" });
+  const byId = new Map(result.fieldResults.map((row) => [row.fieldId, row]));
+  assert.equal(byId.get("header:supplier_name").suggestedValue, "KAPIL ALCOTECH LLP");
+  assert.equal(byId.get("header:invoice_date").suggestedValue, "2026-09-19");
+  assert.equal(byId.get("header:invoice_number").suggestedValue, "19185");
+  assert.equal(result.unresolvedFieldIds.length, 0);
+});
+
+test("split Invoice + Date label is spatially owned while standalone TP date is rejected", () => {
+  const group = {
+    groupId: "adaptive:split-date",
+    receivingShopName: "Royal 21",
+    fields: [
+      { fieldId: "header:invoice_date", label: "Invoice date", scope: "HEADER", kind: "DATE" },
+    ],
+  };
+  const payload = visionPayload([
+    { text: "TP Date", box: [20, 40, 250, 40, 250, 75, 20, 75] },
+    { text: "19-04-2020", box: [260, 40, 430, 40, 430, 75, 260, 75] },
+    { text: "Invoice", box: [560, 130, 700, 130, 700, 165, 560, 165] },
+    { text: "Date 19-09-2026", box: [560, 175, 860, 175, 860, 210, 560, 210] },
+  ]);
+  const result = analyzeAdaptiveRescueGroup({ payload, group, source: "VISION_DERIVATIVE" });
+  assert.equal(result.fieldResults[0].suggestedValue, "2026-09-19");
+});
+
+test("generic Date without invoice ownership remains unresolved", () => {
+  const group = {
+    groupId: "adaptive:generic-date",
+    receivingShopName: "Royal 21",
+    fields: [
+      { fieldId: "header:invoice_date", label: "Invoice date", scope: "HEADER", kind: "DATE" },
+    ],
+  };
+  const result = analyzeAdaptiveRescueGroup({
+    payload: visionPayload([{ text: "Date 19-09-2026" }]),
+    group,
+    source: "VISION_DERIVATIVE",
+  });
+  assert.equal(result.fieldResults[0].suggestedValue, "");
+  assert.deepEqual(result.unresolvedFieldIds, ["header:invoice_date"]);
+});
+
+test("line-item rescue never borrows a value from a neighbouring row", () => {
+  const group = {
+    groupId: "adaptive:row-isolation",
+    receivingShopName: "Royal 21",
+    fields: [{
+      fieldId: "item:0:batch_number",
+      label: "Line 1 · Batch / lot",
+      scope: "LINE_ITEM",
+      kind: "TEXT",
+      relativeRegion: { xMin: 0.40, xMax: 0.62, yMin: 0.05, yMax: 0.22 },
+    }],
+  };
+  const payload = visionPayload([
+    { text: "KINGFISHER STRONG", box: [20, 80, 350, 80, 350, 115, 20, 115] },
+    { text: "AB12 SEP-2026", box: [470, 620, 650, 620, 650, 655, 470, 655] },
+  ]);
+  const result = analyzeAdaptiveRescueGroup({ payload, group, source: "VISION_DERIVATIVE" });
+  assert.equal(result.fieldResults[0].suggestedValue, "");
+  assert.deepEqual(result.unresolvedFieldIds, ["item:0:batch_number"]);
+});
+
+test("multiple unrelated legal entities do not produce a guessed supplier", () => {
+  const group = {
+    groupId: "adaptive:supplier-ambiguity",
+    receivingShopName: "Royal 21",
+    fields: [{ fieldId: "header:supplier_name", label: "Supplier", scope: "HEADER", kind: "TEXT" }],
+  };
+  const payload = visionPayload([
+    { text: "KAPIL ALCOTECH LLP" },
+    { text: "FAST TRANSPORT PRIVATE LIMITED" },
+  ]);
+  const result = analyzeAdaptiveRescueGroup({ payload, group, source: "VISION_DERIVATIVE" });
+  assert.equal(result.fieldResults[0].suggestedValue, "");
+  assert.deepEqual(result.unresolvedFieldIds, ["header:supplier_name"]);
+});
+
+test("quality engine uses line arithmetic only as a rescue trigger and does not rewrite core values", () => {
+  const current = invoice();
+  current.items[0].amount = 9999;
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primaryResult(),
+    primaryInvoice: current,
+    secondaryOcr: secondary(),
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+  const amount = plan.fieldChecks.find((row) => row.fieldId === "item:0:amount");
+  assert.equal(amount.currentValue, "9999");
+  assert.equal(amount.status, "RESCUE");
+  assert.ok(amount.reasons.includes("LINE_AMOUNT_ARITHMETIC_MISMATCH"));
+});
+
+test("rescue groups never merge fields across pages", () => {
+  const current = invoice();
+  current.items.push({
+    description: "SECOND PRODUCT",
+    packing: "750 ML",
+    mrp: 220,
+    batchNumber: "SECOND SEP-2026",
+    batchReviewRequired: true,
+    caseCount: 2,
+    ratePerCase: 1200,
+    amount: 2400,
+    confidence: 0.93,
+  });
+  const primary = primaryResult();
+  primary.analyzeResult.pages.push({ pageNumber: 2, width: 1000, height: 1000 });
+  primary.analyzeResult.tables[0].cells.push(
+    { rowIndex: 2, columnIndex: 0, content: "SECOND PRODUCT", boundingRegions: bound(30, 350, 350, 390, 2) },
+    { rowIndex: 2, columnIndex: 1, content: "750 ML", boundingRegions: bound(350, 350, 470, 390, 2) },
+    { rowIndex: 2, columnIndex: 2, content: "SECOND SEP-2026", boundingRegions: bound(470, 350, 600, 390, 2) },
+    { rowIndex: 2, columnIndex: 3, content: "2", boundingRegions: bound(600, 350, 680, 390, 2) },
+    { rowIndex: 2, columnIndex: 4, content: "1200", boundingRegions: bound(680, 350, 790, 390, 2) },
+    { rowIndex: 2, columnIndex: 5, content: "2400", boundingRegions: bound(790, 350, 940, 390, 2) },
+  );
+  const secondaryOcr = secondary();
+  secondaryOcr.itemBatches[1] = [{ value: "OTHER SEP-2026" }];
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primary,
+    primaryInvoice: current,
+    secondaryOcr,
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+  for (const group of plan.rescueGroups) {
+    const pages = new Set((group.fields || []).map((field) => Number(field.region?.page || group.page || 1)));
+    assert.equal(pages.size, 1);
+  }
+});
+
+test("high-resolution disagreement never becomes a silent suggestion", () => {
+  const merged = mergeAdaptiveRescueResults(
+    [{ fieldResults: [{ fieldId: "header:invoice_date", label: "Invoice date", scope: "HEADER", source: "VISION_DERIVATIVE", suggestedValue: "2026-09-19", confidence: "MEDIUM", requiresHumanConfirmation: true }] }],
+    [{ fieldResults: [{ fieldId: "header:invoice_date", label: "Invoice date", scope: "HEADER", source: "HIGH_RES_LAYOUT_DERIVATIVE", suggestedValue: "2020-10-19", confidence: "MEDIUM", requiresHumanConfirmation: true }] }],
+  );
+  assert.equal(merged.suggestions.length, 0);
+  assert.equal(merged.conflicts.length, 1);
+  assert.equal(merged.conflicts[0].suggestedValue, "");
+  assert.equal(merged.derivativeStored, false);
+});
+
+test("source architecture uses standard prebuilt-invoice first and prebuilt-layout high-res only in rescue", () => {
+  const edge = fs.readFileSync(new URL("../supabase/functions/ocr-invoice/index.ts", import.meta.url), "utf8");
+  const ui = fs.readFileSync(new URL("../src/pages/AutomationHub.jsx", import.meta.url), "utf8");
+  const derivative = fs.readFileSync(new URL("../src/lib/ocrDerivative.js", import.meta.url), "utf8");
+
+  assert.match(edge, /modelId: "prebuilt-invoice"[\s\S]*features: \["keyValuePairs"\]/);
+  assert.match(edge, /mode === "adaptive_rescue"/);
+  assert.match(edge, /modelId: "prebuilt-layout"/);
+  assert.match(edge, /features: \["ocrHighResolution"\]/);
+  assert.match(edge, /HIGH_RES_LAYOUT_DERIVATIVE/);
+  assert.doesNotMatch(edge, /@imagemagick\/magick-wasm/);
+
+  assert.match(ui, /createAdaptiveOcrDerivatives/);
+  assert.match(ui, /mode: "adaptive_rescue"/);
+  assert.match(ui, /HUMAN_CONFIRMED_ADAPTIVE_OCR/);
+  assert.match(ui, /Suggestions never overwrite invoice values automatically/);
+
+  assert.match(derivative, /document\.createElement\("canvas"\)/);
+  assert.match(derivative, /grayscale\(1\) contrast\(1\.45\)/);
+  assert.match(derivative, /sharpenCanvas/);
+  assert.match(derivative, /derivativeStored: false/);
+  assert.doesNotMatch(derivative, /localStorage|sessionStorage|supabase|fetch\(/);
+});
