@@ -106,6 +106,11 @@ test("image request is one multimodal judge request with raw Vision context",()=
   assert.ok(input.field_matrix.length>10);
   assert.equal(built.request.store,false);
   assert.equal(built.request.reasoning.effort,"minimal");
+  assert.equal(built.request.max_output_tokens,6000);
+  assert.ok(built.request.text.format.schema.required.includes("coverage_complete"));
+  assert.ok(built.request.text.format.schema.required.includes("reviewed_field_count"));
+  assert.ok(built.request.text.format.schema.required.includes("too_many_findings"));
+  assert.equal("matched_field_ids" in built.request.text.format.schema.properties,false);
 });
 
 test("PDF request uses Responses API input_file data URI",()=>{
@@ -127,7 +132,9 @@ test("DI/Vision conflict cannot be hidden as MATCH",()=>{
   const result=validateShopAiReview({
     recommendation:"GO",
     summary:"all good",
-    matched_field_ids:matrix.map(x=>x.fieldId),
+    coverage_complete:true,
+    reviewed_field_count:matrix.length,
+    too_many_findings:false,
     findings:[],
   },matrix);
   const date=result.fields.find(x=>x.fieldId==="header:invoice_date");
@@ -142,7 +149,9 @@ test("visual inference is suggestion-only and forces REVIEW",()=>{
   const result=validateShopAiReview({
     recommendation:"GO",
     summary:"date visible",
-    matched_field_ids:matrix.map(x=>x.fieldId).filter(id=>id!==dateId),
+    coverage_complete:true,
+    reviewed_field_count:matrix.length,
+    too_many_findings:false,
     findings:[{
       field_id:dateId,
       verdict:"INFERRED_VISUAL",
@@ -157,14 +166,27 @@ test("visual inference is suggestion-only and forces REVIEW",()=>{
   assert.equal(result.recommendation,"REVIEW");
 });
 
-test("line coverage issue forces NO_GO and omitted fields remain visible",()=>{
+test("compact coverage contract fails closed and line coverage issue forces NO_GO",()=>{
   const matrix=buildShopAiFieldMatrix(sample());
+
+  const incomplete=validateShopAiReview({
+    recommendation:"REVIEW",
+    summary:"not all fields reviewed",
+    coverage_complete:false,
+    reviewed_field_count:matrix.length-1,
+    too_many_findings:false,
+    findings:[],
+  },matrix);
+  assert.equal(incomplete.ok,false);
+  assert.equal(incomplete.reason,"SHOP_AI_COVERAGE_INCOMPLETE");
+
   const coverage="document:line_coverage";
-  const omitted="item:0:mrp";
   const result=validateShopAiReview({
     recommendation:"REVIEW",
     summary:"coverage mismatch",
-    matched_field_ids:matrix.map(x=>x.fieldId).filter(x=>x!==coverage&&x!==omitted),
+    coverage_complete:true,
+    reviewed_field_count:matrix.length,
+    too_many_findings:false,
     findings:[{
       field_id:coverage,
       verdict:"MISMATCH",
@@ -173,8 +195,11 @@ test("line coverage issue forces NO_GO and omitted fields remain visible",()=>{
       reason:"Visual has an unrepresented product row.",
     }],
   },matrix);
+
+  assert.equal(result.ok,true);
   assert.equal(result.recommendation,"NO_GO");
-  assert.equal(result.fields.find(x=>x.fieldId===omitted).verdict,"NOT_JUDGED");
+  assert.equal(result.coverageComplete,true);
+  assert.equal(result.reviewedFieldCount,matrix.length);
 });
 
 test("octet-stream visual type is inferred from filename",()=>{
@@ -199,6 +224,38 @@ test("PDF page budget uses structural PDF evidence instead of trusting DI proces
   assert.equal(estimatePdfPageCount({bytes:pdf,contentType:"application/pdf",fileName:"x.pdf",diPageCount:1}),2);
   assert.equal(estimatePdfPageCount({bytes:new TextEncoder().encode("%PDF-1.7 opaque"),contentType:"application/pdf",fileName:"x.pdf",diPageCount:1}),9);
   assert.equal(estimatePdfPageCount({bytes:new Uint8Array([1,2]),contentType:"image/jpeg",fileName:"x.jpg",diPageCount:1}),1);
+});
+
+test("provider max-output incomplete is classified explicitly instead of invalid JSON",async()=>{
+  const {runShopAiReview}=await import("../supabase/functions/_shared/invoiceShopAiReview.js");
+  const out=await runShopAiReview({
+    config:{enabled:true,baseUrl:"https://unit.invalid",apiKey:"x",model:"gpt-5-mini",timeoutMs:5000},
+    contentBase64:"YWJj",
+    contentType:"image/jpeg",
+    fileName:"invoice.jpg",
+    documentPageCount:1,
+    ...sample(),
+    fetchImpl:async()=>({
+      ok:true,
+      status:200,
+      json:async()=>({
+        status:"incomplete",
+        incomplete_details:{reason:"max_output_tokens"},
+        output_text:'{"recommendation":"REVIEW"',
+        usage:{
+          input_tokens:1000,
+          output_tokens:6000,
+          output_tokens_details:{reasoning_tokens:50},
+        },
+      }),
+    }),
+  });
+
+  assert.equal(out.status,"UNAVAILABLE");
+  assert.equal(out.reason,"SHOP_AI_PROVIDER_INCOMPLETE_MAX_OUTPUT_TOKENS");
+  assert.equal(out.diagnostics.providerStatus,"incomplete");
+  assert.equal(out.diagnostics.incompleteReason,"max_output_tokens");
+  assert.ok(out.diagnostics.outputChars>0);
 });
 
 test("multimodal page budget fails safely to manual review",async()=>{
@@ -255,6 +312,10 @@ test("owner UI keeps the authoritative ShopAI gate behind the existing operator 
   assert.match(source,/Invoice Financial Summary/);
   assert.match(source,/2\. Resolve Every Product & Quantity/);
   assert.match(source,/Open Purchase Receiving Workspace/);
+  assert.match(source,/shopAiFieldSuggestion/);
+  assert.match(source,/HUMAN_CONFIRMED_SHOPAI_VISUAL/);
+  assert.match(source,/Suggested supplier from invoice/);
+  assert.match(source,/confirmSupplierById/);
 
   // Developer diagnostics are no longer exposed as the normal shop-operator UI.
   assert.doesNotMatch(source,/ShopAI Invoice Judge/);

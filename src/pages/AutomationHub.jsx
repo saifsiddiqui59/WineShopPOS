@@ -56,6 +56,48 @@ function extractDateCandidates(rawValue) {
   return rows.slice(0,6);
 }
 
+function normalizeSuggestedInvoiceDate(value) {
+  const raw = String(value || "").trim();
+  if (/^20\d{2}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+  const match = raw.match(/\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})\b/);
+  if (!match) return "";
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (day < 1 || day > 31 || month < 1 || month > 12) return "";
+
+  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const parsed = new Date(`${iso}T00:00:00Z`);
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) return "";
+  return iso;
+}
+
+function shopAiFieldSuggestion(review, fieldId) {
+  if (review?.status !== "COMPLETED") return null;
+  const field = (review?.fields || []).find((row) => row?.fieldId === fieldId);
+  if (!field) return null;
+
+  const verdict = String(field?.verdict || "");
+  const confidence = String(field?.confidence || "LOW");
+  const acceptedVerdicts = new Set(["PREFER_DI", "PREFER_VISION", "INFERRED_VISUAL"]);
+  if (!acceptedVerdicts.has(verdict) || !["HIGH", "MEDIUM"].includes(confidence)) return null;
+
+  const value = String(field?.suggestedValue || "").trim();
+  if (!value) return null;
+
+  return {
+    value,
+    verdict,
+    confidence,
+    reason: String(field?.reason || "").trim(),
+  };
+}
+
 function linePriceSanity(item, row) {
   const mrp = Math.max(0, Number(item?.mrp || 0));
   const pricePerBottle = Math.max(0, Number(row?.purchasePrice || 0));
@@ -425,20 +467,43 @@ export default function AutomationHub() {
   );
 
   const invoiceDateCandidates = useMemo(() => {
-    const rows = extractDateCandidates(result?.invoiceDateRaw);
-    const seen = new Set(rows.map((row) => row.iso));
+    const rows = [];
+    const seen = new Set();
+
+    const shopAi = shopAiFieldSuggestion(result?.shopAiReview, "header:invoice_date");
+    const suggestedIso = normalizeSuggestedInvoiceDate(shopAi?.value);
+    if (suggestedIso) {
+      seen.add(suggestedIso);
+      rows.push({
+        iso: suggestedIso,
+        label: formatIndiaDate(suggestedIso),
+        source: "SHOPAI_VISUAL",
+        suggested: true,
+        confidence: shopAi.confidence,
+        reason: shopAi.reason,
+      });
+    }
+
+    for (const candidate of extractDateCandidates(result?.invoiceDateRaw)) {
+      if (seen.has(candidate.iso)) continue;
+      seen.add(candidate.iso);
+      rows.push({ ...candidate, source: "OCR_RAW", suggested: false });
+    }
+
     for (const candidate of result?.secondaryOcr?.dateCandidates || []) {
       const iso = String(candidate?.value || "");
       if (!/^20\d{2}-\d{2}-\d{2}$/.test(iso) || seen.has(iso)) continue;
       seen.add(iso);
-      rows.push({ iso, label: formatIndiaDate(iso) });
+      rows.push({ iso, label: formatIndiaDate(iso), source: "VISION", suggested: false });
     }
+
     const chosen = String(result?.secondaryOcr?.chosen?.invoiceDate?.value || "");
     if (/^20\d{2}-\d{2}-\d{2}$/.test(chosen) && !seen.has(chosen)) {
-      rows.push({ iso: chosen, label: formatIndiaDate(chosen) });
+      seen.add(chosen);
+      rows.push({ iso: chosen, label: formatIndiaDate(chosen), source: "VISION", suggested: false });
     }
     return rows.slice(0, 6);
-  }, [result?.invoiceDateRaw, result?.secondaryOcr]);
+  }, [result?.invoiceDateRaw, result?.secondaryOcr, result?.shopAiReview]);
   const shopAiReviewFingerprint = useMemo(() => JSON.stringify({
     header: {
       invoiceNumber: result?.invoiceNumber || "",
@@ -471,6 +536,31 @@ export default function AutomationHub() {
       })),
   }), [result, confirmedSupplier, charges, resolution]);
   const hiddenColumnClass = useMemo(() => Object.entries(ocrColumns).filter(([,visible])=>!visible).map(([key])=>`hide-col-${key}`).join(" "), [ocrColumns]);
+
+  const shopAiSupplierSuggestion = useMemo(() => {
+    const suggestion = shopAiFieldSuggestion(
+      result?.shopAiReview,
+      "header:supplier_name",
+    );
+    if (!suggestion) return null;
+
+    const ranked = suppliers
+      .filter((supplier) => supplier.active !== false)
+      .map((supplier) => ({
+        ...supplier,
+        score: supplierScore(suggestion.value, supplier.supplier_name),
+      }))
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.supplier_name.localeCompare(b.supplier_name),
+      );
+
+    return {
+      ...suggestion,
+      existingMatch: ranked[0]?.score >= 35 ? ranked[0] : null,
+    };
+  }, [result?.shopAiReview, suppliers]);
 
   const supplierMatches = useMemo(() => {
     if (!result?.supplierName) return [];
@@ -843,8 +933,8 @@ export default function AutomationHub() {
     }
   }
 
-  async function confirmExistingSupplier() {
-    const supplier = suppliers.find((row) => row.id === supplierId);
+  async function confirmSupplierById(nextSupplierId) {
+    const supplier = suppliers.find((row) => row.id === nextSupplierId);
     if (!supplier || !result) {
       setMessage("Select an existing supplier first.");
       return;
@@ -852,6 +942,7 @@ export default function AutomationHub() {
 
     setBusy(true);
     try {
+      setSupplierId(supplier.id);
       setConfirmedSupplier(supplier);
       await resolveProductLines(result, supplier.id);
       setMessage(
@@ -863,6 +954,10 @@ export default function AutomationHub() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function confirmExistingSupplier() {
+    return confirmSupplierById(supplierId);
   }
 
   async function supplierCreated(supplier) {
@@ -1475,9 +1570,24 @@ export default function AutomationHub() {
               <div>Invoice date needs review. Azure raw value: {result.invoiceDateRaw || "not resolved"}. Confirm the physical invoice date before receiving stock.</div>
               {invoiceDateCandidates.length ? (
                 <div className="button-row" style={{marginTop:8}}>
-                  <span className="muted-text">Detected date candidates:</span>
+                  <span className="muted-text">Invoice date options:</span>
                   {invoiceDateCandidates.map((candidate)=>(
-                    <button key={candidate.iso} type="button" className="secondary-button" onClick={()=>setResult((current)=>({...current,invoiceDate:candidate.iso,invoiceDateReviewRequired:false,invoiceDateSource:"HUMAN_REVIEW_FROM_OCR_CANDIDATE"}))}>Use {formatIndiaDate(candidate.iso)}</button>
+                    <button
+                      key={`${candidate.source || "OCR"}-${candidate.iso}`}
+                      type="button"
+                      className={candidate.suggested ? "primary-button" : "secondary-button"}
+                      title={candidate.reason || ""}
+                      onClick={()=>setResult((current)=>({
+                        ...current,
+                        invoiceDate:candidate.iso,
+                        invoiceDateReviewRequired:false,
+                        invoiceDateSource:candidate.suggested
+                          ? "HUMAN_CONFIRMED_SHOPAI_VISUAL"
+                          : "HUMAN_REVIEW_FROM_OCR_CANDIDATE",
+                      }))}
+                    >
+                      {candidate.suggested ? `Suggested ${formatIndiaDate(candidate.iso)}` : `Use ${formatIndiaDate(candidate.iso)}`}
+                    </button>
                   ))}
                 </div>
               ):null}
@@ -1504,6 +1614,37 @@ export default function AutomationHub() {
             </div>
           ) : (
             <>
+              {shopAiSupplierSuggestion ? (
+                <div className="purchase-message" style={{ marginBottom: 12 }}>
+                  <div>
+                    <strong>Suggested supplier from invoice: {shopAiSupplierSuggestion.value}</strong>
+                    <div className="muted-text">
+                      Visual confidence: {shopAiSupplierSuggestion.confidence}
+                      {shopAiSupplierSuggestion.reason ? ` · ${shopAiSupplierSuggestion.reason}` : ""}
+                    </div>
+                  </div>
+                  {shopAiSupplierSuggestion.existingMatch ? (
+                    <div className="button-row" style={{ marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="primary-button"
+                        disabled={busy}
+                        onClick={() => confirmSupplierById(shopAiSupplierSuggestion.existingMatch.id)}
+                      >
+                        Use {shopAiSupplierSuggestion.existingMatch.supplier_name}
+                      </button>
+                      <span className="muted-text">
+                        Existing supplier match · {shopAiSupplierSuggestion.existingMatch.score}%
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="muted-text" style={{ marginTop: 8 }}>
+                      No reliable existing supplier match. Review the suggestion before creating a supplier.
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
               {supplierMatches[0] ? (
                 <p className="muted-text">
                   Best existing match:{" "}
