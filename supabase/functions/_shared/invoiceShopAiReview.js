@@ -255,6 +255,8 @@ You are WineShopPOS ShopAI Visual Adjudicator.
 
 You receive ONE supplier invoice plus only the fields that need independent visual
 adjudication. OCR candidate VALUES for those fields are intentionally withheld.
+business_context.receiving_shop_name is authoritative business context: it identifies
+the BUYER/RECEIVER and must NEVER be returned as the supplier/vendor.
 Read the ORIGINAL invoice pixels independently. Do not guess what Azure Document
 Intelligence, Azure Vision or WineShopPOS probably extracted.
 
@@ -493,10 +495,14 @@ function visualLocator(field, invoice) {
   return `Read only the printed field "${field.label}".`;
 }
 
-function requestPayload({ targetMatrix, invoice, secondaryOcr, documentPageCount }) {
+function requestPayload({ targetMatrix, invoice, secondaryOcr, documentPageCount, receivingShopName }) {
   return {
     mode: "TARGETED_BLIND_VISUAL_ADJUDICATION_V2",
     candidate_values_withheld: true,
+    business_context: {
+      receiving_shop_name: text(receivingShopName || "", 120),
+      receiving_shop_role: "BUYER_RECEIVER_NOT_SUPPLIER",
+    },
     target_fields: targetMatrix.map((field) => ({
       field_id: field.fieldId,
       label: field.label,
@@ -521,6 +527,7 @@ export function buildShopAiRequest({
   secondaryOcr,
   invoice,
   documentPageCount = 1,
+  receivingShopName = "",
 }) {
   const visual = buildVisual(contentBase64, contentType, fileName);
   const matrix = buildShopAiFieldMatrix({ primaryInvoice, secondaryOcr, invoice });
@@ -557,6 +564,7 @@ export function buildShopAiRequest({
     invoice,
     secondaryOcr,
     documentPageCount,
+    receivingShopName,
   });
 
   return {
@@ -1073,6 +1081,7 @@ export async function runShopAiReview({
   secondaryOcr,
   invoice,
   documentPageCount = 1,
+  receivingShopName = "",
   fetchImpl = globalThis.fetch,
 }) {
   if (!config?.enabled || !config?.baseUrl || !config?.apiKey || !config?.model) {
@@ -1117,6 +1126,7 @@ export async function runShopAiReview({
     secondaryOcr,
     invoice,
     documentPageCount: pageCount,
+    receivingShopName,
   });
   if (!built.ok) {
     return {

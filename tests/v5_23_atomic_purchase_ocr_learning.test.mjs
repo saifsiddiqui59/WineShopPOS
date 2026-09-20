@@ -123,7 +123,11 @@ test("Purchase Receiving has no pre-receive Product Master write",()=>{
 
 test("OCR review defers unmatched Product creation to receiving",()=>{
   const s=read("src/pages/AutomationHub.jsx");
-  assert.match(s,/Prepare New Product in Receiving/);
+  assert.match(s,/Prepare All in Purchase Receiving/);
+  assert.match(s,/buildOcrReceivingPurchaseDraft/);
+  assert.match(s,/stage: "RECEIVE_STOCK"/);
+  assert.match(s,/purchaseDraft,/);
+  assert.match(s,/ready: false/);
   assert.match(s,/Product Master changes happen only if Receive Stock succeeds/);
   assert.doesNotMatch(s,/navigate\(`\/products\/new\?/);
   assert.doesNotMatch(s,/createProductFromCandidate/);

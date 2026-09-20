@@ -192,41 +192,84 @@ async function runDocumentIntelligence({
   contentBase64: string;
   correlationId: string;
 }) {
-  const analyzeUrl = `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze?_overload=analyzeDocument&api-version=2024-11-30&features=keyValuePairs`;
-  const analyze = await fetch(analyzeUrl, {
-    method: "POST",
-    headers: {
-      "Ocp-Apim-Subscription-Key": key,
-      "Content-Type": "application/json",
-      "x-ms-client-request-id": correlationId,
-    },
-    body: JSON.stringify({ base64Source: contentBase64 }),
-  });
+  const featureAttempts = [
+    ["keyValuePairs", "ocrHighResolution"],
+    ["keyValuePairs"],
+  ];
 
-  if (!analyze.ok) {
-    throw new Error(`Azure OCR analyze failed: ${analyze.status} ${await analyze.text()}`);
-  }
+  let lastSubmitError = "";
 
-  const operation = analyze.headers.get("operation-location");
-  if (!operation) throw new Error("Azure OCR did not return operation-location");
+  for (let featureIndex = 0; featureIndex < featureAttempts.length; featureIndex += 1) {
+    const enabledFeatures = featureAttempts[featureIndex];
+    const analyzeUrl =
+      `${endpoint}/documentintelligence/documentModels/prebuilt-invoice:analyze` +
+      `?_overload=analyzeDocument&api-version=2024-11-30&features=${enabledFeatures.join(",")}`;
 
-  let result: any = null;
-  for (let attempt = 0; attempt < 45; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const poll = await fetch(operation, {
+    const analyze = await fetch(analyzeUrl, {
+      method: "POST",
       headers: {
         "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "application/json",
         "x-ms-client-request-id": correlationId,
       },
+      body: JSON.stringify({ base64Source: contentBase64 }),
     });
-    if (!poll.ok) throw new Error(`Azure OCR poll failed: ${poll.status}`);
-    result = await poll.json();
-    if (result.status === "succeeded") return result;
-    if (result.status === "failed") {
-      throw new Error(`Azure OCR analysis failed: ${JSON.stringify(result?.error || result)}`);
+
+    if (!analyze.ok) {
+      const body = await analyze.text();
+      lastSubmitError = `${analyze.status} ${body}`;
+
+      const optionalFeatureRejected =
+        featureIndex === 0 &&
+        [400, 404, 422].includes(Number(analyze.status || 0));
+
+      if (optionalFeatureRejected) {
+        console.warn(
+          "Document Intelligence ocrHighResolution was rejected; retrying safely with keyValuePairs only",
+          String(body || "").slice(0, 180),
+        );
+        continue;
+      }
+
+      throw new Error(`Azure OCR analyze failed: ${lastSubmitError}`);
     }
+
+    const operation = analyze.headers.get("operation-location");
+    if (!operation) throw new Error("Azure OCR did not return operation-location");
+
+    let result: any = null;
+    for (let attempt = 0; attempt < 45; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const poll = await fetch(operation, {
+        headers: {
+          "Ocp-Apim-Subscription-Key": key,
+          "x-ms-client-request-id": correlationId,
+        },
+      });
+      if (!poll.ok) throw new Error(`Azure OCR poll failed: ${poll.status}`);
+      result = await poll.json();
+
+      if (result.status === "succeeded") {
+        return {
+          ...result,
+          wspDocumentFeatures: enabledFeatures,
+          wspHighResolution: enabledFeatures.includes("ocrHighResolution"),
+        };
+      }
+
+      if (result.status === "failed") {
+        throw new Error(
+          `Azure OCR analysis failed: ${JSON.stringify(result?.error || result)}`,
+        );
+      }
+    }
+
+    throw new Error("Azure OCR timed out");
   }
-  throw new Error("Azure OCR timed out");
+
+  throw new Error(
+    `Azure OCR analyze failed after high-resolution fallback: ${lastSubmitError || "unknown error"}`,
+  );
 }
 
 async function runVisionRead({
@@ -319,6 +362,13 @@ Deno.serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
 
+    const { data: currentShop } = await serviceClient
+      .from("shops")
+      .select("name")
+      .eq("id", profile.shop_id)
+      .maybeSingle();
+    const receivingShopName = String(currentShop?.name || "").trim();
+
     const diEndpoint = (Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") || "").replace(/\/$/, "");
     const diKey = Deno.env.get("AZURE_DOCUMENT_INTELLIGENCE_KEY") || "";
 
@@ -406,7 +456,12 @@ Deno.serve(async (req) => {
     let invoice = structuredClone(primaryInvoice);
 
     const secondaryOcr = secondaryResult.ok
-      ? buildVisionReadSummary(secondaryResult.payload, invoice, primaryResult)
+      ? buildVisionReadSummary(
+          secondaryResult.payload,
+          invoice,
+          primaryResult,
+          { currentShopName: receivingShopName },
+        )
       : {
           provider: "AZURE_VISION_READ_3_2",
           status: secondaryResult.reason || "UNAVAILABLE",
@@ -421,7 +476,11 @@ Deno.serve(async (req) => {
           chosen: {},
         };
 
-    invoice = applySecondaryOcrConsensus(invoice, secondaryOcr);
+    invoice = applySecondaryOcrConsensus(
+      invoice,
+      secondaryOcr,
+      { currentShopName: receivingShopName },
+    );
 
     try {
       invoice = await resolveInvoiceExceptions({
@@ -477,6 +536,7 @@ Deno.serve(async (req) => {
         secondaryOcr,
         invoice,
         documentPageCount: estimatePdfPageCount({ bytes, contentType, fileName, diPageCount: Number(primaryResult?.analyzeResult?.pages?.length || 1) }),
+        receivingShopName,
       });
     } catch (shopAiError) {
       const fallbackFields = buildShopAiFieldMatrix({ primaryInvoice, secondaryOcr, invoice })
@@ -542,6 +602,9 @@ Deno.serve(async (req) => {
       shopAiInputTokens: invoice?.shopAiReview?.diagnostics?.inputTokens ?? null,
       shopAiOutputTokens: invoice?.shopAiReview?.diagnostics?.outputTokens ?? null,
       canonicalDocumentSource: canonicalDocument.source,
+      documentIntelligenceFeatures: primaryResult?.wspDocumentFeatures || [],
+      highResolutionOcr: Boolean(primaryResult?.wspHighResolution),
+      receivingShopContext: Boolean(receivingShopName),
     }));
 
     return json({
@@ -551,7 +614,15 @@ Deno.serve(async (req) => {
       rawConfidence: invoice?.ocrQuality?.documentConfidence ?? null,
       model: "prebuilt-invoice+semantic-table+azure-vision-read-3.2",
       apiVersion: "DI:2024-11-30|Vision:3.2",
-      features: ["keyValuePairs", "parallelSecondaryRead", "crossOcrConsensus", "canonicalBlobHash", "multimodalShopAiJudge"],
+      features: [
+        "keyValuePairs",
+        ...(primaryResult?.wspHighResolution ? ["ocrHighResolution"] : []),
+        "parallelSecondaryRead",
+        "crossOcrConsensus",
+        "canonicalBlobHash",
+        "multimodalShopAiJudge",
+        "semanticPartyDateResolver",
+      ],
       secondaryOcr: {
         provider: secondaryOcr.provider,
         status: secondaryOcr.status,

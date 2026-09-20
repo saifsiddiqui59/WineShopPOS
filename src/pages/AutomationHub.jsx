@@ -12,6 +12,7 @@ import {
 } from "../lib/invoicePack";
 import { normalizeBeerOcrText } from "../lib/productInference";
 import { productImageUrl } from "../lib/productImages";
+import { buildOcrReceivingPurchaseDraft } from "../lib/ocrReceivingDraft";
 import OcrProductImagePreview from "../components/OcrProductImagePreview";
 import IndianDateInput from "../components/IndianDateInput";
 import { formatIndiaDate } from "../lib/indiaDate";
@@ -95,12 +96,19 @@ function shopAiFieldSuggestion(review, fieldId) {
     verdict,
     confidence,
     reason: String(field?.reason || "").trim(),
+    diVisionConflict: Boolean(field?.diVisionConflict),
   };
 }
 
-function shopAiAutoPrefillSuggestion(review, fieldId) {
+function shopAiAutoPrefillSuggestion(
+  review,
+  fieldId,
+  { allowConflict = false } = {},
+) {
   const suggestion = shopAiFieldSuggestion(review, fieldId);
-  return suggestion?.confidence === "HIGH" ? suggestion : null;
+  if (suggestion?.confidence !== "HIGH") return null;
+  if (suggestion.diVisionConflict && !allowConflict) return null;
+  return suggestion;
 }
 
 function applyShopAiVisualPrefills(invoice) {
@@ -135,7 +143,11 @@ function applyShopAiVisualPrefills(invoice) {
   }
 
   next.items = next.items.map((item, index) => {
-    const batch = shopAiAutoPrefillSuggestion(review, `item:${index}:batch_number`);
+    const batch = shopAiAutoPrefillSuggestion(
+      review,
+      `item:${index}:batch_number`,
+      { allowConflict: true },
+    );
     if (!batch?.value) return item;
     prefilledFields.push(`batch ${index + 1}`);
     return {
@@ -564,7 +576,7 @@ export default function AutomationHub() {
 
     const shopAi = shopAiFieldSuggestion(result?.shopAiReview, "header:invoice_date");
     const suggestedIso = normalizeSuggestedInvoiceDate(shopAi?.value);
-    if (suggestedIso) {
+    if (suggestedIso && !shopAi?.diVisionConflict) {
       seen.add(suggestedIso);
       rows.push({
         iso: suggestedIso,
@@ -586,7 +598,17 @@ export default function AutomationHub() {
       const iso = String(candidate?.value || "");
       if (!/^20\d{2}-\d{2}-\d{2}$/.test(iso) || seen.has(iso)) continue;
       seen.add(iso);
-      rows.push({ iso, label: formatIndiaDate(iso), source: "VISION", suggested: false });
+      rows.push({
+        iso,
+        label: formatIndiaDate(iso),
+        source: "VISION",
+        suggested: candidate?.semanticRole === "INVOICE_DATE_LABEL",
+        confidence: candidate?.confidence,
+        reason:
+          candidate?.semanticRole === "INVOICE_DATE_LABEL"
+            ? "Read from text explicitly labeled as the invoice/bill date."
+            : "",
+      });
     }
 
     const chosen = String(result?.secondaryOcr?.chosen?.invoiceDate?.value || "");
@@ -635,6 +657,11 @@ export default function AutomationHub() {
       "header:supplier_name",
     );
     if (!suggestion) return null;
+    if (suggestion.diVisionConflict) return null;
+    if (
+      profile?.shop_name &&
+      supplierScore(suggestion.value, profile.shop_name) >= 88
+    ) return null;
 
     const ranked = suppliers
       .filter((supplier) => supplier.active !== false)
@@ -652,7 +679,7 @@ export default function AutomationHub() {
       ...suggestion,
       existingMatch: ranked[0]?.score >= 80 ? ranked[0] : null,
     };
-  }, [result?.shopAiReview, suppliers]);
+  }, [result?.shopAiReview, suppliers, profile?.shop_name]);
 
 
   const shopAiInvoiceNumberSuggestion = useMemo(() => {
@@ -988,19 +1015,39 @@ export default function AutomationHub() {
       }
       duplicateStatus = metadata?.review_status || duplicateStatus || "";
 
-      const aiSupplierSuggestion = shopAiFieldSuggestion(
+      const rawAiSupplierSuggestion = shopAiFieldSuggestion(
         reviewInvoice?.shopAiReview,
         "header:supplier_name",
       );
+      const aiSupplierLooksLikeReceiver = Boolean(
+        rawAiSupplierSuggestion?.value &&
+        profile?.shop_name &&
+        supplierScore(
+          rawAiSupplierSuggestion.value,
+          profile.shop_name,
+        ) >= 88
+      );
+      const aiSupplierSuggestion =
+        rawAiSupplierSuggestion?.diVisionConflict ||
+        aiSupplierLooksLikeReceiver
+          ? null
+          : rawAiSupplierSuggestion;
+      const roleResolvedSupplier =
+        reviewInvoice?.supplierSuggestedSource === "VISION_ROLE_SUGGESTION"
+          ? String(reviewInvoice?.supplierSuggestedValue || "")
+          : "";
       const aiSupplierField = (reviewInvoice?.shopAiReview?.fields || []).find(
         (field) => field?.fieldId === "header:supplier_name",
       );
       const aiSupplierNeedsReview = Boolean(
+        roleResolvedSupplier ||
         aiSupplierField?.ownerConfirmationRequired ||
         aiSupplierSuggestion?.value
       );
       const supplierMatchText =
-        aiSupplierSuggestion?.value || reviewInvoice.supplierName;
+        roleResolvedSupplier ||
+        aiSupplierSuggestion?.value ||
+        reviewInvoice.supplierName;
 
       const ranked = suppliers
         .filter((supplier) => supplier.active !== false)
@@ -1020,7 +1067,7 @@ export default function AutomationHub() {
 
       if (aiSupplierNeedsReview || aiSupplierPrefilled) {
         if (
-          aiSupplierSuggestion?.value &&
+          supplierMatchText &&
           ranked[0]?.score >= 80
         ) {
           setSupplierId(ranked[0].id);
@@ -1589,26 +1636,42 @@ export default function AutomationHub() {
       setMessage("Complete OCR first so the stored invoice can open in Purchase Receiving Workspace.");
       return;
     }
-    // Preparation/navigation is allowed before final ShopAI owner approval.
-    // Purchase Receiving and the authoritative DB receive guard still block
-    // inventory posting until all final review gates pass.
+
+    const selectedSupplier =
+      confirmedSupplier ||
+      suppliers.find((row) => row.id === supplierId) ||
+      null;
+
+    const purchaseDraft = buildOcrReceivingPurchaseDraft({
+      ingestionId,
+      invoice: result,
+      resolution,
+      products: activeProducts,
+      supplierId: selectedSupplier?.id || supplierId || "",
+      supplierName:
+        selectedSupplier?.supplier_name ||
+        result?.supplierName ||
+        "",
+      charges,
+      shopAiOwnerDecision,
+    });
 
     setBusy(true);
     try {
       const persisted = await persistReviewDraft({
         silent: true,
-        stage: "OCR_REVIEW",
-        purchaseDraft: null,
+        stage: "RECEIVE_STOCK",
+        purchaseDraft,
         ready: false,
       });
       if (!persisted?.ok) {
-        throw persisted?.error || new Error("Unable to save the server OCR review draft.");
+        throw persisted?.error || new Error("Unable to prepare the server Purchase Receiving draft.");
       }
 
       sessionStorage.removeItem(REVIEW_KEY);
       navigate(`/purchasing/receive?ingestion=${ingestionId}`);
     } catch (error) {
-      raiseSystemError(error, "Unable to open Purchase Receiving Workspace");
+      raiseSystemError(error, "Unable to prepare Purchase Receiving Workspace");
     } finally {
       setBusy(false);
     }
@@ -1753,10 +1816,13 @@ export default function AutomationHub() {
                             ...current,
                             invoiceDate:candidate.iso,
                             invoiceDateReviewRequired:false,
-                            invoiceDateSource:"HUMAN_CONFIRMED_SHOPAI_VISUAL",
+                            invoiceDateSource:
+                              candidate.source === "SHOPAI_VISUAL"
+                                ? "HUMAN_CONFIRMED_SHOPAI_VISUAL"
+                                : "HUMAN_CONFIRMED_VISION_SEMANTIC",
                           }))}
                         >
-                          Confirm AI suggestion
+                          Confirm suggestion
                         </button>
                       </div>
                     ) : (
@@ -1780,11 +1846,18 @@ export default function AutomationHub() {
             </div>
           ) : null}
           <p className="muted-text">
-            Date source: {result.invoiceDateSource || "OCR"} · Original invoice evidence: {ingestionId ? "saved" : "NOT SAVED"}
+            {String(result.invoiceDateSource || "").startsWith("HUMAN_")
+              ? "Date confirmed by operator."
+              : ["VISION_SEMANTIC_SUGGESTION", "SHOPAI_VISUAL_SUGGESTION"].includes(
+                    String(result.invoiceDateSource || ""),
+                  )
+                ? "Smart suggestion — check."
+                : "Date read from invoice OCR."}
+            {" · "}Original invoice evidence: {ingestionId ? "saved" : "NOT SAVED"}
           </p>
           {!confirmedSupplier ? (
             <p>
-              {result.supplierSource === "SHOPAI_VISUAL_SUGGESTION" ? "Supplier" : "OCR Supplier"}:{" "}
+              {String(result.supplierSource || "").includes("SUGGESTION") ? "Supplier" : "OCR Supplier"}:{" "}
               <strong>{result.supplierName || "Not detected"}</strong>
             </p>
           ) : null}
@@ -1801,6 +1874,14 @@ export default function AutomationHub() {
             </div>
           ) : (
             <>
+              {result?.supplierSuggestedSource === "VISION_ROLE_SUGGESTION" ? (
+                <div className="ocr-smart-suggestion" style={{ marginBottom: 12 }}>
+                  <strong>Smart suggestion — check</strong>
+                  <span>Supplier: {result.supplierSuggestedValue}</span>
+                  <span>The previous OCR supplier matches this receiving shop. Check the selected existing supplier before confirming.</span>
+                </div>
+              ) : null}
+
               {shopAiSupplierSuggestion ? (
                 <div className="ocr-smart-suggestion" style={{ marginBottom: 12 }}>
                   <strong>Smart suggestion — check</strong>
@@ -2115,7 +2196,7 @@ export default function AutomationHub() {
                                 Continue to Purchase Receiving to prepare its name, size, pack and barcode. Product Master changes happen only if Receive Stock succeeds.
                               </div>
                               <button type="button" className="secondary-button" onClick={sendDraft} disabled={busy}>
-                                Prepare in Purchase Receiving
+                                Prepare All in Purchase Receiving
                               </button>
                             </div>
                           </div>
@@ -2294,7 +2375,7 @@ export default function AutomationHub() {
                             className="secondary-button"
                             onClick={sendDraft}
                           >
-                            Prepare New Product in Receiving
+                            Prepare All in Purchase Receiving
                           </button>
                         )}
                       </td>
@@ -2411,7 +2492,7 @@ export default function AutomationHub() {
           <button
             className="primary-button"
             onClick={sendDraft}
-            disabled={busy || (result?.shopAiReview ? !shopAiOwnerReady() : false)}
+            disabled={busy}
           >
             Open Purchase Receiving Workspace
           </button>

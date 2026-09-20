@@ -12,6 +12,32 @@ function norm(value) {
     .replace(/\s+/g, " ");
 }
 
+
+const PARTY_NOISE = new Set([
+  "the", "and", "of", "beer", "wine", "wines", "liquor", "shop", "shopee",
+  "store", "retail", "retailer", "customer", "buyer", "bill", "ship", "to",
+]);
+
+function partyIdentityTokens(value) {
+  return norm(value)
+    .replace(/\b(private|pvt|limited|ltd|llp|company|co)\b/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !PARTY_NOISE.has(token));
+}
+
+function partyLooksSame(left, right) {
+  const a = partyIdentityTokens(left);
+  const b = partyIdentityTokens(right);
+  if (!a.length || !b.length) return false;
+  if (a.join(" ") === b.join(" ")) return true;
+
+  const shorter = a.length <= b.length ? a : b;
+  const longer = new Set(a.length <= b.length ? b : a);
+  if (shorter.length < 2) return false;
+  return shorter.every((token) => longer.has(token));
+}
+
 function normBatch(value) {
   return String(value || "")
     .toUpperCase()
@@ -56,6 +82,52 @@ function datesInText(text) {
     out.push({ value: iso, raw: match[0] });
   }
   return out;
+}
+
+
+const NON_INVOICE_DATE_CONTEXT =
+  /\b(tp|transport|permit|dispatch|order|delivery|batch|lot|mfg|mfd|manufactur(?:e|ed|ing)|expiry|exp)\b/i;
+
+function invoiceDateSemantic(text, anchored = false) {
+  const source = String(text || "");
+  const parsedDates = datesInText(source);
+  const explicitInvoice =
+    /\b(?:invoice|inv|bill)\s*(?:date|dt\.?)\b/i.test(source);
+  const excludedContext = NON_INVOICE_DATE_CONTEXT.test(source);
+
+  if (excludedContext && (!explicitInvoice || parsedDates.length > 1)) {
+    return { score: 0, semanticRole: "EXCLUDED_NON_INVOICE_DATE" };
+  }
+
+  if (explicitInvoice) {
+    return {
+      score: anchored ? 320 : 220,
+      semanticRole: "INVOICE_DATE_LABEL",
+    };
+  }
+
+  if (/^\s*date\s*[:.-]?/i.test(source) && !excludedContext) {
+    return {
+      score: anchored ? 140 : 80,
+      semanticRole: "GENERIC_DATE_LABEL",
+    };
+  }
+
+  if (anchored && !excludedContext) {
+    return {
+      score: 90,
+      semanticRole: "DI_INVOICE_DATE_REGION",
+    };
+  }
+
+  if (/\bdate\b/i.test(source) && !excludedContext) {
+    return {
+      score: 40,
+      semanticRole: "GENERIC_DATE_CONTEXT",
+    };
+  }
+
+  return { score: 0, semanticRole: "NOT_INVOICE_DATE" };
 }
 
 function moneyTokens(text) {
@@ -212,6 +284,8 @@ function publicCandidate(candidate) {
     raw: candidate.raw,
     confidence: candidate.confidence,
     evidenceId: candidate.evidenceId,
+    semanticRole: candidate.semanticRole || null,
+    score: Number.isFinite(Number(candidate.score)) ? Number(candidate.score) : null,
   };
 }
 
@@ -449,7 +523,12 @@ function averageLineConfidence(lines) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = null) {
+export function buildVisionReadSummary(
+  payload,
+  invoice,
+  primaryAnalyzeResult = null,
+  { currentShopName = "" } = {},
+) {
   const lines = flattenVisionLines(payload);
   const evidence = [];
   const dateCandidates = [];
@@ -463,11 +542,15 @@ export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = 
     : null;
 
   for (const line of visionLinesNearRegion(lines, invoiceDateRegion)) {
+    const semantic = invoiceDateSemantic(line.text, true);
+    if (!semantic.score) continue;
+
     for (const date of datesInText(line.text)) {
       const row = {
         value: date.value,
         raw: date.raw,
-        score: 260,
+        score: semantic.score,
+        semanticRole: semantic.semanticRole,
         confidence: line.confidence,
         evidenceId: `${line.id}:invoice-date-anchor:${dateCandidates.length}`,
       };
@@ -475,7 +558,7 @@ export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = 
       evidence.push({
         id: row.evidenceId,
         source: "vision_date_anchor",
-        label: "DI InvoiceDate geometry",
+        label: line.text,
         rawValue: date.raw,
         value: date.value,
         dateValue: date.value,
@@ -489,16 +572,14 @@ export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = 
     const text = line.text;
     const normalized = norm(text);
 
+    const dateSemantic = invoiceDateSemantic(text, false);
     for (const date of datesInText(text)) {
-      let score = 0;
-      if (/\b(invoice|bill)\s*date\b/i.test(text)) score = 120;
-      else if (/^\s*date\b/i.test(text)) score = 80;
-      else if (/\bdate\b/i.test(text) && !/\btp\b/i.test(text)) score = 40;
-      if (!score) continue;
+      if (!dateSemantic.score) continue;
       const row = {
         value: date.value,
         raw: date.raw,
-        score,
+        score: dateSemantic.score,
+        semanticRole: dateSemantic.semanticRole,
         confidence: line.confidence,
         evidenceId: `${line.id}:date:${dateCandidates.length}`,
       };
@@ -563,7 +644,12 @@ export function buildVisionReadSummary(payload, invoice, primaryAnalyzeResult = 
       }
     }
 
-    if (LEGAL_SUFFIX.test(text) && /[a-z]/i.test(text) && normalized.length >= 5) {
+    if (
+      LEGAL_SUFFIX.test(text) &&
+      /[a-z]/i.test(text) &&
+      normalized.length >= 5 &&
+      !partyLooksSame(text, currentShopName)
+    ) {
       const row = {
         value: text,
         raw: text,
@@ -733,7 +819,11 @@ function publicSecondary(summary) {
   };
 }
 
-export function applySecondaryOcrConsensus(invoice, summary) {
+export function applySecondaryOcrConsensus(
+  invoice,
+  summary,
+  { currentShopName = "" } = {},
+) {
   const out = structuredClone(invoice || {});
   out.secondaryOcr = publicSecondary(summary || {});
 
@@ -753,28 +843,37 @@ export function applySecondaryOcrConsensus(invoice, summary) {
 
   const chosenDate = summary?.chosen?.invoiceDate;
   if (chosenDate?.value) {
-    if (validIsoDate(out.invoiceDate) && out.invoiceDate === chosenDate.value) {
+    const currentDate = String(out.invoiceDate || "");
+    const semanticInvoiceDate =
+      chosenDate.semanticRole === "INVOICE_DATE_LABEL";
+
+    if (validIsoDate(currentDate) && currentDate === chosenDate.value) {
       agreements.push({ targetId: "header:invoice_date", value: chosenDate.value });
-    } else if (validIsoDate(out.invoiceDate) && out.invoiceDate !== chosenDate.value) {
-      out.invoiceDateReviewRequired = true;
-      reviewTargets.push({
-        targetId: "header:invoice_date",
-        fieldScope: "HEADER",
-        canonicalField: "invoice_date",
-        reason: "CROSS_OCR_DATE_CONFLICT",
-        primaryValue: out.invoiceDate,
-        secondaryValue: chosenDate.value,
-        secondaryEvidenceId: chosenDate.evidenceId,
-        requiresHumanConfirmation: true,
-      });
     } else {
+      if (semanticInvoiceDate) {
+        out.invoiceDateSuggestedValue = chosenDate.value;
+        out.invoiceDateSuggestedSource = "VISION_SEMANTIC_SUGGESTION";
+        out.invoiceDateSuggestionReason =
+          "Azure Vision found a date explicitly labeled as the invoice/bill date.";
+      }
+
       out.invoiceDateReviewRequired = true;
       reviewTargets.push({
         targetId: "header:invoice_date",
         fieldScope: "HEADER",
         canonicalField: "invoice_date",
-        reason: "SECONDARY_DATE_CANDIDATE",
-        primaryValue: out.invoiceDate || null,
+        reason: validIsoDate(currentDate)
+          ? (
+              semanticInvoiceDate
+                ? "VISION_SEMANTIC_INVOICE_DATE_CONFLICT"
+                : "CROSS_OCR_DATE_CONFLICT"
+            )
+          : (
+              semanticInvoiceDate
+                ? "VISION_SEMANTIC_INVOICE_DATE_CANDIDATE"
+                : "SECONDARY_DATE_CANDIDATE"
+            ),
+        primaryValue: currentDate || null,
         secondaryValue: chosenDate.value,
         secondaryEvidenceId: chosenDate.evidenceId,
         requiresHumanConfirmation: true,
@@ -805,8 +904,36 @@ export function applySecondaryOcrConsensus(invoice, summary) {
   if (chosenSupplier?.value && primarySupplier) {
     const a = comparableSupplier(chosenSupplier.value);
     const b = comparableSupplier(primarySupplier);
+    const primaryLooksLikeReceiver =
+      Boolean(currentShopName) &&
+      partyLooksSame(primarySupplier, currentShopName);
+    const secondaryLooksLikeReceiver =
+      Boolean(currentShopName) &&
+      partyLooksSame(chosenSupplier.value, currentShopName);
+
     if (a && b && (a === b || a.includes(b) || b.includes(a))) {
       agreements.push({ targetId: "header:supplier_name", value: primarySupplier });
+    } else if (
+      primaryLooksLikeReceiver &&
+      !secondaryLooksLikeReceiver &&
+      chosenSupplier.value
+    ) {
+      out.supplierSuggestedValue = chosenSupplier.value;
+      out.supplierSuggestedSource = "VISION_ROLE_SUGGESTION";
+      out.supplierReviewRequired = true;
+      out.supplierSuggestionReason =
+        "The primary OCR supplier matches this receiving shop; Azure Vision found a different legal issuer/vendor.";
+
+      reviewTargets.push({
+        targetId: "header:supplier_name",
+        fieldScope: "HEADER",
+        canonicalField: "supplier_name",
+        reason: "PRIMARY_SUPPLIER_MATCHES_RECEIVING_SHOP",
+        primaryValue: primarySupplier,
+        secondaryValue: chosenSupplier.value,
+        secondaryEvidenceId: chosenSupplier.evidenceId,
+        requiresHumanConfirmation: true,
+      });
     } else if (a && b) {
       reviewTargets.push({
         targetId: "header:supplier_name",
