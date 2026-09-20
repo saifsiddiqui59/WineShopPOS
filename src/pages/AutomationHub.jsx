@@ -1299,8 +1299,8 @@ export default function AutomationHub() {
 
     if (review.status === "UNAVAILABLE") {
       const reason = window.prompt(
-        "ShopAI is unavailable. Enter the reason you are continuing with manual verification:",
-        "Verified manually against the original invoice.",
+        "Automatic verification could not complete. Enter a short note confirming that you checked the original invoice:",
+        "Checked against the original invoice.",
       );
       if (reason === null || reason.trim().length < 4) return;
       setShopAiOwnerDecision({
@@ -1315,14 +1315,14 @@ export default function AutomationHub() {
     }
 
     if (review.status !== "COMPLETED") {
-      setMessage("ShopAI review is still processing. Analyze the invoice again before continuing.");
+      setMessage("Invoice verification is still processing. Analyze the invoice again before continuing.");
       return;
     }
 
     let overrideReason = "";
     if (review.recommendation !== "GO") {
       const reason = window.prompt(
-        `ShopAI recommends ${review.recommendation || "REVIEW"}. Enter why you are overriding this recommendation after checking the original invoice:`,
+        "Some invoice details still need review. Enter a short note confirming what you checked or corrected before continuing:",
         "",
       );
       if (reason === null || reason.trim().length < 4) return;
@@ -1345,11 +1345,7 @@ export default function AutomationHub() {
       return;
     }
     if (!shopAiOwnerReady()) {
-      setMessage(
-        result?.shopAiReview?.status === "UNAVAILABLE"
-          ? "Record Manual GO after reviewing the original invoice, or choose NO-GO."
-          : "Review the complete ShopAI field table and record Owner GO before continuing.",
-      );
+      setMessage("Complete the invoice verification step before continuing to Purchase Receiving.");
       return;
     }
 
@@ -1435,18 +1431,6 @@ export default function AutomationHub() {
         <p className="muted-text">
           OCR never posts inventory directly.
         </p>
-        {analysisTiming ? (
-          <p className="muted-text">
-            Last analysis · total {(analysisTiming.totalMs / 1000).toFixed(1)}s
-            {" · "}file prep {(analysisTiming.encodeMs / 1000).toFixed(1)}s
-            {" · "}evidence save {(analysisTiming.storeMs / 1000).toFixed(1)}s
-            {" · "}OCR {(analysisTiming.ocrMs / 1000).toFixed(1)}s
-            {" · "}audit save {(analysisTiming.metadataMs / 1000).toFixed(1)}s
-            {analysisTiming.productMatchMs > 0
-              ? ` · Product Master ${(analysisTiming.productMatchMs / 1000).toFixed(1)}s`
-              : ""}
-          </p>
-        ) : null}
       </section>
 
       {result ? (
@@ -1454,6 +1438,9 @@ export default function AutomationHub() {
           <div className="button-row spread">
             <h3>1. Confirm Supplier</h3>
             <div className="button-row">
+              <button type="button" className="secondary-button" disabled={busy || !ingestionId} onClick={viewOriginalInvoice}>
+                View Original Invoice
+              </button>
               <button type="button" className="secondary-button" disabled={busy} onClick={saveReviewDraft}>
                 Save Draft
               </button>
@@ -1565,96 +1552,6 @@ export default function AutomationHub() {
               </div>
             </>
           )}
-        </section>
-      ) : null}
-
-      {result?.shopAiReview ? (
-        <section className="panel" style={{ marginTop: 16 }}>
-          <div className="button-row spread">
-            <div>
-              <h3>ShopAI Invoice Judge</h3>
-              <p className="muted-text">
-                One stored invoice was checked using Document Intelligence, Azure Vision and the actual invoice visual. Matching fields stay visible for owner verification.
-              </p>
-            </div>
-            <strong>
-              Recommendation: {result.shopAiReview.recommendation || result.shopAiReview.status || "REVIEW"}
-            </strong>
-          </div>
-
-          <div className="metric-grid four">
-            <div className="metric-card"><span>Fields</span><strong>{result.shopAiReview.fieldCount || result.shopAiReview.fields?.length || 0}</strong></div>
-            <div className="metric-card"><span>Matched</span><strong>{result.shopAiReview.matchedCount || 0}</strong></div>
-            <div className="metric-card"><span>Needs Attention</span><strong>{result.shopAiReview.findingCount || 0}</strong></div>
-            <div className="metric-card"><span>Visual Evidence</span><strong>{result.shopAiReview.visualEvidenceUsed ? "YES" : "MANUAL"}</strong></div>
-          </div>
-
-          {result.shopAiReview.status === "UNAVAILABLE" ? (
-            <div className="purchase-message" style={{ marginTop: 12 }}>
-              ShopAI visual review is unavailable ({result.shopAiReview.reason || "provider unavailable"}). The full manual OCR review remains available; continuing requires Manual GO with a reason.
-            </div>
-          ) : null}
-
-          {result.shopAiReview.summary ? <p>{result.shopAiReview.summary}</p> : null}
-          <p className="muted-text">
-            Vision shows deterministically mapped values where available; ShopAI also received the independent raw Azure Vision OCR text for the full invoice. ShopAI suggestions never auto-apply.
-          </p>
-
-          <div className="data-table-wrapper" style={{ marginTop: 12, maxHeight: 560, overflow: "auto" }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  <th>Doc Intel</th>
-                  <th>Vision</th>
-                  <th>ShopAI</th>
-                  <th>Verdict</th>
-                  <th>Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(result.shopAiReview.fields || []).map((row) => (
-                  <tr key={row.fieldId}>
-                    <td><strong>{row.label || row.fieldId}</strong></td>
-                    <td>{row.diValue || "—"}</td>
-                    <td>{row.visionValue || "—"}</td>
-                    <td>{row.verdict === "MATCH" ? (row.systemValue || row.diValue || row.visionValue || "—") : (row.suggestedValue || "—")}</td>
-                    <td>
-                      <strong>{row.verdict || "NOT_JUDGED"}</strong>
-                      {row.confidence ? <div className="muted-text">{row.confidence}</div> : null}
-                    </td>
-                    <td>{row.reason || "Owner review required."}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="button-row" style={{ marginTop: 12 }}>
-            <button type="button" className="secondary-button" onClick={viewOriginalInvoice}>
-              View Original Invoice
-            </button>
-            <button type="button" className="primary-button" onClick={recordShopAiOwnerGo}>
-              {result.shopAiReview.status === "UNAVAILABLE" ? "Manual GO" : "Owner GO"}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setShopAiOwnerDecision({ decision: "REVIEW", at: new Date().toISOString() })}
-            >
-              Needs Correction
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setShopAiOwnerDecision({ decision: "NO_GO", at: new Date().toISOString() })}
-            >
-              NO-GO
-            </button>
-            <span className="muted-text">
-              Owner decision: <strong>{shopAiOwnerDecision?.decision || "PENDING"}</strong>. GO never bypasses date, finance, product, pack, batch, quantity or server checks.
-            </span>
-          </div>
         </section>
       ) : null}
 
@@ -2097,10 +1994,63 @@ export default function AutomationHub() {
             </table>
           </div>
 
+          {result?.shopAiReview ? (
+            <div
+              className={`purchase-message${shopAiOwnerReady() ? " success" : ""}`}
+              style={{ marginTop: 16 }}
+            >
+              <div className="button-row spread">
+                <div>
+                  <strong>Invoice Verification</strong>
+                  <div className="muted-text">
+                    Background checks support the same supplier, date, product, quantity and financial fields above. They never replace your reviewed values.
+                  </div>
+                </div>
+                <strong>
+                  {shopAiOwnerReady()
+                    ? "Confirmed"
+                    : result.shopAiReview.status === "UNAVAILABLE"
+                      ? "Manual review required"
+                      : "Confirmation required"}
+                </strong>
+              </div>
+
+              <p style={{ marginBottom: 0 }}>
+                {result.shopAiReview.status === "UNAVAILABLE"
+                  ? "Automatic cross-check could not complete. Check the original invoice and the existing mapped fields above before continuing."
+                  : Number(result.shopAiReview.findingCount || 0) > 0
+                    ? `${result.shopAiReview.findingCount} invoice detail(s) need attention. Review or correct the existing mapped fields above, then confirm.`
+                    : "Background cross-check completed. Confirm after reviewing the existing invoice fields above."}
+              </p>
+
+              <div className="button-row" style={{ marginTop: 10 }}>
+                <button type="button" className="primary-button" onClick={recordShopAiOwnerGo}>
+                  {result.shopAiReview.status === "UNAVAILABLE"
+                    ? "Continue After Manual Review"
+                    : "Confirm Invoice Review"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setShopAiOwnerDecision({ decision: "REVIEW", at: new Date().toISOString() })}
+                >
+                  Needs Correction
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setShopAiOwnerDecision({ decision: "NO_GO", at: new Date().toISOString() })}
+                >
+                  Stop Review
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <button
             className="primary-button"
             onClick={sendDraft}
-            disabled={busy}
+            disabled={busy || (result?.shopAiReview ? !shopAiOwnerReady() : false)}
           >
             Open Purchase Receiving Workspace
           </button>

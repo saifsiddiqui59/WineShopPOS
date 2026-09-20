@@ -235,15 +235,33 @@ test("Vision summary gives the judge compact raw OCR lines without persisting th
   assert.doesNotMatch(publicBlock,/textLines:/);
 });
 
-test("owner UI shows every field and requires explicit GO/NO-GO choice",()=>{
+test("owner UI keeps the authoritative ShopAI gate behind the existing operator workflow",()=>{
   const source=fs.readFileSync(new URL("../src/pages/AutomationHub.jsx",import.meta.url),"utf8");
-  assert.match(source,/ShopAI Invoice Judge/);
-  assert.match(source,/shopAiReview\.fields/);
+  assert.match(source,/Invoice Verification/);
   assert.match(source,/View Original Invoice/);
-  assert.match(source,/Owner GO/);
-  assert.match(source,/Manual GO/);
-  assert.match(source,/NO-GO/);
+  assert.match(source,/Continue After Manual Review/);
+  assert.match(source,/Confirm Invoice Review/);
+  assert.match(source,/Needs Correction/);
+  assert.match(source,/Stop Review/);
   assert.match(source,/shopAiOwnerDecision/);
+  assert.match(source,/shopAiOwnerReady/);
+  assert.match(source,/MANUAL_GO/);
+  assert.match(source,/NO_GO/);
+
+  // Existing OCR/candidate/receiving contracts stay intact; this is presentation-only.
+  assert.match(source,/invoiceDateCandidates/);
+  assert.match(source,/resolveProductLines/);
+  assert.match(source,/OCR_COLUMN_OPTIONS/);
+  assert.match(source,/Invoice Financial Summary/);
+  assert.match(source,/2\. Resolve Every Product & Quantity/);
+  assert.match(source,/Open Purchase Receiving Workspace/);
+
+  // Developer diagnostics are no longer exposed as the normal shop-operator UI.
+  assert.doesNotMatch(source,/ShopAI Invoice Judge/);
+  assert.doesNotMatch(source,/<th>Doc Intel<\/th>/);
+  assert.doesNotMatch(source,/<th>Vision<\/th>/);
+  assert.doesNotMatch(source,/<th>ShopAI<\/th>/);
+  assert.doesNotMatch(source,/Last analysis · total/);
 });
 
 test("Purchase Receiving and Inbox use authoritative ShopAI state",()=>{
