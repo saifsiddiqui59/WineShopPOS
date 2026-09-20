@@ -323,11 +323,119 @@ test("source architecture uses standard prebuilt-invoice first and prebuilt-layo
   assert.match(ui, /createAdaptiveOcrDerivatives/);
   assert.match(ui, /mode: "adaptive_rescue"/);
   assert.match(ui, /HUMAN_CONFIRMED_ADAPTIVE_OCR/);
-  assert.match(ui, /Suggestions never overwrite invoice values automatically/);
+  assert.doesNotMatch(ui, /Adaptive OCR Field Check/);
+  assert.doesNotMatch(ui, /Suggestions never overwrite invoice values automatically/);
+  assert.match(ui, /source: "ADAPTIVE_OCR"/);
 
   assert.match(derivative, /document\.createElement\("canvas"\)/);
   assert.match(derivative, /grayscale\(1\) contrast\(1\.45\)/);
   assert.match(derivative, /sharpenCanvas/);
   assert.match(derivative, /derivativeStored: false/);
   assert.doesNotMatch(derivative, /localStorage|sessionStorage|supabase|fetch\(/);
+});
+
+
+test("row-level confidence does not fan out rescue across otherwise valid line fields", () => {
+  const current = invoice();
+  current.items[0].confidence = 0.20;
+  current.items[0].batchReviewRequired = false;
+  current.supplierName = "KAPIL ALCOTECH LLP";
+  current.vendorName = "KAPIL ALCOTECH LLP";
+  current.supplierReviewRequired = false;
+  current.invoiceDateReviewRequired = false;
+  current.crossOcr = { reviewTargets: [] };
+
+  const secondaryOcr = secondary();
+  secondaryOcr.chosen.supplierName = { value: "KAPIL ALCOTECH LLP" };
+  secondaryOcr.chosen.invoiceDate = { value: current.invoiceDate };
+  secondaryOcr.itemBatches = {};
+
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primaryResult(),
+    primaryInvoice: current,
+    secondaryOcr,
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+
+  const description = plan.fieldChecks.find((row) => row.fieldId === "item:0:description");
+  const amount = plan.fieldChecks.find((row) => row.fieldId === "item:0:amount");
+  assert.ok(description);
+  assert.ok(amount);
+  assert.equal(description.reasons.includes("LOW_ROW_CONFIDENCE"), false);
+  assert.equal(amount.reasons.includes("LOW_ROW_CONFIDENCE"), false);
+});
+
+test("line fields without exact DI field geometry fail closed to manual review instead of broad table rescue", () => {
+  const current = invoice();
+  const primary = primaryResult();
+  primary.analyzeResult.tables = [];
+
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primary,
+    primaryInvoice: current,
+    secondaryOcr: secondary(),
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+
+  assert.ok(plan.manualOnlyFieldIds.includes("item:0:batch_number"));
+  assert.equal(
+    plan.rescueGroups.some((group) =>
+      (group.fields || []).some((field) => field.fieldId === "item:0:batch_number")
+    ),
+    false,
+  );
+});
+
+test("LOW single-source adaptive OCR evidence is withheld from suggestions", () => {
+  const merged = mergeAdaptiveRescueResults(
+    [{
+      fieldResults: [{
+        fieldId: "item:0:batch_number",
+        label: "Batch",
+        scope: "LINE_ITEM",
+        source: "VISION_DERIVATIVE",
+        suggestedValue: "NOISY VALUE",
+        confidence: "LOW",
+        requiresHumanConfirmation: true,
+      }],
+    }],
+    [],
+  );
+
+  assert.equal(merged.suggestions.length, 0);
+  assert.equal(merged.fieldResults[0].state, "UNRESOLVED");
+  assert.equal(merged.fieldResults[0].suggestedValue, "");
+});
+
+test("MEDIUM adaptive evidence becomes a suggestion only when Vision and high-res Layout agree", () => {
+  const merged = mergeAdaptiveRescueResults(
+    [{
+      fieldResults: [{
+        fieldId: "header:invoice_date",
+        label: "Invoice date",
+        scope: "HEADER",
+        source: "VISION_DERIVATIVE",
+        suggestedValue: "2026-09-19",
+        confidence: "MEDIUM",
+        requiresHumanConfirmation: true,
+      }],
+    }],
+    [{
+      fieldResults: [{
+        fieldId: "header:invoice_date",
+        label: "Invoice date",
+        scope: "HEADER",
+        source: "HIGH_RES_LAYOUT_DERIVATIVE",
+        suggestedValue: "2026-09-19",
+        confidence: "MEDIUM",
+        requiresHumanConfirmation: true,
+      }],
+    }],
+  );
+
+  assert.equal(merged.suggestions.length, 1);
+  assert.equal(merged.suggestions[0].suggestedValue, "2026-09-19");
+  assert.equal(merged.suggestions[0].confidence, "MEDIUM");
 });

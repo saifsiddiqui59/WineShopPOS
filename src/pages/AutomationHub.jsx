@@ -579,7 +579,10 @@ export default function AutomationHub() {
     const seen = new Set();
 
     for (const rescue of result?.adaptiveOcrRescue?.suggestions || []) {
-      if (rescue?.fieldId !== "header:invoice_date") continue;
+      if (
+        rescue?.fieldId !== "header:invoice_date" ||
+        !["HIGH", "MEDIUM"].includes(String(rescue?.confidence || "").toUpperCase())
+      ) continue;
       const iso = normalizeSuggestedInvoiceDate(rescue?.suggestedValue);
       if (!iso || seen.has(iso)) continue;
       seen.add(iso);
@@ -710,14 +713,6 @@ export default function AutomationHub() {
     if (normalize(suggestion.value) === normalize(result?.invoiceNumber)) return null;
     return suggestion;
   }, [result?.shopAiReview, result?.invoiceNumber]);
-
-  const adaptiveOcrSuggestions = useMemo(
-    () => (result?.adaptiveOcrRescue?.suggestions || []).map((row) => ({
-      ...row,
-      value: String(row?.suggestedValue || ""),
-    })),
-    [result?.adaptiveOcrRescue],
-  );
 
   const supplierMatches = useMemo(() => {
     if (!result?.supplierName) return [];
@@ -2028,37 +2023,6 @@ export default function AutomationHub() {
         </section>
       ) : null}
 
-
-      {result?.adaptiveOcr ? (
-        <section className="panel" style={{ marginTop: 16 }}>
-          <div className="section-row">
-            <div>
-              <h3>Adaptive OCR Field Check</h3>
-              <p className="muted-text">
-                Standard OCR checked {result.adaptiveOcr.fieldCheckCount || 0} fields. Only uncertain/conflicting fields were sent to temporary derivative OCR. Derivatives are not stored.
-              </p>
-            </div>
-            <strong>
-              {result.adaptiveOcr.rescueFieldCount || 0} field(s) needed rescue
-            </strong>
-          </div>
-          {adaptiveOcrSuggestions.length ? (
-            <div className="verification-guidance verification-guidance--review">
-              <strong>Smart suggestions — check</strong>
-              {adaptiveOcrSuggestions.map((suggestion) => (
-                <div key={`${suggestion.fieldId}-${suggestion.source}`}>
-                  {suggestion.label || suggestion.fieldId}: <strong>{suggestion.value}</strong>
-                  {suggestion.source ? ` · ${suggestion.source}` : ""}
-                  {suggestion.confidence ? ` · ${suggestion.confidence}` : ""}
-                </div>
-              ))}
-              <div className="muted-text">Suggestions never overwrite invoice values automatically. Confirm against the physical invoice.</div>
-            </div>
-          ) : result?.adaptiveOcrRescue ? (
-            <p className="muted-text">No unique safe derivative suggestion was produced; manual review remains authoritative.</p>
-          ) : null}
-        </section>
-      ) : null}
 
       {result && confirmedSupplier ? (
         <section id="invoice-financial-summary" className={`panel${financeWarning ? " finance-review-flash" : ""}`} style={{ marginTop: 16 }}>

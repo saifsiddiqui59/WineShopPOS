@@ -4,7 +4,6 @@ const LEGAL_SUFFIX = /\b(llp|ltd|limited|pvt|private|company|co\.?|enterprises?|
 const NON_INVOICE_DATE_CONTEXT = /\b(tp|transport|permit|dispatch|order|delivery|batch|lot|mfg|mfd|manufactur(?:e|ed|ing)|expiry|exp)\b/i;
 const MONTH_PATTERN = "JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|SEPT|OCT|NOV|DEC";
 const MAX_RESCUE_GROUPS = 6;
-const LOW_ROW_CONFIDENCE = 0.84;
 const STRONG_DERIVATIVE_CONFIDENCE = 0.90;
 
 function norm(value) {
@@ -295,8 +294,6 @@ function fieldCheck(field, invoice, receivingShopName) {
     const item = invoice?.items?.[index] || {};
     const critical = new Set(["description", "packing", "mrp", "case_count", "rate_per_case", "amount"]);
     if (!current && critical.has(suffix)) reasons.push("MISSING_CRITICAL_LINE_FIELD");
-    const confidence = finite(item?.confidence);
-    if (confidence != null && confidence < LOW_ROW_CONFIDENCE && critical.has(suffix)) reasons.push("LOW_ROW_CONFIDENCE");
     if (suffix === "batch_number" && item?.batchReviewRequired === true) reasons.push("BATCH_REVIEW_REQUIRED");
     if (suffix === "mrp" && item?.mrpReviewRequired === true) reasons.push("MRP_REVIEW_REQUIRED");
 
@@ -452,21 +449,17 @@ export function buildAdaptiveOcrPlan({
     if (region) fieldRegions.set(fieldId, region);
   }
 
-  const sameRowFields = new Set([
-    "description", "packing", "batch_number", "mrp", "case_count",
-    "units_per_case", "loose_bottles", "printed_bottle_quantity",
-    "rate_per_case", "amount",
-  ]);
   const checks = matrix.map((field) => {
     const base = fieldCheck(field, invoice, receivingShopName);
-    const itemMatch = base.fieldId.match(/^item:(\d+):(.+)$/);
     const directRegion = fieldRegions.get(base.fieldId) || null;
     const reasons = [...base.reasons];
-    if (itemMatch && sameRowFields.has(itemMatch[2]) && !directRegion) {
-      reasons.push("ROW_GEOMETRY_UNVERIFIED");
-    }
     const status = reasons.length ? "RESCUE" : "PASS";
-    const region = directRegion || fallbackRegion(base, table.rowRegions, table.tableRegion);
+
+    let region = directRegion;
+    if (!region && (base.scope === "HEADER" || base.scope === "DOCUMENT")) {
+      region = fallbackRegion(base, table.rowRegions, table.tableRegion);
+    }
+
     return {
       ...base,
       status,
@@ -503,8 +496,8 @@ export function buildAdaptiveOcrPlan({
   const routedFieldIds = new Set(
     rescueGroups.flatMap((group) => (group.fields || []).map((field) => field.fieldId)),
   );
-  const manualOnlyFieldIds = rescueChecks
-    .filter((row) => !routedFieldIds.has(row.fieldId))
+  const manualOnlyFieldIds = checks
+    .filter((row) => row.status === "RESCUE" && !routedFieldIds.has(row.fieldId))
     .map((row) => row.fieldId);
 
   return {
@@ -514,6 +507,7 @@ export function buildAdaptiveOcrPlan({
     passCount: checks.filter((row) => row.status === "PASS").length,
     rescueFieldCount: rescueChecks.length,
     rescueGroupCount: rescueGroups.length,
+    manualOnlyFieldCount: manualOnlyFieldIds.length,
     maxRescueGroups: MAX_RESCUE_GROUPS,
     highResolutionPolicy: "ONLY_AFTER_DERIVATIVE_VISION_REMAINS_UNCERTAIN",
     derivativePolicy: "BROWSER_MEMORY_ONLY_NOT_STORED",
@@ -862,10 +856,31 @@ export function mergeAdaptiveRescueResults(standardGroups = [], highResolutionGr
       };
     }
     const chosen = bv ? b : a;
+    const aConfidence = String(a?.confidence || "LOW").toUpperCase();
+    const bConfidence = String(b?.confidence || "LOW").toUpperCase();
+    const chosenConfidence = String(chosen?.confidence || "LOW").toUpperCase();
+    const corroborated = Boolean(
+      av &&
+      bv &&
+      norm(av) === norm(bv) &&
+      ["HIGH", "MEDIUM"].includes(aConfidence) &&
+      ["HIGH", "MEDIUM"].includes(bConfidence)
+    );
+    const safeSuggestion = Boolean(
+      chosen?.suggestedValue &&
+      (chosenConfidence === "HIGH" || corroborated)
+    );
+
     return {
       ...(chosen || { fieldId }),
-      state: chosen?.suggestedValue ? "SUGGESTION" : "UNRESOLVED",
+      state: safeSuggestion ? "SUGGESTION" : "UNRESOLVED",
+      suggestedValue: safeSuggestion ? String(chosen?.suggestedValue || "").trim() : "",
       candidates: [a, b].filter(Boolean),
+      reason: safeSuggestion
+        ? chosen?.reason
+        : chosen?.suggestedValue
+          ? "LOW_OR_SINGLE_SOURCE_MEDIUM_WITHHELD"
+          : chosen?.reason,
       requiresHumanConfirmation: true,
     };
   });
