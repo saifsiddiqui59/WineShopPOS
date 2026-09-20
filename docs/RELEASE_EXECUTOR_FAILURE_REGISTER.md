@@ -3308,3 +3308,64 @@ guarded PROD build. Commit/push only if every gate passes.
 Verified outcome:
 V4 application/cloud mutation was a safe no-op; only its preceding documentation
 incident commit remained on `main`.
+
+### 2026-09-20 — V6 ShopAI Multimodal Phase B V1 public asset fetch after HTML publish
+
+Marker: `V6_SHOPAI_MULTIMODAL_PHASE_B_V1_PUBLIC_ASSET_FETCH_20260920`
+
+Release/stage:
+V6 ShopAI Multimodal Judge Phase B frontend finish V1 — public frontend verification.
+
+Symptom:
+The exact release built and non-HTML assets plus `404.html`/`index.html` uploaded.
+The cache-busted public `index.html` hash exactly matched the new local release,
+but a subsequent cache-busted `curl` for one `/assets/...` reference returned a
+non-success status and stopped the executor.
+
+Impact:
+- PROD DB migration `20260920043000_v6_shopai_multimodal_judge_v1` was already
+  live and was not replayed by this failure;
+- PROD `ocr-invoice` Edge Function version 24 was already live and was not
+  replayed by this failure;
+- `WSP_INVOICE_STORAGE_API_URL` was set in PROD;
+- new hashed/static frontend assets were uploaded;
+- new HTML was briefly published;
+- automatic rollback restored the prior production HTML;
+- QA/DEV were untouched.
+
+What the V1 evidence proves:
+The new public index hash matched the exact build before the asset request
+failed, so the failure was after publication and was not an index upload/hash
+problem. Every local asset upload command had also returned success. The V1
+validator, however, did not independently prove each Blob object/hash before
+publishing HTML and performed only one immediate public GET per asset.
+
+Resolution:
+Do not republish HTML until every exact-build non-HTML asset passes BOTH:
+1. Azure Blob data-plane download + SHA-256 equality with the local build; and
+2. cache-busted public static-site GET + SHA-256 equality with bounded retries.
+
+Re-upload exact hashed assets with explicit MIME type first. Verify all of them
+while the previous HTML remains live. Only then publish `404.html` and
+`index.html` last, followed by a second public asset/hash pass.
+
+Permanent prevention:
+For Azure Static Website releases:
+- Blob upload success is not sufficient proof that the public static endpoint is
+  immediately serving the object;
+- verify asset existence/content through the data plane before HTML publication;
+- verify public accessibility with bounded retry before HTML publication;
+- compare asset bytes/hashes, not merely HTTP 200;
+- log the exact failing asset in the canonical summary;
+- publish HTML only after its entire referenced/static asset set is publicly
+  available;
+- on any post-HTML failure restore only the captured old HTML entrypoints.
+
+Safe continuation:
+Build exact application source SHA
+`2c6557a5d957c4b41625e1167ae58bf1507ef8bc`. Do not replay the DB migration,
+Edge deployment, or Blob-fallback secret. Reconcile and prove exact static
+assets first; publish frontend HTML only after the pre-publication asset gate.
+
+Verified outcome:
+V1 rollback reported `HTML_RESTORED`; source/server state remained intact.
