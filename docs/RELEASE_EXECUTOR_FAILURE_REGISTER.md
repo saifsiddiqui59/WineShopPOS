@@ -3252,3 +3252,59 @@ focused suite and guarded PROD build, then commit/push only if all gates pass.
 Verified outcome:
 V3 source/cloud mutation was a safe no-op; only the earlier V2 documentation
 incident commit remained on `main`.
+
+### 2026-09-20 — V6 ShopAI Multimodal Phase A V4 stale Indian-date integration contract
+
+Marker: `V6_SHOPAI_MULTIMODAL_PHASE_A_V4_STALE_INDIAN_DATE_TEST_20260920`
+
+Release/stage:
+V6 ShopAI Multimodal Invoice Judge Phase A V4 — focused regression tests.
+
+Symptom:
+The multimodal source patch, the V3 stale-correlation regression correction and
+the current DI `primaryResult` integration correction all completed. The focused
+suite then failed in `tests/v5InvoiceResolutionIntegration.test.mjs` because the
+test still required the legacy JSX shape `Invoice Date<input`.
+
+Impact:
+- the V3 failure-register documentation commit was already pushed to `main`;
+- the V4 application/source candidate was never committed or pushed;
+- no migration was applied;
+- no Edge Function or frontend deployment occurred;
+- no purchase, inventory, QA or DEV mutation occurred;
+- the executor-owned source worktree was removed safely.
+
+Root cause:
+Purchase Receiving was deliberately migrated earlier to `IndianDateInput` so the
+owner sees and edits dates as DD/MM/YYYY while the stored/API value remains ISO.
+The older V5 integration test encoded the former raw `<input>` implementation
+instead of the behavioral requirement that the invoice date remains manually
+editable and feeds the date-review gate.
+
+Resolution:
+Keep `IndianDateInput`. Replace only the stale static contract with assertions
+that verify:
+- the Indian date component is used for the invoice date;
+- the control is exposed as `Invoice Date DD/MM/YYYY`;
+- it is bound to `invoiceDate`;
+- a cleared/invalid edit re-enables `invoiceDateReviewRequired`.
+
+Continuation review also re-ran every other static assertion in
+`v5InvoiceResolutionIntegration.test.mjs` against the current PROD source; all
+other pre-existing assertions are compatible after the V3 contract corrections.
+
+Permanent prevention:
+Static regression tests must encode the business/security invariant, not an old
+HTML implementation detail. When UI components are intentionally replaced
+without changing workflow semantics, update the regression to prove the new
+component's binding and review-gate behavior rather than restoring obsolete JSX.
+
+Safe continuation:
+Fresh isolated worktree from current PROD `origin/main`. Reapply the Phase A
+candidate once, apply all three known stale-contract corrections, run the
+integration contract test separately, then run the complete focused suite and
+guarded PROD build. Commit/push only if every gate passes.
+
+Verified outcome:
+V4 application/cloud mutation was a safe no-op; only its preceding documentation
+incident commit remained on `main`.
