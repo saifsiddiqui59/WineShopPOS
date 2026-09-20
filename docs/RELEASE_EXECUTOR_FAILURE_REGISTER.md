@@ -3195,3 +3195,60 @@ so the entire Phase A source patch may be applied once from current main; nothin
 
 Verified outcome:
 V2 failure itself was safe/no-op. V3 continuation pending.
+
+### 2026-09-20 — V6 ShopAI Multimodal Phase A V3 stale correlation regression contract
+
+Marker: `V6_SHOPAI_MULTIMODAL_PHASE_A_V3_STALE_CORRELATION_TEST_20260920`
+
+Release/stage:
+V6 ShopAI Multimodal Invoice Judge Phase A V3 — focused regression tests.
+
+Symptom:
+The multimodal source patch and semantic guards completed, then the existing
+`tests/v6OcrJudgeEfficiency.test.mjs` failed because it still required:
+`const correlationId = ingestionId || crypto.randomUUID()`.
+
+Impact:
+- the V2 failure-register documentation commit had already been pushed to `main`;
+- the V3 application/source candidate was never committed or pushed;
+- no migration was applied;
+- no Edge Function or frontend deployment occurred;
+- no purchase, inventory, QA or DEV mutation occurred;
+- the executor-owned source worktree was removed safely.
+
+Root cause:
+The new authoritative multimodal architecture intentionally requires every OCR
+request to reference the already-stored invoice ingestion. Therefore the Edge
+Function now rejects a missing ingestion ID and uses that stable ingestion ID as
+the correlation ID. The old regression encoded the previous fallback behavior
+that permitted an unlinked random correlation ID. The regression contract became
+stale after the security/traceability tightening.
+
+A second stale integration assertion was also found during continuation review:
+`tests/v5InvoiceResolutionIntegration.test.mjs` looks for
+`normalizeDocumentIntelligenceResult(result)` even though the live/current OCR
+Edge source uses `normalizeDocumentIntelligenceResult(primaryResult)`.
+
+Resolution:
+Keep the tightened application behavior. Update only the stale regression
+contracts:
+- require a stored ingestion ID;
+- require `const correlationId = ingestionId;`;
+- forbid the former random-ID fallback;
+- align the integration assertion with the existing `primaryResult` variable.
+
+Permanent prevention:
+When an architecture intentionally tightens an invariant, inspect static source
+contract tests for assumptions about the old behavior before running the full
+suite. Do not weaken the production invariant merely to satisfy a stale source
+shape assertion. Prefer tests that verify the security/behavioral invariant
+instead of one historical implementation string.
+
+Safe continuation:
+Fresh isolated worktree from current PROD `origin/main`. Reapply the Phase A
+source candidate once, patch the two stale regression contracts, run the complete
+focused suite and guarded PROD build, then commit/push only if all gates pass.
+
+Verified outcome:
+V3 source/cloud mutation was a safe no-op; only the earlier V2 documentation
+incident commit remained on `main`.
