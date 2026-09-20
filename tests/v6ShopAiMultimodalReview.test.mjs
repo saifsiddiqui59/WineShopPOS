@@ -304,6 +304,7 @@ test("Edge source uses canonical hash, Blob fallback, service-role authority and
   assert.match(source,/skipAi:\s*true/);
   assert.match(source,/estimatePdfPageCount/);
   assert.match(source,/runShopAiReview/);
+  assert.match(source,/Math\.max\(\s*60000,/);
 });
 
 test("Vision summary gives the judge compact raw OCR lines without persisting them in publicSecondary",()=>{
@@ -339,6 +340,11 @@ test("owner UI keeps the authoritative ShopAI gate behind the existing operator 
   assert.match(source,/confirmSupplierById/);
   assert.match(source,/friendlyPackSuggestion/);
   assert.match(source,/From invoice OCR/);
+  assert.match(source,/applyShopAiBatchSuggestion/);
+  assert.match(source,/`item:\$\{index\}:batch_number`/);
+  assert.match(source,/Batch \/ Lot:/);
+  assert.match(source,/OCR product:/);
+  assert.doesNotMatch(source,/<span>Product name: \{suggestedProductName\(item\)\}<\/span>/);
 
   // Developer diagnostics are no longer exposed as the normal shop-operator UI.
   assert.doesNotMatch(source,/ShopAI Invoice Judge/);
@@ -355,6 +361,9 @@ test("Purchase Receiving and Inbox use authoritative ShopAI state",()=>{
   assert.match(purchases,/shopAiReady/);
   assert.match(purchases,/financialReady&&shopAiReady/);
   assert.match(purchases,/shopAiOwnerDecision/);
+  assert.match(purchases,/shopAiReviewSuggestion/);
+  assert.match(purchases,/`item:\$\{i\}:batch_number`/);
+  assert.match(purchases,/Confirm Batch/);
   assert.match(inbox,/normalized_invoice,shopai_review/);
   assert.match(inbox,/shopAiReview:row\.shopai_review/);
 });

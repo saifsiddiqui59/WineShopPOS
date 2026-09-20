@@ -1044,6 +1044,25 @@ export default function AutomationHub() {
     });
   }
 
+  function applyShopAiBatchSuggestion(index, value) {
+    const suggested = String(value || "").trim();
+    if (!suggested) return;
+
+    setResult((current) => ({
+      ...current,
+      items: (current?.items || []).map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              batchNumber: suggested,
+              batchReviewRequired: true,
+              batchSuggestionSource: "SHOPAI_VISUAL_SUGGESTION",
+            }
+          : item,
+      ),
+    }));
+  }
+
   function updateQuantity(index, key, value) {
     setResolution((current) => {
       const row = {
@@ -1883,6 +1902,14 @@ export default function AutomationHub() {
                   const selectedProductImage=selectedProduct?.imageUrl||productImageUrl(selectedProduct?.imagePath||selectedProduct?.image_path||"");
                   const resolvedSizeMl=Number(row.sizeMl||inferOcrSizeMl(item)||0);
                   const priceSanity=linePriceSanity(item,row);
+                  const batchSmartSuggestion=shopAiFieldSuggestion(
+                    result?.shopAiReview,
+                    `item:${index}:batch_number`,
+                  );
+                  const showBatchSmartSuggestion=Boolean(
+                    batchSmartSuggestion?.value &&
+                    normalize(batchSmartSuggestion.value) !== normalize(item?.batchNumber),
+                  );
 
                   return (
                     <tr key={index} className={priceSanity.impossible?"ocr-line-impossible":""}>
@@ -1904,7 +1931,28 @@ export default function AutomationHub() {
                       </td>
 
                       <td><strong>{resolvedSizeMl>0?`${resolvedSizeMl} ml`:"Review"}</strong></td>
-                      <td><strong>{item.batchNumber || "—"}</strong></td>
+                      <td>
+                        <strong>{item.batchNumber || "—"}</strong>
+                        {showBatchSmartSuggestion ? (
+                          <div className="ocr-smart-suggestion ocr-smart-suggestion--compact">
+                            <strong>Smart suggestion — check</strong>
+                            <span>Batch / Lot: {batchSmartSuggestion.value}</span>
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() => applyShopAiBatchSuggestion(index, batchSmartSuggestion.value)}
+                            >
+                              Use suggestion
+                            </button>
+                          </div>
+                        ) : item.batchReviewRequired ? (
+                          <div className="verification-guidance verification-guidance--review">
+                            Check Batch / Lot against the original invoice.
+                          </div>
+                        ) : (
+                          <div className="muted-text">From invoice OCR</div>
+                        )}
+                      </td>
                       <td>{Number(item.mrp || 0) > 0 ? `₹${Number(item.mrp).toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
 
                       <td>
@@ -1925,15 +1973,17 @@ export default function AutomationHub() {
                           </div>
                         ) : (
                           <div>
-                            <div className="ocr-smart-suggestion">
-                              <strong>Smart suggestion — check</strong>
-                              <span>Product name: {suggestedProductName(item)}</span>
-                              {best ? (
-                                <span>Closest known product: {best.product_name} · {Math.round(bestScore * 100)}% · not selected</span>
-                              ) : (
-                                <span>No close Product Master product was found.</span>
-                              )}
+                            <div className="muted-text">
+                              <strong>OCR product:</strong> {suggestedProductName(item)}
                             </div>
+                            {best ? (
+                              <div className="ocr-smart-suggestion">
+                                <strong>Smart suggestion — check</strong>
+                                <span>Closest known product: {best.product_name} · {Math.round(bestScore * 100)}% · not selected</span>
+                              </div>
+                            ) : (
+                              <div className="muted-text">No close Product Master product was found.</div>
+                            )}
                             <div style={{margin:"8px 0"}}>
                               <div className="verification-guidance verification-guidance--neutral">
                                 <strong>New product is not created during OCR review.</strong>{" "}

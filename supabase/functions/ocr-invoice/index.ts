@@ -464,7 +464,10 @@ Deno.serve(async (req) => {
           baseUrl: Deno.env.get("WSP_INVOICE_AI_BASE_URL") || "",
           apiKey: Deno.env.get("WSP_INVOICE_AI_API_KEY") || "",
           model: Deno.env.get("WSP_INVOICE_AI_MODEL") || "",
-          timeoutMs: Number(Deno.env.get("WSP_INVOICE_AI_VISUAL_TIMEOUT_MS") || "30000"),
+          timeoutMs: Math.max(
+            60000,
+            Number(Deno.env.get("WSP_INVOICE_AI_VISUAL_TIMEOUT_MS") || "60000") || 60000,
+          ),
           correlationId,
         },
         contentBase64,
