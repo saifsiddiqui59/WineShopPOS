@@ -3155,3 +3155,43 @@ Do not depend on connector write permission for WineShopPOS release bookkeeping.
 Use the user's authenticated local Git path with an isolated clean worktree,
 exact allowlisted documentation change, race-check current `origin/main`, and
 push the documentation-only commit before the next deployment write.
+
+### 2026-09-20 — V6 ShopAI Multimodal Phase A V2 Purchases receive-message anchor escape failure
+
+Marker: `V6_SHOPAI_MULTIMODAL_PHASE_A_V2_PURCHASES_RECEIVE_BLOCK_ANCHOR_20260920`
+
+Release/stage:
+V6 ShopAI Multimodal Invoice Judge Phase A V2 — in-memory source patch preflight.
+
+Symptom:
+The executor stopped before writing any source with:
+`PATCH_MARKER_CARDINALITY: Purchases receive blocked reason path=src/pages/Purchases.jsx count=0`.
+
+Impact:
+- original `/e/WineShopPOS` was untouched;
+- executor-owned worktree was removed safely;
+- no commit or Git push occurred;
+- no migration, Edge Function, frontend, purchase, inventory, QA or DEV mutation occurred.
+
+Root cause:
+The patcher used a long exact marker containing the JavaScript date regular expression.
+Across shell/base64/JSON/Python source generation, the backslash representation was not
+identical to the checked-in compact JSX source, even though the semantic receive-message
+fragment existed. This repeats the known cross-language escape-collision failure class.
+
+Resolution:
+Patch only the unique semantic ternary fragment immediately before the financial blocked
+reason: `!financialReady?"financial reconciliation":!supplierName.trim()?`. The date regex
+is not part of the anchor. Verify marker cardinality against current `origin/main` before write.
+
+Permanent prevention:
+Do not use generated exact-text anchors containing regular-expression backslashes when a
+smaller unique semantic fragment exists. Keep regex bodies out of cross-language patch
+markers and validate source cardinality before mutation.
+
+Safe continuation:
+Fresh isolated worktree from current PROD `origin/main`. V2 made no source/cloud mutation,
+so the entire Phase A source patch may be applied once from current main; nothing is replayed.
+
+Verified outcome:
+V2 failure itself was safe/no-op. V3 continuation pending.
