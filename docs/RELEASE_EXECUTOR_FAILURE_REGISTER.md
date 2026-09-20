@@ -3369,3 +3369,58 @@ assets first; publish frontend HTML only after the pre-publication asset gate.
 
 Verified outcome:
 V1 rollback reported `HTML_RESTORED`; source/server state remained intact.
+
+### 2026-09-20 — V6 ShopAI authoritative review service-role context failure
+
+Marker: `V6_SHOPAI_AUTHORITATIVE_PERSIST_SERVICE_ROLE_CONTEXT_20260920`
+
+Release/stage:
+V6 ShopAI Multimodal PROD UAT — first authoritative ShopAI review persistence.
+
+Symptom:
+Fresh invoice analysis stopped with:
+`OCR Edge Function failed (HTTP 400): SHOPAI_AUTHORITATIVE_PERSIST_FAILED`.
+The original invoice had already been stored safely; no inventory mutation
+occurred.
+
+Impact:
+The failure occurred on the initial authoritative `PROCESSING` ShopAI review
+write, before the DI/Vision/ShopAI pipeline could complete. The stored invoice
+remained intact and can be analyzed again after the guard fix.
+
+Root cause:
+`trg_guard_invoice_shopai_review_authority` recognized the server primarily via
+the legacy `request.jwt.claim.role` GUC and allowed `postgres`/`supabase_admin`
+as `current_user`, but omitted the modern Data API service-role contexts
+`auth.role() = 'service_role'` and `current_user = 'service_role'`.
+The Edge Function correctly used a service-role Supabase client, but the
+authority trigger rejected that trusted server write and the Edge Function
+surfaced its fail-closed persistence error.
+
+Resolution:
+The guard now treats a write as privileged when any verified server context is
+present:
+- `auth.role() = 'service_role'`;
+- legacy `request.jwt.claim.role = 'service_role'`; or
+- `current_user` is `postgres`, `supabase_admin`, or `service_role`.
+
+Browser/authenticated users remain unable to author the authoritative
+`shopai_review`.
+
+Live verification:
+Migration `20260920061906_v6_shopai_authority_role_fix_v1` was applied to PROD.
+A transaction was executed under `SET LOCAL ROLE service_role` with
+`request.jwt.claims = {"role":"service_role"}` and successfully changed the
+authoritative field, then the transaction was rolled back. Post-rollback query
+confirmed the test invoice still had null ShopAI review fields.
+
+Permanent prevention:
+For Supabase Data API authority checks, do not depend on only the historical
+per-claim GUC. Use Supabase's current auth helpers/role context and explicitly
+handle the `service_role` database role. Keep fail-closed trigger protection for
+all non-server callers.
+
+Safe continuation:
+Do not re-upload the invoice. Retry Analyze Invoice on the already-stored
+ingestion after source-history synchronization. Do not receive stock until the
+new multimodal result has been inspected.
