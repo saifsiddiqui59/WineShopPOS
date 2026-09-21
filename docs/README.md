@@ -16,9 +16,9 @@ must be `v5` for the V5 production-promotion line.
 - `versions/v5/features/`
 - `versions/v5/releases/`
 
-V5 is currently a **PROD promotion candidate**. Documentation must not claim
-that V5 is deployed to PROD until the controlled production release and
-authenticated runtime verification actually complete.
+V5 is **DEPLOYED TO PROD**. The current verified production runtime is
+`483ad7fedfa99ed6e033c9967a60f91319e37919`. Historical candidate and qualification SHAs remain under
+`versions/v5/releases/` and testing evidence.
 
 ## Previous deployed generations
 

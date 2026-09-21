@@ -1,6 +1,6 @@
 # WineShopPOS Documentation Register — V5 PROD
 
-Status: **V5 DEPLOYED TO PROD — CURRENT APPLICATION RUNTIME `0ffe5335278c4075c81629e3807738bae702c66b`**
+Status: **V5 DEPLOYED TO PROD — CURRENT APPLICATION RUNTIME `483ad7fedfa99ed6e033c9967a60f91319e37919`**
 
 Production frontend: `https://wineshoppos.z29.web.core.windows.net/`
 Production Supabase: `uiurgplnsgmawvxhjzzp`
@@ -44,7 +44,7 @@ Production Supabase: `uiurgplnsgmawvxhjzzp`
 
 The deployed WineShopPOS application runtime is commit:
 
-`0ffe5335278c4075c81629e3807738bae702c66b`
+`483ad7fedfa99ed6e033c9967a60f91319e37919`
 
 Financial SSoT all-10 release status:
 - backend financial consistency: **PASS**
@@ -58,6 +58,26 @@ Financial SSoT all-10 release status:
 
 A later documentation-only commit may make `main` newer than the deployed
 application SHA. That does **not** mean a newer frontend was deployed.
+
+### 2026-09-21 current OCR / purchase-review checkpoint
+
+Current production hotfix line:
+- V13 evidence-localized adaptive OCR: `9b8172745cd0f2c93932c3b0eeea673390fe31c0`
+- V13R1 finance/product-cost separation: `483ad7fedfa99ed6e033c9967a60f91319e37919`
+
+Verified current behavior:
+- old Invoice OCR review UI is preserved;
+- Financial Reconciliation is invoice-arithmetic-only;
+- Product Cost Review is independent and cannot change Financial Reconciliation;
+- invoice 19185 financial result remains `₹83,944 -> ₹70,185`, printed `₹70,185`, difference `₹0`, MATCH;
+- adaptive OCR is advisory/fail-closed and never posts inventory directly.
+
+Open items:
+- invoice 19185 physical invoice date remains unresolved by OCR; do not Receive Stock until human-confirmed;
+- Azure OCR poll HTTP 429 resilience is still pending; current polling can fail an analysis attempt on throttling;
+- complete authenticated product/pack/quantity UAT for 19185 and representative invoices;
+- authenticated cross-page financial visual UAT remains pending;
+- three financial migration source-body backfills remain `PENDING_DNS / NON-RUNTIME`.
 
 Truth:
 

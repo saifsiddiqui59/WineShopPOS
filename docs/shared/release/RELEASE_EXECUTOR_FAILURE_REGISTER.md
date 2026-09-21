@@ -72,7 +72,7 @@ Prevention: generate resume/new executors only after fetching and reading the cu
 13. Keep transport verification separate from manual authenticated UAT.
 14. Record new executor failure classes in this file before the next release.
 
-Last updated: 2026-09-12.
+Last updated: 2026-09-21.
 
 ### 8. Relative self-script path after directory change
 Observed: validation used `grep ... "$0"` after the executor had changed directory from `/e/WineShopPOS` to `/e/WineShopPOS_V3`. Because `$0` was a relative filename, the validator searched for the executor inside the V3 worktree and failed with `No such file or directory`.
@@ -661,3 +661,85 @@ Permanent prevention:
 Classification:
 Release/executor network dependency failure. Not an application defect, not a
 database migration failure, and not a production data failure.
+
+<!-- V12_FALSE_SOURCE_ASSERTION_AND_PYTHON_ESCAPE_20260920 -->
+### 2026-09-20 — V12 false source assertion + embedded Python escape warning
+Observed:
+- first V12 executor stopped on literal `grep -Fq 'TP'` although semantic TP handling existed;
+- embedded Python emitted invalid-escape SyntaxWarnings.
+Classification: executor validation defect; no deployment occurred.
+Prevention:
+- test semantics, not arbitrary case-sensitive strings;
+- embedded Python in release executors must be warning-clean;
+- never weaken app code to satisfy a brittle validator.
+<!-- /V12_FALSE_SOURCE_ASSERTION_AND_PYTHON_ESCAPE_20260920 -->
+
+<!-- V12_V5_AUTHORITATIVE_HANDOFF_REGRESSION_20260920 -->
+### 2026-09-20 — V12 broke the V5 authoritative OCR handoff contract
+Observed:
+A candidate changed the required `const reviewInvoice = applyShopAiVisualPrefills(data.invoice);` handoff and failed the V5 regression before deployment.
+Prevention:
+- keep metadata RPC fields sourced from `data.invoice`;
+- adaptive rescue is advisory and must not replace the authoritative ingestion contract;
+- never weaken the regression to make a new OCR design pass.
+<!-- /V12_V5_AUTHORITATIVE_HANDOFF_REGRESSION_20260920 -->
+
+<!-- V12R1_ADAPTIVE_FANOUT_AND_DEBUG_UI_20260920 -->
+### 2026-09-20 — V12R1 over-rescued 98 fields and exposed internal diagnostics
+Observed:
+Invoice 19185 showed `98 field(s) needed rescue`; low row confidence fanned out to many fields and the Adaptive OCR diagnostic panel appeared in normal UI.
+Resolution:
+V12R2 restored old UI, removed row-confidence fan-out, withheld LOW/single-source MEDIUM suggestions and required exact geometry for line/finance rescue.
+Prevention:
+row confidence is not field confidence; internal diagnostics do not belong in normal user flow.
+<!-- /V12R1_ADAPTIVE_FANOUT_AND_DEBUG_UI_20260920 -->
+
+<!-- V12R2_R3_HEADER_DATE_RESCUE_LIMITATION_20260920 -->
+### 2026-09-20 — disputed date rescue first trusted bad DI geometry, then became too broad
+Observed:
+- V12R2 still used the disputed DI InvoiceDate box;
+- V12R3 stopped trusting it but used a broad semantic header crop.
+Resolution direction:
+V13 localizes evidence before rescue.
+Prevention:
+geometry locates evidence but does not establish semantic truth; localize first, then OCR.
+<!-- /V12R2_R3_HEADER_DATE_RESCUE_LIMITATION_20260920 -->
+
+<!-- V13_DATE_UNRESOLVED_AFTER_LOCALIZATION_20260921 -->
+### 2026-09-21 — V13 localized evidence but invoice 19185 date remains unresolved
+Observed:
+V13 ran with trusted-anchor semantic ROI, raw-color derivative and 3-group cap, yet adaptive Vision and high-resolution Layout both returned `NO_UNIQUE_SAFE_CANDIDATE`. DI, Vision and ShopAI disagree.
+Classification:
+OPEN evidence-quality/localization limitation.
+Prevention:
+- never majority-vote conflicting dates into authority;
+- do not add unlimited retries/providers;
+- preserve physical-invoice confirmation when image evidence cannot support one unique date.
+<!-- /V13_DATE_UNRESOLVED_AFTER_LOCALIZATION_20260921 -->
+
+<!-- V13R1_FINANCE_PRODUCT_COST_COUPLING_20260921 -->
+### 2026-09-21 — Product Cost Review leaked into Financial Reconciliation UI
+Observed:
+resolved quantity × purchase price could affect displayed product value; `Other Invoice Deduction` was also ambiguous.
+Resolution:
+`483ad7fedfa99ed6e033c9967a60f91319e37919` separates invoice arithmetic from Product Cost Review and labels `Other Discount / Deduction (-)`.
+Prevention:
+product/master-cost comparison must never change invoice financial MATCH/BLOCKED.
+<!-- /V13R1_FINANCE_PRODUCT_COST_COUPLING_20260921 -->
+
+<!-- AZURE_OCR_429_POLL_RESILIENCE_GAP_20260921 -->
+### 2026-09-21 — Azure OCR poll HTTP 429 aborts the Analyze attempt
+Observed:
+`Azure OCR poll failed: 429`. Original invoice remained stored and inventory unchanged.
+Current defect:
+DI/Vision polling is about once per second and throws immediately on non-2xx; Retry-After/backoff is not implemented.
+Classification:
+OPEN service-throttling resilience defect.
+Required fix:
+- poll less aggressively;
+- honor `Retry-After`;
+- use bounded progressive backoff;
+- retry the same operation-location instead of forcing duplicate Analyze submissions;
+- apply the same resilience to DI and Vision;
+- fail closed after bounded retries.
+<!-- /AZURE_OCR_429_POLL_RESILIENCE_GAP_20260921 -->

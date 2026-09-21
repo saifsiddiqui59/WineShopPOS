@@ -861,3 +861,28 @@ Backend midnight rollover v4 also closes stale previous-day terminal watermarks.
 19-Sep legacy pre-terminal sales were acknowledged without fabricating terminal
 IDs. 19-Sep is FINAL with zero open shifts and zero open terminal blockers.
 <!-- /DAILY_CLOSING_OPERATIONS_20260920 -->
+
+
+<!-- V13_OCR_FINANCE_CURRENT_CHECKPOINT_20260921 -->
+## 2026-09-21 — Current PROD OCR / purchase-review checkpoint
+
+Current deployed application/source runtime: `483ad7fedfa99ed6e033c9967a60f91319e37919`.
+
+Recent PROD sequence:
+- V12R1 `833201f`: adaptive OCR introduced;
+- V12R2 `c7fbdfa`: old OCR UI restored, row-confidence fan-out removed;
+- V12R3 `a4bb93f`: semantic header rescue;
+- V13 `9b817274`: evidence-localized/raw-color rescue, 3-group cap;
+- V13R1 `483ad7f`: Financial Reconciliation separated from Product Cost Review.
+
+Invoice 19185:
+- original evidence safely stored;
+- supplier Kapil Alcotech LLP confirmed;
+- finance: ₹83,944 product value, -₹13,759 adjustments, ₹70,185 calculated, ₹70,185 printed, MATCH ₹0;
+- Product Cost Review is independent;
+- date remains unresolved by OCR and must be physically confirmed;
+- do not Receive Stock until all line/pack/quantity/batch gates are complete.
+
+Open known issue:
+Azure OCR polling can return HTTP 429. Current Edge polling lacks Retry-After/progressive backoff and can fail an otherwise safe Analyze attempt.
+<!-- /V13_OCR_FINANCE_CURRENT_CHECKPOINT_20260921 -->

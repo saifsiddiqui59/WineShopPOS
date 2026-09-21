@@ -4,7 +4,7 @@ Status: **DEPLOYED — FINANCIAL SSoT ALL-10 RELEASE PASS**
 
 Current deployed application runtime:
 
-`0ffe5335278c4075c81629e3807738bae702c66b`
+`483ad7fedfa99ed6e033c9967a60f91319e37919`
 
 Production:
 
@@ -40,6 +40,20 @@ The current financial implementation includes:
 - server-paginated Reports;
 - Owner / Dashboard / Reports / AI financial formula alignment;
 - permanent reconciliation regression checks.
+
+## Post-baseline production hotfix checkpoint — 2026-09-21
+
+Verified:
+- V13 evidence-localized OCR source/frontend/Edge line is live;
+- V13R1 Financial Reconciliation / Product Cost Review separation is live;
+- invoice 19185 backend finance remains MATCH: line product value ₹83,944, calculated invoice ₹70,185, printed invoice ₹70,185, difference ₹0;
+- finance backend implementation was not changed by V13R1;
+- no inventory mutation occurred during OCR review.
+
+Open:
+- invoice 19185 OCR date remains unresolved; competing OCR/AI readings are not trustworthy enough for auto-confirmation;
+- Azure OCR polling HTTP 429 is a known resilience gap and must be fixed before high-volume OCR certification;
+- complete authenticated 19185 line/pack/product review and representative-invoice regression UAT before declaring OCR redesign complete.
 
 ## Remaining follow-up
 

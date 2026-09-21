@@ -4,7 +4,7 @@ Status: **DEPLOYED TO PROD**
 
 Current deployed application runtime:
 
-`0ffe5335278c4075c81629e3807738bae702c66b`
+`483ad7fedfa99ed6e033c9967a60f91319e37919`
 
 Production frontend:
 
@@ -33,7 +33,7 @@ For a new chat or coding session, read in this order:
 ### PROD
 
 - source branch: `main`
-- deployed application SHA: `0ffe5335278c4075c81629e3807738bae702c66b`
+- deployed application SHA: `483ad7fedfa99ed6e033c9967a60f91319e37919`
 - frontend: `https://wineshoppos.z29.web.core.windows.net/`
 - Supabase ref: `uiurgplnsgmawvxhjzzp`
 
@@ -56,6 +56,20 @@ For a new chat or coding session, read in this order:
 - Owner Center / Reports / Dashboard / Profit financial reconciliation.
 - Ask WineShopPOS owner-assistant reporting aligned to India business dates.
 - financial SSoT all-10 consistency release at `0ffe5335278c4075c81629e3807738bae702c66b`.
+
+## Latest production checkpoint — 2026-09-21
+
+After the financial SSoT baseline, production received these bounded OCR/purchase-review hotfixes:
+- V12R1 `833201fcaaadf80fc5a4589fdd6aec7bae132af1`: fail-closed field-level adaptive OCR;
+- V12R2 `c7fbdfa99586b0fb3d2605cc3931951aaa80cd29`: old OCR UI restored and row-confidence rescue fan-out removed;
+- V12R3 `a4bb93f7e77fc3e7ce15beec66c3193dc23c3bee`: disputed header semantic rescue;
+- V13 `9b8172745cd0f2c93932c3b0eeea673390fe31c0`: evidence-localized/raw-color adaptive OCR with a 3-group cap;
+- V13R1 `483ad7fedfa99ed6e033c9967a60f91319e37919`: Financial Reconciliation separated from Product Cost Review.
+
+Known open runtime issues:
+- invoice 19185 date remains unresolved by OCR and must remain human-confirmed;
+- Azure OCR polling can return HTTP 429 and currently lacks Retry-After/progressive backoff resilience;
+- invoice 19185 must not be received until date and all product/pack/quantity/batch review gates are complete.
 
 ## Canonical V5 documentation
 

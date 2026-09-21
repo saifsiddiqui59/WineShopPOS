@@ -632,3 +632,48 @@ Important status distinction:
 The promotion executor must re-derive live PROD migration/service/frontend
 deltas and must not blindly apply every V5-named migration.
 <!-- /V5_30_PROD_DOC_TREE_RECONCILIATION_20260910 -->
+
+
+<!-- V13_OCR_FINANCE_CHECKPOINT_20260921 -->
+## 2026-09-20/21 — V12 -> V13 adaptive OCR redesign + finance/product-cost separation
+
+Production chronology:
+- `833201fcaaadf80fc5a4589fdd6aec7bae132af1` — V12R1 field-level adaptive OCR;
+- `c7fbdfa99586b0fb3d2605cc3931951aaa80cd29` — V12R2 old OCR UI preserved + rescue fan-out removed;
+- `a4bb93f7e77fc3e7ce15beec66c3193dc23c3bee` — V12R3 semantic header rescue;
+- `9b8172745cd0f2c93932c3b0eeea673390fe31c0` — V13 evidence-localized/raw-color adaptive OCR;
+- `483ad7fedfa99ed6e033c9967a60f91319e37919` — V13R1 Financial Reconciliation / Product Cost Review separation.
+
+Current OCR architecture:
+- canonical original invoice is retained and hash-verified;
+- standard DI + Vision run first;
+- adaptive rescue is advisory/fail-closed;
+- broad top-42% header rescue was removed;
+- disputed header rescue uses trusted invoice-number / semantic-label geometry where available;
+- temporary rescue derivatives are raw-color ROI first;
+- client and Edge cap rescue at 3 groups;
+- high-resolution DI uses `prebuilt-layout + ocrHighResolution` only after standard rescue remains unresolved;
+- old Invoice OCR UI remains primary;
+- Receive Stock remains separately gated and DB-authoritative.
+
+Invoice 19185:
+- supplier Kapil Alcotech LLP confirmed;
+- invoice number 19185;
+- financial reconciliation: product value ₹83,944, net adjustments -₹13,759, calculated ₹70,185, printed ₹70,185, difference ₹0, MATCH;
+- Financial Reconciliation is invoice arithmetic only;
+- Product Cost Review is independent;
+- label is `Other Discount / Deduction (-)`.
+
+Unresolved date:
+- DI: 19/07/2021;
+- standard Vision: 19/04/2020;
+- ShopAI produced a conflicting 2020 date;
+- adaptive Vision/high-resolution rescue: no unique safe candidate;
+- expected physical date remains 19/09/2026 and requires human confirmation.
+
+Known runtime resilience gap:
+- Azure OCR/DI polling currently fails the whole Analyze attempt on the first HTTP 429;
+- required fix is Retry-After-aware/progressive backoff on the same operation, not duplicate user submissions.
+
+Do not Receive Stock for 19185 until date and all product/pack/quantity/batch review gates are complete.
+<!-- /V13_OCR_FINANCE_CHECKPOINT_20260921 -->
