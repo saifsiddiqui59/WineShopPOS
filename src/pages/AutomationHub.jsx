@@ -1580,6 +1580,9 @@ export default function AutomationHub() {
   const productLineGap = Number(
     (invoiceLineSubtotal - reviewedResolvedLineValue).toFixed(2),
   );
+  const productCostGap = Number(
+    (reviewedResolvedLineValue - invoiceLineSubtotal).toFixed(2),
+  );
 
   const invoiceTableTotals = useMemo(
     () =>
@@ -1609,7 +1612,7 @@ export default function AutomationHub() {
     [charges],
   );
 
-  const reviewedInvoiceTotal = reviewedProductValue + reviewedAdjustment;
+  const reviewedInvoiceTotal = invoiceLineSubtotal + reviewedAdjustment;
   const printedInvoiceTotal = Number(result?.total || 0);
   const reconciliationDifference =
     printedInvoiceTotal > 0
@@ -2037,7 +2040,7 @@ export default function AutomationHub() {
             WineShopPOS now recognizes common liquor-invoice summary rows such as Cash Discount, Other Deduction, Freight/Carting, Stamp Duty and TCS. Review the auto-filled values before posting.
           </p>
           <div className="metric-grid four" style={{ marginTop: 12 }}>
-            <div className="metric-card"><span>Reviewed Product Value</span><strong>₹{reviewedProductValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Invoice Product Value</span><strong>₹{invoiceLineSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
             <div className="metric-card"><span>Calculated Invoice</span><strong>₹{reviewedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
             <div className="metric-card"><span>Printed Invoice</span><strong>{printedInvoiceTotal > 0 ? `₹${printedInvoiceTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</strong></div>
             <div className="metric-card"><span>Reconciliation</span><strong>{reconciliationDifference == null ? "No printed total" : reconciliationMatches ? `MATCH · ₹${Math.abs(reconciliationDifference).toFixed(2)}` : `REVIEW · ₹${Math.abs(reconciliationDifference).toFixed(2)}`}</strong></div>
@@ -2056,13 +2059,13 @@ export default function AutomationHub() {
           )}
           <div className="form-grid" style={{ marginTop: 12 }}>
             {[
-              ["freightAmount", "Freight / Carting"],
-              ["transportAmount", "Transport"],
-              ["handlingAmount", "Handling"],
-              ["loadingUnloadingAmount", "Loading / Unloading"],
-              ["supplierDiscountAmount", "Cash / Supplier Discount"],
-              ["invoiceDiscountAmount", "Other / Invoice Deduction"],
-              ["miscellaneousAmount", "TCS + Stamp Duty + Other Additions"],
+              ["freightAmount", "Freight / Carting (+)"],
+              ["transportAmount", "Transport (+)"],
+              ["handlingAmount", "Handling (+)"],
+              ["loadingUnloadingAmount", "Loading / Unloading (+)"],
+              ["supplierDiscountAmount", "Cash / Supplier Discount (-)"],
+              ["invoiceDiscountAmount", "Other Discount / Deduction (-)"],
+              ["miscellaneousAmount", "TCS + Stamp Duty + Other Additions (+)"],
             ].map(([key, label]) => (
               <label key={key}>{label}
                 <input type="number" min="0" step="0.01" value={charges[key]}
@@ -2074,6 +2077,20 @@ export default function AutomationHub() {
                 onChange={(e) => setCharges((current) => ({ ...current, roundingAdjustment: Number(e.target.value || 0) }))} />
             </label>
           </div>
+        </section>
+      ) : null}
+
+      {result ? (
+        <section className="panel" style={{ marginTop: 16 }}>
+          <h3>Product Cost Review</h3>
+          <p className="muted-text">Independent product check. This compares invoice line value with reviewed quantity × purchase price and never changes Financial Reconciliation.</p>
+          <div className="metric-grid four">
+            <div className="metric-card"><span>Invoice Product Value</span><strong>₹{invoiceLineSubtotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Reviewed Product Cost</span><strong>₹{reviewedResolvedLineValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Cost Gap</span><strong>₹{Math.abs(productCostGap).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+            <div className="metric-card"><span>Status</span><strong>{unresolved ? "PENDING" : Math.abs(productCostGap) <= 1 ? "MATCH" : "REVIEW"}</strong></div>
+          </div>
+          {unresolved ? <div className="verification-guidance verification-guidance--review">Finish product, pack and quantity review to complete Product Cost Review.</div> : Math.abs(productCostGap) <= 1 ? <div className="verification-guidance verification-guidance--ok">MATCH · product cost gap ₹{Math.abs(productCostGap).toFixed(2)}</div> : <div className="verification-guidance verification-guidance--review">REVIEW · product cost gap ₹{Math.abs(productCostGap).toFixed(2)}. Check reviewed quantity and purchase price; Financial Reconciliation remains independent.</div>}
         </section>
       ) : null}
 
