@@ -113,9 +113,10 @@ test("field-level quality engine checks every ShopAI matrix field but rescues on
   assert.equal(plan.mode, "FIELD_LEVEL_ADAPTIVE_OCR_V1");
   assert.ok(plan.fieldCheckCount > 10);
   assert.ok(plan.passCount > 0);
-  assert.ok(plan.rescueFieldCount >= 3);
+  assert.ok(plan.rescueFieldCount >= 2);
   assert.ok(plan.rescueGroupCount >= 2);
-  assert.ok(plan.rescueGroupCount <= 6);
+  assert.ok(plan.rescueGroupCount <= 3);
+  assert.equal(plan.maxRescueGroups, 3);
   assert.equal(plan.highResolutionPolicy, "ONLY_AFTER_DERIVATIVE_VISION_REMAINS_UNCERTAIN");
   assert.equal(plan.derivativePolicy, "BROWSER_MEMORY_ONLY_NOT_STORED");
 
@@ -328,10 +329,15 @@ test("source architecture uses standard prebuilt-invoice first and prebuilt-layo
   assert.match(ui, /source: "ADAPTIVE_OCR"/);
 
   assert.match(derivative, /document\.createElement\("canvas"\)/);
-  assert.match(derivative, /grayscale\(1\) contrast\(1\.45\)/);
-  assert.match(derivative, /sharpenCanvas/);
+  assert.match(derivative, /RAW_COLOR_ROI_V1/);
+  assert.match(derivative, /image\/png/);
+  assert.match(derivative, /imageSmoothingEnabled = false/);
+  assert.doesNotMatch(derivative, /grayscale\(1\)|contrast\(1\.45\)|sharpenCanvas/);
+  assert.match(derivative, /rescueGroups\.slice\(0, 3\)/);
   assert.match(derivative, /derivativeStored: false/);
   assert.doesNotMatch(derivative, /localStorage|sessionStorage|supabase|fetch\(/);
+  assert.match(edge, /derivatives\.slice\(0, 3\)/);
+  assert.match(edge, /rescueGroupLimit: 3/);
 });
 
 
@@ -441,43 +447,84 @@ test("MEDIUM adaptive evidence becomes a suggestion only when Vision and high-re
 });
 
 
-test("disputed invoice date ignores the DI InvoiceDate box and rescues from semantic header context", () => {
+test("V13 localizes disputed invoice date to semantic evidence instead of the broad header", () => {
   const current = invoice();
+  const primary = primaryResult();
+  primary.analyzeResult.pages[0].lines = [
+    {
+      content: "TP Date",
+      polygon: [
+        { x: 80, y: 135 }, { x: 230, y: 135 },
+        { x: 230, y: 165 }, { x: 80, y: 165 },
+      ],
+    },
+    {
+      content: "19-04-2020",
+      polygon: [
+        { x: 240, y: 135 }, { x: 390, y: 135 },
+        { x: 390, y: 165 }, { x: 240, y: 165 },
+      ],
+    },
+    {
+      content: "Invoice No 19185",
+      polygon: [
+        { x: 620, y: 210 }, { x: 790, y: 210 },
+        { x: 790, y: 245 }, { x: 620, y: 245 },
+      ],
+    },
+    {
+      content: "Invoice",
+      polygon: [
+        { x: 620, y: 252 }, { x: 715, y: 252 },
+        { x: 715, y: 282 }, { x: 620, y: 282 },
+      ],
+    },
+    {
+      content: "Date 19-7-2021",
+      polygon: [
+        { x: 620, y: 286 }, { x: 830, y: 286 },
+        { x: 830, y: 318 }, { x: 620, y: 318 },
+      ],
+    },
+  ];
+
   const plan = buildAdaptiveOcrPlan({
-    primaryResult: primaryResult(),
+    primaryResult: primary,
     primaryInvoice: current,
     secondaryOcr: secondary(),
     invoice: current,
     receivingShopName: "Royal 21",
   });
 
-  assert.equal(plan.headerRescuePolicy, "SEMANTIC_HEADER_CONTEXT_ON_REVIEW");
+  assert.equal(plan.headerRescuePolicy, "TRUSTED_ANCHOR_SEMANTIC_ROI_V1");
+  assert.equal(plan.evidenceLocalizationPolicy, "INVOICE_ID_AND_SEMANTIC_LABEL_GEOMETRY");
+  assert.equal(plan.derivativePreprocessingPolicy, "RAW_COLOR_ROI_FIRST");
 
   const date = plan.fieldChecks.find((row) => row.fieldId === "header:invoice_date");
   assert.ok(date);
   assert.equal(date.status, "RESCUE");
   assert.ok(date.region);
-  assert.equal(date.region.page, 1);
-  assert.equal(date.region.xMin, 0);
-  assert.equal(date.region.xMax, 1);
-  assert.equal(date.region.yMin, 0);
-  assert.equal(date.region.yMax, 0.42);
+  assert.ok(["SPLIT_INVOICE_DATE_LABEL", "INVOICE_NUMBER_DATE_NEIGHBORHOOD"].includes(date.evidenceLocator));
+  assert.ok(date.region.xMin > 0.45);
+  assert.ok(date.region.xMax < 0.95);
+  assert.ok(date.region.yMax - date.region.yMin < 0.25);
+  assert.notEqual(date.region.xMin, 0);
+  assert.notEqual(date.region.xMax, 1);
 
   const group = plan.rescueGroups.find((row) =>
     (row.fields || []).some((field) => field.fieldId === "header:invoice_date")
   );
   assert.ok(group);
-  assert.equal(group.page, 1);
-  assert.equal(group.region.xMin, 0);
-  assert.equal(group.region.xMax, 1);
-  assert.equal(group.region.yMin, 0);
-  assert.equal(group.region.yMax, 0.44);
+  assert.ok(group.region.xMin > 0.40);
+  assert.ok(group.region.xMax < 0.98);
+  assert.ok(group.region.yMax - group.region.yMin < 0.30);
 });
 
-test("review-required supplier also uses semantic header context instead of disputed DI VendorName geometry", () => {
+test("V13 supplier rescue never falls back to the disputed receiver VendorName box", () => {
   const current = invoice();
+  const primary = primaryResult();
   const plan = buildAdaptiveOcrPlan({
-    primaryResult: primaryResult(),
+    primaryResult: primary,
     primaryInvoice: current,
     secondaryOcr: secondary(),
     invoice: current,
@@ -488,8 +535,64 @@ test("review-required supplier also uses semantic header context instead of disp
   assert.ok(supplier);
   assert.equal(supplier.status, "RESCUE");
   assert.ok(supplier.reasons.includes("SUPPLIER_MATCHES_RECEIVING_SHOP"));
-  assert.equal(supplier.region.xMin, 0);
-  assert.equal(supplier.region.xMax, 1);
-  assert.equal(supplier.region.yMin, 0);
-  assert.equal(supplier.region.yMax, 0.42);
+  assert.equal(supplier.region, null);
+  assert.ok(plan.manualOnlyFieldIds.includes("header:supplier_name"));
+});
+
+test("V13 supplier rescue uses one unique non-receiver legal vendor region when available", () => {
+  const current = invoice();
+  const primary = primaryResult();
+  primary.analyzeResult.pages[0].lines = [
+    {
+      content: "KAPIL ALCOTECH LLP",
+      polygon: [
+        { x: 70, y: 70 }, { x: 370, y: 70 },
+        { x: 370, y: 105 }, { x: 70, y: 105 },
+      ],
+    },
+    {
+      content: "ROYAL 21 BEER AND WINE SHOPEE KOKANWADI",
+      polygon: [
+        { x: 70, y: 170 }, { x: 430, y: 170 },
+        { x: 430, y: 205 }, { x: 70, y: 205 },
+      ],
+    },
+  ];
+
+  const plan = buildAdaptiveOcrPlan({
+    primaryResult: primary,
+    primaryInvoice: current,
+    secondaryOcr: secondary(),
+    invoice: current,
+    receivingShopName: "Royal 21",
+  });
+
+  const supplier = plan.fieldChecks.find((row) => row.fieldId === "header:supplier_name");
+  assert.ok(supplier.region);
+  assert.equal(supplier.evidenceLocator, "UNIQUE_LEGAL_VENDOR_LINE");
+  assert.ok(supplier.region.xMax < 0.55);
+  assert.ok(supplier.region.yMax < 0.20);
+});
+
+
+test("V13 semantic ROI can accept one unique non-TP date even when derivative OCR drops the Invoice word", () => {
+  const group = {
+    groupId: "adaptive:v13-date-roi",
+    receivingShopName: "Royal 21",
+    fields: [{
+      fieldId: "header:invoice_date",
+      label: "Invoice date",
+      scope: "HEADER",
+      kind: "DATE",
+      evidenceLocator: "INVOICE_NUMBER_DATE_NEIGHBORHOOD",
+    }],
+  };
+  const payload = visionPayload([
+    { text: "TP Date", box: [20, 40, 220, 40, 220, 75, 20, 75] },
+    { text: "19-04-2020", box: [230, 40, 410, 40, 410, 75, 230, 75] },
+    { text: "Date", box: [560, 140, 650, 140, 650, 175, 560, 175] },
+    { text: "19-09-2026", box: [665, 140, 860, 140, 860, 175, 665, 175] },
+  ]);
+  const result = analyzeAdaptiveRescueGroup({ payload, group, source: "VISION_DERIVATIVE" });
+  assert.equal(result.fieldResults[0].suggestedValue, "2026-09-19");
 });

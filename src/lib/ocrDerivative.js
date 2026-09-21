@@ -1,6 +1,6 @@
 const MAX_OUTPUT_DIMENSION = 1800;
 const MAX_OUTPUT_PIXELS = 2_800_000;
-const MAX_DERIVATIVE_BYTES = 950_000;
+const MAX_DERIVATIVE_BYTES = 1_150_000;
 
 function clamp(value, min = 0, max = 1) {
   const n = Number(value);
@@ -41,42 +41,13 @@ function blobToBase64(blob) {
   });
 }
 
-function canvasBlob(canvas, quality) {
+function canvasBlob(canvas, type, quality = undefined) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) reject(new Error("Unable to create temporary OCR derivative"));
       else resolve(blob);
-    }, "image/jpeg", quality);
+    }, type, quality);
   });
-}
-
-function sharpenCanvas(canvas) {
-  if (canvas.width * canvas.height > MAX_OUTPUT_PIXELS) return;
-  const context = canvas.getContext("2d", { willReadFrequently: true });
-  if (!context) return;
-  const source = context.getImageData(0, 0, canvas.width, canvas.height);
-  const src = source.data;
-  const copy = new Uint8ClampedArray(src);
-  const width = canvas.width;
-  const height = canvas.height;
-  const channels = 4;
-  for (let y = 1; y < height - 1; y += 1) {
-    for (let x = 1; x < width - 1; x += 1) {
-      const center = (y * width + x) * channels;
-      const left = center - channels;
-      const right = center + channels;
-      const up = center - width * channels;
-      const down = center + width * channels;
-      for (let c = 0; c < 3; c += 1) {
-        copy[center + c] = Math.max(
-          0,
-          Math.min(255, 5 * src[center + c] - src[left + c] - src[right + c] - src[up + c] - src[down + c]),
-        );
-      }
-    }
-  }
-  source.data.set(copy);
-  context.putImageData(source, 0, 0);
 }
 
 export function canCreateAdaptiveOcrDerivative(file) {
@@ -89,7 +60,7 @@ export async function createAdaptiveOcrDerivatives(file, rescueGroups = []) {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   try {
     const output = [];
-    for (const group of rescueGroups.slice(0, 6)) {
+    for (const group of rescueGroups.slice(0, 3)) {
       const region = safeRegion(group?.region);
       if (!region || Number(group?.page || 1) !== 1) continue;
 
@@ -106,7 +77,7 @@ export async function createAdaptiveOcrDerivatives(file, rescueGroups = []) {
 
       const byDimension = MAX_OUTPUT_DIMENSION / Math.max(sw, sh);
       const byPixels = Math.sqrt(MAX_OUTPUT_PIXELS / Math.max(1, sw * sh));
-      const scale = Math.max(1, Math.min(3, byDimension, byPixels));
+      const scale = Math.max(1, Math.min(4, byDimension, byPixels));
       const width = Math.max(1, Math.round(sw * scale));
       const height = Math.max(1, Math.round(sh * scale));
 
@@ -115,16 +86,20 @@ export async function createAdaptiveOcrDerivatives(file, rescueGroups = []) {
       canvas.height = height;
       const context = canvas.getContext("2d", { willReadFrequently: true });
       if (!context) continue;
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = "high";
-      context.filter = "grayscale(1) contrast(1.45)";
-      context.drawImage(bitmap, sx, sy, sw, sh, 0, 0, width, height);
-      context.filter = "none";
-      sharpenCanvas(canvas);
 
-      let blob = await canvasBlob(canvas, 0.92);
-      if (blob.size > MAX_DERIVATIVE_BYTES) blob = await canvasBlob(canvas, 0.78);
-      if (blob.size > MAX_DERIVATIVE_BYTES * 1.35) continue;
+      // V13: preserve the original color pixels on the first rescue attempt.
+      // Do not grayscale, increase contrast, or sharpen compressed WhatsApp text.
+      context.imageSmoothingEnabled = false;
+      context.filter = "none";
+      context.drawImage(bitmap, sx, sy, sw, sh, 0, 0, width, height);
+
+      let contentType = "image/png";
+      let blob = await canvasBlob(canvas, contentType);
+      if (blob.size > MAX_DERIVATIVE_BYTES) {
+        contentType = "image/jpeg";
+        blob = await canvasBlob(canvas, contentType, 0.96);
+      }
+      if (blob.size > MAX_DERIVATIVE_BYTES) continue;
 
       const derivativeRegion = {
         xMin: sx / sourceWidth,
@@ -142,7 +117,8 @@ export async function createAdaptiveOcrDerivatives(file, rescueGroups = []) {
             relativeRegion: relativeToDerivative(field.region, derivativeRegion),
           })),
         },
-        contentType: "image/jpeg",
+        contentType,
+        preprocessing: "RAW_COLOR_ROI_V1",
         contentBase64: await blobToBase64(blob),
         width,
         height,

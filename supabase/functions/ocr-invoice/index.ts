@@ -324,7 +324,7 @@ async function runAdaptiveOcrRescue({
   correlationId: string;
 }) {
   const safeDerivatives = Array.isArray(derivatives)
-    ? derivatives.slice(0, 6)
+    ? derivatives.slice(0, 3)
     : [];
   const standardGroups: any[] = [];
   const highResolutionGroups: any[] = [];
@@ -425,7 +425,9 @@ async function runAdaptiveOcrRescue({
     visionRequestCount,
     highResolutionRequestCount,
     highResolutionRequestLimit: 3,
+    rescueGroupLimit: 3,
     derivativeCount: safeDerivatives.length,
+    derivativeProfiles: safeDerivatives.map((row) => String(row?.preprocessing || "UNKNOWN")),
     derivativeStored: false,
     highResolutionModel: "prebuilt-layout",
     highResolutionFeature: "ocrHighResolution",

@@ -3,7 +3,7 @@ import { buildShopAiFieldMatrix } from "./invoiceShopAiReview.js";
 const LEGAL_SUFFIX = /\b(llp|ltd|limited|pvt|private|company|co\.?|enterprises?|distributors?|industries?)\b/i;
 const NON_INVOICE_DATE_CONTEXT = /\b(tp|transport|permit|dispatch|order|delivery|batch|lot|mfg|mfd|manufactur(?:e|ed|ing)|expiry|exp)\b/i;
 const MONTH_PATTERN = "JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|SEPT|OCT|NOV|DEC";
-const MAX_RESCUE_GROUPS = 6;
+const MAX_RESCUE_GROUPS = 3;
 const STRONG_DERIVATIVE_CONFIDENCE = 0.90;
 
 function norm(value) {
@@ -124,6 +124,249 @@ function documentFieldRegion(primaryResult, fieldName, pages) {
   const field = primaryResult?.analyzeResult?.documents?.[0]?.fields?.[fieldName];
   const bound = field?.boundingRegions?.[0];
   return normalizedRegionFromBounding(bound, pages);
+}
+
+function primaryLayoutLines(primaryResult, pages) {
+  const output = [];
+  for (const [pageIndex, page] of (primaryResult?.analyzeResult?.pages || []).entries()) {
+    const pageNumber = Number(page?.pageNumber || pageIndex + 1);
+    for (const [lineIndex, line] of (page?.lines || []).entries()) {
+      const text = String(line?.content || "").trim();
+      const region = normalizedRegionFromBounding(
+        { pageNumber, polygon: line?.polygon },
+        pages,
+      );
+      if (!text || !region) continue;
+      output.push({
+        id: `primary:${pageNumber}:${lineIndex}`,
+        text,
+        region,
+      });
+    }
+  }
+  return output;
+}
+
+function regionCenterPoint(region) {
+  if (!validRegion(region)) return null;
+  return {
+    x: (Number(region.xMin) + Number(region.xMax)) / 2,
+    y: (Number(region.yMin) + Number(region.yMax)) / 2,
+  };
+}
+
+function regionDistance(a, b) {
+  const ac = regionCenterPoint(a);
+  const bc = regionCenterPoint(b);
+  if (!ac || !bc || Number(a?.page || 1) !== Number(b?.page || 1)) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const dx = Math.abs(ac.x - bc.x);
+  const dy = Math.abs(ac.y - bc.y);
+  return Math.sqrt((dx * 0.65) ** 2 + dy ** 2);
+}
+
+function capEvidenceRegion(region, maxWidth = 0.68, maxHeight = 0.24) {
+  if (!validRegion(region)) return null;
+  const center = regionCenterPoint(region);
+  if (!center) return null;
+  const width = Math.min(maxWidth, Number(region.xMax) - Number(region.xMin));
+  const height = Math.min(maxHeight, Number(region.yMax) - Number(region.yMin));
+  return {
+    page: Number(region.page || 1),
+    xMin: clamp(center.x - width / 2),
+    xMax: clamp(center.x + width / 2),
+    yMin: clamp(center.y - height / 2),
+    yMax: clamp(center.y + height / 2),
+  };
+}
+
+function isInvoiceWord(text) {
+  return /\b(?:invoice|inv|bill)\b/i.test(String(text || ""));
+}
+
+function isDateLabel(text) {
+  return /\b(?:date|dt\.?)\b/i.test(String(text || ""));
+}
+
+function isInvoiceNumberLabel(text) {
+  const raw = String(text || "");
+  return (
+    isInvoiceWord(raw) &&
+    /\b(?:no|number|#)\b/i.test(raw) &&
+    !isDateLabel(raw) &&
+    !NON_INVOICE_DATE_CONTEXT.test(raw)
+  );
+}
+
+function semanticInvoiceDateEvidenceRegion({
+  primaryResult,
+  pages,
+  invoiceNumberRegion,
+  invoiceNumber,
+}) {
+  const page = Number(invoiceNumberRegion?.page || 1);
+  const lines = primaryLayoutLines(primaryResult, pages)
+    .filter((line) => Number(line?.region?.page || 1) === page)
+    .filter((line) => Number(line?.region?.yMin || 0) <= 0.48);
+
+  const invoiceNumberText = String(invoiceNumber || "").trim();
+  const textualAnchor = lines
+    .filter((line) => !NON_INVOICE_DATE_CONTEXT.test(line.text))
+    .filter((line) => isInvoiceNumberLabel(line.text) || (
+      invoiceNumberText &&
+      line.text.includes(invoiceNumberText) &&
+      isInvoiceWord(line.text)
+    ))
+    .sort((a, b) => (
+      regionDistance(a.region, invoiceNumberRegion) -
+      regionDistance(b.region, invoiceNumberRegion)
+    ))[0] || null;
+
+  const anchorRegion = unionRegions(
+    [invoiceNumberRegion, textualAnchor?.region].filter(Boolean),
+  ) || invoiceNumberRegion || textualAnchor?.region || null;
+
+  const explicit = lines
+    .filter((line) => !NON_INVOICE_DATE_CONTEXT.test(line.text))
+    .filter((line) => isInvoiceWord(line.text) && isDateLabel(line.text))
+    .map((line) => ({
+      region: line.region,
+      locator: "EXPLICIT_INVOICE_DATE_LABEL",
+    }));
+
+  const invoiceLines = lines
+    .filter((line) => !NON_INVOICE_DATE_CONTEXT.test(line.text))
+    .filter((line) => isInvoiceWord(line.text));
+  const dateLines = lines
+    .filter((line) => !NON_INVOICE_DATE_CONTEXT.test(line.text))
+    .filter((line) => isDateLabel(line.text));
+
+  const split = [];
+  for (const invoiceLine of invoiceLines) {
+    for (const dateLine of dateLines) {
+      if (invoiceLine.id === dateLine.id) continue;
+      if (regionDistance(invoiceLine.region, dateLine.region) > 0.20) continue;
+      const joined = unionRegions([invoiceLine.region, dateLine.region]);
+      if (!joined) continue;
+      split.push({
+        region: joined,
+        locator: "SPLIT_INVOICE_DATE_LABEL",
+      });
+    }
+  }
+
+  const semanticCandidates = [...explicit, ...split]
+    .sort((a, b) => {
+      if (anchorRegion) {
+        const d = regionDistance(a.region, anchorRegion) - regionDistance(b.region, anchorRegion);
+        if (Math.abs(d) > 0.0001) return d;
+      }
+      return Number(a.region?.yMin || 0) - Number(b.region?.yMin || 0);
+    });
+
+  if (semanticCandidates.length) {
+    const selected = semanticCandidates[0];
+    return {
+      region: capEvidenceRegion(paddedRegion(selected.region, 0.075, 0.055)),
+      locator: selected.locator,
+    };
+  }
+
+  if (!anchorRegion) return null;
+
+  const nearestDate = dateLines
+    .map((line) => ({
+      line,
+      distance: regionDistance(line.region, anchorRegion),
+    }))
+    .filter((row) => row.distance <= 0.28)
+    .sort((a, b) => a.distance - b.distance)[0] || null;
+
+  if (nearestDate) {
+    return {
+      region: capEvidenceRegion(
+        paddedRegion(
+          unionRegions([anchorRegion, nearestDate.line.region]) || anchorRegion,
+          0.06,
+          0.05,
+        ),
+      ),
+      locator: "INVOICE_NUMBER_DATE_NEIGHBORHOOD",
+    };
+  }
+
+  return {
+    region: capEvidenceRegion(paddedRegion(anchorRegion, 0.20, 0.09), 0.60, 0.22),
+    locator: "INVOICE_NUMBER_ANCHOR_NEIGHBORHOOD",
+  };
+}
+
+function semanticSupplierEvidenceRegion({
+  primaryResult,
+  pages,
+  receivingShopName,
+}) {
+  const lines = primaryLayoutLines(primaryResult, pages)
+    .filter((line) => Number(line?.region?.page || 1) === 1)
+    .filter((line) => Number(line?.region?.yMin || 0) <= 0.48);
+
+  const legal = lines
+    .filter((line) => LEGAL_SUFFIX.test(line.text))
+    .filter((line) => !/\b(buyer|bill\s*to|ship\s*to|consignee|customer|receiver)\b/i.test(line.text))
+    .filter((line) => !receivingShopName || !partyLooksSame(line.text, receivingShopName));
+
+  if (!legal.length) return null;
+  if (legal.length === 1) {
+    return {
+      region: capEvidenceRegion(paddedRegion(legal[0].region, 0.08, 0.05), 0.78, 0.20),
+      locator: "UNIQUE_LEGAL_VENDOR_LINE",
+    };
+  }
+
+  const roleLabels = lines.filter((line) =>
+    /\b(supplier|vendor|seller|issuer)\b/i.test(line.text),
+  );
+  const anchored = legal
+    .map((line) => ({
+      line,
+      distance: Math.min(
+        ...roleLabels.map((label) => regionDistance(line.region, label.region)),
+        Number.POSITIVE_INFINITY,
+      ),
+    }))
+    .filter((row) => row.distance <= 0.18)
+    .sort((a, b) => a.distance - b.distance);
+
+  if (anchored.length !== 1) return null;
+  return {
+    region: capEvidenceRegion(paddedRegion(anchored[0].line.region, 0.08, 0.05), 0.78, 0.20),
+    locator: "ROLE_ANCHORED_LEGAL_VENDOR",
+  };
+}
+
+function semanticInvoiceNumberEvidenceRegion({
+  primaryResult,
+  pages,
+  invoiceNumber,
+}) {
+  const value = String(invoiceNumber || "").trim();
+  const lines = primaryLayoutLines(primaryResult, pages)
+    .filter((line) => Number(line?.region?.page || 1) === 1)
+    .filter((line) => Number(line?.region?.yMin || 0) <= 0.48)
+    .filter((line) => !NON_INVOICE_DATE_CONTEXT.test(line.text))
+    .filter((line) => isInvoiceNumberLabel(line.text) || (
+      value &&
+      line.text.includes(value) &&
+      isInvoiceWord(line.text) &&
+      !isDateLabel(line.text)
+    ));
+
+  if (lines.length !== 1) return null;
+  return {
+    region: capEvidenceRegion(paddedRegion(lines[0].region, 0.08, 0.05), 0.60, 0.20),
+    locator: "EXPLICIT_INVOICE_NUMBER_LABEL",
+  };
 }
 
 function headerRole(value) {
@@ -345,7 +588,7 @@ function fieldCheck(field, invoice, receivingShopName) {
 }
 
 function fallbackRegion(check, rowRegions, tableRegion) {
-  if (check.scope === "HEADER") return { page: 1, xMin: 0, xMax: 1, yMin: 0, yMax: 0.42 };
+  if (check.scope === "HEADER") return null;
   if (check.scope === "FINANCE") return { page: 1, xMin: 0, xMax: 1, yMin: 0.48, yMax: 1 };
   if (check.scope === "DOCUMENT") return tableRegion || { page: 1, xMin: 0.02, xMax: 0.98, yMin: 0.25, yMax: 0.82 };
   const match = check.fieldId.match(/^item:(\d+):/);
@@ -372,7 +615,7 @@ function groupRescueChecks(checks) {
     const page = Number(check?.region?.page || 1);
     let key = `p${page}:document`;
     const item = check.fieldId.match(/^item:(\d+):/);
-    if (check.scope === "HEADER") key = `p${page}:header`;
+    if (check.scope === "HEADER") key = `p${page}:header:${String(check.fieldId || "").split(":").pop()}`;
     else if (check.scope === "FINANCE") key = `p${page}:finance`;
     else if (item) key = `p${page}:line:${item[1]}`;
     const list = provisional.get(key) || [];
@@ -380,9 +623,21 @@ function groupRescueChecks(checks) {
     provisional.set(key, list);
   }
 
+  const rescueGroupPriority = (key) => {
+    if (key.includes(":header:invoice_date")) return 0;
+    if (key.includes(":header:invoice_number")) return 1;
+    if (key.includes(":header:supplier_name")) return 2;
+    if (key.includes(":finance")) return 3;
+    if (key.includes(":document")) return 4;
+    return 5;
+  };
+
   const fixed = [...provisional.entries()]
     .filter(([key]) => !key.includes(":line:"))
-    .sort((a, b) => a[0].localeCompare(b[0]));
+    .sort((a, b) => (
+      rescueGroupPriority(a[0]) - rescueGroupPriority(b[0]) ||
+      a[0].localeCompare(b[0])
+    ));
   const lineEntries = [...provisional.entries()]
     .filter(([key]) => key.includes(":line:"))
     .sort((a, b) => {
@@ -449,6 +704,29 @@ export function buildAdaptiveOcrPlan({
     if (region) fieldRegions.set(fieldId, region);
   }
 
+  const headerEvidenceRegions = new Map();
+  const dateEvidence = semanticInvoiceDateEvidenceRegion({
+    primaryResult,
+    pages,
+    invoiceNumberRegion: fieldRegions.get("header:invoice_number") || null,
+    invoiceNumber: invoice?.invoiceNumber || "",
+  });
+  if (dateEvidence?.region) headerEvidenceRegions.set("header:invoice_date", dateEvidence);
+
+  const supplierEvidence = semanticSupplierEvidenceRegion({
+    primaryResult,
+    pages,
+    receivingShopName,
+  });
+  if (supplierEvidence?.region) headerEvidenceRegions.set("header:supplier_name", supplierEvidence);
+
+  const invoiceNumberEvidence = semanticInvoiceNumberEvidenceRegion({
+    primaryResult,
+    pages,
+    invoiceNumber: invoice?.invoiceNumber || "",
+  });
+  if (invoiceNumberEvidence?.region) headerEvidenceRegions.set("header:invoice_number", invoiceNumberEvidence);
+
   const checks = matrix.map((field) => {
     const base = fieldCheck(field, invoice, receivingShopName);
     const directRegion = fieldRegions.get(base.fieldId) || null;
@@ -456,14 +734,12 @@ export function buildAdaptiveOcrPlan({
     const status = reasons.length ? "RESCUE" : "PASS";
 
     let region = directRegion;
+    let evidenceLocator = "";
 
-    // A disputed header field must be rescued from semantic header context,
-    // not from the DI field box that produced the disputed value. This is
-    // especially important for invoice date/vendor, where DI may point at a
-    // TP/transport date or the receiving shop. Geometry locates evidence;
-    // semantic ownership decides the value.
     if (status === "RESCUE" && base.scope === "HEADER") {
-      region = fallbackRegion(base, table.rowRegions, table.tableRegion);
+      const evidence = headerEvidenceRegions.get(base.fieldId) || null;
+      region = evidence?.region || null;
+      evidenceLocator = String(evidence?.locator || "");
     } else if (!region && base.scope === "DOCUMENT") {
       region = fallbackRegion(base, table.rowRegions, table.tableRegion);
     }
@@ -473,6 +749,7 @@ export function buildAdaptiveOcrPlan({
       status,
       reasons: [...new Set(reasons)],
       region: region || null,
+      evidenceLocator,
       rescueEligible: status === "RESCUE" && Boolean(region),
     };
   });
@@ -496,6 +773,7 @@ export function buildAdaptiveOcrPlan({
         currentValue: row.currentValue,
         reasons: row.reasons,
         region: row.region,
+        evidenceLocator: row.evidenceLocator || "",
         relativeRegion: relativeRegion(row.region, safeRegion),
       })),
     };
@@ -519,7 +797,9 @@ export function buildAdaptiveOcrPlan({
     maxRescueGroups: MAX_RESCUE_GROUPS,
     highResolutionPolicy: "ONLY_AFTER_DERIVATIVE_VISION_REMAINS_UNCERTAIN",
     derivativePolicy: "BROWSER_MEMORY_ONLY_NOT_STORED",
-    headerRescuePolicy: "SEMANTIC_HEADER_CONTEXT_ON_REVIEW",
+    derivativePreprocessingPolicy: "RAW_COLOR_ROI_FIRST",
+    headerRescuePolicy: "TRUSTED_ANCHOR_SEMANTIC_ROI_V1",
+    evidenceLocalizationPolicy: "INVOICE_ID_AND_SEMANTIC_LABEL_GEOMETRY",
     fieldChecks: checks,
     rescueGroups,
     manualOnlyFieldIds,
@@ -700,7 +980,7 @@ function dateOwner(line, lines) {
   return roles[0].role;
 }
 
-function parseHeaderDate(lines) {
+function parseHeaderDate(lines, field = {}) {
   const candidates = [];
   for (const line of lines || []) {
     const tokens = dateTokens(line?.text || "");
@@ -709,7 +989,31 @@ function parseHeaderDate(lines) {
       candidates.push({ value: date.value, lines: [line], reason: "SPATIALLY_OWNED_INVOICE_DATE" });
     }
   }
-  return uniqueCandidate(candidates);
+
+  const explicit = uniqueCandidate(candidates);
+  if (explicit) return explicit;
+
+  const locator = String(field?.evidenceLocator || "");
+  const roiOwned = new Set([
+    "EXPLICIT_INVOICE_DATE_LABEL",
+    "SPLIT_INVOICE_DATE_LABEL",
+    "INVOICE_NUMBER_DATE_NEIGHBORHOOD",
+  ]);
+  if (!roiOwned.has(locator)) return null;
+
+  const localized = [];
+  for (const line of lines || []) {
+    if (NON_INVOICE_DATE_CONTEXT.test(String(line?.text || ""))) continue;
+    if (dateOwner(line, lines) === "NON_INVOICE") continue;
+    for (const date of dateTokens(line?.text || "")) {
+      localized.push({
+        value: date.value,
+        lines: [line],
+        reason: "SEMANTIC_ROI_UNIQUE_DATE",
+      });
+    }
+  }
+  return uniqueCandidate(localized);
 }
 
 function parseInvoiceNumber(lines) {
@@ -797,7 +1101,7 @@ function parseLineOrFinance(field, lines) {
 }
 
 function parseFieldCandidate(field, lines, receivingShopName) {
-  if (field.fieldId === "header:invoice_date") return parseHeaderDate(lines);
+  if (field.fieldId === "header:invoice_date") return parseHeaderDate(lines, field);
   if (field.fieldId === "header:invoice_number") return parseInvoiceNumber(lines);
   if (field.fieldId === "header:supplier_name") return parseSupplier(lines, receivingShopName);
   return parseLineOrFinance(field, lines);
