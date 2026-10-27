@@ -66,3 +66,5 @@ jobs:
 # Visual-fidelity correction: iMessage-style dense scattered wine-and-beer Echo background.
 
 # Explicit frontend-only promotion: visible clockwise swirling Echo; motion-tested PR #7.
+
+# Scoped rollout: verified 184-object premium perspective Echo, PR #8, UI only.
