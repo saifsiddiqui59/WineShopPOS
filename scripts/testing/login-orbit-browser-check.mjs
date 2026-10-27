@@ -9,9 +9,9 @@ await fs.mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true, channel: "chrome" });
 try {
   for (const scene of [
-    { name: "desktop", viewport: { width: 1440, height: 900 }, reducedMotion: "no-preference", expectedImages: 78 },
-    { name: "mobile", viewport: { width: 390, height: 844 }, reducedMotion: "no-preference", expectedImages: 78 },
-    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, reducedMotion: "reduce", expectedImages: 78 },
+    { name: "desktop", viewport: { width: 1440, height: 900 }, reducedMotion: "no-preference", expectedImages: 184 },
+    { name: "mobile", viewport: { width: 390, height: 844 }, reducedMotion: "no-preference", expectedImages: 184 },
+    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, reducedMotion: "reduce", expectedImages: 184 },
   ]) {
     const context = await browser.newContext({
       viewport: scene.viewport,
@@ -38,6 +38,36 @@ try {
     assert.deepEqual(missingImages, [], "decorative SVG files should be available from public/");
     const uniqueBrands = new Set(await page.locator(".wsp-login-product-label").allTextContents());
     assert.equal(uniqueBrands.size, 10, "all wine and beer brands should appear in the Echo field");
+    assert.equal(await page.locator(".wsp-login-echo[data-depth='0']").count(), 46);
+    assert.equal(await page.locator(".wsp-login-echo[data-depth='3']").count(), 46);
+    const perspective = await page.locator(".wsp-login-echo-field").evaluate(el =>
+      getComputedStyle(el).perspective);
+    assert.equal(perspective, "1100px", "depth must come from a 3D perspective camera");
+
+    await page.waitForTimeout(500);
+    const depthStats = await page.locator(".wsp-login-echo").evaluateAll(els => {
+      const visible = els.filter(el => {
+        const style = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return style.display !== "none" && Number(style.opacity) > .35 &&
+          rect.width > 5 && rect.height > 5 &&
+          rect.right > -20 && rect.left < innerWidth + 20 &&
+          rect.bottom > -20 && rect.top < innerHeight + 20;
+      });
+      const depth = new Set(visible.map(el => el.dataset.depth));
+      return {
+        visible: visible.length,
+        bands: [...depth],
+        threeDimensional: visible.filter(el =>
+          getComputedStyle(el).transform.startsWith("matrix3d(")).length,
+      };
+    });
+    assert(depthStats.visible >= (scene.name === "mobile" ? 18 : 40),
+      "not enough simultaneously visible bottles: " + JSON.stringify(depthStats));
+    assert(depthStats.bands.length >= 3, "visible bottles must come from multiple 3D depths");
+    assert(depthStats.threeDimensional >= depthStats.visible * .9,
+      "nearly every visible bottle must have an actual 3D transform");
+    console.log("LOGIN_PREMIUM_3D_DENSITY_" + scene.name.toUpperCase() + "=" + JSON.stringify(depthStats));
 
     // Assert the pieces actually move in the browser. Static render counts and
     // single screenshots do NOT qualify a swirling animation.
@@ -77,7 +107,7 @@ try {
 
     const animation = await page.locator(".wsp-login-echo").first().evaluate(el =>
       getComputedStyle(el).animationName);
-    assert.equal(animation, scene.reducedMotion === "reduce" ? "none" : "wsp-login-echo-swirl");
+    assert.equal(animation, scene.reducedMotion === "reduce" ? "none" : "wsp-login-premium-echo");
 
     const card = await page.locator(".auth-card").boundingBox();
     assert(card && card.width > 240 && card.x >= 0 &&
