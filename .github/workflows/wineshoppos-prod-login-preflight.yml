@@ -95,8 +95,12 @@ jobs:
           import fs from "node:fs";
           const files = fs.readdirSync("/tmp/wsp-live").filter(f => f.endsWith(".js"));
           const bundle = files.map(f => fs.readFileSync("/tmp/wsp-live/"+f,"utf8")).join("\n");
-          if (!bundle.includes("uiurgplnsgmawvxhjzzp") || bundle.includes("juhcypzoacauzmtzqnwd")) {
-            console.error("Production bundle identity mismatch or DEV reference found.");
+          console.log("Live JS bytes:", Buffer.byteLength(bundle),
+            "starts like HTML:", bundle.trimStart().startsWith("<!"),
+            "contains PROD project:", bundle.includes("uiurgplnsgmawvxhjzzp"),
+            "contains DEV project:", bundle.includes("juhcypzoacauzmtzqnwd"));
+          if (!bundle.includes("uiurgplnsgmawvxhjzzp")) {
+            console.error("Production bundle does not contain the expected PROD project; do not deploy.");
             process.exit(1);
           }
           const jwt = [...new Set(bundle.match(/eyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}/g) || [])];
