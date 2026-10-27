@@ -58,3 +58,5 @@ jobs:
         run: bash scripts/ops/wsp-prod-login-deploy.sh
 
 # PROD rerun: verified invoice API config and main-only shell guard.
+
+# Re-run live acceptance after fixing SVG decode wait; rollback stays mandatory.
