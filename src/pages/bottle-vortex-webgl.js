@@ -1,6 +1,4 @@
 
-import { } from "react";
-
 // Dependency-free, GPU-rendered 3D mesh scene: not SVG billboards.
 const BRANDS = [
   ["SULA","wine",[.12,.21,.17],[.83,.64,.42]],
