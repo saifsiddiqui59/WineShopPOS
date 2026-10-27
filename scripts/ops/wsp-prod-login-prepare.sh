@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# WSP_ENV_ISOLATION_GUARD_V1: This script is PROD-only and rejects every non-main branch before Azure access.
 set -euo pipefail
 [[ "$GITHUB_REF" == "refs/heads/main" ]] || { echo "::error::Only main can deploy PROD"; exit 1; }
 WEB="https://wineshoppos.z29.web.core.windows.net/"
