@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getEnvironment } from "../config/environment";
 import { supabase } from "../lib/supabase";
+import LoginBrandOrbit from "./LoginBrandOrbit";
 
 const PUBLIC_DEMO_EMAIL =
   import.meta.env.VITE_DEMO_EMAIL || "admin@demowineshop.com";
@@ -72,7 +73,8 @@ export default function Login() {
 
   if (recoveryMode) {
     return (
-      <div className="auth-screen">
+      <div className="auth-screen wsp-login-screen">
+      <LoginBrandOrbit />
         <form className="auth-card" onSubmit={sendRecovery}>
           <h1>Forgot Password</h1>
           <p>Enter the email used for your WineShop POS account.</p>
@@ -115,7 +117,8 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-screen">
+    <div className="auth-screen wsp-login-screen">
+      <LoginBrandOrbit />
       <form className="auth-card" onSubmit={submit}>
         <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
           <span style={{
