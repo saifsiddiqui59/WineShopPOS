@@ -17,6 +17,9 @@ try {
       viewport: scene.viewport,
       reducedMotion: scene.reducedMotion,
       serviceWorkers: "block",
+      ...(scene.name === "desktop" ? {
+        recordVideo: { dir: output, size: { width: 960, height: 600 } },
+      } : {}),
     });
     const page = await context.newPage();
     const pageErrors = [];
@@ -83,6 +86,9 @@ try {
     if (scene.name === "desktop") {
       await page.waitForTimeout(750);
       await page.screenshot({ path: `${output}/desktop-motion-next.png` });
+      // Include a genuine browser-recorded motion clip for visual review;
+      // two screenshots alone cannot validate a swirl's aesthetic quality.
+      await page.waitForTimeout(1800);
     }
     assert.deepEqual(pageErrors, [], "Login should render without JS runtime errors");
     await context.close();
