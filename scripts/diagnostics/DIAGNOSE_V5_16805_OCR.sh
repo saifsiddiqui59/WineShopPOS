@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 DEV_REF="juhcypzoacauzmtzqnwd"
+# WSP_ENV_ISOLATION_GUARD_V1: DEV-only execution; existing checks below reject PROD.
 PROD_REF="uiurgplnsgmawvxhjzzp"
 INVOICE_NO="16805"
 AUTH_FILE="$HOME/.wineshoppos-v5-uat/auth.json"
