@@ -1,5 +1,5 @@
-/* WineShopPOS login-only Echo: multiple wine/beer packages radiate outward in
-   overlapping waves. Pure CSS motion, reused self-hosted product illustrations. */
+/* Real Echo-style login backdrop: numerous copies scatter across the entire
+   page in different sizes, overlap, drift and fade. No orbit or expanding rings. */
 .auth-screen.wsp-login-screen {
   position: relative;
   isolation: isolate;
@@ -18,12 +18,7 @@
   inset: 0;
   pointer-events: none;
 }
-
-.wsp-login-backdrop {
-  z-index: -1;
-  overflow: hidden;
-}
-
+.wsp-login-backdrop { z-index: -1; overflow: hidden; }
 .wsp-login-light {
   position: absolute;
   width: min(45vw, 660px);
@@ -35,54 +30,37 @@
 .wsp-login-light--amber { top: -18%; right: -8%; background: rgba(175, 108, 44, .23); }
 .wsp-login-light--wine { bottom: -27%; left: -11%; background: rgba(179, 35, 80, .27); }
 
-/* Concentric shimmers reinforce the iMessage-like Echo pulse. */
-.wsp-login-echo-halo {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(64vw, 920px);
-  aspect-ratio: 1;
-  border: 2px solid rgba(243, 187, 116, .24);
-  box-shadow: 0 0 46px rgba(217, 86, 51, .1), inset 0 0 32px rgba(217, 86, 51, .07);
-  border-radius: 50%;
-  opacity: 0;
-  animation: wsp-login-echo-halo 5.8s ease-out infinite;
-  pointer-events: none;
-}
-.wsp-login-echo-halo--two { animation-delay: -1.9s; border-color: rgba(205, 93, 113, .2); }
-.wsp-login-echo-halo--three { animation-delay: -3.8s; border-color: rgba(235, 196, 117, .18); }
-
+/* iMessage Echo fills the canvas with overlapping copies rather than tracking
+   packages outward on circles. Negative wave delays ensure no initial blank. */
 .wsp-login-echo {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: var(--echo-y);
+  left: var(--echo-x);
   opacity: 0;
-  transform: translate3d(-50%, -50%, 0) scale(.2);
-  animation: wsp-login-echo-burst 10.2s cubic-bezier(.18, .72, .31, 1) var(--echo-delay) infinite;
-  will-change: transform, opacity;
+  transform: translate3d(-50%, -40%, 0) scale(.1);
+  animation: wsp-login-echo-swarm 5.6s ease-out var(--echo-delay) infinite;
+  will-change: opacity, transform;
 }
 
 .wsp-login-product {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 107px;
-  padding: 6px 8px 9px;
-  border: 1px solid rgba(251, 218, 158, .21);
-  border-radius: 19px;
-  background: linear-gradient(155deg, rgba(255, 239, 212, .13), rgba(12, 11, 19, .62));
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .4), inset 0 1px rgba(255, 249, 230, .18);
-  backdrop-filter: blur(7px);
+  width: 88px;
+  padding: 4px 6px 7px;
+  border: 1px solid rgba(251, 218, 158, .18);
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(255, 239, 212, .13), rgba(12, 11, 19, .64));
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .36);
   transform: rotate(var(--echo-tilt));
 }
 .wsp-login-product--wine { border-color: rgba(236, 169, 180, .26); }
 .wsp-login-product img {
   display: block;
-  width: 75px;
-  height: 118px;
+  width: 65px;
+  height: 104px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .5));
+  filter: drop-shadow(0 5px 9px rgba(0, 0, 0, .43));
 }
 .wsp-login-product-label {
   color: #ffe7bb;
@@ -91,14 +69,13 @@
   font-size: 10px;
   font-weight: 750;
   line-height: 1.2;
-  letter-spacing: .03em;
+  letter-spacing: .02em;
 }
 
 .wsp-login-center-shade {
-  background: radial-gradient(ellipse 430px 380px at center, rgba(11, 10, 17, .79), transparent 94%);
+  background: radial-gradient(ellipse 440px 365px at center, rgba(11, 10, 17, .69), transparent 95%);
 }
 
-/* Login controls always sit above the decorative Echo layer. */
 .auth-screen.wsp-login-screen > .auth-card {
   position: relative;
   z-index: 2;
@@ -128,53 +105,48 @@
   background: rgba(255, 255, 255, .07);
 }
 
-/* Every package begins close to the form, spreads to its own radial destination
-   and dissolves before the next echo wave. Starting negative delays avoid a
-   blank background on first load. */
-@keyframes wsp-login-echo-burst {
-  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.18); }
-  12% { opacity: .22; transform: translate3d(-50%, -50%, 0) scale(.35); }
-  45% {
-    opacity: .92;
-    transform: translate3d(calc(-50% + var(--echo-x)), calc(-50% + var(--echo-y)), 0) scale(1);
+/* A short pop-in, a densely overlapping full-screen swarm, then a fade-out;
+   3 offset waves repeat this in the background without blocking input. */
+@keyframes wsp-login-echo-swarm {
+  0%, 7% {
+    opacity: 0;
+    transform: translate3d(-50%, -36%, 0) scale(.08);
   }
-  72% {
-    opacity: .8;
-    transform: translate3d(calc(-50% + var(--echo-x)), calc(-50% + var(--echo-y)), 0) scale(1.08);
+  23% {
+    opacity: .92;
+    transform: translate3d(-50%, -50%, 0) scale(var(--echo-size));
+  }
+  53% {
+    opacity: .96;
+    transform: translate3d(calc(-50% + var(--echo-drift-x)), calc(-50% + var(--echo-drift-y)), 0) scale(var(--echo-size));
+  }
+  79% {
+    opacity: 0;
+    transform: translate3d(calc(-50% + var(--echo-drift-x)), calc(-50% + var(--echo-drift-y)), 0) scale(var(--echo-size-end));
   }
   100% {
     opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-x)), calc(-50% + var(--echo-y)), 0) scale(1.18);
+    transform: translate3d(calc(-50% + var(--echo-drift-x)), calc(-50% + var(--echo-drift-y)), 0) scale(var(--echo-size-end));
   }
-}
-@keyframes wsp-login-echo-halo {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(.1); }
-  18% { opacity: .42; }
-  90%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.75); }
 }
 
 @media (max-width: 760px) {
   .auth-screen.wsp-login-screen { padding: 18px; }
-  .wsp-login-backdrop { opacity: .74; }
+  .wsp-login-backdrop { opacity: .8; }
   .wsp-login-echo--secondary { display: none; }
-  .wsp-login-echo .wsp-login-product { width: 77px; padding: 5px; border-radius: 12px; }
-  .wsp-login-product img { width: 56px; height: 90px; }
+  .wsp-login-product { width: 74px; padding: 3px 4px 5px; border-radius: 11px; }
+  .wsp-login-product img { width: 54px; height: 84px; }
   .wsp-login-product-label { font-size: 8px; }
   .wsp-login-center-shade {
-    background: radial-gradient(ellipse 300px 360px at center, rgba(8, 8, 14, .85), transparent 97%);
+    background: radial-gradient(ellipse 300px 360px at center, rgba(8, 8, 14, .86), transparent 97%);
   }
   .auth-screen.wsp-login-screen > .auth-card { width: min(440px, 100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wsp-login-echo,
-  .wsp-login-echo-halo {
-    animation: none !important;
-    will-change: auto;
-  }
+  .wsp-login-echo { animation: none !important; will-change: auto; }
   .wsp-login-echo {
-    opacity: .48;
-    transform: translate3d(calc(-50% + var(--echo-x)), calc(-50% + var(--echo-y)), 0) scale(.88);
+    opacity: .46;
+    transform: translate3d(-50%, -50%, 0) scale(var(--echo-size));
   }
-  .wsp-login-echo-halo { display: none; }
 }
