@@ -60,3 +60,5 @@ jobs:
 # PROD rerun: verified invoice API config and main-only shell guard.
 
 # Re-run live acceptance after fixing SVG decode wait; rollback stays mandatory.
+
+# Echo login rollout: 30 staggered illustrated brand particles; login UI only.
