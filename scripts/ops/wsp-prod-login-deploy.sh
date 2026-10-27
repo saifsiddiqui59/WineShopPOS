@@ -104,8 +104,18 @@ try {
     return img.complete&&img.naturalWidth>0;
   });
   if(!loaded) throw Error('Brand image failed to load after decoding');
+  const points=()=>page.locator('.wsp-login-echo').evaluateAll(els=>els.slice(0,24).map(el=>{
+    const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};
+  }));
+  const before=await points();
+  await page.waitForTimeout(700);
+  const after=await points();
+  const distances=before.map((p,i)=>Math.hypot(p.x-after[i].x,p.y-after[i].y));
+  if(distances.filter(d=>d>25).length<12 || Math.max(...distances)<70) {
+    throw Error('Echo bottles do not visibly swirl: insufficient measured motion');
+  }
   if(errors.length) throw Error('Browser JS errors: '+errors.join('; ').slice(0,500));
-  console.log('LIVE_LOGIN_ECHO_SMOKE_PASS - 78 varied-size full-screen Echo copies rendered');
+  console.log('LIVE_LOGIN_ECHO_SWIRL_PASS - 78 branded copies, clockwise movement validated over 700ms');
 } finally {
   await browser.close();
 }

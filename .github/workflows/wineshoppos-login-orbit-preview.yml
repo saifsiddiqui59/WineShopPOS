@@ -28,6 +28,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Install Playwright video encoder for the animated preview
+        run: npx playwright install ffmpeg
       - name: Build isolated DEV preview without live cloud credentials
         shell: bash
         env:

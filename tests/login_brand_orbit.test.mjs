@@ -17,21 +17,29 @@ test("login uses an isolated decorative Echo for sign-in and password recovery",
   assert.match(login, /resetPasswordForEmail/);
 });
 
-test("iMessage-style radial Echo bursts and reduced-motion preference are declared", () => {
+test("iMessage-style clockwise spiral Echo motion and reduced-motion preference are declared", () => {
   const component = read("src/pages/LoginBrandOrbit.jsx");
   const css = read("src/pages/login-brand-orbit.css");
   assert.match(component, /aria-hidden="true"/);
   assert.match(component, /\/login-brands\//);
   assert.match(component, /Array\.from\(\{ length: 78 \}/);
-  assert.match(component, /--echo-x/);
-  assert.match(component, /--echo-y/);
+  for (const waypoint of ["p0", "p1", "p2", "p3"]) {
+    assert.match(component, new RegExp("--echo-" + waypoint + "x"));
+    assert.match(component, new RegExp("--echo-" + waypoint + "y"));
+  }
+  assert.match(component, /swirlPoint\(/);
+  assert.match(component, /angle \+ 110/);
   assert.match(component, /--echo-delay/);
   assert.match(component, /--echo-size/);
-  assert.match(component, /--echo-drift-x/);
-  assert.match(css, /@keyframes wsp-login-echo-swarm/);
+  assert.match(component, /--echo-big-size/);
+  assert.match(css, /@keyframes wsp-login-echo-swirl/);
+  assert.match(css, /var\(--echo-p1x\)/);
+  assert.match(css, /var\(--echo-p2x\)/);
+  assert.match(css, /var\(--echo-p3y\)/);
+  assert.doesNotMatch(css, /@keyframes wsp-login-echo-swarm/);
   assert.doesNotMatch(css, /@keyframes wsp-login-echo-halo/);
-  assert.match(css, /top: var\(--echo-y\)/);
-  assert.match(css, /left: var\(--echo-x\)/);
+  assert.match(css, /top: 50%/);
+  assert.match(css, /left: 50%/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /pointer-events:\s*none/);
   assert.match(css, /\.auth-screen\.wsp-login-screen/);
