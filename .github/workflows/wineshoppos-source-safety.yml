@@ -1,0 +1,109 @@
+name: WineShopPOS Source Safety CI
+
+# Checks committed source and documentation only. No cloud deployments or DB writes.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wsp-source-safety-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-safety:
+    name: Source, documentation and build checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out committed source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Confirm canonical version, documentation and migrations exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\r\n ' < docs/CURRENT_VERSION)"
+          [[ "$VERSION" =~ ^v[0-9]+$ ]] || { echo "::error::Invalid current version"; exit 1; }
+          required=(
+            AGENTS.md
+            docs/DOCUMENTATION_REGISTER.md
+            docs/versions/"$VERSION"/README.md
+            docs/versions/"$VERSION"/V5_CURRENT_STATE_AND_CONTINUATION.md
+            docs/handbook/WineShopPOS_Developer_Handbook_Master_Reconsolidation.md
+            docs/manual/WineShopPOS_User_Manual_Master_Reconsolidation.md
+            docs/shared/release/RELEASE_EXECUTOR_FAILURE_REGISTER.md
+            docs/shared/release/END_TO_END_RELEASE_TESTING_AND_PROMOTION_PLAYBOOK.md
+            supabase/config.toml
+          )
+          for path in "${required[@]}"; do
+            [[ -s "$path" ]] || { echo "::error::Required file missing/empty: $path"; exit 1; }
+          done
+          mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print)
+          (( ${#migrations[@]} > 0 )) || { echo "::error::No Supabase SQL migrations found"; exit 1; }
+          echo "Checked ${#required[@]} continuity files and ${#migrations[@]} migrations"
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Validate documentation structure
+        run: npm run docs:check
+
+      - name: Lint the source
+        run: npm run lint
+
+      - name: Run offline, read-only regression tests
+        run: node --test tests/pos_clear_bill_state_reset.test.mjs tests/v5EnvironmentBadgeProdSafety.test.mjs
+
+      - name: Compile app without live credentials
+        shell: bash
+        env:
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Reproduce the repo's branch isolation contract without accessing Supabase.
+          if [[ "$CI_BRANCH" == "main" ]]; then
+            REF="uiurgplnsgmawvxhjzzp"
+          else
+            REF="juhcypzoacauzmtzqnwd"
+          fi
+          export BRANCH_NAME="$CI_BRANCH"
+          export VITE_SUPABASE_URL="https://${REF}.supabase.co"
+          export SUPABASE_PROJECT_ID="$REF"
+          export VITE_SUPABASE_ANON_KEY="ci-public-placeholder-not-a-real-key"
+          npm run build
+
+      - name: Package a committed-source recovery snapshot (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovery
+          git archive --format=tar.gz --output="recovery/wineshoppos-source-${GITHUB_SHA}.tar.gz" HEAD
+          (
+            cd recovery
+            sha256sum "wineshoppos-source-${GITHUB_SHA}.tar.gz" > SHA256SUMS.txt
+          )
+          echo "Archive contains tracked Git files only; not live DB/cloud data or local secrets."
+
+      - name: Upload temporary source recovery artifact (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wineshoppos-source-${{ github.sha }}
+          path: recovery/
+          if-no-files-found: error
+          retention-days: 30

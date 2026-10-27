@@ -16,6 +16,7 @@ set -Eeuo pipefail
 #   SKIP_REAL_INVOICE_UAT=1 bash RUN_V5_FULL_MASTER_CERTIFICATION.sh
 
 DEV_REF="juhcypzoacauzmtzqnwd"
+# WSP_ENV_ISOLATION_GUARD_V1: DEV-only execution; existing checks below reject PROD.
 PROD_REF="uiurgplnsgmawvxhjzzp"
 PROD_HOST="wineshoppos.z29.web.core.windows.net"
 V5_29_BASE_COMMIT="92d68ceac8fb5cef00e82d0a8eef7035edd8513d"
