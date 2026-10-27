@@ -1,0 +1,93 @@
+name: WineShopPOS DEV V5 Static Website Recovery
+# Scoped to V5 DEV only. Never touches production storage or Supabase.
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/wineshoppos-dev-static-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  dev-recovery:
+    name: Diagnose and enable existing DEV static website
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: wineshoppos-deploy
+    steps:
+      - name: Login to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Inspect existing DEV storage; enable hosting only if disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACCOUNT="wspv5qa3a5e8018"
+          RG="wineshopPOS"
+          URL="https://wspv5qa3a5e8018.z29.web.core.windows.net/"
+          echo "## WineShopPOS V5 DEV static hosting recovery" >> "$GITHUB_STEP_SUMMARY"
+          echo "Target: \`$RG / $ACCOUNT\`. Production storage is strictly excluded." >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::group::Validate dedicated DEV target"
+          if ! ACCOUNT_INFO=$(az storage account show --name "$ACCOUNT" --resource-group "$RG" --query '{name:name,endpoint:primaryEndpoints.web,location:location}' -o json); then
+            echo "::error::DEV account not accessible using the GitHub OIDC identity. Confirm Reader/Storage Account Contributor role specifically on $ACCOUNT."
+            echo "DEV Azure account access: **DENIED or NOT FOUND**" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "$ACCOUNT_INFO"
+          GOT=$(echo "$ACCOUNT_INFO" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("endpoint", ""))')
+          if [[ "$GOT" != "$URL" ]]; then
+            echo "::error::DEV storage URL mismatch; refusing to change any settings"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Read DEV static hosting settings"
+          DETAILS=$(az storage account blob-service-properties show -g "$RG" --account-name "$ACCOUNT" --query '{enabled:staticWebsite.enabled,index:staticWebsite.indexDocument}' -o json)
+          echo "$DETAILS"
+          ENABLED=$(echo "$DETAILS" | python3 -c 'import sys,json;print(str(json.load(sys.stdin).get("enabled", False)).lower())')
+          INDEX=$(echo "$DETAILS" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("index") or "")')
+          echo "::endgroup::"
+
+          if [[ "$ENABLED" != "true" || "$INDEX" != "index.html" ]]; then
+            echo "Restoring static website setting on existing DEV account only..."
+            if ! az storage account blob-service-properties update \
+              -g "$RG" --account-name "$ACCOUNT" \
+              --enable-static-website true --index-document index.html -o none; then
+              echo "::error::DEV identity cannot enable static hosting. Assign Storage Account Contributor at DEV storage account scope or enable it in the Azure portal."
+              echo "DEV website restore: **RBAC BLOCKED**" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          else
+            echo "DEV static hosting already enabled."
+          fi
+
+          RESULT=$(az storage account blob-service-properties show -g "$RG" --account-name "$ACCOUNT" --query '{enabled:staticWebsite.enabled,index:staticWebsite.indexDocument}' -o json)
+          echo "Post-restore static settings: $RESULT"
+          echo "Static hosting: \`$RESULT\`" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::group::Check index blob with OIDC data permissions"
+          if EXISTS=$(az storage blob exists --account-name "$ACCOUNT" --container-name '$web' --name index.html --auth-mode login --query exists -o tsv); then
+            echo "DEV index.html exists: $EXISTS"
+            echo "DEV index.html exists: \`$EXISTS\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::DEV blob check denied; Storage Blob Data Reader/Contributor must be assigned on $ACCOUNT."
+            echo "DEV index blob check: **RBAC DENIED**" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Public DEV website HTTP test"
+          STATUS=$(curl -sS -L --retry 2 --retry-delay 2 --max-time 25 -o /dev/null -w '%{http_code}' "$URL" || true)
+          echo "DEV endpoint $URL returned HTTP $STATUS"
+          echo "Public DEV URL: $URL; HTTP \`$STATUS\`" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$STATUS" != "200" ]]; then
+            echo "::warning::DEV hosting settings are restored but the site is not yet serving index.html. Check $web content or propagation."
+          fi
+          echo "::endgroup::"
