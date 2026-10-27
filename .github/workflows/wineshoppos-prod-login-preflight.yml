@@ -1,0 +1,117 @@
+name: WineShopPOS PROD Login Preflight (Read Only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/wineshoppos-prod-login-preflight.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    environment: wineshoppos-deploy
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify PROD storage and rollback permissions without writing
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACCOUNT="wineshoppos"
+          RG="wineshopPOS"
+          WEB="https://wineshoppos.z29.web.core.windows.net/"
+          echo "## WineShopPOS production release preflight (READ ONLY)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Main SHA: \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+
+          TARGET=$(az storage account show -g "$RG" -n "$ACCOUNT" --query primaryEndpoints.web -o tsv)
+          [[ "$TARGET" == "$WEB" ]] || { echo "::error::Wrong PROD account endpoint: refusing"; exit 1; }
+
+          WEBSITE=$(az storage account blob-service-properties show -g "$RG" --account-name "$ACCOUNT" --query '{enabled:staticWebsite.enabled,index:staticWebsite.indexDocument}' -o json)
+          echo "Hosting configuration: $WEBSITE"
+          ENABLED=$(echo "$WEBSITE" | python3 -c 'import json,sys;print(str(json.load(sys.stdin).get("enabled")).lower())')
+          [[ "$ENABLED" == "true" ]] || { echo "::error::Hosting is disabled"; exit 1; }
+          echo "PROD account and static hosting: PASS" >> "$GITHUB_STEP_SUMMARY"
+
+          AUTH_MODE=""
+          if az storage blob exists -c '$web' -n index.html --account-name "$ACCOUNT" --auth-mode login --query exists -o tsv > /tmp/wsp-login-blob-exists 2>/tmp/wsp-login-blob-error; then
+            if [[ "$(cat /tmp/wsp-login-blob-exists)" == "True" || "$(cat /tmp/wsp-login-blob-exists)" == "true" ]]; then AUTH_MODE="login"; fi
+          fi
+          if [[ -z "$AUTH_MODE" ]]; then
+            echo "Data-plane OAuth not sufficient; checking optional storage-account-key fallback without displaying a key."
+            if az storage account keys list --account-name "$ACCOUNT" -g "$RG" --query '[0].value' -o tsv > /tmp/wsp-prod-storage-key 2>/tmp/wsp-key-error; then
+              chmod 600 /tmp/wsp-prod-storage-key
+              export AZURE_STORAGE_KEY
+              AZURE_STORAGE_KEY=$(cat /tmp/wsp-prod-storage-key)
+              if [[ -n "$AZURE_STORAGE_KEY" ]]; then
+                echo "::add-mask::$AZURE_STORAGE_KEY"
+                if az storage blob exists -c '$web' -n index.html --account-name "$ACCOUNT" --auth-mode key --query exists -o tsv > /tmp/wsp-key-blob-exists 2>/tmp/wsp-key-blob-error; then
+                  if [[ "$(cat /tmp/wsp-key-blob-exists)" == "True" || "$(cat /tmp/wsp-key-blob-exists)" == "true" ]]; then AUTH_MODE="key"; fi
+                fi
+              fi
+              unset AZURE_STORAGE_KEY
+            fi
+          fi
+          echo "Rollback data access available: ${AUTH_MODE:-NONE}" 
+          echo "Rollback data access: \`${AUTH_MODE:-NONE}\`" >> "$GITHUB_STEP_SUMMARY"
+          [[ -n "$AUTH_MODE" ]] || { echo "::error::Cannot back up existing files; do not deploy until Storage Blob Data Contributor or guarded account-key permission exists"; exit 1; }
+
+          echo "::group::Check existing public app and extract only key metadata"
+          mkdir -p /tmp/wsp-live
+          curl -fLsS --connect-timeout 10 --max-time 45 "$WEB" -o /tmp/wsp-live/index.html
+          SHA=$(sha256sum /tmp/wsp-live/index.html | cut -d' ' -f1)
+          echo "Current PROD index.html SHA-256: $SHA"
+          echo "Current PROD index SHA-256: \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const html = fs.readFileSync("/tmp/wsp-live/index.html", "utf8");
+          const scripts = [...html.matchAll(/<script[^>]*src=["']([^"']+\.js)["']/g)].map(m => m[1]);
+          if (scripts.length < 1 || scripts.length > 6) {
+            console.error("Expected 1-6 production JS entry files; got", scripts.length);
+            process.exit(1);
+          }
+          fs.writeFileSync("/tmp/wsp-live/script-paths", scripts.join("\n"));
+          console.log("Production JS entries discovered:", scripts.length);
+          NODE
+          while IFS= read -r path; do
+            [[ "$path" == /assets/*.js ]] || { echo "::error::Unexpected external or untrusted script path"; exit 1; }
+            curl -fLsS --connect-timeout 10 --max-time 60 "${WEB%/}$path" -o "/tmp/wsp-live/$(basename "$path")"
+          done < /tmp/wsp-live/script-paths
+
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const files = fs.readdirSync("/tmp/wsp-live").filter(f => f.endsWith(".js"));
+          const bundle = files.map(f => fs.readFileSync("/tmp/wsp-live/"+f,"utf8")).join("\n");
+          if (!bundle.includes("uiurgplnsgmawvxhjzzp") || bundle.includes("juhcypzoacauzmtzqnwd")) {
+            console.error("Production bundle identity mismatch or DEV reference found.");
+            process.exit(1);
+          }
+          const jwt = [...new Set(bundle.match(/eyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}/g) || [])];
+          const valid = jwt.filter(t => {
+            try {
+              const payload = JSON.parse(Buffer.from(t.split(".")[1], "base64url").toString("utf8"));
+              return payload.ref === "uiurgplnsgmawvxhjzzp" && payload.role === "anon";
+            } catch { return false; }
+          });
+          const publishable = [...new Set(bundle.match(/sb_publishable_[A-Za-z0-9_-]+/g) || [])];
+          console.log("Found matching PROD public anon JWTs:", valid.length, "; publishable key candidates:", publishable.length);
+          if (valid.length === 1) fs.writeFileSync("/tmp/wsp-live/prod-anon-key", valid[0], {mode: 0o600});
+          else if (valid.length === 0 && publishable.length === 1) fs.writeFileSync("/tmp/wsp-live/prod-anon-key", publishable[0], {mode: 0o600});
+          else { console.error("Cannot identify one unique PROD public key; do not deploy."); process.exit(1); }
+          console.log("Public production build key: extractable for an ephemeral runner-only build");
+          NODE
+          echo "PROD public configuration recovery: PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "::endgroup::"
