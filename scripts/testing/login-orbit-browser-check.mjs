@@ -6,124 +6,65 @@ const base = process.env.LOGIN_PREVIEW_URL || "http://127.0.0.1:4173";
 const output = "artifacts/login-orbit";
 await fs.mkdir(output, { recursive: true });
 
-const browser = await chromium.launch({ headless: true, channel: "chrome" });
+const browser = await chromium.launch({
+  headless: true,
+  channel: "chrome",
+  args: ["--enable-webgl", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+});
 try {
   for (const scene of [
-    { name: "desktop", viewport: { width: 1440, height: 900 }, reducedMotion: "no-preference", expectedImages: 184 },
-    { name: "mobile", viewport: { width: 390, height: 844 }, reducedMotion: "no-preference", expectedImages: 184 },
-    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, reducedMotion: "reduce", expectedImages: 184 },
+    { name: "desktop", viewport: { width: 1440, height: 900 }, motion: "no-preference", bottles: 32 },
+    { name: "mobile", viewport: { width: 390, height: 844 }, motion: "no-preference", bottles: 18 },
+    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, motion: "reduce", bottles: 32 },
   ]) {
     const context = await browser.newContext({
       viewport: scene.viewport,
-      reducedMotion: scene.reducedMotion,
+      reducedMotion: scene.motion,
       serviceWorkers: "block",
-      ...(scene.name === "desktop" ? {
-        recordVideo: { dir: output, size: { width: 960, height: 600 } },
-      } : {}),
+      ...(scene.name === "desktop" ? { recordVideo: {
+        dir: output, size: { width: 960, height: 600 },
+      } } : {}),
     });
     const page = await context.newPage();
-    const pageErrors = [];
-    page.on("pageerror", error => pageErrors.push(error.message));
-
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
     await page.goto(`${base}/login`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "WineShop POS" }).waitFor();
+    await page.getByRole("heading", { name: "WineShop POS" }).waitFor({ timeout: 30000 });
     await page.getByRole("button", { name: "Login" }).waitFor();
-    await page.locator(".wsp-login-echo").first().waitFor({ state: "attached" });
-
-    assert.equal(await page.locator(".wsp-login-echo").count(), scene.expectedImages);
-    assert.equal(await page.locator(".wsp-login-product img").count(), scene.expectedImages);
-    await page.locator(".wsp-login-product img").first().evaluate(el => el.decode());
-    const missingImages = await page.locator(".wsp-login-product img").evaluateAll(els =>
-      els.filter(img => !img.complete || img.naturalWidth === 0).map(img => img.src));
-    assert.deepEqual(missingImages, [], "decorative SVG files should be available from public/");
-    const uniqueBrands = new Set(await page.locator(".wsp-login-product img").evaluateAll(els =>
-      els.map(img => new URL(img.src).pathname)));
-    assert.equal(uniqueBrands.size, 10, "all wine and beer brands should appear in the Echo field");
-    assert.equal(await page.locator(".wsp-login-echo[data-depth='0']").count(), 46);
-    assert.equal(await page.locator(".wsp-login-echo[data-depth='3']").count(), 46);
-    const perspective = await page.locator(".wsp-login-echo-field").evaluate(el =>
-      getComputedStyle(el).perspective);
-    assert.equal(perspective, "1100px", "depth must come from a 3D perspective camera");
-
-    await page.waitForTimeout(500);
-    const depthStats = await page.locator(".wsp-login-echo").evaluateAll(els => {
-      const visible = els.filter(el => {
-        const style = getComputedStyle(el);
-        const rect = el.getBoundingClientRect();
-        return style.display !== "none" && Number(style.opacity) > .35 &&
-          rect.width > 5 && rect.height > 5 &&
-          rect.right > -20 && rect.left < innerWidth + 20 &&
-          rect.bottom > -20 && rect.top < innerHeight + 20;
-      });
-      const depth = new Set(visible.map(el => el.dataset.depth));
-      return {
-        visible: visible.length,
-        bands: [...depth],
-        threeDimensional: visible.filter(el =>
-          getComputedStyle(el).transform.startsWith("matrix3d(")).length,
-      };
-    });
-    assert(depthStats.visible >= (scene.name === "mobile" ? 18 : 40),
-      "not enough simultaneously visible bottles: " + JSON.stringify(depthStats));
-    assert(depthStats.bands.length >= 3, "visible bottles must come from multiple 3D depths");
-    assert(depthStats.threeDimensional >= depthStats.visible * .9,
-      "nearly every visible bottle must have an actual 3D transform");
-    console.log("LOGIN_PREMIUM_3D_DENSITY_" + scene.name.toUpperCase() + "=" + JSON.stringify(depthStats));
-
-    // Assert the pieces actually move in the browser. Static render counts and
-    // single screenshots do NOT qualify a swirling animation.
-    const samplePoints = () => page.locator(".wsp-login-echo").evaluateAll(els =>
-      els.slice(0, 24).map(el => {
-        const r = el.getBoundingClientRect();
-        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-      })
-    );
-    const t0 = await samplePoints();
-    await page.waitForTimeout(700);
-    const t1 = await samplePoints();
-    const distance = t0.map((point, i) =>
-      Math.hypot(point.x - t1[i].x, point.y - t1[i].y));
-    if (scene.reducedMotion === "reduce") {
-      assert(distance.every(d => d < 1), "reduced motion must freeze every Echo bottle");
-    } else {
-      assert(distance.filter(d => d > 25).length >= 12,
-        "at least 12 of 24 Echo bottles must swirl more than 25px in 700ms");
-      assert(Math.max(...distance) > 70,
-        "Echo must show strong visible movement, not subtle drifting");
-    }
-
-    const trajectory = await page.locator(".wsp-login-echo").first().evaluate(el =>
-      ["p0", "p1", "p2", "p3"].map(id => ({
-        x: parseFloat(el.style.getPropertyValue("--echo-" + id + "x")),
-        y: parseFloat(el.style.getPropertyValue("--echo-" + id + "y")),
-      }))
-    );
-    const angles = trajectory.map(p => Math.atan2(p.y, p.x));
-    const clockwise = angles.slice(1).map((angle, i) => {
-      const d = angle - angles[i];
-      return d < 0 ? d + 2 * Math.PI : d;
-    });
-    assert(clockwise.every(d => d > .5 && d < 2.1),
-      "Echo path must sweep clockwise at each waypoint, not remain static");
-
-    const animation = await page.locator(".wsp-login-echo").first().evaluate(el =>
-      getComputedStyle(el).animationName);
-    assert.equal(animation, scene.reducedMotion === "reduce" ? "none" : "wsp-login-premium-echo");
-
+    const canvas = page.locator(".wsp-login-webgl");
+    await canvas.waitFor({ state: "attached" });
+    await page.waitForFunction(() =>
+      document.querySelector(".wsp-login-webgl")?.dataset.rendererStatus === "ready",
+      null, { timeout: 20000 });
+    assert.equal(await canvas.getAttribute("data-renderer"), "wsp-bottle-vortex");
+    assert.equal(Number(await canvas.getAttribute("data-bottle-count")), scene.bottles);
+    assert.equal(Number(await canvas.getAttribute("data-brand-count")), 10);
+    assert.equal(await page.locator(".wsp-login-product").count(), 0,
+      "old SVG product DOM swarm must be gone");
+    const canvasRect = await canvas.boundingBox();
+    assert(canvasRect && canvasRect.width >= scene.viewport.width - 2 &&
+      canvasRect.height >= scene.viewport.height - 2, "3D renderer must cover login viewport");
     const card = await page.locator(".auth-card").boundingBox();
-    assert(card && card.width > 240 && card.x >= 0 &&
-      card.x + card.width <= scene.viewport.width + 1, "login card must fit viewport");
-    await page.screenshot({ path: `${output}/${scene.name}.png` });
-    if (scene.name === "desktop") {
-      await page.waitForTimeout(750);
-      await page.screenshot({ path: `${output}/desktop-motion-next.png` });
-      // Include a genuine browser-recorded motion clip for visual review;
-      // two screenshots alone cannot validate a swirl's aesthetic quality.
-      await page.waitForTimeout(1800);
+    assert(card && card.width > 230 && card.x >= 0 &&
+      card.x + card.width <= scene.viewport.width + 1, "login must fit viewport");
+
+    const firstFrame = Number(await canvas.getAttribute("data-rendered-frames"));
+    const imageA = await canvas.screenshot({ path: `${output}/${scene.name}-3d-first.png` });
+    await page.waitForTimeout(950);
+    const laterFrame = Number(await canvas.getAttribute("data-rendered-frames"));
+    const imageB = await canvas.screenshot({ path: `${output}/${scene.name}-3d-later.png` });
+    if (scene.motion === "reduce") {
+      assert.equal(laterFrame, firstFrame, "reduced motion must render once and stop");
+    } else {
+      assert(laterFrame >= firstFrame + 5,
+        "real 3D animation must advance at least five frames in 950ms");
+      assert(!imageA.equals(imageB), "GPU-rendered image must visibly change over time");
     }
-    assert.deepEqual(pageErrors, [], "Login should render without JS runtime errors");
+    await page.screenshot({ path: `${output}/${scene.name}.png` });
+    if (scene.name === "desktop") await page.waitForTimeout(1400);
+    assert.deepEqual(errors, [], "WebGL login should not throw browser errors");
     await context.close();
-    console.log(`LOGIN_ECHO_VISUAL_${scene.name.toUpperCase().replaceAll("-", "_")}=PASS`);
+    console.log(`WINESHOPPOS_REAL_3D_${scene.name.toUpperCase().replaceAll("-", "_")}=PASS; frames=${firstFrame}->${laterFrame}`);
   }
 } finally {
   await browser.close();
