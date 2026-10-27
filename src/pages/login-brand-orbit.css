@@ -1,0 +1,183 @@
+/* Login-only decorative orbit. Does not affect authentication or dashboard pages. */
+.auth-screen.wsp-login-screen {
+  isolation: isolate;
+  position: relative;
+  overflow: hidden;
+  min-height: 100svh;
+  background:
+    radial-gradient(ellipse at 18% 15%, rgba(139, 54, 45, .38), transparent 46%),
+    radial-gradient(ellipse at 80% 83%, rgba(177, 123, 49, .16), transparent 52%),
+    linear-gradient(145deg, #1e0c12 0%, #090c14 52%, #230d17 100%);
+}
+
+.wsp-login-backdrop,
+.wsp-login-orbit-field,
+.wsp-login-center-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.wsp-login-backdrop {
+  z-index: -1;
+  overflow: hidden;
+}
+
+.wsp-login-light {
+  position: absolute;
+  width: min(45vw, 660px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(76px);
+  opacity: .65;
+}
+.wsp-login-light--amber { top: -18%; right: -8%; background: rgba(175, 108, 44, .23); }
+.wsp-login-light--wine { bottom: -27%; left: -11%; background: rgba(179, 35, 80, .27); }
+
+.wsp-login-orbit-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 1px solid rgba(224, 178, 120, .11);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 35px rgba(224, 156, 86, .03), inset 0 0 45px rgba(224, 156, 86, .02);
+}
+.wsp-login-orbit-ring--inner { width: min(68vw, 1170px); aspect-ratio: 1; }
+.wsp-login-orbit-ring--outer { width: min(88vw, 1480px); aspect-ratio: 1; }
+
+.wsp-login-orbiter {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 0;
+  width: 0;
+  transform: rotate(var(--start-angle));
+  animation: wsp-login-clockwise var(--orbit-speed) linear infinite;
+  will-change: transform;
+}
+
+.wsp-login-orbit-offset {
+  position: absolute;
+  top: 0;
+  left: var(--orbit-distance);
+}
+
+.wsp-login-upright {
+  animation: wsp-login-counterclockwise var(--orbit-speed) linear infinite;
+  transform: rotate(calc(0deg - var(--start-angle)));
+  will-change: transform;
+}
+
+.wsp-login-floater {
+  animation: wsp-login-hover 5.8s ease-in-out infinite;
+  animation-delay: var(--float-delay);
+  transform: translate(-50%, -50%);
+}
+
+.wsp-login-product {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 0;
+  width: 142px;
+  padding: 7px 9px 12px;
+  border-radius: 23px;
+  border: 1px solid rgba(252, 221, 159, .19);
+  background: linear-gradient(150deg, rgba(255, 243, 213, .13), rgba(8, 10, 16, .43));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .37), inset 0 1px rgba(255, 245, 222, .18);
+  backdrop-filter: blur(10px);
+}
+
+.wsp-login-product--wine { border-color: rgba(242, 184, 178, .24); }
+
+.wsp-login-product img {
+  display: block;
+  width: 94px;
+  height: 176px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .45));
+}
+
+.wsp-login-product-label {
+  margin-top: -2px;
+  color: #ffe8be;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 750;
+  letter-spacing: .045em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.wsp-login-center-shade {
+  background: radial-gradient(ellipse 420px 360px at center, rgba(9, 10, 16, .76), transparent 94%);
+}
+
+.auth-screen.wsp-login-screen > .auth-card {
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(241, 195, 125, .32);
+  border-radius: 22px;
+  color: #fff5e6;
+  background: linear-gradient(155deg, rgba(35, 23, 30, .94), rgba(13, 17, 24, .94));
+  box-shadow: 0 28px 100px rgba(0, 0, 0, .57), inset 0 1px 0 rgba(255, 232, 194, .10);
+  backdrop-filter: blur(18px);
+}
+
+.wsp-login-screen .auth-card h1 {
+  color: #f9d99c;
+  letter-spacing: -.035em;
+}
+.wsp-login-screen .auth-card p { color: #d7c9c7; }
+.wsp-login-screen .auth-card label { color: #f8eae6; }
+.wsp-login-screen .auth-card input {
+  color: #191d25;
+  background: #fffdfb;
+  border-color: #dec9ba;
+}
+.wsp-login-screen .auth-card input:focus-visible,
+.wsp-login-screen .auth-card button:focus-visible {
+  outline: 3px solid #dfb765;
+  outline-offset: 2px;
+}
+.wsp-login-screen .auth-card .secondary-button {
+  color: #f9e4bd;
+  border-color: rgba(246, 214, 162, .36);
+  background: rgba(255, 255, 255, .07);
+}
+
+@keyframes wsp-login-clockwise {
+  from { transform: rotate(var(--start-angle)); }
+  to { transform: rotate(calc(var(--start-angle) + 360deg)); }
+}
+@keyframes wsp-login-counterclockwise {
+  from { transform: rotate(calc(0deg - var(--start-angle))); }
+  to { transform: rotate(calc(-360deg - var(--start-angle))); }
+}
+@keyframes wsp-login-hover {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-13px); }
+}
+
+@media (max-width: 760px) {
+  .auth-screen.wsp-login-screen { padding: 18px; }
+  .wsp-login-backdrop { opacity: .65; }
+  .wsp-login-orbiter--secondary { display: none; }
+  .wsp-login-product { width: 112px; padding: 5px; }
+  .wsp-login-product img { width: 75px; height: 145px; }
+  .wsp-login-product-label { font-size: 10px; }
+  .wsp-login-center-shade {
+    background: radial-gradient(ellipse 300px 350px at center, rgba(8, 8, 14, .87), transparent 95%);
+  }
+  .auth-screen.wsp-login-screen > .auth-card { width: min(440px, 100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsp-login-orbiter,
+  .wsp-login-upright,
+  .wsp-login-floater {
+    animation: none !important;
+    will-change: auto;
+  }
+}
