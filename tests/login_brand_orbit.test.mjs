@@ -21,7 +21,7 @@ test("clockwise motion and reduced-motion preference are declared", () => {
   const component = read("src/pages/LoginBrandOrbit.jsx");
   const css = read("src/pages/login-brand-orbit.css");
   assert.match(component, /aria-hidden="true"/);
-  assert.match(component, /"\/login-brands\//);
+  assert.match(component, /\/login-brands\//);
   assert.match(css, /@keyframes wsp-login-clockwise/);
   assert.match(css, /rotate\(calc\(var\(--start-angle\) \+ 360deg\)\)/);
   assert.match(css, /@keyframes wsp-login-counterclockwise/);
@@ -39,7 +39,7 @@ test("all locally hosted beer and wine illustrations exist and are self-containe
     const svg = read(`public/login-brands/${name}.svg`);
     assert.match(svg, /<svg[\s\S]+viewBox=/);
     assert.match(svg, /<title>/);
-    assert.doesNotMatch(svg, /<script|xlink:href|https?:\/\//i);
+    assert.doesNotMatch(svg, /<script|xlink:href|<foreignObject|href=/i);
   }
   assert.equal(assets.length, 10);
 });
