@@ -6,9 +6,9 @@ Scope: `src/pages/Login.jsx`, `src/pages/LoginBrandOrbit.jsx`,
 - Adds **10 original vector package illustrations** (beer/wine) directly under
   Vite's existing `public/login-brands/` directory. Brand names are identification text,
   **not official manufacturer trademarks/logos or product photography**.
-- Displays the same artwork in **30 staggered Echo particles** (10 unique brands
-  repeated three times), expanding outward from the center before fading, with
-  pulsing concentric halos; replaces the earlier clockwise orbit treatment.
+- Displays the same artwork in **78 staggered Echo copies** of 10 different brand packages scattered all
+  over the screen at varied sizes, overlapping and fading in quick waves—based on
+  iMessage's dense, repeated-message Echo effect rather than an outward ring or orbit.
 - Animation uses pure CSS transforms with negative staggered delays (no JS timers).
 - Auth logic, Supabase calls, demo mode, recovery and route guards remain unchanged.
 - Layers are decorative, `aria-hidden`, and do not receive pointer events.
