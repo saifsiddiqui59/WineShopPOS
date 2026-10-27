@@ -114,6 +114,7 @@ jobs:
           console.log("Found matching PROD public anon JWTs:", valid.length, "; publishable key candidates:", publishable.length);
           const azureHosts = [...new Set((bundle.match(new RegExp("https?:[/][/][A-Za-z0-9.-]+[.]azurewebsites[.]net", "gi")) || []))];
           console.log("Azure Functions public endpoint candidates present in live frontend:", azureHosts.length);
+          console.log("Existing public Azure Functions hosts:", azureHosts.map(s => new URL(s).hostname).join(", "));
           if (valid.length === 1) fs.writeFileSync("/tmp/wsp-live/prod-anon-key", valid[0], {mode: 0o600});
           else if (valid.length === 0 && publishable.length === 1) fs.writeFileSync("/tmp/wsp-live/prod-anon-key", publishable[0], {mode: 0o600});
           else { console.error("Cannot identify one unique PROD public key; do not deploy."); process.exit(1); }
