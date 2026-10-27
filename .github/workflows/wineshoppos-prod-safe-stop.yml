@@ -1,7 +1,6 @@
-name: WineShopPOS PROD Safe Low-Cost Stop
-
-# User-requested reversible production shutdown before redesigning login artwork.
-# ONLY existing PROD Azure resources; Supabase and DEV/QA untouched.
+name: WineShopPOS PROD Website Stop (Reversible)
+# User-requested website pause while redesigning premium login graphics.
+# Only the existing PROD static website. No database, function, or DEV writes.
 on:
   push:
     branches: [main]
@@ -13,115 +12,47 @@ permissions:
   contents: read
   id-token: write
 
-concurrency:
-  group: wineshoppos-prod-operational-control
-  cancel-in-progress: false
-
 jobs:
-  safe-stop:
-    name: Disable PROD static website, automation and Functions (leave data intact)
-    environment: wineshoppos-deploy
+  stop-prod-web:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    environment: wineshoppos-deploy
+    timeout-minutes: 8
     steps:
-      - name: Azure OIDC login
+      - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Validate exact PROD targets and perform reversible stop
+      - name: Disable only WineShopPOS PROD static website and verify
         shell: bash
         run: |
           set -Eeuo pipefail
+          EXPECTED_SUB="3a5e8018-40a4-49e3-bcba-a9af3344f50e"
           RG="wineshopPOS"
-          WEB="wineshoppos"
-          EXPECTED_WEB="https://wineshoppos.z29.web.core.windows.net/"
-          INVOICE="wsp-v3-invoice-53b6e9a1"
-          AI="wineshoppos-ai-1a61d5885c"
-          LOGIC="wsp-v3-email-scheduler-53b6e9a1"
-          SUB="3a5e8018-40a4-49e3-bcba-a9af3344f50e"
-
-          echo "## WineShopPOS PROD low-cost reversible STOP" >> "$GITHUB_STEP_SUMMARY"
-          echo "Requested before login artwork redesign; Supabase remains untouched." >> "$GITHUB_STEP_SUMMARY"
+          ACCOUNT="wineshoppos"
+          URL="https://wineshoppos.z29.web.core.windows.net/"
+          echo "## WineShopPOS production website stop" >> "$GITHUB_STEP_SUMMARY"
           CURRENT_SUB=$(az account show --query id -o tsv)
-          [[ "${CURRENT_SUB,,}" == "${SUB,,}" ]] || {
-            echo "::error::Azure subscription differs from recorded WineShopPOS subscription. No changes made."
-            exit 1
+          [[ "${CURRENT_SUB,,}" == "${EXPECTED_SUB,,}" ]] || {
+            echo "::error::Unexpected subscription; no changes made"; exit 1;
           }
-          CURRENT_WEB=$(az storage account show -g "$RG" -n "$WEB" --query primaryEndpoints.web -o tsv)
-          [[ "$CURRENT_WEB" == "$EXPECTED_WEB" ]] || {
-            echo "::error::Unexpected storage endpoint. No changes made."
-            exit 1
+          ACTUAL_URL=$(az storage account show -g "$RG" -n "$ACCOUNT" --query primaryEndpoints.web -o tsv)
+          [[ "$ACTUAL_URL" == "$URL" ]] || {
+            echo "::error::Unexpected website endpoint; no changes made"; exit 1;
           }
-          echo "Existing Function Apps in production RG (inventory only):"
-          az functionapp list -g "$RG" --query '[].{name:name,state:state}' -o table
-          for NAME in "$INVOICE" "$AI"; do
-            if az functionapp show -g "$RG" -n "$NAME" -o none 2>/dev/null; then
-              echo "Validated present PROD Function: $NAME"
-            else
-              echo "::warning::Legacy PROD Function $NAME absent or inaccessible. Will not stop a substitute."
-            fi
-          done
-          echo "Target validation: PASS (only wineshopPOS / PROD)" >> "$GITHUB_STEP_SUMMARY"
-
-          # Keep production unpublished during the offline redesign.
-          az storage account blob-service-properties update -g "$RG" -n "$WEB" \
-            --enable-static-website false -o none
-          SITE=$(az storage account blob-service-properties show -g "$RG" -n "$WEB" --query staticWebsite.enabled -o tsv)
-          [[ "${SITE,,}" == "false" ]] || { echo "::error::Unable to verify website disabled"; exit 1; }
-          echo "PROD static website: DISABLED" >> "$GITHUB_STEP_SUMMARY"
-
-          # Disable external emails before shutting down the Functions.
-          if az resource show -g "$RG" -n "$LOGIC" --resource-type Microsoft.Logic/workflows -o none 2>/dev/null; then
-            az resource update -g "$RG" -n "$LOGIC" \
-              --resource-type Microsoft.Logic/workflows \
-              --set properties.state=Disabled -o none
-            LS=$(az resource show -g "$RG" -n "$LOGIC" --resource-type Microsoft.Logic/workflows --query properties.state -o tsv)
-            [[ "$LS" == "Disabled" ]] || { echo "::error::Email Logic App not disabled"; exit 1; }
-            echo "PROD email Logic App: Disabled" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "PROD email Logic App: ABSENT" >> "$GITHUB_STEP_SUMMARY"
+          STATE=$(az storage account blob-service-properties show -g "$RG" -n "$ACCOUNT" --query staticWebsite.enabled -o tsv)
+          echo "Previous PROD static website setting: ${STATE}" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${STATE,,}" != "false" ]]; then
+            az storage account blob-service-properties update -g "$RG" -n "$ACCOUNT" --enable-static-website false -o none
           fi
-
-          if az functionapp show -g "$RG" -n "$INVOICE" -o none 2>/dev/null; then
-            az functionapp config appsettings set -g "$RG" -n "$INVOICE" \
-              --settings EMAIL_POLL_ENABLED=false "AzureWebJobs.email-invoice-poller.Disabled=true" -o none
-            echo "Invoice automatic email polling: DISABLED" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Legacy PROD invoice Function: NOT FOUND; no timer to disable there" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          for NAME in "$INVOICE" "$AI"; do
-            if az functionapp show -g "$RG" -n "$NAME" -o none 2>/dev/null; then
-              CURRENT=$(az functionapp show -g "$RG" -n "$NAME" --query state -o tsv)
-              if [[ "$CURRENT" != "Stopped" ]]; then
-                az functionapp stop -g "$RG" -n "$NAME" -o none
-              fi
-            fi
-          done
-
-          FAILED=0
-          for NAME in "$INVOICE" "$AI"; do
-            if ! az functionapp show -g "$RG" -n "$NAME" -o none 2>/dev/null; then
-              echo "$NAME: ABSENT (nothing to stop)" >> "$GITHUB_STEP_SUMMARY"
-              continue
-            fi
-            STATE=""
-            for _ in $(seq 1 20); do
-              STATE=$(az functionapp show -g "$RG" -n "$NAME" --query state -o tsv || true)
-              [[ "$STATE" == "Stopped" ]] && break
-              sleep 3
-            done
-            echo "$NAME state: $STATE" >> "$GITHUB_STEP_SUMMARY"
-            [[ "$STATE" == "Stopped" ]] || FAILED=1
-          done
-          [[ "$FAILED" == 0 ]] || { echo "::error::At least one Function did not stop"; exit 1; }
-
-          FINAL_SITE=$(az storage account blob-service-properties show -g "$RG" -n "$WEB" --query staticWebsite.enabled -o tsv)
-          [[ "${FINAL_SITE,,}" == "false" ]] || { echo "::error::Static site reenabled unexpectedly"; exit 1; }
-          echo "PROD_SAFE_STOP_SUCCEEDED"
-          echo "Supabase: NOT MODIFIED" >> "$GITHUB_STEP_SUMMARY"
-          echo "DEV/QA: NOT MODIFIED" >> "$GITHUB_STEP_SUMMARY"
-          echo "Resources remain allocated; storage and other residual charges may continue." >> "$GITHUB_STEP_SUMMARY"
+          FINAL=$(az storage account blob-service-properties show -g "$RG" -n "$ACCOUNT" --query staticWebsite.enabled -o tsv)
+          [[ "${FINAL,,}" == "false" ]] || {
+            echo "::error::Could not verify the website was disabled"; exit 1;
+          }
+          echo "PROD_STATIC_WEBSITE_DISABLED_CONFIRMED"
+          echo "Site: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Website: DISABLED — customer web access unavailable while redesign proceeds" >> "$GITHUB_STEP_SUMMARY"
+          echo "Azure Functions and email Logic App: NOT STOPPED (GitHub identity lacks Microsoft.Web/sites/read)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Supabase: UNTOUCHED" >> "$GITHUB_STEP_SUMMARY"
+          echo "DEV/QA: UNTOUCHED" >> "$GITHUB_STEP_SUMMARY"
