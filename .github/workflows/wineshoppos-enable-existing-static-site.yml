@@ -1,0 +1,93 @@
+name: Enable WineShopPOS Existing Static Website
+
+# User-authorized one-time hosting restore for existing Storage account only.
+on:
+  push:
+    branches:
+      - ops/enable-wineshoppos-static-site-20261027
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: wineshoppos-restore-static-website
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    name: Enable existing static website and verify public URL
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: wineshoppos-deploy
+    steps:
+      - name: Azure login using GitHub OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Enable static hosting on existing WineShopPOS account
+        shell: bash
+        run: |
+          set -euo pipefail
+          RG="wineshopPOS"
+          ACCOUNT="wineshoppos"
+          URL="https://wineshoppos.z29.web.core.windows.net/"
+          echo "## WineShopPOS existing website restore" >> "$GITHUB_STEP_SUMMARY"
+          echo "Target: existing storage account \`$ACCOUNT\`, RG \`$RG\`" >> "$GITHUB_STEP_SUMMARY"
+
+          # Guard against changing the wrong account/subscription.
+          NAME=$(az storage account show -g "$RG" -n "$ACCOUNT" --query name -o tsv)
+          [[ "$NAME" == "$ACCOUNT" ]] || { echo "::error::Unexpected target storage account"; exit 1; }
+
+          CURRENT=$(az storage account blob-service-properties show \
+            -g "$RG" --account-name "$ACCOUNT" \
+            --query 'staticWebsite.enabled' -o tsv)
+          echo "Previously enabled: $CURRENT"
+          if [[ "${CURRENT,,}" != "true" ]]; then
+            echo "Enabling static website and setting index.html..."
+            if ! az storage account blob-service-properties update \
+              -g "$RG" --account-name "$ACCOUNT" \
+              --static-website true --index-document index.html -o none; then
+              echo "::error::Cannot enable static website. This requires Microsoft.Storage/storageAccounts/blobServices/write, usually Storage Account Contributor at this storage account scope."
+              echo "Enable operation: **FAILED (Azure RBAC permission needed)**" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          else
+            echo "Hosting already enabled; no other properties changed."
+          fi
+
+          ENABLED=$(az storage account blob-service-properties show \
+            -g "$RG" --account-name "$ACCOUNT" \
+            --query 'staticWebsite.enabled' -o tsv)
+          INDEX=$(az storage account blob-service-properties show \
+            -g "$RG" --account-name "$ACCOUNT" \
+            --query 'staticWebsite.indexDocument' -o tsv)
+          echo "Static hosting enabled: $ENABLED; index document: $INDEX"
+          echo "Static website enabled: \`$ENABLED\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Index document: \`$INDEX\`" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${ENABLED,,}" != "true" ]]; then
+            echo "::error::Static website is still not enabled"
+            exit 1
+          fi
+
+          echo 'Checking index.html in $web with Entra ID read permission'
+          if EXISTS=$(az storage blob exists --account-name "$ACCOUNT" \
+             --container-name '$web' --name index.html --auth-mode login \
+             --query exists -o tsv); then
+            echo "index.html exists: $EXISTS"
+            echo "Index blob exists: \`$EXISTS\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Index blob check denied or unavailable; add Storage Blob Data Reader/Contributor if necessary."
+            echo "Index blob check: **not authorized/available**" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          HTTP=$(curl -sS -L --max-time 30 -o /dev/null -w '%{http_code}' "$URL" || true)
+          echo "Public URL: $URL HTTP $HTTP"
+          echo "Public website HTTP: \`$HTTP\`" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$HTTP" != "200" ]]; then
+            echo "::warning::Static hosting may be enabled but the site is not serving successfully; check index.html and propagation."
+          fi
