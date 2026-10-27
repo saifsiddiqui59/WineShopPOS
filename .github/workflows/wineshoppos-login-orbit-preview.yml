@@ -1,0 +1,64 @@
+name: WineShopPOS Login Orbit Visual Preview
+
+on:
+  pull_request:
+    paths:
+      - "src/pages/Login.jsx"
+      - "src/pages/LoginBrandOrbit.jsx"
+      - "src/pages/login-brand-orbit.css"
+      - "public/login-brands/**"
+      - "scripts/testing/login-orbit-browser-check.mjs"
+      - ".github/workflows/wineshoppos-login-orbit-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-preview:
+    name: Login brand orbit browser visual check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Build isolated DEV preview without live cloud credentials
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          VITE_SUPABASE_URL: https://juhcypzoacauzmtzqnwd.supabase.co
+          SUPABASE_PROJECT_ID: juhcypzoacauzmtzqnwd
+          VITE_SUPABASE_ANON_KEY: visual-test-placeholder-not-real
+        run: npm run build
+      - name: Verify login on desktop, mobile and reduced motion
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          VITE_SUPABASE_URL: https://juhcypzoacauzmtzqnwd.supabase.co
+          SUPABASE_PROJECT_ID: juhcypzoacauzmtzqnwd
+          VITE_SUPABASE_ANON_KEY: visual-test-placeholder-not-real
+        run: |
+          set -euo pipefail
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/wsp-login-preview.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/login > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/login > /dev/null || { cat /tmp/wsp-login-preview.log; exit 1; }
+          node scripts/testing/login-orbit-browser-check.mjs
+      - name: Upload visual evidence (not a production build)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wineshoppos-login-orbit-visual-${{ github.sha }}
+          path: artifacts/login-orbit/
+          if-no-files-found: ignore
+          retention-days: 14
