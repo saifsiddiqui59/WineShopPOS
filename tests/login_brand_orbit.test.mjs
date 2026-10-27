@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("login uses an isolated decorative orbit for both sign-in and password recovery", () => {
+test("login uses an isolated decorative Echo for sign-in and password recovery", () => {
   const login = read("src/pages/Login.jsx");
   assert.match(login, /import LoginBrandOrbit from "\.\/LoginBrandOrbit"/);
   assert.equal((login.match(/<LoginBrandOrbit\s*\/>/g) ?? []).length, 2);
