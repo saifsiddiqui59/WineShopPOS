@@ -1,0 +1,97 @@
+name: WineShopPOS Azure Read-Only Diagnostic
+
+# Limited to this diagnostic branch and manual dispatch. Never deploys or mutates Azure.
+on:
+  push:
+    branches:
+      - ci/wsp-azure-readonly-check-20261027
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  azure-readonly:
+    name: Verify OIDC, storage configuration and web index
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: wineshoppos-deploy
+    steps:
+      - name: Check required Azure environment secrets exist
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          for variable in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "::error::Missing environment secret: $variable"
+              exit 1
+            fi
+          done
+          echo "All three Azure OIDC identifier secrets are configured."
+
+      - name: Log into Azure with GitHub OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read storage settings, index blob and website HTTP status
+        shell: bash
+        run: |
+          set -u
+          RG="wineshopPOS"
+          ACCOUNT="wineshoppos"
+          SITE="https://wineshoppos.z29.web.core.windows.net/"
+          echo "### WineShopPOS read-only Azure diagnostic" >> "$GITHUB_STEP_SUMMARY"
+          echo "Azure OIDC login: success" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::group::Subscription identity"
+          az account show --query '{id:id,tenantId:tenantId}' -o json
+          echo "::endgroup::"
+
+          echo "::group::Azure Storage account"
+          if az storage account show -n "$ACCOUNT" -g "$RG" \
+               --query '{name:name,location:location,kind:kind,primaryWebEndpoint:primaryEndpoints.web}' -o json; then
+            echo "Storage account ARM read: success" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Cannot read $RG/$ACCOUNT: check Reader role and subscription."
+            echo "Storage account ARM read: FAILED" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Static website properties (management read)"
+          if az storage account blob-service-properties show --account-name "$ACCOUNT" -g "$RG" \
+               --query '{enabled:staticWebsite.enabled,indexDocument:staticWebsite.indexDocument,errorDocument404Path:staticWebsite.errorDocument404Path}' -o json; then
+            echo "Static website property read: success" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Cannot read static website settings (check ARM Reader role)."
+            echo "Static website property read: FAILED" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Check $web index blob with Microsoft Entra login"
+          if EXISTS=$(az storage blob exists --account-name "$ACCOUNT" --container-name '$web' \
+                     --name index.html --auth-mode login --query exists -o tsv); then
+            echo "index.html exists: $EXISTS"
+            echo "Index blob exists: \`$EXISTS\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Cannot inspect index.html (check Storage Blob Data Contributor role)."
+            echo "Index blob check: permission or API error" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Public production website"
+          STATUS=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$SITE")
+          CURL_RC=$?
+          echo "Production URL: $SITE"
+          echo "HTTP status: $STATUS (curl exit $CURL_RC)"
+          echo "Public website HTTP: \`$STATUS\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "::endgroup::"
+          # Keep diagnostics observational, even when the live website is down.
+          exit 0
