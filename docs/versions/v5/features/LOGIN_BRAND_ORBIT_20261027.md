@@ -6,9 +6,10 @@ Scope: `src/pages/Login.jsx`, `src/pages/LoginBrandOrbit.jsx`,
 - Adds **10 original vector package illustrations** (beer/wine) directly under
   Vite's existing `public/login-brands/` directory. Brand names are identification text,
   **not official manufacturer trademarks/logos or product photography**.
-- Displays the same artwork in **78 staggered Echo copies** of 10 different brand packages scattered all
-  over the screen at varied sizes, overlapping and fading in quick waves—based on
-  iMessage's dense, repeated-message Echo effect rather than an outward ring or orbit.
+- Displays the same artwork in **78 staggered Echo copies** of 10 different brand packages moving across the
+  screen on distinct **clockwise spiral curves** at varied sizes. Each copy
+  sweeps through four arc positions, enlarges and fades; three overlapping
+  waves create the iMessage-like repetition (not static, scattered stickers).
 - Animation uses pure CSS transforms with negative staggered delays (no JS timers).
 - Auth logic, Supabase calls, demo mode, recovery and route guards remain unchanged.
 - Layers are decorative, `aria-hidden`, and do not receive pointer events.
@@ -20,8 +21,10 @@ Scope: `src/pages/Login.jsx`, `src/pages/LoginBrandOrbit.jsx`,
 
 1. On a candidate branch, run `node --test tests/login_brand_orbit.test.mjs`,
    `npm run docs:check`, `npm run lint`, `npm run build`.
-2. Browser-qualify both login and Forgot Password on desktop/mobile with
-   reduced motion and verify keyboard navigation / readable text.
+2. Browser-qualify desktop/mobile/reduced-motion, validate the measured screen
+   displacement of 24 particles across 700ms, validate clockwise waypoints,
+   and capture two temporally separated desktop screenshots. Also check login
+   and Forgot Password keyboard navigation / readable text.
 3. For production, begin from current main, inject verified PROD Vite config,
    take a frontend rollback snapshot and build the **exact promoted source**.
 4. Upload immutable assets before changing `index.html` and compare hashes
