@@ -83,7 +83,7 @@ jobs:
             console.error("Expected 1-6 production JS entry files; got", scripts.length);
             process.exit(1);
           }
-          fs.writeFileSync("/tmp/wsp-live/script-paths", scripts.join("\n"));
+          fs.writeFileSync("/tmp/wsp-live/script-paths", scripts.join("\n") + "\n");
           console.log("Production JS entries discovered:", scripts.length);
           NODE
           while IFS= read -r path; do
