@@ -98,14 +98,14 @@ try {
   await page.getByRole('heading',{name:'WineShop POS'}).waitFor({timeout:25000});
   await page.locator('.wsp-login-echo').first().waitFor({state:'attached',timeout:25000});
   const total=await page.locator('.wsp-login-product img').count();
-  if(total!==30) throw Error('Expected thirty illustrated Echo particles; found '+total);
+  if(total!==78) throw Error('Expected 78 scattered wine/beer Echo copies; found '+total);
   const loaded=await page.locator('.wsp-login-product img').first().evaluate(async img=>{
     await img.decode();
     return img.complete&&img.naturalWidth>0;
   });
   if(!loaded) throw Error('Brand image failed to load after decoding');
   if(errors.length) throw Error('Browser JS errors: '+errors.join('; ').slice(0,500));
-  console.log('LIVE_LOGIN_ECHO_SMOKE_PASS - all 30 Echo particles rendered');
+  console.log('LIVE_LOGIN_ECHO_SMOKE_PASS - 78 varied-size full-screen Echo copies rendered');
 } finally {
   await browser.close();
 }
