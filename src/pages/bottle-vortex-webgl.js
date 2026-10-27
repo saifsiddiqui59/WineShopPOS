@@ -179,6 +179,8 @@ export function mountBottleVortex(canvas) {
     return small?18:32;
   }
   let count=resize();
+  canvas.dataset.bottleCount=String(count);
+  canvas.dataset.brandCount=String(BRANDS.length);
   function draw(t){
     if(disposed||gl.isContextLost())return;
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -203,7 +205,7 @@ export function mountBottleVortex(canvas) {
     }
     gl.bindVertexArray(null);canvas.dataset.renderedFrames=String(++frame);
   }
-  const onResize=()=>{if(!disposed){count=resize();draw(reduced.matches?3:(performance.now()-start)/1000);}};
+  const onResize=()=>{if(!disposed){count=resize();canvas.dataset.bottleCount=String(count);draw(reduced.matches?3:(performance.now()-start)/1000);}};
   const onVisibility=()=>{if(!document.hidden&&reduced.matches)draw(3);};
   const onMotion=()=>{draw(3);};
   function tick(time){
