@@ -8,6 +8,7 @@ on:
       - "src/pages/login-brand-orbit.css"
       - "public/login-brands/**"
       - "scripts/testing/login-orbit-browser-check.mjs"
+      - ".github/workflows/wineshoppos-login-orbit-preview.yml"
   workflow_dispatch:
 
 permissions:
