@@ -62,7 +62,7 @@ JS_FILE=$(find dist/assets -maxdepth 1 -type f -name '*.js' | head -n 1)
 [[ -n "$JS_FILE" ]] || { echo "::error::Missing production JS"; exit 1; }
 grep -q "$PROD_REF" "$JS_FILE" || { echo "::error::PROD ref missing"; exit 1; }
 if grep -q "$DEV_REF" "$JS_FILE"; then echo "::error::DEV ref present in PROD build"; exit 1; fi
-for required in "wineshoppos-ai-1a61d5885c.azurewebsites.net" "wsp-v3-invoice-53b6e9a1.azurewebsites.net" "wsp-login-orbiter"; do
+for required in "wineshoppos-ai-1a61d5885c.azurewebsites.net" "wsp-v3-invoice-53b6e9a1.azurewebsites.net" "wsp-login-echo"; do
   grep -q "$required" "$JS_FILE" || { echo "::error::Build missing marker: $required"; exit 1; }
 done
 for asset in dist/index.html dist/login-brands/kingfisher.svg dist/login-brands/sula.svg; do
