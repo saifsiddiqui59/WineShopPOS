@@ -75,7 +75,7 @@ jobs:
           fi
           echo "::endgroup::"
 
-          echo "::group::Check $web index blob with Microsoft Entra login"
+          echo '::group::Check $web index blob with Microsoft Entra login'
           if EXISTS=$(az storage blob exists --account-name "$ACCOUNT" --container-name '$web' \
                      --name index.html --auth-mode login --query exists -o tsv); then
             echo "index.html exists: $EXISTS"
