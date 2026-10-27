@@ -17,22 +17,27 @@ test("login uses an isolated decorative Echo for sign-in and password recovery",
   assert.match(login, /resetPasswordForEmail/);
 });
 
-test("iMessage-style clockwise spiral Echo motion and reduced-motion preference are declared", () => {
+test("premium layered 3D-depth vortex and reduced-motion preference are declared", () => {
   const component = read("src/pages/LoginBrandOrbit.jsx");
   const css = read("src/pages/login-brand-orbit.css");
   assert.match(component, /aria-hidden="true"/);
   assert.match(component, /\/login-brands\//);
-  assert.match(component, /Array\.from\(\{ length: 78 \}/);
+  assert.match(component, /Array\.from\(\{ length: 184 \}/);
   for (const waypoint of ["p0", "p1", "p2", "p3"]) {
     assert.match(component, new RegExp("--echo-" + waypoint + "x"));
     assert.match(component, new RegExp("--echo-" + waypoint + "y"));
   }
-  assert.match(component, /swirlPoint\(/);
-  assert.match(component, /angle \+ 110/);
+  assert.match(component, /function point\(/);
+  assert.match(component, /angle \+ 86/);
   assert.match(component, /--echo-delay/);
   assert.match(component, /--echo-size/);
-  assert.match(component, /--echo-big-size/);
-  assert.match(css, /@keyframes wsp-login-echo-swirl/);
+  assert.match(component, /--echo-near-size/);
+  assert.match(css, /@keyframes wsp-login-premium-echo/);
+  assert.match(css, /perspective: 1100px/);
+  assert.match(css, /transform-style: preserve-3d/);
+  assert.match(component, /--echo-p2z/);
+  assert.match(component, /data-depth=/);
+  assert.match(component, /length: 32/);
   assert.match(css, /var\(--echo-p1x\)/);
   assert.match(css, /var\(--echo-p2x\)/);
   assert.match(css, /var\(--echo-p3y\)/);

@@ -1,19 +1,19 @@
-/* Login-only Echo: dozens of self-hosted bottle/can illustrations swoop through
-   clockwise curved paths, expand, overlap and fade in distinct waves. */
+/* Dense, layered 3D-style branded product vortex. Scope: login/recovery only. */
 .auth-screen.wsp-login-screen {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   min-height: 100svh;
   background:
-    radial-gradient(ellipse at 18% 15%, rgba(139, 54, 45, .38), transparent 46%),
-    radial-gradient(ellipse at 80% 83%, rgba(177, 123, 49, .16), transparent 52%),
-    linear-gradient(145deg, #1e0c12 0%, #090c14 52%, #230d17 100%);
+    radial-gradient(ellipse at 50% 38%, rgba(89, 28, 48, .34) 0%, transparent 59%),
+    radial-gradient(ellipse at 3% 75%, rgba(118, 38, 61, .32), transparent 47%),
+    radial-gradient(ellipse at 93% 18%, rgba(148, 89, 40, .27), transparent 48%),
+    #0c0812;
 }
-
 .wsp-login-backdrop,
 .wsp-login-echo-field,
-.wsp-login-center-shade {
+.wsp-login-center-shade,
+.wsp-login-sparkle-field {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -21,139 +21,218 @@
 .wsp-login-backdrop { z-index: -1; overflow: hidden; }
 .wsp-login-light {
   position: absolute;
-  width: min(45vw, 660px);
+  width: min(60vw, 840px);
   aspect-ratio: 1;
   border-radius: 50%;
-  filter: blur(76px);
-  opacity: .65;
+  filter: blur(100px);
+  opacity: .66;
 }
-.wsp-login-light--amber { top: -18%; right: -8%; background: rgba(175, 108, 44, .23); }
-.wsp-login-light--wine { bottom: -27%; left: -11%; background: rgba(179, 35, 80, .27); }
+.wsp-login-light--amber { top: -40%; right: -16%; background: rgba(237, 147, 54, .34); }
+.wsp-login-light--wine { bottom: -40%; left: -18%; background: rgba(212, 44, 90, .31); }
 
-/* Positions animate through four clockwise points (not stationary cards); three
-   overlapping waves use negative delays for instant depth on first paint. */
-.wsp-login-echo {
+/* Moving, wide, soft-edged spiral light shafts add depth behind the products. */
+.wsp-login-vortex {
   position: absolute;
+  width: max(120vw, 140vh);
+  height: max(120vw, 140vh);
   top: 50%;
   left: 50%;
+  border-radius: 50%;
+  mask-image: radial-gradient(circle, transparent 0 17%, #000 35%, #000 73%, transparent 85%);
+  opacity: .47;
+  pointer-events: none;
+  background: conic-gradient(from 22deg,
+    transparent 0deg, rgba(240, 164, 74, .15) 29deg, transparent 51deg,
+    transparent 76deg, rgba(255, 198, 117, .11) 101deg, transparent 129deg,
+    transparent 168deg, rgba(194, 67, 108, .22) 208deg, transparent 239deg,
+    transparent 275deg, rgba(252, 167, 81, .12) 306deg, transparent 343deg);
+  animation: wsp-login-vortex-spin 25s linear infinite;
+}
+.wsp-login-vortex--ruby {
+  opacity: .28;
+  scale: .75;
+  filter: blur(18px);
+  animation-duration: 37s;
+  animation-direction: reverse;
+}
+
+.wsp-login-echo-field {
+  perspective: 1100px;
+  perspective-origin: 50% 48%;
+  transform-style: preserve-3d;
+  contain: layout style;
+}
+
+/* Each independent echo follows a 3D spiral with four actual depth waypoints. */
+.wsp-login-echo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 104px;
+  height: 208px;
   opacity: 0;
-  transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), 0) scale(.12);
-  animation: wsp-login-echo-swirl 6.3s linear var(--echo-delay) infinite;
-  will-change: opacity, transform;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), var(--echo-p0z)) scale(.2);
+  animation: wsp-login-premium-echo 8.8s cubic-bezier(.32,.14,.4,.94) var(--echo-delay) infinite;
+  will-change: transform, opacity;
 }
 
 .wsp-login-product {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 88px;
-  padding: 4px 6px 7px;
-  border: 1px solid rgba(251, 218, 158, .18);
-  border-radius: 14px;
-  background: linear-gradient(155deg, rgba(255, 239, 212, .13), rgba(12, 11, 19, .64));
-  box-shadow: 0 6px 20px rgba(0, 0, 0, .36);
-  transform: rotate(var(--echo-tilt));
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  transform-style: preserve-3d;
+  transform: rotateY(var(--echo-turn)) rotateX(var(--echo-pitch)) rotateZ(var(--echo-roll));
+  backface-visibility: hidden;
+  filter: drop-shadow(12px 20px 12px rgba(0,0,0,.58));
 }
-.wsp-login-product--wine { border-color: rgba(236, 169, 180, .26); }
+
+/* No cheap opaque rectangles around products: luminous bottle silhouette,
+   cool edge reflection and translucent glass sheen follow the 3D plane. */
 .wsp-login-product img {
+  width: 100%;
+  height: 100%;
   display: block;
-  width: 65px;
-  height: 104px;
   object-fit: contain;
-  filter: drop-shadow(0 5px 9px rgba(0, 0, 0, .43));
+  filter:
+    drop-shadow(-1px -1px 2px rgba(255,225,175,.48))
+    drop-shadow(5px 11px 9px rgba(0,0,0,.6));
+  backface-visibility: hidden;
 }
-.wsp-login-product-label {
-  color: #ffe7bb;
-  text-align: center;
-  white-space: nowrap;
-  font-size: 10px;
-  font-weight: 750;
-  line-height: 1.2;
-  letter-spacing: .02em;
+.wsp-login-product::before {
+  content: "";
+  position: absolute;
+  left: 25%;
+  top: 10%;
+  width: 15%;
+  height: 78%;
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent);
+  filter: blur(5px);
+  mix-blend-mode: screen;
+  transform: translateZ(4px) rotate(-3deg);
+  pointer-events: none;
+}
+.wsp-login-product::after {
+  content: "";
+  position: absolute;
+  width: 58%;
+  height: 13%;
+  left: 22%;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(230,161,77,.24), transparent 70%);
+  filter: blur(8px);
+  transform: translateZ(-18px) rotateX(75deg);
+  pointer-events: none;
+}
+.wsp-login-echo--far .wsp-login-product { opacity: .75; }
+.wsp-login-echo--far .wsp-login-product img { filter: drop-shadow(2px 5px 10px rgba(0,0,0,.65)); }
+
+.wsp-login-sparkle-field { opacity: .7; }
+.wsp-login-sparkle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #ffe9ba;
+  box-shadow: 0 0 10px 2px rgba(242, 175, 89, .35);
+  animation: wsp-login-glint 5s ease-in-out var(--glint-delay) infinite;
 }
 
 .wsp-login-center-shade {
-  background: radial-gradient(ellipse 440px 365px at center, rgba(11, 10, 17, .69), transparent 95%);
+  background: radial-gradient(ellipse 360px 330px at center, rgba(9,6,14,.68), transparent 98%);
 }
 
+/* Frosted charcoal glass makes the login look expensive while preserving
+   strong label and field contrast and keeping all controls tappable. */
 .auth-screen.wsp-login-screen > .auth-card {
   position: relative;
   z-index: 2;
-  border: 1px solid rgba(241, 195, 125, .32);
+  border: 1px solid rgba(250, 207, 139, .42);
   border-radius: 22px;
-  color: #fff5e6;
-  background: linear-gradient(155deg, rgba(35, 23, 30, .95), rgba(13, 17, 24, .95));
-  box-shadow: 0 28px 100px rgba(0, 0, 0, .57), inset 0 1px 0 rgba(255, 232, 194, .1);
-  backdrop-filter: blur(18px);
+  color: #fff6eb;
+  background:
+    linear-gradient(152deg, rgba(55,35,47,.93), rgba(12,14,23,.95) 77%);
+  box-shadow: 0 35px 100px rgba(0,0,0,.71), 0 0 70px rgba(174,91,43,.13),
+    inset 0 1px 0 rgba(255,240,200,.16);
+  backdrop-filter: blur(19px);
 }
-.wsp-login-screen .auth-card h1 { color: #f9d99c; letter-spacing: -.035em; }
-.wsp-login-screen .auth-card p { color: #d7c9c7; }
-.wsp-login-screen .auth-card label { color: #f8eae6; }
-.wsp-login-screen .auth-card input {
-  color: #191d25;
-  background: #fffdfb;
-  border-color: #dec9ba;
-}
+.wsp-login-screen .auth-card h1 { color: #ffe2a4; letter-spacing: -.035em; }
+.wsp-login-screen .auth-card p { color: #e5d1ce; }
+.wsp-login-screen .auth-card label { color: #ffefe9; }
+.wsp-login-screen .auth-card input { color:#191d25; background:#fffdfa; border-color:#dec9ba; }
 .wsp-login-screen .auth-card input:focus-visible,
-.wsp-login-screen .auth-card button:focus-visible {
-  outline: 3px solid #dfb765;
-  outline-offset: 2px;
-}
+.wsp-login-screen .auth-card button:focus-visible { outline:3px solid #dfb765; outline-offset:2px; }
 .wsp-login-screen .auth-card .secondary-button {
   color: #f9e4bd;
-  border-color: rgba(246, 214, 162, .36);
-  background: rgba(255, 255, 255, .07);
+  border-color: rgba(246,214,162,.36);
+  background: rgba(255,255,255,.07);
 }
 
-/* Dense iMessage-style repeats with genuine sweeping, clockwise motion:
-   path angles advance about 250 degrees while radius grows. GPU transforms
-   keep this smooth without interval timers, canvas or layout reflows. */
-@keyframes wsp-login-echo-swirl {
-  0%, 7% {
+/* Rich overlap: 75%+ of the animation is visible rather than the previous
+   brief fade which left most of the page empty at any single instant. */
+@keyframes wsp-login-premium-echo {
+  0% {
     opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), 0)
-      rotate(-18deg) scale(.12);
+    transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), var(--echo-p0z))
+      rotateZ(-32deg) scale(.2);
   }
-  24% {
-    opacity: .9;
-    transform: translate3d(calc(-50% + var(--echo-p1x)), calc(-50% + var(--echo-p1y)), 0)
-      rotate(-5deg) scale(var(--echo-small-size));
-  }
-  52% {
-    opacity: .95;
-    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), 0)
-      rotate(8deg) scale(var(--echo-size));
-  }
-  76% {
+  11% {
     opacity: .72;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), 0)
-      rotate(17deg) scale(var(--echo-big-size));
+    transform: translate3d(calc(-50% + var(--echo-p1x)), calc(-50% + var(--echo-p1y)), var(--echo-p1z))
+      rotateZ(-11deg) scale(var(--echo-far-size));
   }
-  91%, 100% {
+  37% {
+    opacity: .93;
+    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), var(--echo-p2z))
+      rotateZ(16deg) scale(var(--echo-size));
+  }
+  65% {
+    opacity: .94;
+    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
+      rotateZ(49deg) scale(var(--echo-near-size));
+  }
+  86% {
+    opacity: .76;
+    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
+      rotateZ(61deg) scale(var(--echo-near-size));
+  }
+  100% {
     opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), 0)
-      rotate(20deg) scale(var(--echo-big-size));
+    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
+      rotateZ(68deg) scale(var(--echo-near-size));
   }
+}
+@keyframes wsp-login-vortex-spin {
+  from { transform: translate(-50%,-50%) rotate(0deg); }
+  to { transform: translate(-50%,-50%) rotate(360deg); }
+}
+@keyframes wsp-login-glint {
+  0%,100% { opacity:.12; scale: .5; }
+  46% { opacity:.85; scale: 1.6; }
 }
 
 @media (max-width: 760px) {
-  .auth-screen.wsp-login-screen { padding: 18px; }
-  .wsp-login-backdrop { opacity: .8; }
-  .wsp-login-echo--secondary { display: none; }
-  .wsp-login-product { width: 74px; padding: 3px 4px 5px; border-radius: 11px; }
-  .wsp-login-product img { width: 54px; height: 84px; }
-  .wsp-login-product-label { font-size: 8px; }
+  .auth-screen.wsp-login-screen { padding:18px; }
+  .wsp-login-echo--secondary { display:none; }
+  .wsp-login-echo { width:75px; height:150px; }
+  .wsp-login-product::before,
+  .wsp-login-product::after { display:none; }
   .wsp-login-center-shade {
-    background: radial-gradient(ellipse 300px 360px at center, rgba(8, 8, 14, .86), transparent 97%);
+    background:radial-gradient(ellipse 285px 340px at center, rgba(7,6,13,.79), transparent 98%);
   }
-  .auth-screen.wsp-login-screen > .auth-card { width: min(440px, 100%); }
+  .auth-screen.wsp-login-screen > .auth-card { width:min(440px,100%); }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .wsp-login-echo { animation: none !important; will-change: auto; }
+  .wsp-login-echo, .wsp-login-vortex, .wsp-login-sparkle { animation:none !important; will-change:auto; }
   .wsp-login-echo {
-    opacity: .45;
-    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), 0)
+    opacity: .55;
+    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), var(--echo-p2z))
       scale(var(--echo-size));
   }
+  .wsp-login-sparkle { opacity:.3; }
 }
