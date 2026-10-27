@@ -27,8 +27,6 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
       - name: Build isolated DEV preview without live cloud credentials
         shell: bash
         env:
