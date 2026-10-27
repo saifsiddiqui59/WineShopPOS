@@ -25,7 +25,7 @@ try {
     await page.goto(`${base}/login`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "WineShop POS" }).waitFor();
     await page.getByRole("button", { name: "Login" }).waitFor();
-    await page.locator(".wsp-login-orbiter").first().waitFor();
+    await page.locator(".wsp-login-orbiter").first().waitFor({ state: "attached" });
 
     assert.equal(await page.locator(".wsp-login-orbiter").count(), scene.expectedImages);
     assert.equal(await page.locator(".wsp-login-product img").count(), scene.expectedImages);
