@@ -50,6 +50,7 @@ export SUPABASE_PROJECT_ID="$PROD_REF"
 export VITE_SUPABASE_URL="https://$PROD_REF.supabase.co"
 export VITE_SUPABASE_ANON_KEY="$(cat "$RUNNER_TEMP/wsp-live/public-anon-key")"
 export VITE_AI_API_URL="https://wineshoppos-ai-1a61d5885c.azurewebsites.net"
+export VITE_INVOICE_API_URL="https://wsp-v3-invoice-53b6e9a1.azurewebsites.net"
 echo "::add-mask::$VITE_SUPABASE_ANON_KEY"
 npm ci
 npm run docs:check
