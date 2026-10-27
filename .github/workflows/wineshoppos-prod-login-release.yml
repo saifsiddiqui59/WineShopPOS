@@ -56,3 +56,5 @@ jobs:
       - name: Upload new immutable assets, publish frontend, verify, auto-rollback on failure
         shell: bash
         run: bash scripts/ops/wsp-prod-login-deploy.sh
+
+# PROD rerun: verified invoice API config and main-only shell guard.
