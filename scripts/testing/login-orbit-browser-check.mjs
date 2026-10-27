@@ -47,7 +47,7 @@ try {
     await page.screenshot({ path: `${output}/${scene.name}.png` });
     assert.deepEqual(pageErrors, [], "Login should render without JS runtime errors");
     await context.close();
-    console.log(`LOGIN_ORBIT_VISUAL_${scene.name.toUpperCase().replaceAll("-", "_")}=PASS`);
+    console.log(`LOGIN_ECHO_VISUAL_${scene.name.toUpperCase().replaceAll("-", "_")}=PASS`);
   }
 } finally {
   await browser.close();
