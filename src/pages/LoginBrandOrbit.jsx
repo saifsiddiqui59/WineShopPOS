@@ -1,7 +1,7 @@
 import "./login-brand-orbit.css";
 
-// Reuse existing, self-hosted illustrative wine/beer bottle and can art.
-// Decorative packages include identifying names, not manufacturer-owned logos.
+// Same ten locally hosted original illustrations; the Echo effect duplicates
+// each bottle/can at varied positions and sizes like iMessage's bubble swarm.
 const BRANDS = [
   { id: "kingfisher", label: "Kingfisher", family: "beer" },
   { id: "sula", label: "Sula", family: "wine" },
@@ -15,18 +15,31 @@ const BRANDS = [
   { id: "corona", label: "Corona", family: "beer" },
 ];
 
-// Deterministic radial paths: echo from center in overlapping waves, then fade.
-// Negative delays make waves visible immediately; no timers, randomness, or network API.
-const ECHO_ITEMS = Array.from({ length: 30 }, (_, i) => {
-  const angle = ((i * 137.508 + 26) * Math.PI) / 180;
-  const radius = 31 + ((i * 17) % 19);
+// Deterministic spread across the whole screen: not an orbit or radial ring.
+// Three closely timed overlapping waves produce a dense, varied-size Echo.
+// All values are constant at render; CSS handles the entire animation.
+function scatter(seed) {
+  let n = (Math.imul(seed + 1, 1664525) + 1013904223) >>> 0;
+  n ^= n << 13;
+  n ^= n >>> 17;
+  n ^= n << 5;
+  return (n >>> 0) / 4294967295;
+}
+
+const ECHO_ITEMS = Array.from({ length: 78 }, (_, index) => {
+  const wave = Math.floor(index / 26);
+  const size = 0.33 + scatter(index * 7 + 3) * 0.88;
   return {
-    ...BRANDS[i % BRANDS.length],
-    key: i,
-    dx: `${(Math.cos(angle) * radius).toFixed(2)}vw`,
-    dy: `${(Math.sin(angle) * radius * 1.06).toFixed(2)}vh`,
-    delay: `${(i * -0.34).toFixed(2)}s`,
-    tilt: `${((i % 5) - 2) * 5}deg`,
+    ...BRANDS[(index * 7 + wave) % BRANDS.length],
+    key: index,
+    x: `${(3 + scatter(index * 7 + 1) * 94).toFixed(2)}%`,
+    y: `${(3 + scatter(index * 7 + 2) * 94).toFixed(2)}%`,
+    scale: size.toFixed(2),
+    scaleEnd: (size * 1.17).toFixed(2),
+    driftX: `${Math.round((scatter(index * 7 + 4) - 0.5) * 42)}px`,
+    driftY: `${Math.round((scatter(index * 7 + 5) - 0.5) * 40)}px`,
+    delay: `${(-wave * 1.6 - (index % 26) * 0.035).toFixed(2)}s`,
+    tilt: `${Math.round((scatter(index * 7 + 6) - 0.5) * 19)}deg`,
   };
 });
 
@@ -35,18 +48,18 @@ export default function LoginBrandOrbit() {
     <div className="wsp-login-backdrop" aria-hidden="true">
       <div className="wsp-login-light wsp-login-light--amber" />
       <div className="wsp-login-light wsp-login-light--wine" />
-      <div className="wsp-login-echo-halo wsp-login-echo-halo--one" />
-      <div className="wsp-login-echo-halo wsp-login-echo-halo--two" />
-      <div className="wsp-login-echo-halo wsp-login-echo-halo--three" />
-
       <div className="wsp-login-echo-field">
         {ECHO_ITEMS.map((item, index) => (
           <div
-            className={`wsp-login-echo ${index >= 20 ? "wsp-login-echo--secondary" : ""}`}
+            className={`wsp-login-echo ${index >= 48 ? "wsp-login-echo--secondary" : ""}`}
             key={item.key}
             style={{
-              "--echo-x": item.dx,
-              "--echo-y": item.dy,
+              "--echo-x": item.x,
+              "--echo-y": item.y,
+              "--echo-size": item.scale,
+              "--echo-size-end": item.scaleEnd,
+              "--echo-drift-x": item.driftX,
+              "--echo-drift-y": item.driftY,
               "--echo-delay": item.delay,
               "--echo-tilt": item.tilt,
             }}
@@ -55,8 +68,8 @@ export default function LoginBrandOrbit() {
               <img
                 src={`/login-brands/${item.id}.svg`}
                 alt=""
-                width="92"
-                height="200"
+                width="80"
+                height="156"
                 decoding="async"
                 draggable="false"
               />
