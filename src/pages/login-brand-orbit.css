@@ -1,5 +1,5 @@
-/* Real Echo-style login backdrop: numerous copies scatter across the entire
-   page in different sizes, overlap, drift and fade. No orbit or expanding rings. */
+/* Login-only Echo: dozens of self-hosted bottle/can illustrations swoop through
+   clockwise curved paths, expand, overlap and fade in distinct waves. */
 .auth-screen.wsp-login-screen {
   position: relative;
   isolation: isolate;
@@ -30,15 +30,15 @@
 .wsp-login-light--amber { top: -18%; right: -8%; background: rgba(175, 108, 44, .23); }
 .wsp-login-light--wine { bottom: -27%; left: -11%; background: rgba(179, 35, 80, .27); }
 
-/* iMessage Echo fills the canvas with overlapping copies rather than tracking
-   packages outward on circles. Negative wave delays ensure no initial blank. */
+/* Positions animate through four clockwise points (not stationary cards); three
+   overlapping waves use negative delays for instant depth on first paint. */
 .wsp-login-echo {
   position: absolute;
-  top: var(--echo-y);
-  left: var(--echo-x);
+  top: 50%;
+  left: 50%;
   opacity: 0;
-  transform: translate3d(-50%, -40%, 0) scale(.1);
-  animation: wsp-login-echo-swarm 5.6s ease-out var(--echo-delay) infinite;
+  transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), 0) scale(.12);
+  animation: wsp-login-echo-swirl 6.3s linear var(--echo-delay) infinite;
   will-change: opacity, transform;
 }
 
@@ -105,28 +105,34 @@
   background: rgba(255, 255, 255, .07);
 }
 
-/* A short pop-in, a densely overlapping full-screen swarm, then a fade-out;
-   3 offset waves repeat this in the background without blocking input. */
-@keyframes wsp-login-echo-swarm {
+/* Dense iMessage-style repeats with genuine sweeping, clockwise motion:
+   path angles advance about 250 degrees while radius grows. GPU transforms
+   keep this smooth without interval timers, canvas or layout reflows. */
+@keyframes wsp-login-echo-swirl {
   0%, 7% {
     opacity: 0;
-    transform: translate3d(-50%, -36%, 0) scale(.08);
+    transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), 0)
+      rotate(-18deg) scale(.12);
   }
-  23% {
-    opacity: .92;
-    transform: translate3d(-50%, -50%, 0) scale(var(--echo-size));
+  24% {
+    opacity: .9;
+    transform: translate3d(calc(-50% + var(--echo-p1x)), calc(-50% + var(--echo-p1y)), 0)
+      rotate(-5deg) scale(var(--echo-small-size));
   }
-  53% {
-    opacity: .96;
-    transform: translate3d(calc(-50% + var(--echo-drift-x)), calc(-50% + var(--echo-drift-y)), 0) scale(var(--echo-size));
+  52% {
+    opacity: .95;
+    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), 0)
+      rotate(8deg) scale(var(--echo-size));
   }
-  79% {
+  76% {
+    opacity: .72;
+    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), 0)
+      rotate(17deg) scale(var(--echo-big-size));
+  }
+  91%, 100% {
     opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-drift-x)), calc(-50% + var(--echo-drift-y)), 0) scale(var(--echo-size-end));
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-drift-x)), calc(-50% + var(--echo-drift-y)), 0) scale(var(--echo-size-end));
+    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), 0)
+      rotate(20deg) scale(var(--echo-big-size));
   }
 }
 
@@ -146,7 +152,8 @@
 @media (prefers-reduced-motion: reduce) {
   .wsp-login-echo { animation: none !important; will-change: auto; }
   .wsp-login-echo {
-    opacity: .46;
-    transform: translate3d(-50%, -50%, 0) scale(var(--echo-size));
+    opacity: .45;
+    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), 0)
+      scale(var(--echo-size));
   }
 }
