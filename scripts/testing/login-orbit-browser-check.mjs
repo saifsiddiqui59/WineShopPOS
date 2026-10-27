@@ -6,7 +6,7 @@ const base = process.env.LOGIN_PREVIEW_URL || "http://127.0.0.1:4173";
 const output = "artifacts/login-orbit";
 await fs.mkdir(output, { recursive: true });
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, channel: "chrome" });
 try {
   for (const scene of [
     { name: "desktop", viewport: { width: 1440, height: 900 }, reducedMotion: "no-preference", expectedImages: 10 },
