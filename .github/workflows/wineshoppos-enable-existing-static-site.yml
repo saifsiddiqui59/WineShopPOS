@@ -50,7 +50,7 @@ jobs:
             echo "Enabling static website and setting index.html..."
             if ! az storage account blob-service-properties update \
               -g "$RG" --account-name "$ACCOUNT" \
-              --static-website true --index-document index.html -o none; then
+              --enable-static-website true --index-document index.html -o none; then
               echo "::error::Cannot enable static website. This requires Microsoft.Storage/storageAccounts/blobServices/write, usually Storage Account Contributor at this storage account scope."
               echo "Enable operation: **FAILED (Azure RBAC permission needed)**" >> "$GITHUB_STEP_SUMMARY"
               exit 1
