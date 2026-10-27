@@ -36,7 +36,8 @@ try {
     const missingImages = await page.locator(".wsp-login-product img").evaluateAll(els =>
       els.filter(img => !img.complete || img.naturalWidth === 0).map(img => img.src));
     assert.deepEqual(missingImages, [], "decorative SVG files should be available from public/");
-    const uniqueBrands = new Set(await page.locator(".wsp-login-product-label").allTextContents());
+    const uniqueBrands = new Set(await page.locator(".wsp-login-product img").evaluateAll(els =>
+      els.map(img => new URL(img.src).pathname)));
     assert.equal(uniqueBrands.size, 10, "all wine and beer brands should appear in the Echo field");
     assert.equal(await page.locator(".wsp-login-echo[data-depth='0']").count(), 46);
     assert.equal(await page.locator(".wsp-login-echo[data-depth='3']").count(), 46);
