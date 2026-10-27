@@ -96,16 +96,16 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto('https://wineshoppos.z29.web.core.windows.net/#/login',{waitUntil:'domcontentloaded',timeout:30000});
   await page.getByRole('heading',{name:'WineShop POS'}).waitFor({timeout:25000});
-  await page.locator('.wsp-login-orbiter').first().waitFor({state:'attached',timeout:25000});
+  await page.locator('.wsp-login-echo').first().waitFor({state:'attached',timeout:25000});
   const total=await page.locator('.wsp-login-product img').count();
-  if(total!==10) throw Error('Expected ten animated wine/beer brands; found '+total);
+  if(total!==30) throw Error('Expected thirty illustrated Echo particles; found '+total);
   const loaded=await page.locator('.wsp-login-product img').first().evaluate(async img=>{
     await img.decode();
     return img.complete&&img.naturalWidth>0;
   });
   if(!loaded) throw Error('Brand image failed to load after decoding');
   if(errors.length) throw Error('Browser JS errors: '+errors.join('; ').slice(0,500));
-  console.log('LIVE_LOGIN_SMOKE_PASS - all 10 wine/beer brands rendered');
+  console.log('LIVE_LOGIN_ECHO_SMOKE_PASS - all 30 Echo particles rendered');
 } finally {
   await browser.close();
 }

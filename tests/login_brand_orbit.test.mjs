@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("login uses an isolated decorative orbit for both sign-in and password recovery", () => {
+test("login uses an isolated decorative Echo for sign-in and password recovery", () => {
   const login = read("src/pages/Login.jsx");
   assert.match(login, /import LoginBrandOrbit from "\.\/LoginBrandOrbit"/);
   assert.equal((login.match(/<LoginBrandOrbit\s*\/>/g) ?? []).length, 2);
@@ -17,14 +17,18 @@ test("login uses an isolated decorative orbit for both sign-in and password reco
   assert.match(login, /resetPasswordForEmail/);
 });
 
-test("clockwise motion and reduced-motion preference are declared", () => {
+test("iMessage-style radial Echo bursts and reduced-motion preference are declared", () => {
   const component = read("src/pages/LoginBrandOrbit.jsx");
   const css = read("src/pages/login-brand-orbit.css");
   assert.match(component, /aria-hidden="true"/);
   assert.match(component, /\/login-brands\//);
-  assert.match(css, /@keyframes wsp-login-clockwise/);
-  assert.match(css, /rotate\(calc\(var\(--start-angle\) \+ 360deg\)\)/);
-  assert.match(css, /@keyframes wsp-login-counterclockwise/);
+  assert.match(component, /Array\.from\(\{ length: 30 \}/);
+  assert.match(component, /--echo-x/);
+  assert.match(component, /--echo-y/);
+  assert.match(component, /--echo-delay/);
+  assert.match(css, /@keyframes wsp-login-echo-burst/);
+  assert.match(css, /@keyframes wsp-login-echo-halo/);
+  assert.match(css, /calc\(-50% \+ var\(--echo-x\)\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /pointer-events:\s*none/);
   assert.match(css, /\.auth-screen\.wsp-login-screen/);

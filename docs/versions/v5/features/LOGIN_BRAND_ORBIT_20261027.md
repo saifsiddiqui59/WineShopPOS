@@ -1,4 +1,4 @@
-# WineShopPOS Login Brand Orbit — UI-only handoff
+# WineShopPOS Login Brand Echo — UI-only handoff
 
 Scope: `src/pages/Login.jsx`, `src/pages/LoginBrandOrbit.jsx`,
 `src/pages/login-brand-orbit.css` and `public/login-brands/*.svg`.
@@ -6,13 +6,15 @@ Scope: `src/pages/Login.jsx`, `src/pages/LoginBrandOrbit.jsx`,
 - Adds **10 original vector package illustrations** (beer/wine) directly under
   Vite's existing `public/login-brands/` directory. Brand names are identification text,
   **not official manufacturer trademarks/logos or product photography**.
-- Displays the artwork on **clockwise, slow orbiting tracks** with counter-rotation
-  to keep products upright; smooth vertical hovering adds depth.
+- Displays the same artwork in **30 staggered Echo particles** (10 unique brands
+  repeated three times), expanding outward from the center before fading, with
+  pulsing concentric halos; replaces the earlier clockwise orbit treatment.
+- Animation uses pure CSS transforms with negative staggered delays (no JS timers).
 - Auth logic, Supabase calls, demo mode, recovery and route guards remain unchanged.
 - Layers are decorative, `aria-hidden`, and do not receive pointer events.
 - Scoped selectors are unique to the login form; other screens are untouched.
-- Smaller devices display fewer illustrations; `prefers-reduced-motion` disables
-  animation. No external hosts, paid services, or JavaScript animation loops.
+- Smaller devices display fewer particles; `prefers-reduced-motion` disables
+  the animation and keeps a quiet static layout. No external hosts, paid services, or JavaScript animation loops.
 
 ## Check / release
 
