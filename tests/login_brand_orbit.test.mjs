@@ -27,11 +27,11 @@ test("premium layered 3D-depth vortex and reduced-motion preference are declared
     assert.match(component, new RegExp("--echo-" + waypoint + "x"));
     assert.match(component, new RegExp("--echo-" + waypoint + "y"));
   }
-  assert.match(component, /swirlPoint\(/);
-  assert.match(component, /angle \+ 110/);
+  assert.match(component, /function point\(/);
+  assert.match(component, /angle \+ 86/);
   assert.match(component, /--echo-delay/);
   assert.match(component, /--echo-size/);
-  assert.match(component, /--echo-big-size/);
+  assert.match(component, /--echo-near-size/);
   assert.match(css, /@keyframes wsp-login-premium-echo/);
   assert.match(css, /perspective: 1100px/);
   assert.match(css, /transform-style: preserve-3d/);
