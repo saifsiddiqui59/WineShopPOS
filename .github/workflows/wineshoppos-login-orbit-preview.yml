@@ -38,6 +38,11 @@ jobs:
         run: npm run build
       - name: Verify login on desktop, mobile and reduced motion
         shell: bash
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          VITE_SUPABASE_URL: https://juhcypzoacauzmtzqnwd.supabase.co
+          SUPABASE_PROJECT_ID: juhcypzoacauzmtzqnwd
+          VITE_SUPABASE_ANON_KEY: visual-test-placeholder-not-real
         run: |
           set -euo pipefail
           npx vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/wsp-login-preview.log 2>&1 &
@@ -47,6 +52,7 @@ jobs:
             if curl -fsS http://127.0.0.1:4173/login > /dev/null; then break; fi
             sleep 1
           done
+          curl -fsS http://127.0.0.1:4173/login > /dev/null || { cat /tmp/wsp-login-preview.log; exit 1; }
           node scripts/testing/login-orbit-browser-check.mjs
       - name: Upload visual evidence (not a production build)
         if: always()
