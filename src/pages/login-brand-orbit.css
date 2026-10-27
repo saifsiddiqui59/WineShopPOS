@@ -1,238 +1,114 @@
-/* Dense, layered 3D-style branded product vortex. Scope: login/recovery only. */
+/* WineShopPOS login-only cinematic bottle stage. One GPU canvas handles
+   actual 3D meshes; no DOM forest or animated flat SVG product cards. */
 .auth-screen.wsp-login-screen {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   min-height: 100svh;
   background:
-    radial-gradient(ellipse at 50% 38%, rgba(89, 28, 48, .34) 0%, transparent 59%),
-    radial-gradient(ellipse at 3% 75%, rgba(118, 38, 61, .32), transparent 47%),
-    radial-gradient(ellipse at 93% 18%, rgba(148, 89, 40, .27), transparent 48%),
-    #0c0812;
+    radial-gradient(ellipse 75% 82% at 50% 48%, rgba(92, 34, 44, .34), transparent 78%),
+    radial-gradient(ellipse at 84% 12%, rgba(189, 107, 45, .31), transparent 42%),
+    radial-gradient(ellipse at 10% 89%, rgba(130, 34, 63, .31), transparent 47%),
+    #0c0711;
 }
 .wsp-login-backdrop,
-.wsp-login-echo-field,
-.wsp-login-center-shade,
-.wsp-login-sparkle-field {
+.wsp-login-webgl,
+.wsp-login-center-shade {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 .wsp-login-backdrop { z-index: -1; overflow: hidden; }
-.wsp-login-light {
-  position: absolute;
-  width: min(60vw, 840px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: .66;
-}
-.wsp-login-light--amber { top: -40%; right: -16%; background: rgba(237, 147, 54, .34); }
-.wsp-login-light--wine { bottom: -40%; left: -18%; background: rgba(212, 44, 90, .31); }
-
-/* Moving, wide, soft-edged spiral light shafts add depth behind the products. */
-.wsp-login-vortex {
-  position: absolute;
-  width: max(120vw, 140vh);
-  height: max(120vw, 140vh);
-  top: 50%;
-  left: 50%;
-  border-radius: 50%;
-  mask-image: radial-gradient(circle, transparent 0 17%, #000 35%, #000 73%, transparent 85%);
-  opacity: .47;
-  pointer-events: none;
-  background: conic-gradient(from 22deg,
-    transparent 0deg, rgba(240, 164, 74, .15) 29deg, transparent 51deg,
-    transparent 76deg, rgba(255, 198, 117, .11) 101deg, transparent 129deg,
-    transparent 168deg, rgba(194, 67, 108, .22) 208deg, transparent 239deg,
-    transparent 275deg, rgba(252, 167, 81, .12) 306deg, transparent 343deg);
-  animation: wsp-login-vortex-spin 25s linear infinite;
-}
-.wsp-login-vortex--ruby {
-  opacity: .28;
-  scale: .75;
-  filter: blur(18px);
-  animation-duration: 37s;
-  animation-direction: reverse;
-}
-
-.wsp-login-echo-field {
-  perspective: 1100px;
-  perspective-origin: 50% 48%;
-  transform-style: preserve-3d;
-  contain: layout style;
-}
-
-/* Each independent echo follows a 3D spiral with four actual depth waypoints. */
-.wsp-login-echo {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 104px;
-  height: 208px;
-  opacity: 0;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), var(--echo-p0z)) scale(.2);
-  animation: wsp-login-premium-echo 8.8s cubic-bezier(.32,.14,.4,.94) var(--echo-delay) infinite;
-  will-change: transform, opacity;
-}
-
-.wsp-login-product {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  transform-style: preserve-3d;
-  transform: rotateY(var(--echo-turn)) rotateX(var(--echo-pitch)) rotateZ(var(--echo-roll));
-  backface-visibility: hidden;
-  filter: drop-shadow(12px 20px 12px rgba(0,0,0,.58));
-}
-
-/* No cheap opaque rectangles around products: luminous bottle silhouette,
-   cool edge reflection and translucent glass sheen follow the 3D plane. */
-.wsp-login-product img {
+.wsp-login-webgl {
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: contain;
-  filter:
-    drop-shadow(-1px -1px 2px rgba(255,225,175,.48))
-    drop-shadow(5px 11px 9px rgba(0,0,0,.6));
-  backface-visibility: hidden;
+  opacity: 1;
 }
-.wsp-login-product::before {
-  content: "";
+.wsp-login-light {
   position: absolute;
-  left: 25%;
-  top: 10%;
-  width: 15%;
-  height: 78%;
+  width: min(67vw, 870px);
+  height: min(67vw, 870px);
   border-radius: 50%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent);
-  filter: blur(5px);
-  mix-blend-mode: screen;
-  transform: translateZ(4px) rotate(-3deg);
+  filter: blur(88px);
+  opacity: .6;
   pointer-events: none;
 }
-.wsp-login-product::after {
-  content: "";
+.wsp-login-light--amber {
+  top: -40%; right: -23%;
+  background: rgba(231, 154, 61, .28);
+}
+.wsp-login-light--wine {
+  bottom: -36%; left: -21%;
+  background: rgba(192, 37, 72, .26);
+}
+.wsp-login-vortex-halo {
   position: absolute;
-  width: 58%;
-  height: 13%;
-  left: 22%;
-  bottom: 0;
+  left: 50%;
+  top: 50%;
+  width: min(77vw, 970px);
+  aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(230,161,77,.24), transparent 70%);
+  background: conic-gradient(from 0deg,
+    transparent 0deg,
+    rgba(231, 164, 72, .11) 27deg,
+    transparent 62deg,
+    transparent 96deg,
+    rgba(227, 104, 89, .12) 146deg,
+    transparent 192deg,
+    rgba(235, 185, 92, .10) 253deg,
+    transparent 302deg);
+  mask-image: radial-gradient(circle, transparent 29%, #000 46%, #000 67%, transparent 84%);
+  transform-origin: center;
+  animation: wsp-login-stage-spin 30s linear infinite;
   filter: blur(8px);
-  transform: translateZ(-18px) rotateX(75deg);
   pointer-events: none;
 }
-.wsp-login-echo--far .wsp-login-product { opacity: .75; }
-.wsp-login-echo--far .wsp-login-product img { filter: drop-shadow(2px 5px 10px rgba(0,0,0,.65)); }
-
-.wsp-login-sparkle-field { opacity: .7; }
-.wsp-login-sparkle {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: #ffe9ba;
-  box-shadow: 0 0 10px 2px rgba(242, 175, 89, .35);
-  animation: wsp-login-glint 5s ease-in-out var(--glint-delay) infinite;
-}
-
 .wsp-login-center-shade {
-  background: radial-gradient(ellipse 360px 330px at center, rgba(9,6,14,.68), transparent 98%);
+  background: radial-gradient(ellipse 360px 350px at center, rgba(8, 6, 12, .7), transparent 94%);
 }
-
-/* Frosted charcoal glass makes the login look expensive while preserving
-   strong label and field contrast and keeping all controls tappable. */
 .auth-screen.wsp-login-screen > .auth-card {
   position: relative;
   z-index: 2;
-  border: 1px solid rgba(250, 207, 139, .42);
+  border: 1px solid rgba(244, 190, 118, .38);
   border-radius: 22px;
-  color: #fff6eb;
+  color: #fff2e7;
   background:
-    linear-gradient(152deg, rgba(55,35,47,.93), rgba(12,14,23,.95) 77%);
-  box-shadow: 0 35px 100px rgba(0,0,0,.71), 0 0 70px rgba(174,91,43,.13),
-    inset 0 1px 0 rgba(255,240,200,.16);
-  backdrop-filter: blur(19px);
+    linear-gradient(152deg, rgba(38, 26, 37, .94), rgba(11, 12, 23, .95) 78%);
+  box-shadow: 0 26px 100px rgba(0,0,0,.68), 0 0 55px rgba(152, 78, 43, .13),
+    inset 0 1px 0 rgba(255,245,218,.12);
+  backdrop-filter: blur(18px);
 }
 .wsp-login-screen .auth-card h1 { color: #ffe2a4; letter-spacing: -.035em; }
-.wsp-login-screen .auth-card p { color: #e5d1ce; }
+.wsp-login-screen .auth-card p { color: #e2d0cc; }
 .wsp-login-screen .auth-card label { color: #ffefe9; }
-.wsp-login-screen .auth-card input { color:#191d25; background:#fffdfa; border-color:#dec9ba; }
+.wsp-login-screen .auth-card input {
+  color: #191d25;
+  background: #fffdfa;
+  border-color: #dec9ba;
+}
 .wsp-login-screen .auth-card input:focus-visible,
-.wsp-login-screen .auth-card button:focus-visible { outline:3px solid #dfb765; outline-offset:2px; }
+.wsp-login-screen .auth-card button:focus-visible {
+  outline: 3px solid #dfb765;
+  outline-offset: 2px;
+}
 .wsp-login-screen .auth-card .secondary-button {
   color: #f9e4bd;
-  border-color: rgba(246,214,162,.36);
-  background: rgba(255,255,255,.07);
+  border-color: rgba(246, 214, 162, .36);
+  background: rgba(255, 255, 255, .07);
 }
-
-/* Rich overlap: 75%+ of the animation is visible rather than the previous
-   brief fade which left most of the page empty at any single instant. */
-@keyframes wsp-login-premium-echo {
-  0% {
-    opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), var(--echo-p0z))
-      rotateZ(-32deg) scale(.2);
-  }
-  11% {
-    opacity: .72;
-    transform: translate3d(calc(-50% + var(--echo-p1x)), calc(-50% + var(--echo-p1y)), var(--echo-p1z))
-      rotateZ(-11deg) scale(var(--echo-far-size));
-  }
-  37% {
-    opacity: .93;
-    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), var(--echo-p2z))
-      rotateZ(16deg) scale(var(--echo-size));
-  }
-  65% {
-    opacity: .94;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
-      rotateZ(49deg) scale(var(--echo-near-size));
-  }
-  86% {
-    opacity: .76;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
-      rotateZ(61deg) scale(var(--echo-near-size));
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
-      rotateZ(68deg) scale(var(--echo-near-size));
-  }
+@keyframes wsp-login-stage-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
-@keyframes wsp-login-vortex-spin {
-  from { transform: translate(-50%,-50%) rotate(0deg); }
-  to { transform: translate(-50%,-50%) rotate(360deg); }
-}
-@keyframes wsp-login-glint {
-  0%,100% { opacity:.12; scale: .5; }
-  46% { opacity:.85; scale: 1.6; }
-}
-
 @media (max-width: 760px) {
-  .auth-screen.wsp-login-screen { padding:18px; }
-  .wsp-login-echo--secondary { display:none; }
-  .wsp-login-echo { width:75px; height:150px; }
-  .wsp-login-product::before,
-  .wsp-login-product::after { display:none; }
+  .auth-screen.wsp-login-screen { padding: 18px; }
+  .auth-screen.wsp-login-screen > .auth-card { width: min(440px,100%); }
   .wsp-login-center-shade {
-    background:radial-gradient(ellipse 285px 340px at center, rgba(7,6,13,.79), transparent 98%);
+    background: radial-gradient(ellipse 280px 360px at center, rgba(9,6,13,.76), transparent 96%);
   }
-  .auth-screen.wsp-login-screen > .auth-card { width:min(440px,100%); }
+  .wsp-login-vortex-halo { width: 140vw; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wsp-login-echo, .wsp-login-vortex, .wsp-login-sparkle { animation:none !important; will-change:auto; }
-  .wsp-login-echo {
-    opacity: .55;
-    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), var(--echo-p2z))
-      scale(var(--echo-size));
-  }
-  .wsp-login-sparkle { opacity:.3; }
+  .wsp-login-vortex-halo { animation: none !important; }
 }
