@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 REPO="${WSP_REPO:-/e/WineShopPOS_V5}"
 DEV_REF="juhcypzoacauzmtzqnwd"
+# WSP_ENV_ISOLATION_GUARD_V1: DEV-only execution; existing checks below reject PROD.
 PROD_REF="uiurgplnsgmawvxhjzzp"
 PORT="${WSP_EXTENDED_PORT:-4195}"
 BASE_URL="http://127.0.0.1:${PORT}"
