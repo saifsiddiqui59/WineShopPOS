@@ -159,6 +159,67 @@ export function mountBottleVortex(canvas) {
     return () => {};
   }
 
+  // Full-screen, low-cost amber-gold light tunnel. This is only atmospheric
+  // lighting behind genuine textured glTF geometry, never flat product images.
+  const bgScene = new THREE.Scene();
+  const bgCamera = new THREE.Camera();
+  const bgUniforms = {
+    uTime: { value: 0 },
+    uAspect: { value: 1 },
+    uResolution: { value: new THREE.Vector2(1, 1) },
+  };
+  const background = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.ShaderMaterial({
+      uniforms: bgUniforms,
+      depthTest: false,
+      depthWrite: false,
+      vertexShader: `
+        void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform float uTime;
+        uniform float uAspect;
+        uniform vec2 uResolution;
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
+        void main() {
+          vec2 xy = gl_FragCoord.xy;
+          float H = max(1.0, uResolution.y);
+          vec2 q = (xy - 0.5 * uResolution) / H;
+          q.x *= 1.0;
+          float a = atan(q.y, q.x);
+          float r = length(q * vec2(1.0, 1.32));
+          float vignette = smoothstep(0.96, 0.12, r);
+          vec3 dark = vec3(0.023, 0.006, 0.012);
+          vec3 wine = vec3(0.084, 0.021, 0.026);
+          vec3 base = mix(dark, wine, 0.44 + 0.38 * vignette);
+          base += vec3(0.11, 0.037, 0.015) * exp(-r * 3.0);
+          float ringPhase = r * 68.0 - 0.85 * a - uTime * 0.19;
+          float streak = pow(0.5 + 0.5 * cos(ringPhase), 20.0);
+          float ribbons = pow(0.5 + 0.5 * cos(ringPhase + 0.64 * sin(a * 2.0)),
+            9.0);
+          float centralFade = smoothstep(0.08, 0.22, r);
+          base += vec3(0.91, 0.39, 0.095) *
+            (0.50 * streak + 0.13 * ribbons) * centralFade * exp(-r * 1.15);
+          float arc = pow(max(0.0, sin(a * 3.0 + r * 18.0 - uTime * 0.11)), 30.0);
+          base += vec3(0.39, 0.13, 0.045) * arc * exp(-r * 2.2);
+          vec2 cell = floor(xy / 14.0);
+          vec2 local = fract(xy / 14.0) - 0.5;
+          float chance = step(0.986, hash(cell));
+          float dotGlow = exp(-dot(local, local) * 110.0) * chance;
+          base += vec3(1.0, 0.63, 0.30) * dotGlow * (0.35 + 0.3 * sin(uTime + cell.x));
+          base *= 1.0 - 0.46 * smoothstep(0.34, 0.92, r);
+          gl_FragColor = vec4(base, 1.0);
+        }
+      `,
+    })
+  );
+  background.frustumCulled = false;
+  bgScene.add(background);
+
   const stage = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 90);
   camera.position.set(0, 0, 13.3);
@@ -204,8 +265,8 @@ export function mountBottleVortex(canvas) {
       halos.push(ring);
     }
   }
-  const particlePositions = new Float32Array(300 * 3);
-  for (let i = 0; i < 300; i++) {
+  const particlePositions = new Float32Array(540 * 3);
+  for (let i = 0; i < 540; i++) {
     const a = i * 2.399963229728653;
     const radius = 2.2 + ((i * 47) % 107) / 107 * 6.5;
     particlePositions[i * 3] = Math.cos(a) * radius;
@@ -215,7 +276,7 @@ export function mountBottleVortex(canvas) {
   const particlesGeometry = new THREE.BufferGeometry();
   particlesGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
   const particles = new THREE.Points(particlesGeometry, new THREE.PointsMaterial({
-    color: 0xf4be85, size: 0.035, transparent: true, opacity: 0.65,
+    color: 0xffd39a, size: 0.058, transparent: true, opacity: 0.77,
     depthWrite: false, sizeAttenuation: true,
   }));
   stage.add(particles);
@@ -254,6 +315,8 @@ export function mountBottleVortex(canvas) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,
       isMobile ? MAX_DPR_MOBILE : MAX_DPR_DESKTOP));
     renderer.setSize(w, h, false);
+    renderer.getDrawingBufferSize(bgUniforms.uResolution.value);
+    bgUniforms.uAspect.value = w / h;
     camera.aspect = w / h;
     camera.position.z = isMobile ? 15.8 : 14.5;
     camera.fov = isMobile ? 58 : 43;
@@ -303,7 +366,7 @@ export function mountBottleVortex(canvas) {
     rotation.set(
       0.24 * Math.sin(a * 0.8 + index),
       -a * 0.48 + Math.sin(t * 0.3 + index) * 0.24,
-      0.33 * Math.sin(a + index * 0.27) + (hero ? -0.28 : 0)
+      hero ? (index === 7 ? -0.49 : 0.47) + 0.19 * Math.sin(t * 0.3 + index) : 0.35 * Math.sin(a + index * 0.27)
     );
     quaternion.setFromEuler(rotation);
     return matrix.compose(position, quaternion, scale);
@@ -334,7 +397,13 @@ export function mountBottleVortex(canvas) {
       ring.rotation.z = t * (i % 2 ? -0.045 : 0.033) + i * 0.14;
     });
     particles.rotation.z = -t * 0.012;
+    bgUniforms.uTime.value = t;
+    renderer.autoClear = false;
+    renderer.clear();
+    renderer.render(bgScene, bgCamera);
+    renderer.clearDepth();
     renderer.render(stage, camera);
+    renderer.autoClear = true;
     frames++;
     canvas.dataset.renderedFrames = String(frames);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
@@ -485,6 +554,8 @@ export function mountBottleVortex(canvas) {
     environment.dispose();
     envMap.dispose();
     pmrem.dispose();
+    background.geometry.dispose();
+    background.material.dispose();
     renderer.dispose();
   };
 }
