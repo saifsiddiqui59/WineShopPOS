@@ -40,6 +40,7 @@ try {
     assert(visibleBottles >= (scene.name === "mobile" ? 18 : 29),
       "adaptive cyclone must preserve a visible product field");
     assert.equal(Number(await canvas.getAttribute("data-brand-count")), 7);
+    assert.equal(await canvas.getAttribute("data-render-mode"), "cached-pbr-packshots");
     assert.equal(await page.locator(".wsp-login-product").count(), 0);
     const card = await page.locator(".auth-card").boundingBox();
     assert(card && card.width > 230 && card.x >= 0 &&
@@ -57,6 +58,7 @@ try {
       triangles: Number(el.dataset.triangles), assets: el.dataset.assetStatus,
       quality: el.dataset.qualityTier, targetDensity: Number(el.dataset.desiredCount),
       visibleDensity: Number(el.dataset.bottleCount), motionAxis: el.dataset.motionAxis,
+      renderMode: el.dataset.renderMode,
       glError: el.getContext("webgl2")?.getError(),
     }));
     results.push({ scene: scene.name, firstFrame, afterFrame, ...perf });

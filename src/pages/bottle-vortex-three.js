@@ -277,6 +277,54 @@ export function mountBottleVortex(canvas) {
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   const sourceModels = [];
+  const bakedTargets = [];
+  // Slow or software GPU paths animate images baked from the actual
+  // licensed PBR glTF, not generic procedural cylinders or fake asset URLs.
+  // All visible product instances are simple textured planes, while their
+  // world-space paths retain the full X/Y/Z perspective cyclone.
+  const bakeScene = new THREE.Scene();
+  bakeScene.environment = envMap;
+  bakeScene.add(new THREE.HemisphereLight(0xffe5ce, 0x27202a, 1.75));
+  const frontKey = new THREE.DirectionalLight(0xffebd2, 4.2);
+  frontKey.position.set(-3, 5, 7);
+  bakeScene.add(frontKey);
+  const rimKey = new THREE.DirectionalLight(0xf7ad65, 3);
+  rimKey.position.set(3, -1, -1);
+  bakeScene.add(rimKey);
+  const bakeCamera = new THREE.PerspectiveCamera(30, 0.5, 0.1, 50);
+  bakeCamera.position.set(0, 0, 5.7);
+  bakeCamera.lookAt(0, 0, 0);
+  const bakeClear = new THREE.Color();
+
+  // Once per licensed source model, render a sharp, alpha-transparent
+  // studio packshot into a GPU texture. It is re-used by all 44/24 bottles.
+  function bakePackshot(source, kind, label) {
+    const target = new THREE.WebGLRenderTarget(384, 768, {
+      format: THREE.RGBAFormat, depthBuffer: true,
+      minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+      generateMipmaps: true,
+    });
+    target.texture.colorSpace = THREE.SRGBColorSpace;
+    bakedTargets.push(target);
+    const rig = new THREE.Group();
+    rig.add(source.clone(true));
+    if (label) rig.add(label.clone());
+    bakeScene.add(rig);
+    const previousTarget = renderer.getRenderTarget();
+    renderer.getClearColor(bakeClear);
+    const previousAlpha = renderer.getClearAlpha();
+    const previousAutoClear = renderer.autoClear;
+    renderer.autoClear = true;
+    renderer.setRenderTarget(target);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear(true, true, true);
+    renderer.render(bakeScene, bakeCamera);
+    renderer.setRenderTarget(previousTarget);
+    renderer.setClearColor(bakeClear, previousAlpha);
+    renderer.autoClear = previousAutoClear;
+    bakeScene.remove(rig);
+    return target.texture;
+  }
   const pools = [];
   const labelCache = new Map();
   const frameTimes = [];
@@ -373,13 +421,13 @@ export function mountBottleVortex(canvas) {
       ? (index % 2 === 0 ? 1 : -1) * (5.42 + (rise - 0.5) * 2.4)
       : (rise - 0.5) * height + 0.16 * Math.sin(angle * 0.65);
     position.set(Math.cos(angle) * radius, strandY, depth);
-    const perspective = 0.8 + 0.18 * Math.sin(angle);
+    const perspective = 0.84 + 0.23 * Math.sin(angle);
     const baseScale = tier === 0 ? 1.25 : tier === 1 ? 0.93 : 0.68;
     scale.setScalar(Math.max(0.0001,
       baseScale * perspective * (isMobile ? 1.06 : 1) * Math.max(0, fade)));
     rotation.set(
-      0.13 * Math.cos(angle),
-      0.13 * Math.sin(angle * 0.65),
+      0.045 * Math.cos(angle),
+      0.075 * Math.sin(angle * 0.65),
       // Z-axis rolling tilt follows the swirling air, not a carousel spin.
       0.27 * Math.sin(angle) - 0.14 * Math.cos(angle * 0.5)
     );
@@ -420,6 +468,7 @@ export function mountBottleVortex(canvas) {
     frames++;
     canvas.dataset.renderedFrames = String(frames);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
+    canvas.dataset.renderMode ||= "loading";
     canvas.dataset.triangles = String(renderer.info.render.triangles);
     canvas.dataset.motionAxis = "vertical-cyclone";
     canvas.dataset.motionProgress = (t * 0.56).toFixed(3);
@@ -525,32 +574,42 @@ export function mountBottleVortex(canvas) {
       }
       loaded.forEach((entry) => sourceModels.push(entry.source));
       if (loaded.length !== 7) throw new Error("Expected 4 Poly Haven + 3 additional CC0 models");
+      // Suspend the competing animated render during short texture-bake passes.
+      // Loading state keeps the golden tunnel alive until the new bottles arrive.
+      stop();
       for (let sourceIndex = 0; sourceIndex < loaded.length; sourceIndex++) {
         const entry = loaded[sourceIndex];
         const indices = selection.map((selected, index) =>
-          selected === sourceIndex ? index : -1).filter((index) => index >= 0);
-        const parts = [];
-        const meshes = [];
-        entry.source.updateMatrixWorld(true);
-        entry.source.traverse((node) => { if (node.isMesh) meshes.push(node); });
+          selected === sourceIndex ? index : -1).filter(index => index >= 0);
+        let label = null;
         if (!entry.spec.name.startsWith("Poly Haven")) {
-          const key = entry.spec.kind;
-          if (!labelCache.has(key)) labelCache.set(key, bespokeLabel(key, entry.source));
-          const label = labelCache.get(key);
+          if (!labelCache.has(entry.spec.kind)) {
+            labelCache.set(entry.spec.kind, bespokeLabel(entry.spec.kind, entry.source));
+          }
+          label = labelCache.get(entry.spec.kind);
           label.updateMatrixWorld(true);
-          meshes.push(label);
         }
-        for (const sourceMesh of meshes) {
-          const instanced = new THREE.InstancedMesh(
-            sourceMesh.geometry, sourceMesh.material, indices.length);
-          instanced.frustumCulled = false;
-          instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-          instanced.count = 0;
-          stage.add(instanced);
-          parts.push({ mesh: instanced, localMatrix: sourceMesh.matrixWorld.clone() });
-        }
-        pools.push({ indices, parts });
+        const texture = bakePackshot(entry.source, entry.spec.kind, label);
+        const geometry = new THREE.PlaneGeometry(1.32, 2.92);
+        const material = new THREE.MeshBasicMaterial({
+          map: texture, transparent: true, alphaTest: 0.035,
+          depthWrite: false, side: THREE.DoubleSide,
+          toneMapped: false,
+        });
+        const instanced = new THREE.InstancedMesh(geometry, material, indices.length);
+        instanced.frustumCulled = false;
+        instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        instanced.count = 0;
+        instanced.renderOrder = 2;
+        stage.add(instanced);
+        pools.push({ indices, parts: [{
+          mesh: instanced, localMatrix: new THREE.Matrix4(),
+        }] });
+        // Yield to the browser between sources so login keeps responding.
+        if (sourceIndex % 2 === 1) await new Promise(resolve => setTimeout(resolve, 0));
+        if (disposed) return;
       }
+      canvas.dataset.renderMode = "cached-pbr-packshots";
       canvas.dataset.assetStatus = "vendored-glTF";
       canvas.dataset.brandCount = String(loaded.length);
       canvas.dataset.rendererStatus = "ready";
@@ -583,6 +642,7 @@ export function mountBottleVortex(canvas) {
     pmrem.dispose();
     background.geometry.dispose();
     background.material.dispose();
+    bakedTargets.forEach(target => target.dispose());
     renderer.dispose();
   };
 }

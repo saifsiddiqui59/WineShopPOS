@@ -23,6 +23,9 @@ test("licensed glTF scene uses physically based Three.js, not procedural bottle 
   assert.match(component, /aria-hidden="true"/);
   assert.match(engine, /new GLTFLoader\(\)/);
   assert.match(engine, /new THREE\.InstancedMesh/);
+  assert.match(engine, /new THREE\.WebGLRenderTarget/);
+  assert.match(engine, /function bakePackshot\(/);
+  assert.match(engine, /cached-pbr-packshots/);
   assert.match(engine, /function pose\(index, t\)/);
   assert.match(engine, /motionAxis = "vertical-cyclone"/);
   assert.match(engine, /Math\.cos\(angle\) \* radius/);
