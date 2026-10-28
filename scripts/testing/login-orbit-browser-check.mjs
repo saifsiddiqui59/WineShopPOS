@@ -23,6 +23,16 @@ try {
       } } : {}),
     });
     const page = await context.newPage();
+    // Observe WebGL context creation without opening a context ourselves.
+    await page.addInitScript(() => {
+      window.__wspWebGLContexts = 0;
+      const nativeGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+        if (/^(webgl|webgl2|experimental-webgl)$/i.test(String(type)))
+          window.__wspWebGLContexts++;
+        return nativeGetContext.call(this, type, ...args);
+      };
+    });
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     const navigationStart = Date.now();
@@ -57,23 +67,46 @@ try {
     const afterFrame = Number(await canvas.getAttribute("data-rendered-frames"));
     const progress = Number(await canvas.getAttribute("data-motion-progress"));
     assert(progress >= 0, "cyclone must report continuous time-based motion");
+    const motionProbe = page.locator(".wsp-login-cyclone-product").first();
+    const beforeMotion = await motionProbe.evaluate(node => getComputedStyle(node).transform);
+    if (scene.motion !== "reduce") {
+      await page.waitForTimeout(450);
+      const afterMotion = await motionProbe.evaluate(node => getComputedStyle(node).transform);
+      assert.notEqual(afterMotion, beforeMotion,
+        "compositor animation must physically move the bottle between sampled frames");
+      const running = await page.locator(".wsp-login-cyclone-product").first()
+        .evaluate(node => node.getAnimations().some(anim => anim.playState === "running"));
+      assert(running, "compositor keyframe animation must actually run");
+    } else {
+      assert.equal(await motionProbe.evaluate(node => node.getAnimations().length), 0,
+        "reduced motion must not animate products");
+    }
     const productCoverage = await page.locator(".wsp-login-cyclone-product")
       .evaluateAll((nodes) => {
         let left = 0, right = 0;
+        let upperLeft = 0, upperRight = 0, lowerLeft = 0, lowerRight = 0;
         const width = window.innerWidth;
+        const height = window.innerHeight;
         for (const node of nodes) {
           if (Number(getComputedStyle(node).opacity) < 0.15) continue;
           const box = node.getBoundingClientRect();
           if (box.width < 6 || box.height < 12) continue;
           const cx = box.x + box.width / 2;
+          const cy = box.y + box.height / 2;
           if (cx < width * 0.42) left++;
           if (cx > width * 0.58) right++;
+          if (cx < width * .46 && cy < height * .36) upperLeft++;
+          if (cx > width * .54 && cy < height * .36) upperRight++;
+          if (cx < width * .46 && cy > height * .64) lowerLeft++;
+          if (cx > width * .54 && cy > height * .64) lowerRight++;
         }
-        return { left, right };
+        return { left, right, upperLeft, upperRight, lowerLeft, lowerRight };
       });
     assert(productCoverage.left >= (scene.name === "mobile" ? 2 : 5) &&
       productCoverage.right >= (scene.name === "mobile" ? 2 : 5),
       "Cyclone must distribute visible products on BOTH sides, not a single clustered column");
+    assert(Object.values(productCoverage).slice(2).every(x => x >= 1),
+      "cyclone must occupy all four outer screen quadrants");
     await page.screenshot({ path: output + "/" + scene.name + ".png" });
     const perf = await canvas.evaluate(el => ({
       fps: Number(el.dataset.averageFps), p95FrameMs: Number(el.dataset.p95FrameMs),
@@ -83,14 +116,15 @@ try {
       visibleDensity: Number(el.dataset.bottleCount), motionAxis: el.dataset.motionAxis,
       renderMode: el.dataset.renderMode, compositorCount: Number(el.dataset.compositorCount || 0),
       visibleSprites: Number(el.dataset.visibleSprites || "0"),
-      glError: el.getContext("webgl2")?.getError(),
+      webglContextsCreated: Number(window.__wspWebGLContexts || 0),
     }));
     results.push({ scene: scene.name, readyMs, productCoverage, firstFrame, afterFrame, ...perf });
     await fs.writeFile(output + "/performance.json", JSON.stringify(results, null, 2));
     console.log("VISUAL_MEASUREMENT " + JSON.stringify(results.at(-1)));
     if (scene.motion === "reduce") assert.equal(afterFrame, firstFrame);
     else assert(afterFrame > firstFrame, "rendering must advance at least one frame");
-    assert.equal(perf.glError, 0, "WebGL error must be zero");
+    assert.equal(perf.webglContextsCreated, 0,
+      "fast atlas path must never initialize a WebGL context");
     if (scene.name === "desktop") {
       assert(Number.isFinite(perf.fps) && perf.fps > 0 && perf.p95FrameMs > 0, "actual FPS/p95 samples are required");
       assert.equal(perf.calls, 0, "vendored atlas must avoid runtime WebGL calls");

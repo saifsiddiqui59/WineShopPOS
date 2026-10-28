@@ -9,7 +9,9 @@ const TAU = Math.PI * 2;
 
 function sample(i, progress, w, h, mobile) {
   const tier = i % 3;
-  const phase = (i * 0.618033988749895 + tier * 0.137) % 1;
+  // Deliberately independent from the golden-angle azimuth. Using its
+  // conjugate for both axis phase and height produced diagonal bunching.
+  const phase = (i * 0.7548776662466927 + tier * 0.173) % 1;
   const rise = (phase + progress) % 1;
   // One exact revolution per cycle. Each product already carries its own
   // golden-angle offset, so a second per-product timeline delay synchronizes
@@ -17,7 +19,7 @@ function sample(i, progress, w, h, mobile) {
   const theta = i * GOLDEN + progress * TAU;
   const radius = mobile ? 2.13 + tier * 0.37 : 5.4 + tier * 0.72;
   const vertical = mobile
-    ? (i % 2 === 0 ? 1 : -1) * (5.42 + (rise - 0.5) * 2.6)
+    ? (i % 2 === 0 ? 1 : -1) * (6.08 + (rise - 0.5) * 2.35)
     : (rise - 0.5) * 12.9;
   const depthOffset = mobile ? 1.65 + tier * 0.36 : 2.75 + tier * 0.48;
   const z = -1.7 + Math.sin(theta) * depthOffset;
@@ -27,8 +29,8 @@ function sample(i, progress, w, h, mobile) {
   const perspective = focal / (cameraZ - z);
   const x = w / 2 + Math.cos(theta) * radius * perspective;
   const y = h / 2 - vertical * perspective;
-  const scale = (tier === 0 ? 1.22 : tier === 1 ? 0.93 : 0.69) *
-    (0.84 + 0.23 * Math.sin(theta)) * (mobile ? 1.02 : 1);
+  const scale = (tier === 0 ? 1.24 : tier === 1 ? 0.98 : 0.75) *
+    (0.84 + 0.23 * Math.sin(theta)) * (mobile ? 1.13 : 1);
   const width = 1.32 * scale * perspective;
   const angle = -(.27 * Math.sin(theta) - .14 * Math.cos(theta * .5)) * 180 / Math.PI;
   const fade = Math.min(1, rise / .075, (1 - rise) / .075);
@@ -195,7 +197,7 @@ export async function mountLightweightCyclone(canvas) {
         figure.style.transform = keyframes[12].transform;
         figure.style.opacity = "1";
       } else {
-        const cycleMs = 22000 + (i % 3) * 3100;
+        const cycleMs = 17600 + (i % 3) * 2600;
         const anim = figure.animate(keyframes, {
           duration: cycleMs, iterations: Infinity,
           easing: "linear", fill: "both",
