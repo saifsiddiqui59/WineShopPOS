@@ -60,7 +60,7 @@ function normalizedModel(source, kind) {
 
 
 // Self-created generic branding: never imitates a manufacturer's trademark.
-function bespokeLabel(kind) {
+function bespokeLabel(kind, sourceModel) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 384;
@@ -93,15 +93,20 @@ function bespokeLabel(kind) {
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 4;
-  const radius = can ? 0.478 : kind === "beer" ? 0.299 : 0.288;
-  const geometry = new THREE.CylinderGeometry(radius, radius, can ? 0.99 : 0.73,
-    64, 1, true, -Math.PI * 0.79, Math.PI * 1.58);
+  // Fit the paper wrap OUTSIDE the actual GLB surface, not inside a generic
+  // assumed radius (which previously hid the labels behind opaque cans).
+  const bounds = new THREE.Box3().setFromObject(sourceModel);
+  const dims = bounds.getSize(new THREE.Vector3());
+  const radius = Math.max(dims.x, dims.z) * 0.51 + 0.016;
+  const paperHeight = dims.y * (can ? 0.64 : 0.32);
+  const geometry = new THREE.CylinderGeometry(radius, radius, paperHeight,
+    64, 1, true, -Math.PI, Math.PI * 2);
   const material = new THREE.MeshPhysicalMaterial({
     map, roughness: 0.7, metalness: can ? 0.20 : 0.03,
     side: THREE.DoubleSide, depthWrite: true,
   });
   const wrap = new THREE.Mesh(geometry, material);
-  wrap.position.y = can ? -0.01 : -0.29;
+  wrap.position.y = can ? 0 : -dims.y * 0.13;
   return wrap;
 }
 
@@ -333,7 +338,7 @@ export function mountBottleVortex(canvas) {
         instance.add(entry.source.clone(true));
         if (!entry.spec.name.startsWith("Poly Haven")) {
           if (!labelCache.has(entry.spec.kind)) {
-            labelCache.set(entry.spec.kind, bespokeLabel(entry.spec.kind));
+            labelCache.set(entry.spec.kind, bespokeLabel(entry.spec.kind, entry.source));
           }
           instance.add(labelCache.get(entry.spec.kind).clone());
         }
