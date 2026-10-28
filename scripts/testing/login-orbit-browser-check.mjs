@@ -62,6 +62,17 @@ try {
       assert(perf.calls > 0 && perf.triangles > 0, "must render real mesh triangles");
     }
     assert.deepEqual(errors, [], "browser page errors");
+    if (scene.name === "desktop") {
+      // Read-only auth smoke: no real account credentials, no Supabase write.
+      const primaryBackground = await page.getByRole("button", { name: "Login" })
+        .evaluate(button => getComputedStyle(button).backgroundImage);
+      assert.match(primaryBackground, /linear-gradient/i,
+        "the branded wine-red login button must not be overridden by global theme");
+      await page.getByRole("button", { name: "Forgot Password?" }).click();
+      await page.getByRole("heading", { name: "Forgot Password" }).waitFor();
+      await page.getByRole("button", { name: "Back to Login" }).click();
+      await page.getByRole("heading", { name: "WineShop POS" }).waitFor();
+    }
     await context.close();
   }
   await fs.writeFile(output + "/performance.json", JSON.stringify(results, null, 2));
