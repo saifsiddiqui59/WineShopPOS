@@ -1,0 +1,42 @@
+name: WineShopPOS All Environments Reversible Shutdown
+
+# One-off main push, intentionally preserves Supabase, storage data and code.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/wineshoppos-all-env-low-cost-stop.yml"
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+concurrency:
+  group: wineshoppos-all-env-low-cost-stop
+  cancel-in-progress: false
+jobs:
+  shutdown:
+    name: Stop September-allowlisted PROD DEV QA Azure runtimes
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: wineshoppos-deploy
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Login Azure with existing OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Execute reversible PROD and DEV QA stop, verify state
+        shell: bash
+        run: bash scripts/ops/wsp-all-env-low-cost-stop-ci.sh
+      - name: Preserve read-only verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wineshoppos-shutdown-${{ github.sha }}
+          path: artifacts/wsp-shutdown/
+          retention-days: 30
+          if-no-files-found: warn
