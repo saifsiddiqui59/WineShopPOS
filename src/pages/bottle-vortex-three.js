@@ -50,12 +50,59 @@ function normalizedModel(source, kind) {
     const materials = Array.isArray(child.material) ? child.material : [child.material];
     for (const mat of materials) {
       if (mat?.isMeshStandardMaterial || mat?.isMeshPhysicalMaterial) {
-        mat.envMapIntensity = 1.7;
+        mat.envMapIntensity = 0.88;
         mat.needsUpdate = true;
       }
     }
   });
   return copy;
+}
+
+
+// Self-created generic branding: never imitates a manufacturer's trademark.
+function bespokeLabel(kind) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 384;
+  const c = canvas.getContext("2d");
+  const can = kind === "can";
+  const g = c.createLinearGradient(0, 0, 512, 384);
+  g.addColorStop(0, can ? "#49121a" : "#f6e8cb");
+  g.addColorStop(0.48, can ? "#8c2436" : "#ddc6a0");
+  g.addColorStop(1, can ? "#270f1e" : "#fcf1dc");
+  c.fillStyle = g;
+  c.fillRect(0, 0, 512, 384);
+  c.strokeStyle = can ? "#d5a95b" : "#9c713c";
+  c.lineWidth = 14;
+  c.strokeRect(16, 16, 480, 352);
+  c.lineWidth = 2;
+  c.strokeRect(36, 35, 440, 314);
+  const ink = can ? "#fff1d2" : "#3f2220";
+  c.textAlign = "center";
+  c.fillStyle = ink;
+  c.font = "24px Georgia, serif";
+  c.fillText("EST. 1926  •  PRIVATE SELECTION", 256, 88);
+  c.font = "bold 66px Georgia, serif";
+  c.fillText(can ? "GOLDEN" : kind === "beer" ? "AMBER" : "MERIDIAN", 256, 177);
+  c.font = "bold 44px Georgia, serif";
+  c.fillText(can ? "CASK" : kind === "beer" ? "LAGER" : "CELLARS", 256, 230);
+  c.font = "22px Georgia, serif";
+  c.fillText(can ? "PREMIUM MALT" : kind === "beer" ? "SMALL BATCH" : "VINTAGE RESERVE", 256, 285);
+  c.font = "20px Georgia, serif";
+  c.fillText("ORIGINAL COLLECTION", 256, 326);
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 4;
+  const radius = can ? 0.478 : kind === "beer" ? 0.299 : 0.288;
+  const geometry = new THREE.CylinderGeometry(radius, radius, can ? 0.99 : 0.73,
+    64, 1, true, -Math.PI * 0.79, Math.PI * 1.58);
+  const material = new THREE.MeshPhysicalMaterial({
+    map, roughness: 0.7, metalness: can ? 0.20 : 0.03,
+    side: THREE.DoubleSide, depthWrite: true,
+  });
+  const wrap = new THREE.Mesh(geometry, material);
+  wrap.position.y = can ? -0.01 : -0.29;
+  return wrap;
 }
 
 export function mountBottleVortex(canvas) {
@@ -77,38 +124,45 @@ export function mountBottleVortex(canvas) {
   camera.lookAt(0, 0, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 0.86;
   const pmrem = new THREE.PMREMGenerator(renderer);
   const environment = new RoomEnvironment();
   const envMap = pmrem.fromScene(environment, 0.035).texture;
   stage.environment = envMap;
-  stage.add(new THREE.HemisphereLight(0xffe6cf, 0x251522, 2.1));
+  stage.add(new THREE.HemisphereLight(0xffdbbd, 0x1c101a, 0.75));
   function spotlight(color, intensity, x, y, z) {
     const light = new THREE.PointLight(color, intensity, 24, 2);
     light.position.set(x, y, z);
     stage.add(light);
   }
-  spotlight(0xffb46c, 135, -5.6, 4, 6);
-  spotlight(0xffe1c7, 100, 5.6, 1.8, 5);
-  spotlight(0xba3159, 80, 1.0, -4.5, -2);
-  spotlight(0x8a9ecb, 65, -1.6, 2.7, -6);
+  spotlight(0xffb46c, 68, -5.6, 4, 6);
+  spotlight(0xffe1c7, 52, 5.6, 1.8, 5);
+  spotlight(0xba3159, 40, 1.0, -4.5, -2);
+  spotlight(0x8a9ecb, 35, -1.6, 2.7, -6);
 
+  // Layered golden perspective rings, like a luminous photographic tunnel.
+  // Geometry is behind the card; no full-screen bloom postprocessing needed.
   const halos = [];
-  for (let j = 0; j < 3; j++) {
-    const geo = new THREE.TorusGeometry(4.7 + j * 0.64, 0.006, 5, 144);
-    const material = new THREE.MeshBasicMaterial({
-      color: j === 1 ? 0xac4c5b : GOLD, transparent: true,
-      opacity: j === 0 ? 0.16 : 0.09, depthWrite: false,
-    });
-    const ring = new THREE.Mesh(geo, material);
-    ring.rotation.x = 0.48 + j * 0.18;
-    ring.rotation.y = 0.34 + j * 0.13;
-    ring.position.z = -3.2 - j;
-    stage.add(ring);
-    halos.push(ring);
+  for (let j = 0; j < 7; j++) {
+    const radius = 2.5 + j * 0.48;
+    for (let glow = 0; glow < 2; glow++) {
+      const geo = new THREE.TorusGeometry(radius, glow ? 0.065 : 0.014,
+        glow ? 6 : 8, 160);
+      const material = new THREE.MeshBasicMaterial({
+        color: j % 2 ? 0xffaa65 : 0xffca7c, transparent: true,
+        opacity: glow ? 0.085 : 0.49,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
+      const ring = new THREE.Mesh(geo, material);
+      ring.rotation.x = 0.12 + j * 0.035;
+      ring.rotation.y = 0.075 + j * 0.02;
+      ring.position.z = -3.7 - j * 0.42;
+      stage.add(ring);
+      halos.push(ring);
+    }
   }
-  const particlePositions = new Float32Array(200 * 3);
-  for (let i = 0; i < 200; i++) {
+  const particlePositions = new Float32Array(300 * 3);
+  for (let i = 0; i < 300; i++) {
     const a = i * 2.399963229728653;
     const radius = 2.2 + ((i * 47) % 107) / 107 * 6.5;
     particlePositions[i * 3] = Math.cos(a) * radius;
@@ -162,7 +216,7 @@ export function mountBottleVortex(canvas) {
       item.position.set(
         Math.cos(a) * orbitR,
         Math.sin(a) * (isMobile ? 3.35 : 3.05) + 0.22 * Math.sin(a * 2.0),
-        Math.sin(a + i * 0.07) * 3.6 - 2.5 - (i % 3) * 0.45
+        Math.sin(a + i * 0.07) * 4.25 - 2.1 - (i % 3) * 0.35 + (i % 9 === 0 ? 2.9 : 0)
       );
       item.rotation.set(
         0.15 * Math.sin(t * 0.37 + i),
@@ -190,7 +244,7 @@ export function mountBottleVortex(canvas) {
       if (dt > 0) {
         frameTimes.push(dt);
         if (frameTimes.length > 180) frameTimes.shift();
-        if (frames % 10 === 0 && frameTimes.length >= 6) {
+        if (frameTimes.length >= 2) {
           const sorted = [...frameTimes].sort((a, b) => a - b);
           const mean = frameTimes.reduce((sum, value) => sum + value, 0) / frameTimes.length;
           canvas.dataset.averageFps = (1000 / mean).toFixed(1);
@@ -276,6 +330,9 @@ export function mountBottleVortex(canvas) {
         // normalization scale required for real-world-meter source assets.
         const instance = new THREE.Group();
         instance.add(entry.source.clone(true));
+        if (!entry.spec.name.startsWith("Poly Haven")) {
+          instance.add(bespokeLabel(entry.spec.kind));
+        }
         stage.add(instance);
         models.push(instance);
       }

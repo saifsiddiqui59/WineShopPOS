@@ -121,3 +121,26 @@
   .wsp-login-webgl { will-change: auto; }
   .wsp-login-light { filter: blur(78px); }
 }
+
+/* Luxury-only login surface: intentionally scoped away from dashboard pages. */
+.wsp-login-screen .auth-card .primary-button {
+  color: #fff4ee;
+  background: linear-gradient(135deg, #8e183d, #ae2751 52%, #761331);
+  border: 1px solid rgba(255, 176, 140, .4);
+  box-shadow: 0 8px 22px rgba(100, 4, 40, .3);
+}
+.wsp-login-screen .auth-card .primary-button:hover {
+  background: linear-gradient(135deg, #ad2b50, #b63153 52%, #851a39);
+}
+.wsp-login-screen .auth-card .secondary-button {
+  color: #f7deba;
+  background: rgba(40, 23, 36, .85);
+}
+.wsp-login-screen .auth-card input {
+  background: rgba(247, 230, 215, .97);
+  border: 1px solid rgba(244, 203, 152, .55);
+}
+.wsp-login-vortex-halo {
+  opacity: 0.65;
+  filter: blur(22px);
+}

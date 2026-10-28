@@ -1,13 +1,25 @@
 import { useEffect, useRef } from "react";
-import { mountBottleVortex } from "./bottle-vortex-three";
 import "./login-brand-orbit.css";
 
-// Only a decorative, self-hosted glTF backdrop. Sign-in and recovery stay unchanged.
+// Isolated decorative renderer: the heavy Three.js chunk is fetched only for login.
+// Authentication and recovery routes preserve their existing behavior.
 export default function LoginBrandOrbit() {
   const canvasRef = useRef(null);
   useEffect(() => {
-    if (!canvasRef.current) return undefined;
-    return mountBottleVortex(canvasRef.current);
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    let active = true;
+    let teardown;
+    import("./bottle-vortex-three").then(({ mountBottleVortex }) => {
+      if (active) teardown = mountBottleVortex(canvas);
+    }).catch((error) => {
+      canvas.dataset.rendererStatus = "fallback";
+      console.warn("Optional cinematic backdrop unavailable:", error.message);
+    });
+    return () => {
+      active = false;
+      teardown?.();
+    };
   }, []);
   return (
     <div className="wsp-login-backdrop" aria-hidden="true">

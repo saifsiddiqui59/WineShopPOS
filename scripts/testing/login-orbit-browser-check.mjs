@@ -58,7 +58,7 @@ try {
     else assert(afterFrame > firstFrame, "rendering must advance at least one frame");
     assert.equal(perf.glError, 0, "WebGL error must be zero");
     if (scene.name === "desktop") {
-      assert(perf.fps > 0 && perf.p95FrameMs > 0, "FPS/p95 must be measured");
+      assert(Number.isFinite(perf.fps) && perf.fps > 0 && perf.p95FrameMs > 0, "actual FPS/p95 samples are required");
       assert(perf.calls > 0 && perf.triangles > 0, "must render real mesh triangles");
     }
     assert.deepEqual(errors, [], "browser page errors");
