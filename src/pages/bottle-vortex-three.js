@@ -215,8 +215,8 @@ export function mountBottleVortex(canvas) {
       const a = phase + t * (0.23 + (i % 4) * 0.009);
       const orbitR = (isMobile ? 4.9 : 5.35) + (i % 4) * 0.43;
       item.position.set(
-        Math.cos(a) * orbitR,
-        Math.sin(a) * (isMobile ? 3.35 : 3.05) + 0.22 * Math.sin(a * 2.0),
+        Math.cos(a) * (isMobile ? 2.15 : orbitR),
+        Math.sin(a) * (isMobile ? 5.8 : 3.05) + 0.22 * Math.sin(a * 2.0),
         Math.sin(a + i * 0.07) * 4.25 - 2.1 - (i % 3) * 0.35 + (i % 9 === 0 ? 2.9 : 0)
       );
       item.rotation.set(

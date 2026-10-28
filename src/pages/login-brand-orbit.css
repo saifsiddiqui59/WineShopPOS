@@ -144,3 +144,35 @@
   opacity: 0.65;
   filter: blur(22px);
 }
+
+/* Prevent global light/dark theme !important rules from repainting the login buttons. */
+html .auth-screen.wsp-login-screen .auth-card button.primary-button,
+html[data-theme="light"] .auth-screen.wsp-login-screen .auth-card button.primary-button,
+html[data-theme="dark"] .auth-screen.wsp-login-screen .auth-card button.primary-button {
+  background: linear-gradient(115deg, #7d163c, #a3234d 53%, #851d40) !important;
+  color: #fff4ee !important;
+  border-color: #c9856c !important;
+  box-shadow: 0 12px 28px rgba(45, 4, 21, .48) !important;
+}
+html .auth-screen.wsp-login-screen .auth-card button.secondary-button {
+  background: rgba(83, 51, 56, .18) !important;
+  color: #f4d5b3 !important;
+  border: 1px solid rgba(221, 172, 118, .45) !important;
+}
+.wsp-login-screen .wsp-login-backdrop {
+  background: radial-gradient(ellipse 59% 73% at 49% 51%,
+    rgba(154, 77, 27, .20) 0%, rgba(77, 24, 34, .16) 52%, transparent 83%);
+}
+.wsp-login-screen .wsp-login-vortex-halo {
+  opacity: .91;
+  filter: blur(14px);
+}
+@media (max-width: 760px) {
+  .wsp-login-screen .wsp-login-vortex-halo {
+    width: 220vw;
+    opacity: .72;
+  }
+  .wsp-login-screen .auth-card {
+    backdrop-filter: blur(22px);
+  }
+}
