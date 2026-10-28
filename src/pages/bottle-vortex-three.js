@@ -246,12 +246,24 @@ export function mountBottleVortex(canvas) {
       const manifest = await response.json();
       if (!Array.isArray(manifest.models) || manifest.models.length < 2)
         throw new Error("Expected wine and beer glTF models");
-      const loaded = await Promise.all(manifest.models.map(async (spec) => {
+      const loaded = (await Promise.all(manifest.models.map(async (spec) => {
         if (!spec.path?.startsWith("/login-brands/models/"))
           throw new Error("Model path outside vendored library");
         const gltf = await loader.loadAsync(spec.path);
-        return { spec, source: normalizedModel(gltf.scene, spec.kind) };
-      }));
+        // Poly Haven's original glTF has four separate, fully textured bottle nodes.
+        // Move these bottles individually rather than orbiting a rigid four-pack.
+        const roots = spec.name.startsWith("Poly Haven")
+          ? gltf.scene.children.filter((child) => {
+              let hasMesh = false;
+              child.traverse((node) => { if (node.isMesh) hasMesh = true; });
+              return hasMesh;
+            })
+          : [gltf.scene];
+        if (!roots.length) throw new Error("No mesh nodes for " + spec.name);
+        return roots.map((root, index) => ({
+          spec, source: normalizedModel(root, spec.kind), assetIndex: index,
+        }));
+      }))).flat();
       if (disposed) {
         for (const entry of loaded) sourceModels.push(entry.source);
         return;
@@ -265,7 +277,7 @@ export function mountBottleVortex(canvas) {
         models.push(instance);
       }
       canvas.dataset.assetStatus = "vendored-glTF";
-      canvas.dataset.brandCount = String(manifest.models.length);
+      canvas.dataset.brandCount = String(loaded.length);
       canvas.dataset.rendererStatus = "ready";
       resize();
       renderFrame(reduced.matches ? 2.1 : 0);

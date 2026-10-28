@@ -35,7 +35,7 @@ try {
       null, { timeout: 60000 });
     assert.equal(await canvas.getAttribute("data-asset-status"), "vendored-glTF");
     assert.equal(Number(await canvas.getAttribute("data-bottle-count")), scene.bottles);
-    assert.equal(Number(await canvas.getAttribute("data-brand-count")), 4);
+    assert.equal(Number(await canvas.getAttribute("data-brand-count")), 7);
     assert.equal(await page.locator(".wsp-login-product").count(), 0);
     const card = await page.locator(".auth-card").boundingBox();
     assert(card && card.width > 230 && card.x >= 0 &&
