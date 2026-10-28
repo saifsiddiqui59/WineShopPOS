@@ -192,18 +192,18 @@ export function mountBottleVortex(canvas) {
           q.x *= 1.0;
           float a = atan(q.y, q.x);
           float r = length(q * vec2(1.0, 1.32));
-          float vignette = smoothstep(0.96, 0.12, r);
-          vec3 dark = vec3(0.023, 0.006, 0.012);
-          vec3 wine = vec3(0.084, 0.021, 0.026);
+          float vignette = 1.0 - smoothstep(0.12, 0.96, r);
+          vec3 dark = vec3(0.032, 0.009, 0.014);
+          vec3 wine = vec3(0.123, 0.029, 0.030);
           vec3 base = mix(dark, wine, 0.44 + 0.38 * vignette);
           base += vec3(0.11, 0.037, 0.015) * exp(-r * 3.0);
-          float ringPhase = r * 68.0 - 0.85 * a - uTime * 0.19;
-          float streak = pow(0.5 + 0.5 * cos(ringPhase), 20.0);
+          float ringPhase = r * 45.0 - a + 0.70 * sin(a * 3.0 + r * 5.0) - uTime * 0.19;
+          float streak = pow(0.5 + 0.5 * cos(ringPhase), 8.0);
           float ribbons = pow(0.5 + 0.5 * cos(ringPhase + 0.64 * sin(a * 2.0)),
-            9.0);
+            5.0);
           float centralFade = smoothstep(0.08, 0.22, r);
           base += vec3(0.91, 0.39, 0.095) *
-            (0.50 * streak + 0.13 * ribbons) * centralFade * exp(-r * 1.15);
+            (0.37 * streak + 0.13 * ribbons) * centralFade * exp(-r * 1.15);
           float arc = pow(max(0.0, sin(a * 3.0 + r * 18.0 - uTime * 0.11)), 30.0);
           base += vec3(0.39, 0.13, 0.045) * arc * exp(-r * 2.2);
           vec2 cell = floor(xy / 14.0);
@@ -247,7 +247,7 @@ export function mountBottleVortex(canvas) {
   // Fast physical-depth concentric gold arcs, not flat SVG sticker layers.
   // A thin bright ring and a wider glow ring share the same world depth.
   const halos = [];
-  for (let j = 0; j < 9; j++) {
+  for (let j = 0; j < 7; j++) {
     const radius = 2.65 + j * 0.43;
     for (let glow = 0; glow < 2; glow++) {
       const geometry = new THREE.TorusGeometry(radius, glow ? 0.068 : 0.012,
@@ -365,7 +365,7 @@ export function mountBottleVortex(canvas) {
     }
     rotation.set(
       0.24 * Math.sin(a * 0.8 + index),
-      -a * 0.48 + Math.sin(t * 0.3 + index) * 0.24,
+      Math.sin(t * 0.26 + index * 0.8) * 0.26,
       hero ? (index === 7 ? -0.49 : 0.47) + 0.19 * Math.sin(t * 0.3 + index) : 0.35 * Math.sin(a + index * 0.27)
     );
     quaternion.setFromEuler(rotation);
