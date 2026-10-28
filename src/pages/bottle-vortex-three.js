@@ -227,23 +227,36 @@ export function mountBottleVortex(canvas) {
   // Geometry is behind the card; no full-screen bloom postprocessing needed.
   // Fast physical-depth concentric gold arcs, not flat SVG sticker layers.
   // A thin bright ring and a wider glow ring share the same world depth.
+  // Actual upright cyclone light trails. Each ribbon is a 3D helix around
+  // the screen-vertical Y axis rather than a flat ring in the XY plane.
   const halos = [];
-  for (let j = 0; j < 7; j++) {
-    const radius = 2.65 + j * 0.43;
+  const helixGroup = new THREE.Group();
+  stage.add(helixGroup);
+  for (let strand = 0; strand < 5; strand++) {
+    const samples = [];
+    for (let k = 0; k <= 96; k++) {
+      const h = k / 96;
+      const phase = h * Math.PI * 5.3 + strand * (Math.PI * 2 / 5);
+      const radius = 5.7 + 0.9 * Math.sin(h * Math.PI);
+      samples.push(new THREE.Vector3(
+        Math.cos(phase) * radius,
+        (h - 0.5) * 15.0,
+        -2.7 + Math.sin(phase) * 3.1
+      ));
+    }
+    const curve = new THREE.CatmullRomCurve3(samples, false, "centripetal");
     for (let glow = 0; glow < 2; glow++) {
-      const geometry = new THREE.TorusGeometry(radius, glow ? 0.068 : 0.012,
-        glow ? 4 : 5, 128);
+      const tube = new THREE.TubeGeometry(curve, 128, glow ? 0.085 : 0.018, 4, false);
       const material = new THREE.MeshBasicMaterial({
-        color: j % 3 === 0 ? 0xffb76a : 0xffd492,
-        transparent: true, opacity: glow ? 0.18 : 0.78,
-        blending: THREE.AdditiveBlending, depthWrite: false,
+        color: strand % 2 ? 0xffc079 : 0xffdf9b,
+        transparent: true, depthWrite: false,
+        opacity: glow ? 0.11 : 0.55,
+        blending: THREE.AdditiveBlending,
       });
-      const ring = new THREE.Mesh(geometry, material);
-      ring.rotation.x = 0.25 + j * 0.023;
-      ring.rotation.y = -0.13 + j * 0.027;
-      ring.position.z = -2.0 - j * 0.56;
-      stage.add(ring);
-      halos.push(ring);
+      const ribbon = new THREE.Mesh(tube, material);
+      ribbon.frustumCulled = false;
+      helixGroup.add(ribbon);
+      halos.push(ribbon);
     }
   }
   const particlePositions = new Float32Array(540 * 3);
@@ -325,6 +338,7 @@ export function mountBottleVortex(canvas) {
     camera.position.z = isMobile ? 15.8 : 14.8;
     camera.fov = isMobile ? 59 : 43;
     camera.updateProjectionMatrix();
+    helixGroup.scale.set(isMobile ? 0.43 : 1, isMobile ? 1.05 : 1, isMobile ? 0.72 : 1);
     activeCount = qualityTier === "low" ? (isMobile ? 14 : 23)
       : qualityTier === "medium" ? (isMobile ? 19 : 32)
       : desiredCount[isMobile ? "mobile" : "desktop"];
@@ -393,9 +407,8 @@ export function mountBottleVortex(canvas) {
         if (slot) part.mesh.instanceMatrix.needsUpdate = true;
       }
     }
-    halos.forEach((ring, i) => {
-      ring.rotation.z = t * (i % 2 ? -0.045 : 0.033) + i * 0.14;
-    });
+    helixGroup.rotation.y = t * 0.16;
+    helixGroup.rotation.z = 0.04 * Math.sin(t * 0.22);
     particles.rotation.z = -t * 0.012;
     bgUniforms.uTime.value = t;
     renderer.autoClear = false;

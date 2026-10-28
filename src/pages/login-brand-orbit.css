@@ -234,3 +234,8 @@ html .auth-screen.wsp-login-screen .auth-card button.secondary-button {
     min-height: 42px;
   }
 }
+
+/* The 3D renderer now draws upright helix trails. Suppress the former flat
+   concentric CSS rings, which visually contradicted the cyclone direction. */
+.wsp-login-screen .wsp-login-backdrop::before { display: none; }
+.wsp-login-screen .wsp-login-vortex-halo { opacity: 0.17; filter: blur(38px); }
