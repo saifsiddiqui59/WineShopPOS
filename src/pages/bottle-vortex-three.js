@@ -284,11 +284,110 @@ export function mountBottleVortex(canvas) {
   spriteOverlay.setAttribute("aria-hidden", "true");
   canvas.insertAdjacentElement("afterend", spriteOverlay);
   const spriteCtx = spriteOverlay.getContext("2d", { alpha: true, desynchronized: true });
+  const trailsCanvas = document.createElement("canvas");
+  trailsCanvas.className = "wsp-login-helical-trails";
+  canvas.insertAdjacentElement("afterend", trailsCanvas);
+  const trailCtx = trailsCanvas.getContext("2d");
+  const compositor = document.createElement("div");
+  compositor.className = "wsp-login-compositor";
+  trailsCanvas.insertAdjacentElement("afterend", compositor);
+  const animations = [];
+  const sourceUrls = [];
+  let useCompositor = false;
   const screenPoint = new THREE.Vector3();
   const drawItems = [];
   let useCanvas2d = false;
   let viewportWidth = 1;
   let viewportHeight = 1;
+  const trailPoint = new THREE.Vector3();
+
+  function paintVerticalTrails() {
+    if (!trailCtx) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.3);
+    trailsCanvas.width = Math.max(1, Math.round(viewportWidth * dpr));
+    trailsCanvas.height = Math.max(1, Math.round(viewportHeight * dpr));
+    trailCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    trailCtx.clearRect(0, 0, viewportWidth, viewportHeight);
+    const radius = isMobile ? 2.25 : 5.8;
+    for (let strand = 0; strand < 4; strand++) {
+      trailCtx.beginPath();
+      for (let i = 0; i <= 120; i++) {
+        const h = i / 120;
+        const a = h * Math.PI * 5.3 + strand * Math.PI / 2;
+        trailPoint.set(Math.cos(a) * radius, (h - 0.5) * (isMobile ? 14 : 15),
+          -3.0 + Math.sin(a) * 3);
+        trailPoint.project(camera);
+        const x = (trailPoint.x + 1) * viewportWidth * 0.5;
+        const y = (1 - trailPoint.y) * viewportHeight * 0.5;
+        if (i === 0) trailCtx.moveTo(x, y);
+        else trailCtx.lineTo(x, y);
+      }
+      trailCtx.lineWidth = strand % 2 ? 1.8 : 1.15;
+      trailCtx.strokeStyle = strand % 2
+        ? "rgba(247,193,111,0.26)" : "rgba(255,217,162,0.36)";
+      trailCtx.shadowColor = "rgba(245,157,65,0.62)";
+      trailCtx.shadowBlur = 11;
+      trailCtx.stroke();
+    }
+    trailCtx.shadowBlur = 0;
+  }
+
+  function stopCompositor() {
+    animations.forEach(animation => animation.cancel());
+    animations.length = 0;
+    compositor.replaceChildren();
+  }
+
+  function buildCompositor() {
+    if (!useCompositor || disposed) return;
+    stopCompositor();
+    const cycleMs = 24000;
+    const sampleCount = 48;
+    const focal = viewportHeight * 0.5 /
+      Math.tan(THREE.MathUtils.degToRad(camera.fov) * 0.5);
+    const baseWidth = isMobile ? 104 : 150;
+    const baseHeight = baseWidth * 2;
+    for (let i = 0; i < activeCount; i++) {
+      const img = document.createElement("img");
+      img.src = sourceUrls[selection[i]];
+      img.alt = "";
+      img.draggable = false;
+      img.className = "wsp-login-cyclone-product";
+      img.style.width = baseWidth + "px";
+      img.style.height = baseHeight + "px";
+      img.style.left = (-baseWidth / 2) + "px";
+      img.style.top = (-baseHeight / 2) + "px";
+      const keyframes = [];
+      for (let j = 0; j <= sampleCount; j++) {
+        const t = 24 * j / sampleCount;
+        pose(i, t);
+        trailPoint.copy(position).project(camera);
+        const depth = Math.max(0.5, camera.position.z - position.z);
+        const projectedWidth = 1.32 * scale.x * focal / depth;
+        const x = (trailPoint.x + 1) * viewportWidth * 0.5;
+        const y = (1 - trailPoint.y) * viewportHeight * 0.5;
+        const factor = Math.max(0.001, projectedWidth / baseWidth);
+        keyframes.push({
+          offset: j / sampleCount,
+          transform: `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) rotate(${(-rotation.z * 180 / Math.PI).toFixed(2)}deg) scale(${factor.toFixed(4)})`,
+          opacity: j < 2 || j > sampleCount - 2 ? 0 : 1,
+        });
+      }
+      compositor.appendChild(img);
+      if (reduced.matches) {
+        img.style.transform = keyframes[12].transform;
+        img.style.opacity = "1";
+      } else {
+        const animation = img.animate(keyframes, {
+          duration: cycleMs, iterations: Infinity, easing: "linear", fill: "both",
+        });
+        animation.currentTime = (i * 0.61803398875 % 1) * cycleMs;
+        animations.push(animation);
+      }
+    }
+    canvas.dataset.visibleSprites = String(activeCount);
+    canvas.dataset.compositorCount = String(animations.length);
+  }
 
   // Slow or software GPU paths animate images baked from the actual
   // licensed PBR glTF, not generic procedural cylinders or fake asset URLs.
@@ -420,7 +519,11 @@ export function mountBottleVortex(canvas) {
     camera.position.z = isMobile ? 15.8 : 14.8;
     camera.fov = isMobile ? 59 : 43;
     camera.updateProjectionMatrix();
-    if (useCanvas2d && canvas.dataset.rendererStatus === "ready") drawWebGLBackdrop(2.1);
+    if ((useCanvas2d || useCompositor) && canvas.dataset.rendererStatus === "ready") {
+      paintVerticalTrails();
+      if (useCanvas2d) drawWebGLBackdrop(2.1);
+      if (useCompositor) buildCompositor();
+    }
     helixGroup.scale.set(isMobile ? 0.43 : 1, isMobile ? 1.05 : 1, isMobile ? 0.72 : 1);
     activeCount = qualityTier === "low" ? (isMobile ? 18 : 29)
       : qualityTier === "medium" ? (isMobile ? 21 : 36)
@@ -521,6 +624,13 @@ export function mountBottleVortex(canvas) {
 
   function renderFrame(t) {
     if (disposed || renderer.getContext().isContextLost()) return;
+    if (useCompositor) {
+      frames++;
+      canvas.dataset.renderedFrames = String(frames);
+      canvas.dataset.motionAxis = "vertical-cyclone";
+      canvas.dataset.motionProgress = (t * 0.56).toFixed(3);
+      return;
+    }
     if (useCanvas2d) {
       drawPackshots2d(t);
       frames++;
@@ -580,8 +690,10 @@ export function mountBottleVortex(canvas) {
           canvas.dataset.p95FrameMs = sorted[Math.floor(0.95 * (sorted.length - 1))].toFixed(1);
           // Trim GPU overdraw on weak mobile and software renderers, preserving
           // 44 / 24 bottle abundance for capable browsers.
-          if (frames > 6 && fps < 18 && qualityTier === "high") setQuality("medium");
-          if (frames > 14 && fps < 10 && qualityTier === "medium") setQuality("low");
+          // Compositor-owned WAAPI transforms are independent of JS canvas
+          // paints. Never cull bottles merely because headless CI rAF is slow.
+          if (!useCompositor && frames > 6 && fps < 18 && qualityTier === "high") setQuality("medium");
+          if (!useCompositor && frames > 14 && fps < 10 && qualityTier === "medium") setQuality("low");
         }
       }
     }
@@ -604,13 +716,18 @@ export function mountBottleVortex(canvas) {
     lastFrame = 0;
   }
   function onVisibility() {
-    if (document.hidden) stop();
-    else if (reduced.matches) renderFrame(2.1);
-    else schedule();
+    if (document.hidden) {
+      stop();
+      animations.forEach(animation => animation.pause());
+    } else if (reduced.matches) renderFrame(2.1);
+    else {
+      animations.forEach(animation => animation.play());
+      schedule();
+    }
   }
   function onMotion() {
-    if (reduced.matches) { stop(); renderFrame(2.1); }
-    else schedule();
+    if (reduced.matches) { stop(); buildCompositor(); renderFrame(2.1); }
+    else { buildCompositor(); schedule(); }
   }
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
@@ -698,8 +815,18 @@ export function mountBottleVortex(canvas) {
         if (sourceIndex % 2 === 1) await new Promise(resolve => setTimeout(resolve, 0));
         if (disposed) return;
       }
-      useCanvas2d = Boolean(spriteCtx) && bakedImages.length === loaded.length;
-      if (useCanvas2d) {
+      useCompositor = typeof Element.prototype.animate === "function"
+        && bakedImages.length === loaded.length;
+      useCanvas2d = !useCompositor && Boolean(spriteCtx)
+        && bakedImages.length === loaded.length;
+      if (useCompositor) {
+        bakedImages.forEach((image, index) => {
+          sourceUrls[index] = image.toDataURL("image/webp", 0.94);
+        });
+        pools.forEach(pool => pool.parts.forEach(part => { part.mesh.visible = false; }));
+        canvas.dataset.renderMode = "compositor-keyframes-pbr";
+        spriteOverlay.style.display = "none";
+      } else if (useCanvas2d) {
         pools.forEach(pool => pool.parts.forEach(part => { part.mesh.visible = false; }));
         canvas.dataset.renderMode = "canvas2d-cached-pbr";
       } else {
@@ -713,6 +840,11 @@ export function mountBottleVortex(canvas) {
       canvas.dataset.rendererStatus = "ready";
       resize();
       if (useCanvas2d) drawWebGLBackdrop(reduced.matches ? 2.1 : 0);
+      if (useCompositor) {
+        canvas.style.opacity = "0";
+        paintVerticalTrails();
+        buildCompositor();
+      }
       renderFrame(reduced.matches ? 2.1 : 0);
       schedule();
     } catch (error) {
@@ -742,6 +874,9 @@ export function mountBottleVortex(canvas) {
     background.geometry.dispose();
     background.material.dispose();
     bakedTargets.forEach(target => target.dispose());
+    stopCompositor();
+    compositor.remove();
+    trailsCanvas.remove();
     spriteOverlay.remove();
     renderer.dispose();
   };

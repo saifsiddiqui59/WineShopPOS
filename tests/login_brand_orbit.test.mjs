@@ -25,7 +25,10 @@ test("licensed glTF scene uses physically based Three.js, not procedural bottle 
   assert.match(engine, /new THREE\.InstancedMesh/);
   assert.match(engine, /new THREE\.WebGLRenderTarget/);
   assert.match(engine, /function bakePackshot\(/);
-  assert.match(engine, /canvas2d-cached-pbr/);
+  assert.match(engine, /compositor-keyframes-pbr/);
+  assert.match(engine, /function buildCompositor/);
+  assert.match(engine, /img\.animate\(keyframes/);
+  assert.match(engine, /function paintVerticalTrails/);
   assert.match(engine, /readRenderTargetPixels/);
   assert.match(engine, /drawPackshots2d/);
   assert.match(engine, /spriteCtx\.drawImage/);
