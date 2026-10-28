@@ -112,3 +112,12 @@
 @media (prefers-reduced-motion: reduce) {
   .wsp-login-vortex-halo { animation: none !important; }
 }
+
+/* Fallback deliberately remains premium but static if WebGL or licensed GLBs fail. */
+.wsp-login-backdrop { background: radial-gradient(ellipse at 16% 28%, rgba(196,105,49,.20),transparent 48%), radial-gradient(ellipse at 85% 83%,rgba(164,38,68,.23),transparent 48%); }
+.wsp-login-webgl { will-change: contents; }
+.wsp-login-screen .auth-card { isolation: isolate; }
+@media (prefers-reduced-motion: reduce) {
+  .wsp-login-webgl { will-change: auto; }
+  .wsp-login-light { filter: blur(78px); }
+}

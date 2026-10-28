@@ -1,0 +1,41 @@
+name: WineShopPOS Login CC0 3D Asset Import (DEV PR Only)
+on:
+  push:
+    branches: [feat/login-webgl-bottle-vortex-20261027]
+    paths:
+      - scripts/assets/sync-login-models.py
+      - .github/workflows/wineshoppos-login-assets.yml
+      - package.json
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-assets:
+    if: github.ref == 'refs/heads/feat/login-webgl-bottle-vortex-20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/login-webgl-bottle-vortex-20261027
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Regenerate exact Three.js dependency lock without executing lifecycle scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Vendor and validate license-qualified CC0 source models
+        run: python3 scripts/assets/sync-login-models.py
+      - name: Commit only allowed DEV model assets and lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json public/login-brands/models
+          if git diff --cached --quiet; then
+            echo "CC0_ASSETS_ALREADY_CURRENT"
+            exit 0
+          fi
+          git commit -m "assets(login): vendor checked CC0 wine and beer glTF models and lock Three.js"
+          git push origin HEAD:feat/login-webgl-bottle-vortex-20261027

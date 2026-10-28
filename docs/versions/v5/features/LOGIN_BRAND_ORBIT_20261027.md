@@ -1,46 +1,24 @@
-# WineShopPOS Login Bottle Vortex — Real 3D WebGL upgrade
+# WineShopPOS — licensed photorealistic login-model continuation (28 October 2026)
 
-**Scope:** Only `src/pages/LoginBrandOrbit.jsx`, `src/pages/bottle-vortex-webgl.js`,
-`src/pages/login-brand-orbit.css`, plus login-only verification scripts.
+Branch: feat/login-webgl-bottle-vortex-20261027; Draft PR #9; no production promotion.
 
-## Why the previous animation was replaced
+## Decision
+The previous dependency-free shader-geometry prototype is retained in source history but no longer mounted. It painted perfect cylinders and canvas labels: technically 3D but not product photography.
 
-Earlier releases created 184 overlapping SVG product illustrations. Those were
-**flat drawings**, expensive to animate as separate DOM elements, and did not
-approach realistic bottle geometry. Do not describe the prior work as
-photorealistic 3D.
+Three.js + GLTFLoader + physically based materials + PMREM studio environment is the DEV candidate. One canvas shares meshes and material textures; 26 orbiting groups desktop, 12 mobile. Curved multi-axis motion uses continuous time and depth/perspective. Under reduced motion, a single static frame is drawn. Visibility pause, GPU fallback, explicit FPS/P95/triangles/draw-call instrumentation.
 
-## Current DEV candidate
+## Licensed source assets
+- Poly Haven: https://polyhaven.com/a/wine_bottles_01 (CC0, four original fictional wine labels, glTF + PBR images, 1K preview import; *not* Sula or any real manufacturer's pack shot).
+- Innerscene wine, beer and can original GLBs (CC0, unbranded). Sources:
+  - https://www.innerscene.com/tools/library/3d-parts/wine-bottle-original-drink-vessel-dff39232
+  - https://www.innerscene.com/tools/library/3d-parts/beer-bottle-original-drink-vessel-1b0eeeac
+  - https://www.innerscene.com/tools/library/3d-parts/drink-can-original-drink-vessel-c636c4a2
 
-- A **single WebGL2 canvas**, no new packages or paid GPU APIs.
-- Real, parameterized **3D wine bottles, beer bottles and cans** made from lathe
-  meshes with separate glass, foil and brand-label shading.
-- Ten original textual brand/collection labels created at runtime, rather than
-  scraping or hotlinking manufacturer photography. These are not licensed
-  official manufacturer label reproductions.
-- 32 3D instances on desktop / 18 on smaller screens; actual depth, changing
-  perspective and rotating glass surfaces, while avoiding 184 DOM elements.
-- Pixel ratio caps (desktop 1.35, mobile 1.1), visibility pause, reduced-motion
-  support (one static frame), context failure fallback and cleanup.
-- All existing login, demo, Supabase authentication and password-reset logic
-  unchanged. No cross-page CSS selectors or remote third-party assets.
+The dedicated branch-only importer downloads, validates and vendors all model bytes in public/login-brands/models. The application does not depend on external asset host/CDN at runtime. The importer must pass before browser rendering is expected to work. Models must remain unclaimed as any manufacturer's official bottles, until independently licensed.
 
-**Limitations:** Procedurally shaded glass is **real 3D geometry** but is not
-a professional product photograph or an exact branded glass/label reproduction.
-For licensed photographic product packs, obtain the rights and supply the
-specific product assets before replacing any existing production image.
-
-## Verification and release policy
-
-1. Source/lint/docs/build tests must pass without any real DEV/PROD secrets.
-2. Browser Playwright test must show a working WebGL2 renderer (or an explicitly
-   reported unsupported browser), 32/18 models, 10 label designs, frame
-   progression, visually changing canvas, mobile layout, and reduced motion.
-3. Inspect desktop/mobile screenshots and **actual browser-recorded video**;
-   source-level checks and WebGL initialization alone are not visual sign-off.
-4. The production website is currently intentionally disabled per user request.
-   **Do not auto-reenable it merely by merging DEV code.** Only after a
-   verified production promotion, correct PROD Vite configuration, existing
-   index backup, Azure Blob safety checks, and user-directed restart.
-5. Keep Supabase/DEV, Invoice/AI Azure Functions, Logic App and all business
-   records untouched throughout this login-only redesign.
+## Promotion gates
+- Source/build and GitHub checks green, actual glTF browser loading and no WebGL errors.
+- Review uploaded desktop/mobile screenshots AND animated Playwright recording, not source checkmarks.
+- Inspect frame-rate data from a real browser. CI SwiftShader results are not representative of hardware GPUs: test physical desktop/mobile hardware before approving 60 FPS.
+- Real login demo, recovery and keyboard focus need user/UAT signoff. No production merge or deploy until approved.
+- In particular, no production credentials, migrations, DB, invoice, AI Functions or storage-account changes are part of this PR.
