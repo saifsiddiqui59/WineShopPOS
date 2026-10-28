@@ -25,3 +25,6 @@ The dedicated branch-only importer downloads, validates and vendors all model by
 
 ## October 28 cinematic optimization follow-up
 Compared the rendered GitHub Actions screenshot with the user's reference: earlier assets formed two stiff columns and lacked near/far perspective, photographic highlights and a strong gold light tunnel. New renderer batches every repeated source mesh using InstancedMesh (instead of 26 complete cloned hierarchies), preserves texture maps and PBR environment reflections, disables expensive KHR_materials_transmission prepasses in the multi-object background, and uses distinct foreground/near/middle/far helix poses. Adds CSS copper-gold atmosphere. The production site remains untouched. Must inspect fresh desktop/mobile/screenshots and browser video before quality acceptance; measured SwiftShader CI FPS is not a hardware benchmark.
+
+## Photorealism regression correction
+First instanced screenshot was inspected: pale opaque bottles and an oversized foreground can were unacceptable. Tint physically based original glass by named glass/liquid materials (green, amber and ruby) with glossy clearcoat, avoid costly full transmission, anchor three hero bottle positions at the desktop edges, and keep complete silhouettes above/below the mobile form. Explicitly NOT declaring this photorealistic until new screenshots and recording inspected.

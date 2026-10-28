@@ -53,13 +53,40 @@ function normalizedModel(source, kind) {
         // GLTF KHR_materials_transmission adds a costly whole-scene prepass.
         // Retain real PBR maps, glass shape and environment reflections but
         // disable screen-space transmission in this many-instance decorative scene.
+        const name = (mat.name || "").toLowerCase();
+        // Transparent physical materials become pale, chalky white if the
+        // transmission pass is removed without preserving an absorbent tint.
+        // These saturated, PBR-lit tones mimic dark green/burgundy/amber glass
+        // and avoid opaque white cut-outs in the cinematic background.
+        const bottleTints = [
+          ["glass_green", "#0b291b"],
+          ["glass_yellow", "#2b2711"],
+          ["glass_orange", "#412014"],
+          ["glass_clear", "#39463a"],
+          ["wine_light_red", "#441b24"],
+          ["wine_red", "#280d17"],
+          ["wine_clear", "#51401e"],
+        ];
+        const tinted = bottleTints.find(([prefix]) => name.includes(prefix));
+        if (tinted) {
+          mat.color.set(tinted[1]);
+          mat.metalness = 0.11;
+          mat.roughness = 0.17;
+          if (mat.isMeshPhysicalMaterial) {
+            mat.clearcoat = 0.9;
+            mat.clearcoatRoughness = 0.11;
+          }
+        } else if (!mat.map && kind !== "can" && !/label|paper|seal|cap/.test(name)) {
+          mat.color.set(kind === "beer" ? "#6c3616" : "#1e3223");
+          mat.metalness = 0.08;
+          mat.roughness = 0.22;
+        }
         mat.transmission = 0;
         mat.transparent = false;
         mat.opacity = 1;
         mat.depthWrite = true;
         mat.side = THREE.FrontSide;
-        mat.envMapIntensity = 2.35;
-        if (mat.isMeshPhysicalMaterial) mat.clearcoat = Math.max(mat.clearcoat || 0, 0.38);
+        mat.envMapIntensity = tinted ? 3.0 : 1.75;
         mat.needsUpdate = true;
       }
     }
@@ -207,7 +234,7 @@ export function mountBottleVortex(canvas) {
   const quaternion = new THREE.Quaternion();
   // 4 phototextured Poly Haven bottles, 3 distinct CC0 beer/can/wine props.
   // Keep wine dominant; avoid multiplying 20 low-fidelity product designs.
-  const selection = [0, 1, 2, 3, 0, 5, 1, 6, 2, 3, 0, 4, 1,
+  const selection = [0, 1, 2, 3, 0, 5, 1, 2, 2, 6, 0, 4, 1,
     2, 3, 5, 0, 1, 2, 6, 3, 0, 4, 1, 2, 5];
   let disposed = false, raf = 0, frames = 0, isMobile = false, elapsed = 0;
   let lastFrame = 0;
@@ -244,21 +271,34 @@ export function mountBottleVortex(canvas) {
     const hero = index === 0 || index === 7 || index === 18;
     const front = index % 5 === 0 || hero;
     if (isMobile) {
-      const corner = (index % 4);
+      // Keep complete product silhouettes in the visible top/bottom margins,
+      // instead of hiding most bottles behind the full-width sign-in card.
+      const lane = index % 3;
+      const above = Math.floor(index / 3) % 2 === 0;
       position.set(
-        (corner % 2 ? 1 : -1) * (1.38 + 0.24 * Math.sin(a)),
-        (corner < 2 ? 1 : -1) * (5.15 + 0.55 * Math.sin(a * 0.6)),
-        -2.1 + Math.cos(a) * 2.5
+        (lane - 1) * 1.9 + Math.sin(a * 0.3) * 0.22,
+        (above ? 1 : -1) * (6.65 + 0.26 * Math.cos(a)),
+        -2.8 + Math.cos(a) * 1.2
       );
-      scale.setScalar(hero ? 1.15 : (front ? 0.91 : 0.72));
+      scale.setScalar(hero ? 0.9 : (front ? 0.78 : 0.62));
+    } else if (hero) {
+      // Three restrained hero packshots at left/right edges; never let
+      // a giant bottle or can sweep over the login form or crop at the top.
+      const side = index === 7 ? 1 : -1;
+      position.set(
+        side * (6.7 + Math.sin(a * 0.35) * 0.27),
+        (index === 18 ? -1.75 : index === 7 ? 0.7 : 1.25) + Math.sin(a) * 0.45,
+        3.05 + Math.cos(a) * 0.45
+      );
+      scale.setScalar(index === 18 ? 1.32 : 1.39);
     } else {
-      const radius = (hero ? 6.35 : 5.35 + (index % 4) * 0.55);
+      const radius = 5.5 + (index % 4) * 0.47;
       position.set(
-        Math.cos(a) * radius + (hero ? Math.sign(Math.cos(a)) * 0.65 : 0),
-        Math.sin(a * 0.97) * (hero ? 3.05 : 3.92),
-        (hero ? 4.1 : -2.7) + Math.sin(a + index * 0.11) * (hero ? 1.4 : 4.0)
+        Math.cos(a) * radius,
+        Math.sin(a * 0.97) * 4.12,
+        -2.7 + Math.sin(a + index * 0.11) * 3.75
       );
-      scale.setScalar(hero ? 1.68 : (front ? 1.18 : 0.78));
+      scale.setScalar(front ? 1.02 : 0.69);
     }
     rotation.set(
       0.24 * Math.sin(a * 0.8 + index),
