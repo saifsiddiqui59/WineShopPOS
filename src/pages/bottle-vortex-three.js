@@ -178,41 +178,22 @@ export function mountBottleVortex(canvas) {
         void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
       `,
       fragmentShader: `
-        precision highp float;
+        precision mediump float;
         uniform float uTime;
-        uniform float uAspect;
         uniform vec2 uResolution;
-        float hash(vec2 p) {
-          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-        }
         void main() {
-          vec2 xy = gl_FragCoord.xy;
-          float H = max(1.0, uResolution.y);
-          vec2 q = (xy - 0.5 * uResolution) / H;
-          q.x *= 1.0;
-          float a = atan(q.y, q.x);
-          float r = length(q * vec2(1.0, 1.32));
-          float vignette = 1.0 - smoothstep(0.12, 0.96, r);
-          vec3 dark = vec3(0.032, 0.009, 0.014);
-          vec3 wine = vec3(0.123, 0.029, 0.030);
-          vec3 base = mix(dark, wine, 0.44 + 0.38 * vignette);
-          base += vec3(0.11, 0.037, 0.015) * exp(-r * 3.0);
-          float ringPhase = r * 45.0 - a + 0.70 * sin(a * 3.0 + r * 5.0) - uTime * 0.19;
-          float streak = pow(0.5 + 0.5 * cos(ringPhase), 8.0);
-          float ribbons = pow(0.5 + 0.5 * cos(ringPhase + 0.64 * sin(a * 2.0)),
-            5.0);
-          float centralFade = smoothstep(0.08, 0.22, r);
-          base += vec3(0.91, 0.39, 0.095) *
-            (0.37 * streak + 0.13 * ribbons) * centralFade * exp(-r * 1.15);
-          float arc = pow(max(0.0, sin(a * 3.0 + r * 18.0 - uTime * 0.11)), 30.0);
-          base += vec3(0.39, 0.13, 0.045) * arc * exp(-r * 2.2);
-          vec2 cell = floor(xy / 14.0);
-          vec2 local = fract(xy / 14.0) - 0.5;
-          float chance = step(0.986, hash(cell));
-          float dotGlow = exp(-dot(local, local) * 110.0) * chance;
-          base += vec3(1.0, 0.63, 0.30) * dotGlow * (0.35 + 0.3 * sin(uTime + cell.x));
-          base *= 1.0 - 0.46 * smoothstep(0.34, 0.92, r);
-          gl_FragColor = vec4(base, 1.0);
+          vec2 q = (gl_FragCoord.xy - uResolution * 0.5) / max(1.0, uResolution.y);
+          float rad = length(q * vec2(1.0, 1.23));
+          float theta = atan(q.y, q.x);
+          float spiral = sin(rad * 38.0 - theta * 1.5 - uTime * 0.36);
+          float arc = max(0.0, spiral) * max(0.0, spiral);
+          float glow = 1.0 - smoothstep(0.1, 0.79, rad);
+          vec3 color = mix(vec3(0.026, 0.006, 0.013),
+            vec3(0.105, 0.031, 0.034), glow);
+          color += vec3(0.30, 0.115, 0.026) * arc *
+            smoothstep(0.10, 0.23, rad) * (1.0 - smoothstep(0.48, 0.94, rad));
+          color += vec3(0.105, 0.045, 0.018) * glow * glow;
+          gl_FragColor = vec4(color, 1.0);
         }
       `,
     })
@@ -295,8 +276,14 @@ export function mountBottleVortex(canvas) {
   const quaternion = new THREE.Quaternion();
   // 4 phototextured Poly Haven bottles, 3 distinct CC0 beer/can/wine props.
   // Keep wine dominant; avoid multiplying 20 low-fidelity product designs.
-  const selection = [0, 1, 2, 3, 0, 5, 1, 2, 2, 6, 0, 4, 1,
-    2, 3, 5, 0, 1, 2, 6, 3, 0, 4, 1, 2, 5];
+  // Four CC0 wine silhouettes dominate, while beer/cans punctuate the flow.
+  // Forty-four source instances reuse GLB mesh/material buffers through instancing.
+  const selection = Array.from({ length: 44 }, (_, i) =>
+    [0, 1, 2, 3, 0, 5, 1, 2, 4, 3, 0, 6, 1, 2, 3, 5, 0, 1, 2, 6, 3, 0][i % 22]);
+  const poses = Array.from({ length: selection.length }, () => new THREE.Matrix4());
+  const desiredCount = { desktop: selection.length, mobile: 24 };
+  let qualityTier = "high";
+  let qualityDpr = 1;
   let disposed = false, raf = 0, frames = 0, isMobile = false, elapsed = 0;
   let lastFrame = 0;
   let activeCount = 0;
@@ -308,65 +295,77 @@ export function mountBottleVortex(canvas) {
   canvas.dataset.drawCalls = "0";
   canvas.dataset.triangles = "0";
 
+  function setQuality(tier) {
+    if (tier === qualityTier) return;
+    qualityTier = tier;
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    qualityDpr = tier === "low" ? 0.68 : tier === "medium" ? 0.83 : 1;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,
+      isMobile ? MAX_DPR_MOBILE : MAX_DPR_DESKTOP) * qualityDpr);
+    renderer.setSize(w, h, false);
+    renderer.getDrawingBufferSize(bgUniforms.uResolution.value);
+    activeCount = tier === "low" ? (isMobile ? 14 : 23)
+      : tier === "medium" ? (isMobile ? 19 : 32)
+      : desiredCount[isMobile ? "mobile" : "desktop"];
+    canvas.dataset.qualityTier = tier;
+    canvas.dataset.bottleCount = String(pools.length ? activeCount : 0);
+  }
+
   function resize() {
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
     isMobile = w <= 760;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,
-      isMobile ? MAX_DPR_MOBILE : MAX_DPR_DESKTOP));
+      isMobile ? MAX_DPR_MOBILE : MAX_DPR_DESKTOP) * qualityDpr);
     renderer.setSize(w, h, false);
     renderer.getDrawingBufferSize(bgUniforms.uResolution.value);
     bgUniforms.uAspect.value = w / h;
     camera.aspect = w / h;
-    camera.position.z = isMobile ? 15.8 : 14.5;
-    camera.fov = isMobile ? 58 : 43;
+    camera.position.z = isMobile ? 15.8 : 14.8;
+    camera.fov = isMobile ? 59 : 43;
     camera.updateProjectionMatrix();
-    activeCount = isMobile ? 12 : selection.length;
+    activeCount = qualityTier === "low" ? (isMobile ? 14 : 23)
+      : qualityTier === "medium" ? (isMobile ? 19 : 32)
+      : desiredCount[isMobile ? "mobile" : "desktop"];
+    canvas.dataset.desiredCount = String(desiredCount[isMobile ? "mobile" : "desktop"]);
     canvas.dataset.bottleCount = String(pools.length ? activeCount : 0);
+    canvas.dataset.qualityTier = qualityTier;
     if (reduced.matches && canvas.dataset.rendererStatus === "ready") renderFrame(2.1);
   }
 
+  // Vertical cyclone: Y is the screen-up spine; each bottle orbits in the X/Z
+  // depth plane. Local Z rotation makes the product bank into the airflow.
+  // This differs from the rejected flat XY carousel / central clock-face orbit.
+  // Slot heights repeat modulo 1; size fades to zero at each boundary so
+  // re-entry from bottom is invisible, avoiding hard position jumps.
   function pose(index, t) {
-    const phi = index * 2.399963229728653;
-    const a = phi + t * (0.37 + (index % 3) * 0.012);
-    // Echo abundance: golden-angle phases, but orbit in continuous 3D.
-    // The two near-hero bottles intentionally crop at the viewport edges.
-    const hero = index === 0 || index === 7 || index === 18;
-    const front = index % 5 === 0 || hero;
-    if (isMobile) {
-      // Keep complete product silhouettes in the visible top/bottom margins,
-      // instead of hiding most bottles behind the full-width sign-in card.
-      const lane = index % 3;
-      const above = Math.floor(index / 3) % 2 === 0;
-      position.set(
-        (lane - 1) * 1.9 + Math.sin(a * 0.3) * 0.22,
-        (above ? 1 : -1) * (6.65 + 0.26 * Math.cos(a)),
-        -2.8 + Math.cos(a) * 1.2
-      );
-      scale.setScalar(hero ? 0.9 : (front ? 0.78 : 0.62));
-    } else if (hero) {
-      // Three restrained hero packshots at left/right edges; never let
-      // a giant bottle or can sweep over the login form or crop at the top.
-      const side = index === 7 ? 1 : -1;
-      position.set(
-        side * (6.7 + Math.sin(a * 0.35) * 0.27),
-        (index === 18 ? -1.75 : index === 7 ? 0.7 : 1.25) + Math.sin(a) * 0.45,
-        3.05 + Math.cos(a) * 0.45
-      );
-      scale.setScalar(index === 18 ? 1.32 : 1.39);
-    } else {
-      const radius = 5.5 + (index % 4) * 0.47;
-      position.set(
-        Math.cos(a) * radius,
-        Math.sin(a * 0.97) * 4.12,
-        -2.7 + Math.sin(a + index * 0.11) * 3.75
-      );
-      scale.setScalar(front ? 1.02 : 0.69);
-    }
+    const tier = index % 3;
+    const phase = (index * 0.618033988749895 + tier * 0.137) % 1;
+    const speed = 0.036 + tier * 0.004;
+    const rise = (phase + t * speed) % 1;
+    const fade = Math.min(1, rise / 0.095, (1 - rise) / 0.095);
+    const angle = index * 2.399963229728653 + t * (0.56 + tier * 0.045);
+    // Widen the screen-filling cyclone: foreground large, rear layer small.
+    const radius = isMobile ? (2.18 + tier * 0.36) : (5.5 + tier * 0.91);
+    const height = isMobile ? 16.2 : 12.6;
+    const depth = isMobile
+      ? -1.9 + Math.sin(angle) * (1.7 + tier * 0.3)
+      : -1.6 + Math.sin(angle) * (2.7 + tier * 0.65);
+    position.set(
+      Math.cos(angle) * radius,
+      (rise - 0.5) * height + 0.16 * Math.sin(angle * 0.65),
+      depth
+    );
+    const perspective = 0.8 + 0.18 * Math.sin(angle);
+    const baseScale = tier === 0 ? 1.25 : tier === 1 ? 0.93 : 0.68;
+    scale.setScalar(Math.max(0.0001,
+      baseScale * perspective * (isMobile ? 0.72 : 1) * Math.max(0, fade)));
     rotation.set(
-      0.24 * Math.sin(a * 0.8 + index),
-      Math.sin(t * 0.26 + index * 0.8) * 0.26,
-      hero ? (index === 7 ? -0.49 : 0.47) + 0.19 * Math.sin(t * 0.3 + index) : 0.35 * Math.sin(a + index * 0.27)
+      0.13 * Math.cos(angle),
+      0.13 * Math.sin(angle * 0.65),
+      // Z-axis rolling tilt follows the swirling air, not a carousel spin.
+      0.27 * Math.sin(angle) - 0.14 * Math.cos(angle * 0.5)
     );
     quaternion.setFromEuler(rotation);
     return matrix.compose(position, quaternion, scale);
@@ -376,8 +375,7 @@ export function mountBottleVortex(canvas) {
     if (disposed || renderer.getContext().isContextLost()) return;
     // Each source mesh is rendered once as an InstancedMesh; repeated
     // physical materials, texture maps and geometry share GPU memory.
-    const poses = [];
-    for (let i = 0; i < activeCount; i++) poses[i] = pose(i, t).clone();
+    for (let i = 0; i < activeCount; i++) poses[i].copy(pose(i, t));
     for (const pool of pools) {
       let slot = 0;
       for (const index of pool.indices) {
@@ -408,6 +406,8 @@ export function mountBottleVortex(canvas) {
     canvas.dataset.renderedFrames = String(frames);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
+    canvas.dataset.motionAxis = "vertical-cyclone";
+    canvas.dataset.motionProgress = (t * 0.56).toFixed(3);
   }
 
   function animate(now) {
@@ -419,11 +419,18 @@ export function mountBottleVortex(canvas) {
       if (dt > 0) {
         frameTimes.push(dt);
         if (frameTimes.length > 180) frameTimes.shift();
-        if (frameTimes.length >= 2) {
+        // Only sample metrics periodically. Sorting on every frame induces
+        // avoidable JS garbage collection and additional animation stutter.
+        if (frameTimes.length >= 2 && frameTimes.length % 8 === 0) {
           const sorted = [...frameTimes].sort((a, b) => a - b);
           const mean = frameTimes.reduce((sum, value) => sum + value, 0) / frameTimes.length;
-          canvas.dataset.averageFps = (1000 / mean).toFixed(1);
+          const fps = 1000 / mean;
+          canvas.dataset.averageFps = fps.toFixed(1);
           canvas.dataset.p95FrameMs = sorted[Math.floor(0.95 * (sorted.length - 1))].toFixed(1);
+          // Trim GPU overdraw on weak mobile and software renderers, preserving
+          // 44 / 24 bottle abundance for capable browsers.
+          if (frames > 14 && fps < 18 && qualityTier === "high") setQuality("medium");
+          if (frames > 25 && fps < 10 && qualityTier === "medium") setQuality("low");
         }
       }
     }

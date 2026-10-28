@@ -12,9 +12,9 @@ const browser = await chromium.launch({
 const results = [];
 try {
   for (const scene of [
-    { name: "desktop", viewport: { width: 1440, height: 900 }, motion: "no-preference", bottles: 26 },
-    { name: "mobile", viewport: { width: 390, height: 844 }, motion: "no-preference", bottles: 12 },
-    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, motion: "reduce", bottles: 26 },
+    { name: "desktop", viewport: { width: 1440, height: 900 }, motion: "no-preference", bottles: 44 },
+    { name: "mobile", viewport: { width: 390, height: 844 }, motion: "no-preference", bottles: 24 },
+    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, motion: "reduce", bottles: 44 },
   ]) {
     const context = await browser.newContext({
       viewport: scene.viewport, reducedMotion: scene.motion, serviceWorkers: "block",
@@ -34,7 +34,11 @@ try {
       document.querySelector(".wsp-login-webgl")?.dataset.rendererStatus === "ready",
       null, { timeout: 60000 });
     assert.equal(await canvas.getAttribute("data-asset-status"), "vendored-glTF");
-    assert.equal(Number(await canvas.getAttribute("data-bottle-count")), scene.bottles);
+    assert.equal(Number(await canvas.getAttribute("data-desired-count")), scene.bottles);
+    assert.equal(await canvas.getAttribute("data-motion-axis"), "vertical-cyclone");
+    const visibleBottles = Number(await canvas.getAttribute("data-bottle-count"));
+    assert(visibleBottles >= (scene.name === "mobile" ? 14 : 23),
+      "adaptive cyclone must preserve a visible product field");
     assert.equal(Number(await canvas.getAttribute("data-brand-count")), 7);
     assert.equal(await page.locator(".wsp-login-product").count(), 0);
     const card = await page.locator(".auth-card").boundingBox();
@@ -44,11 +48,15 @@ try {
     const firstFrame = Number(await canvas.getAttribute("data-rendered-frames"));
     await page.waitForTimeout(scene.name === "desktop" ? 8500 : 3000);
     const afterFrame = Number(await canvas.getAttribute("data-rendered-frames"));
+    const progress = Number(await canvas.getAttribute("data-motion-progress"));
+    assert(progress >= 0, "cyclone must report continuous time-based motion");
     await page.screenshot({ path: output + "/" + scene.name + ".png" });
     const perf = await canvas.evaluate(el => ({
       fps: Number(el.dataset.averageFps), p95FrameMs: Number(el.dataset.p95FrameMs),
       frames: Number(el.dataset.renderedFrames), calls: Number(el.dataset.drawCalls),
       triangles: Number(el.dataset.triangles), assets: el.dataset.assetStatus,
+      quality: el.dataset.qualityTier, targetDensity: Number(el.dataset.desiredCount),
+      visibleDensity: Number(el.dataset.bottleCount), motionAxis: el.dataset.motionAxis,
       glError: el.getContext("webgl2")?.getError(),
     }));
     results.push({ scene: scene.name, firstFrame, afterFrame, ...perf });
