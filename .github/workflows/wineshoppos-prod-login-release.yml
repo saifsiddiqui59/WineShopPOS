@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/wineshoppos-prod-login-release.yml"
+      - "src/pages/bottle-vortex-lite.js"
+      - "src/pages/LoginBrandOrbit.jsx"
+      - "public/login-brands/packshots/atlas.webp"
   workflow_dispatch:
 
 permissions:
