@@ -34,7 +34,7 @@ def as_glb(name, url, kind):
     path = ROOT / (name + ".glb")
     path.write_bytes(content)
     print(name, len(content), hashlib.sha256(content).hexdigest())
-    return {"name": name, "kind": kind, "path": "/" + path.as_posix()}
+    return {"name": name, "kind": kind, "path": "/" + path.relative_to(Path("public")).as_posix()}
 
 def file_urls(node, key=""):
     if isinstance(node, dict):
@@ -112,7 +112,7 @@ def poly_haven_wine():
                 raise ValueError("glTF missing texture: " + uri)
     print("polyhaven", model, model.stat().st_size)
     return {"name": "Poly Haven four-bottle collection (original fictional labels)",
-            "kind": "wine", "path": "/" + model.as_posix()}
+            "kind": "wine", "path": "/" + model.relative_to(Path("public")).as_posix()}
 
 manifest = {"license": "CC0",
             "sources": ["https://polyhaven.com/a/wine_bottles_01",
