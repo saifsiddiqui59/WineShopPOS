@@ -412,7 +412,8 @@ export function mountBottleVortex(canvas) {
 
   function animate(now) {
     raf = 0;
-    if (disposed || document.hidden || reduced.matches || canvas.dataset.rendererStatus !== "ready") return;
+    if (disposed || document.hidden || reduced.matches ||
+        !["loading", "ready"].includes(canvas.dataset.rendererStatus)) return;
     if (lastFrame > 0) {
       const dt = now - lastFrame;
       if (dt > 0) {
@@ -433,7 +434,7 @@ export function mountBottleVortex(canvas) {
   }
   function schedule() {
     if (!raf && !disposed && !document.hidden && !reduced.matches &&
-        canvas.dataset.rendererStatus === "ready") {
+        ["loading", "ready"].includes(canvas.dataset.rendererStatus)) {
       clock.getDelta();
       lastFrame = 0;
       raf = window.requestAnimationFrame(animate);
@@ -465,6 +466,10 @@ export function mountBottleVortex(canvas) {
   };
   canvas.addEventListener("webglcontextlost", contextLost);
   resize();
+  // Draw the complete light tunnel immediately while glTF fetch/parse occurs.
+  // The UI must not be a blank stage for the first seconds of the recording.
+  renderFrame(reduced.matches ? 2.1 : 0);
+  schedule();
 
   const loader = new GLTFLoader();
   async function loadAssets() {
