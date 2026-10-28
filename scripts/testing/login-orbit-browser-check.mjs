@@ -37,7 +37,7 @@ try {
     assert.equal(Number(await canvas.getAttribute("data-desired-count")), scene.bottles);
     assert.equal(await canvas.getAttribute("data-motion-axis"), "vertical-cyclone");
     const visibleBottles = Number(await canvas.getAttribute("data-bottle-count"));
-    assert(visibleBottles >= (scene.name === "mobile" ? 14 : 23),
+    assert(visibleBottles >= (scene.name === "mobile" ? 18 : 29),
       "adaptive cyclone must preserve a visible product field");
     assert.equal(Number(await canvas.getAttribute("data-brand-count")), 7);
     assert.equal(await page.locator(".wsp-login-product").count(), 0);

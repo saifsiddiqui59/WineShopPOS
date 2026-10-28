@@ -232,11 +232,11 @@ export function mountBottleVortex(canvas) {
   const halos = [];
   const helixGroup = new THREE.Group();
   stage.add(helixGroup);
-  for (let strand = 0; strand < 5; strand++) {
+  for (let strand = 0; strand < 3; strand++) {
     const samples = [];
     for (let k = 0; k <= 96; k++) {
       const h = k / 96;
-      const phase = h * Math.PI * 5.3 + strand * (Math.PI * 2 / 5);
+      const phase = h * Math.PI * 5.3 + strand * (Math.PI * 2 / 3);
       const radius = 5.7 + 0.9 * Math.sin(h * Math.PI);
       samples.push(new THREE.Vector3(
         Math.cos(phase) * radius,
@@ -246,11 +246,11 @@ export function mountBottleVortex(canvas) {
     }
     const curve = new THREE.CatmullRomCurve3(samples, false, "centripetal");
     for (let glow = 0; glow < 2; glow++) {
-      const tube = new THREE.TubeGeometry(curve, 128, glow ? 0.085 : 0.018, 4, false);
+      const tube = new THREE.TubeGeometry(curve, 80, glow ? 0.075 : 0.014, 4, false);
       const material = new THREE.MeshBasicMaterial({
         color: strand % 2 ? 0xffc079 : 0xffdf9b,
         transparent: true, depthWrite: false,
-        opacity: glow ? 0.11 : 0.55,
+        opacity: glow ? 0.052 : 0.28,
         blending: THREE.AdditiveBlending,
       });
       const ribbon = new THREE.Mesh(tube, material);
@@ -313,13 +313,13 @@ export function mountBottleVortex(canvas) {
     qualityTier = tier;
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
-    qualityDpr = tier === "low" ? 0.68 : tier === "medium" ? 0.83 : 1;
+    qualityDpr = tier === "low" ? 0.62 : tier === "medium" ? 0.79 : 1;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,
       isMobile ? MAX_DPR_MOBILE : MAX_DPR_DESKTOP) * qualityDpr);
     renderer.setSize(w, h, false);
     renderer.getDrawingBufferSize(bgUniforms.uResolution.value);
-    activeCount = tier === "low" ? (isMobile ? 14 : 23)
-      : tier === "medium" ? (isMobile ? 19 : 32)
+    activeCount = tier === "low" ? (isMobile ? 18 : 29)
+      : tier === "medium" ? (isMobile ? 21 : 36)
       : desiredCount[isMobile ? "mobile" : "desktop"];
     canvas.dataset.qualityTier = tier;
     canvas.dataset.bottleCount = String(pools.length ? activeCount : 0);
@@ -339,8 +339,8 @@ export function mountBottleVortex(canvas) {
     camera.fov = isMobile ? 59 : 43;
     camera.updateProjectionMatrix();
     helixGroup.scale.set(isMobile ? 0.43 : 1, isMobile ? 1.05 : 1, isMobile ? 0.72 : 1);
-    activeCount = qualityTier === "low" ? (isMobile ? 14 : 23)
-      : qualityTier === "medium" ? (isMobile ? 19 : 32)
+    activeCount = qualityTier === "low" ? (isMobile ? 18 : 29)
+      : qualityTier === "medium" ? (isMobile ? 21 : 36)
       : desiredCount[isMobile ? "mobile" : "desktop"];
     canvas.dataset.desiredCount = String(desiredCount[isMobile ? "mobile" : "desktop"]);
     canvas.dataset.bottleCount = String(pools.length ? activeCount : 0);
