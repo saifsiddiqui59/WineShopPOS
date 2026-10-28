@@ -212,3 +212,25 @@ html .auth-screen.wsp-login-screen .auth-card button.secondary-button {
 @media (max-width:760px) {
   .wsp-login-screen .wsp-login-backdrop::before { opacity:.42; }
 }
+
+/* Desktop cinematic art-direction: smaller floating card reveals the bottle
+   tunnel on all four sides; keep mobile touch targets at their original size. */
+@media (min-width: 761px) {
+  .auth-screen.wsp-login-screen > .auth-card {
+    width: min(372px, 100%) !important;
+    max-width: 372px;
+    padding: 25px 26px;
+    gap: 12px;
+    border-radius: 19px;
+  }
+  .wsp-login-screen .auth-card h1 {
+    font-size: clamp(26px, 2.2vw, 31px);
+    line-height: 1.16;
+  }
+  .wsp-login-screen .auth-card input {
+    height: 42px;
+  }
+  .wsp-login-screen .auth-card button {
+    min-height: 42px;
+  }
+}
