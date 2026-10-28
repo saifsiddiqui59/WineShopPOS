@@ -352,15 +352,17 @@ export function mountBottleVortex(canvas) {
     const depth = isMobile
       ? -1.9 + Math.sin(angle) * (1.7 + tier * 0.3)
       : -1.6 + Math.sin(angle) * (2.7 + tier * 0.65);
-    position.set(
-      Math.cos(angle) * radius,
-      (rise - 0.5) * height + 0.16 * Math.sin(angle * 0.65),
-      depth
-    );
+    // On a phone the login card spans almost the entire width. The same
+    // helix passes *behind* the form, but visible strands are composed into
+    // the bands above and below it to avoid an apparently empty backdrop.
+    const strandY = isMobile
+      ? (index % 2 === 0 ? 1 : -1) * (5.42 + (rise - 0.5) * 2.4)
+      : (rise - 0.5) * height + 0.16 * Math.sin(angle * 0.65);
+    position.set(Math.cos(angle) * radius, strandY, depth);
     const perspective = 0.8 + 0.18 * Math.sin(angle);
     const baseScale = tier === 0 ? 1.25 : tier === 1 ? 0.93 : 0.68;
     scale.setScalar(Math.max(0.0001,
-      baseScale * perspective * (isMobile ? 0.72 : 1) * Math.max(0, fade)));
+      baseScale * perspective * (isMobile ? 1.06 : 1) * Math.max(0, fade)));
     rotation.set(
       0.13 * Math.cos(angle),
       0.13 * Math.sin(angle * 0.65),
@@ -421,7 +423,7 @@ export function mountBottleVortex(canvas) {
         if (frameTimes.length > 180) frameTimes.shift();
         // Only sample metrics periodically. Sorting on every frame induces
         // avoidable JS garbage collection and additional animation stutter.
-        if (frameTimes.length >= 2 && frameTimes.length % 8 === 0) {
+        if (frameTimes.length >= 2 && frames % 8 === 0) {
           const sorted = [...frameTimes].sort((a, b) => a - b);
           const mean = frameTimes.reduce((sum, value) => sum + value, 0) / frameTimes.length;
           const fps = 1000 / mean;
@@ -429,8 +431,8 @@ export function mountBottleVortex(canvas) {
           canvas.dataset.p95FrameMs = sorted[Math.floor(0.95 * (sorted.length - 1))].toFixed(1);
           // Trim GPU overdraw on weak mobile and software renderers, preserving
           // 44 / 24 bottle abundance for capable browsers.
-          if (frames > 14 && fps < 18 && qualityTier === "high") setQuality("medium");
-          if (frames > 25 && fps < 10 && qualityTier === "medium") setQuality("low");
+          if (frames > 6 && fps < 18 && qualityTier === "high") setQuality("medium");
+          if (frames > 14 && fps < 10 && qualityTier === "medium") setQuality("low");
         }
       }
     }
