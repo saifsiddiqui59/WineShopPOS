@@ -87,7 +87,7 @@ export async function mountLightweightCyclone(canvas) {
   products.className = "wsp-login-compositor";
   root.append(trails, products);
   canvas.insertAdjacentElement("afterend", root);
-  canvas.style.display = "none";
+  canvas.style.opacity = "0";
   const animations = [];
   const frameTimes = [];
   let observer;
@@ -240,6 +240,6 @@ export async function mountLightweightCyclone(canvas) {
     reduced.removeEventListener?.("change", onMotion);
     clearAnimations();
     root.remove();
-    canvas.style.display = "";
+    canvas.style.opacity = "";
   };
 }
