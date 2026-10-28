@@ -352,6 +352,7 @@ export function mountBottleVortex(canvas) {
       img.src = sourceUrls[selection[i]];
       img.alt = "";
       img.draggable = false;
+      img.dataset.modelIndex = String(selection[i]);
       img.className = "wsp-login-cyclone-product";
       img.style.width = baseWidth + "px";
       img.style.height = baseHeight + "px";

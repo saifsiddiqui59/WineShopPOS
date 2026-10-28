@@ -79,6 +79,19 @@ try {
     else assert(perf.compositorCount >= (scene.name === "mobile" ? 24 : 44));
     assert.deepEqual(errors, [], "browser page errors");
     if (scene.name === "desktop") {
+      // Bake products into a reusable artifact rather than delaying every
+      // customer login with runtime GLB parsing and seven PBR GPU captures.
+      const packshots = await page.locator(".wsp-login-cyclone-product")
+        .evaluateAll(images => Object.fromEntries(images
+          .filter(img => img.dataset.modelIndex && img.src.startsWith("data:image/webp;base64,"))
+          .map(img => [img.dataset.modelIndex, img.src])));
+      assert.equal(Object.keys(packshots).length, 7,
+        "all seven licensed product images must be exported");
+      await fs.mkdir(output + "/packshots", { recursive: true });
+      for (let i = 0; i < 7; i++) {
+        await fs.writeFile(output + "/packshots/packshot-" + i + ".webp",
+          Buffer.from(packshots[String(i)].split(",")[1], "base64"));
+      }
       // Read-only auth smoke: no real account credentials, no Supabase write.
       const primaryBackground = await page.getByRole("button", { name: "Login" })
         .evaluate(button => getComputedStyle(button).backgroundImage);
