@@ -25,6 +25,7 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
+    const navigationStart = Date.now();
     await page.goto(base + "/login", { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "WineShop POS" }).waitFor({ timeout: 30000 });
     await page.getByRole("button", { name: "Login" }).waitFor();
@@ -33,14 +34,17 @@ try {
     await page.waitForFunction(() =>
       document.querySelector(".wsp-login-webgl")?.dataset.rendererStatus === "ready",
       null, { timeout: 60000 });
-    assert.equal(await canvas.getAttribute("data-asset-status"), "vendored-glTF");
+    const readyMs = Date.now() - navigationStart;
+    assert(readyMs < 15000, "licensed atlas must avoid the slow GLB startup path");
+    assert.equal(await canvas.getAttribute("data-asset-status"), "vendored-pbr-atlas");
     assert.equal(Number(await canvas.getAttribute("data-desired-count")), scene.bottles);
     assert.equal(await canvas.getAttribute("data-motion-axis"), "vertical-cyclone");
     const visibleBottles = Number(await canvas.getAttribute("data-bottle-count"));
     assert(visibleBottles >= (scene.name === "mobile" ? 18 : 29),
       "adaptive cyclone must preserve a visible product field");
     assert.equal(Number(await canvas.getAttribute("data-brand-count")), 7);
-    assert.equal(await canvas.getAttribute("data-render-mode"), "compositor-keyframes-pbr");
+    assert.equal(await page.locator(".wsp-login-helical-trails").count(), 1);
+    assert.equal(await canvas.getAttribute("data-render-mode"), "compositor-atlas");
     assert.equal(await page.locator(".wsp-login-cyclone-product").count(),
       scene.name === "mobile" ? 24 : 44);
     assert.equal(await page.locator(".wsp-login-product").count(), 0);
@@ -64,7 +68,7 @@ try {
       visibleSprites: Number(el.dataset.visibleSprites || "0"),
       glError: el.getContext("webgl2")?.getError(),
     }));
-    results.push({ scene: scene.name, firstFrame, afterFrame, ...perf });
+    results.push({ scene: scene.name, readyMs, firstFrame, afterFrame, ...perf });
     await fs.writeFile(output + "/performance.json", JSON.stringify(results, null, 2));
     console.log("VISUAL_MEASUREMENT " + JSON.stringify(results.at(-1)));
     if (scene.motion === "reduce") assert.equal(afterFrame, firstFrame);
@@ -72,26 +76,15 @@ try {
     assert.equal(perf.glError, 0, "WebGL error must be zero");
     if (scene.name === "desktop") {
       assert(Number.isFinite(perf.fps) && perf.fps > 0 && perf.p95FrameMs > 0, "actual FPS/p95 samples are required");
-      assert(perf.calls > 0 && perf.triangles > 0, "must render real mesh triangles");
+      assert.equal(perf.calls, 0, "vendored atlas must avoid runtime WebGL calls");
+      assert.equal(perf.triangles, 0, "vendored atlas must avoid runtime GLB geometry");
     }
     assert(perf.visibleSprites >= 18, "cyclone must show dense licensed packshots");
     if (scene.motion === "reduce") assert.equal(perf.compositorCount, 0);
     else assert(perf.compositorCount >= (scene.name === "mobile" ? 24 : 44));
     assert.deepEqual(errors, [], "browser page errors");
     if (scene.name === "desktop") {
-      // Bake products into a reusable artifact rather than delaying every
-      // customer login with runtime GLB parsing and seven PBR GPU captures.
-      const packshots = await page.locator(".wsp-login-cyclone-product")
-        .evaluateAll(images => Object.fromEntries(images
-          .filter(img => img.dataset.modelIndex && img.src.startsWith("data:image/webp;base64,"))
-          .map(img => [img.dataset.modelIndex, img.src])));
-      assert.equal(Object.keys(packshots).length, 7,
-        "all seven licensed product images must be exported");
-      await fs.mkdir(output + "/packshots", { recursive: true });
-      for (let i = 0; i < 7; i++) {
-        await fs.writeFile(output + "/packshots/packshot-" + i + ".webp",
-          Buffer.from(packshots[String(i)].split(",")[1], "base64"));
-      }
+      await page.screenshot({ path: output + "/first-ready-desktop.png" });
       // Read-only auth smoke: no real account credentials, no Supabase write.
       const primaryBackground = await page.getByRole("button", { name: "Login" })
         .evaluate(button => getComputedStyle(button).backgroundImage);

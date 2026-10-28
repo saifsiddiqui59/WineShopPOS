@@ -10,12 +10,20 @@ export default function LoginBrandOrbit() {
     if (!canvas) return undefined;
     let active = true;
     let teardown;
-    import("./bottle-vortex-three").then(({ mountBottleVortex }) => {
-      if (active) teardown = mountBottleVortex(canvas);
-    }).catch((error) => {
-      canvas.dataset.rendererStatus = "fallback";
-      console.warn("Optional cinematic backdrop unavailable:", error.message);
-    });
+    import("./bottle-vortex-lite")
+      .then(({ mountLightweightCyclone }) => mountLightweightCyclone(canvas))
+      .then((dispose) => { if (active) teardown = dispose; else dispose?.(); })
+      .catch(() => {
+        // Asset missing, blocked WebP or legacy browser: retain the existing
+        // licensed Three.js implementation as a non-auth decorative fallback.
+        if (!active) return;
+        import("./bottle-vortex-three").then(({ mountBottleVortex }) => {
+          if (active) teardown = mountBottleVortex(canvas);
+        }).catch((error) => {
+          canvas.dataset.rendererStatus = "fallback";
+          console.warn("Optional cinematic backdrop unavailable:", error.message);
+        });
+      });
     return () => {
       active = false;
       teardown?.();

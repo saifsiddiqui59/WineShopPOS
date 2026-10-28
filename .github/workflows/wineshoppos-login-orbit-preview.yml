@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   visual-preview:
@@ -59,16 +59,6 @@ jobs:
           done
           curl -fsS http://127.0.0.1:4173/login > /dev/null || { cat /tmp/wsp-login-preview.log; exit 1; }
           node scripts/testing/login-orbit-browser-check.mjs
-      # One-time DEV asset bake, never a production release. The write is
-      # guarded to this repository's existing draft feature branch.
-      - name: Vendor licensed PBR packshot atlas into DEV branch
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feat/login-webgl-bottle-vortex-20261027' && github.event.pull_request.head.repo.full_name == github.repository }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python3 -m venv /tmp/wsp-packshot-venv
-          /tmp/wsp-packshot-venv/bin/pip install --quiet Pillow==11.3.0
-          /tmp/wsp-packshot-venv/bin/python scripts/assets/vendor_login_atlas.py
       - name: Upload visual evidence (not a production build)
         if: always()
         uses: actions/upload-artifact@v4

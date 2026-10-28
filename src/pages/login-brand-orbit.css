@@ -278,3 +278,9 @@ html .auth-screen.wsp-login-screen .auth-card button.secondary-button {
 @media (prefers-reduced-motion: reduce) {
   .wsp-login-cyclone-product { will-change: auto; }
 }
+
+/* Zero-WebGL startup on the happy path; one 49 KB licensed product atlas. */
+.wsp-login-lite-root { position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0; }
+.wsp-login-lite-root .wsp-login-helical-trails { z-index:0; }
+.wsp-login-lite-root .wsp-login-compositor { z-index:1; }
+.wsp-login-lite-root .wsp-login-cyclone-product { background-color:transparent; }

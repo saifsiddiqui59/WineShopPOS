@@ -20,6 +20,12 @@ test("licensed glTF scene uses physically based Three.js, not procedural bottle 
   const engine = read("src/pages/bottle-vortex-three.js");
   const css = read("src/pages/login-brand-orbit.css");
   assert.match(component, /mountBottleVortex/);
+  assert.match(component, /mountLightweightCyclone/);
+  const lite = read("src/pages/bottle-vortex-lite.js");
+  assert.match(lite, /packshots\/atlas\.webp/);
+  assert.match(lite, /figure\.animate\(keyframes/);
+  assert.match(lite, /paintTrails\(/);
+  assert.doesNotMatch(lite, /new THREE\.WebGLRenderer/);
   assert.match(component, /aria-hidden="true"/);
   assert.match(engine, /new GLTFLoader\(\)/);
   assert.match(engine, /new THREE\.InstancedMesh/);
