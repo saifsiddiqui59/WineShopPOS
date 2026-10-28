@@ -190,7 +190,7 @@ export function mountBottleVortex(canvas) {
       if (dt > 0) {
         frameTimes.push(dt);
         if (frameTimes.length > 180) frameTimes.shift();
-        if (frames % 30 === 0 && frameTimes.length >= 20) {
+        if (frames % 10 === 0 && frameTimes.length >= 6) {
           const sorted = [...frameTimes].sort((a, b) => a - b);
           const mean = frameTimes.reduce((sum, value) => sum + value, 0) / frameTimes.length;
           canvas.dataset.averageFps = (1000 / mean).toFixed(1);
@@ -272,7 +272,10 @@ export function mountBottleVortex(canvas) {
       for (let i = 0; i < 26; i++) {
         const entry = loaded[i % loaded.length];
         // Clone only nodes/transforms: geometries and PBR textures are shared.
-        const instance = entry.source.clone(true);
+        // Animate the outer rig, not the glTF node. The child retains the
+        // normalization scale required for real-world-meter source assets.
+        const instance = new THREE.Group();
+        instance.add(entry.source.clone(true));
         stage.add(instance);
         models.push(instance);
       }
