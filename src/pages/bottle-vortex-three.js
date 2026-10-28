@@ -180,6 +180,7 @@ export function mountBottleVortex(canvas) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   const models = [];
   const sourceModels = [];
+  const labelCache = new Map();
   const frameTimes = [];
   const clock = new THREE.Clock();
   let disposed = false, raf = 0, frames = 0, isMobile = false, elapsed = 0;
@@ -240,7 +241,7 @@ export function mountBottleVortex(canvas) {
     raf = 0;
     if (disposed || document.hidden || reduced.matches || canvas.dataset.rendererStatus !== "ready") return;
     if (lastFrame > 0) {
-      const dt = Math.min(now - lastFrame, 250);
+      const dt = now - lastFrame;
       if (dt > 0) {
         frameTimes.push(dt);
         if (frameTimes.length > 180) frameTimes.shift();
@@ -253,7 +254,7 @@ export function mountBottleVortex(canvas) {
       }
     }
     lastFrame = now;
-    elapsed += Math.min(clock.getDelta(), 0.1);
+    elapsed += clock.getDelta();
     renderFrame(elapsed);
     raf = window.requestAnimationFrame(animate);
   }
@@ -331,7 +332,10 @@ export function mountBottleVortex(canvas) {
         const instance = new THREE.Group();
         instance.add(entry.source.clone(true));
         if (!entry.spec.name.startsWith("Poly Haven")) {
-          instance.add(bespokeLabel(entry.spec.kind));
+          if (!labelCache.has(entry.spec.kind)) {
+            labelCache.set(entry.spec.kind, bespokeLabel(entry.spec.kind));
+          }
+          instance.add(labelCache.get(entry.spec.kind).clone());
         }
         stage.add(instance);
         models.push(instance);
