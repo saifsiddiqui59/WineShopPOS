@@ -57,6 +57,23 @@ try {
     const afterFrame = Number(await canvas.getAttribute("data-rendered-frames"));
     const progress = Number(await canvas.getAttribute("data-motion-progress"));
     assert(progress >= 0, "cyclone must report continuous time-based motion");
+    const productCoverage = await page.locator(".wsp-login-cyclone-product")
+      .evaluateAll((nodes) => {
+        let left = 0, right = 0;
+        const width = window.innerWidth;
+        for (const node of nodes) {
+          if (Number(getComputedStyle(node).opacity) < 0.15) continue;
+          const box = node.getBoundingClientRect();
+          if (box.width < 6 || box.height < 12) continue;
+          const cx = box.x + box.width / 2;
+          if (cx < width * 0.42) left++;
+          if (cx > width * 0.58) right++;
+        }
+        return { left, right };
+      });
+    assert(productCoverage.left >= (scene.name === "mobile" ? 2 : 5) &&
+      productCoverage.right >= (scene.name === "mobile" ? 2 : 5),
+      "Cyclone must distribute visible products on BOTH sides, not a single clustered column");
     await page.screenshot({ path: output + "/" + scene.name + ".png" });
     const perf = await canvas.evaluate(el => ({
       fps: Number(el.dataset.averageFps), p95FrameMs: Number(el.dataset.p95FrameMs),
@@ -68,7 +85,7 @@ try {
       visibleSprites: Number(el.dataset.visibleSprites || "0"),
       glError: el.getContext("webgl2")?.getError(),
     }));
-    results.push({ scene: scene.name, readyMs, firstFrame, afterFrame, ...perf });
+    results.push({ scene: scene.name, readyMs, productCoverage, firstFrame, afterFrame, ...perf });
     await fs.writeFile(output + "/performance.json", JSON.stringify(results, null, 2));
     console.log("VISUAL_MEASUREMENT " + JSON.stringify(results.at(-1)));
     if (scene.motion === "reduce") assert.equal(afterFrame, firstFrame);

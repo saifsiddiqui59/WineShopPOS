@@ -11,7 +11,10 @@ function sample(i, progress, w, h, mobile) {
   const tier = i % 3;
   const phase = (i * 0.618033988749895 + tier * 0.137) % 1;
   const rise = (phase + progress) % 1;
-  const theta = i * GOLDEN + progress * TAU * (1.05 + tier * 0.05);
+  // One exact revolution per cycle. Each product already carries its own
+  // golden-angle offset, so a second per-product timeline delay synchronizes
+  // the orbit into a single ugly column (the prior visual regression).
+  const theta = i * GOLDEN + progress * TAU;
   const radius = mobile ? 2.13 + tier * 0.37 : 5.4 + tier * 0.72;
   const vertical = mobile
     ? (i % 2 === 0 ? 1 : -1) * (5.42 + (rise - 0.5) * 2.6)
@@ -156,7 +159,6 @@ export async function mountLightweightCyclone(canvas) {
     const mobile = w <= 760;
     const count = mobile ? 24 : 44;
     const baseWidth = mobile ? 104 : 150;
-    const cycleMs = 24000;
     const points = 48;
     stop();
     clearAnimations();
@@ -185,7 +187,7 @@ export async function mountLightweightCyclone(canvas) {
           transform: "translate3d(" + pose.x.toFixed(2) + "px," +
             pose.y.toFixed(2) + "px,0) rotate(" +
             pose.angle.toFixed(2) + "deg) scale(" + factor.toFixed(4) + ")",
-          opacity: j < 2 || j > points - 2 ? 0 : pose.opacity,
+          opacity: pose.opacity,
         });
       }
       products.appendChild(figure);
@@ -193,11 +195,13 @@ export async function mountLightweightCyclone(canvas) {
         figure.style.transform = keyframes[12].transform;
         figure.style.opacity = "1";
       } else {
+        const cycleMs = 22000 + (i % 3) * 3100;
         const anim = figure.animate(keyframes, {
           duration: cycleMs, iterations: Infinity,
           easing: "linear", fill: "both",
         });
-        anim.currentTime = ((i * .61803398875) % 1) * cycleMs;
+        // Golden-angle placement is baked into sample(i,...).
+        anim.currentTime = 0;
         animations.push(anim);
       }
     }
