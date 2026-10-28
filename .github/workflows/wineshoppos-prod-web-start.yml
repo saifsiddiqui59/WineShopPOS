@@ -1,0 +1,94 @@
+name: WineShopPOS PROD Website Start (Reversible)
+
+# User-requested re-enable of the ORIGINAL production static website.
+# No frontend deployment, database migration, Azure Function or DEV/QA change.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/wineshoppos-prod-web-start.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  start-prod-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: wineshoppos-deploy
+    steps:
+      - name: Login to Azure using existing OIDC identity
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Re-enable existing WineShopPOS PROD static website and verify public URL
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          RG="wineshopPOS"
+          ACCOUNT="wineshoppos"
+          WEB="https://wineshoppos.z29.web.core.windows.net/"
+          EXPECTED_SUB="3a5e8018-40a4-49e3-bcba-a9af3344f50e"
+
+          echo "## WineShopPOS production site restart" >> "$GITHUB_STEP_SUMMARY"
+          ACTUAL_SUB=$(az account show --query id -o tsv)
+          [[ "${ACTUAL_SUB,,}" == "${EXPECTED_SUB,,}" ]] || {
+            echo "::error::Wrong subscription; no change made"; exit 1;
+          }
+          ACTUAL_WEB=$(az storage account show --resource-group "$RG" --name "$ACCOUNT" --query primaryEndpoints.web -o tsv)
+          [[ "$ACTUAL_WEB" == "$WEB" ]] || {
+            echo "::error::Wrong storage endpoint; no change made"; exit 1;
+          }
+
+          CURRENT=$(az storage account blob-service-properties show -g "$RG" -n "$ACCOUNT" --query '{enabled:staticWebsite.enabled,index:staticWebsite.indexDocument}' -o json)
+          echo "Prior static hosting: $CURRENT"
+          echo "Prior configuration: \`$CURRENT\`" >> "$GITHUB_STEP_SUMMARY"
+
+          # Preserve original web blobs/index. Only Azure static website configuration may change.
+          az storage account blob-service-properties update \
+            --resource-group "$RG" --account-name "$ACCOUNT" \
+            --enable-static-website true --index-document index.html -o none
+
+          CURRENT=$(az storage account blob-service-properties show -g "$RG" -n "$ACCOUNT" --query '{enabled:staticWebsite.enabled,index:staticWebsite.indexDocument}' -o json)
+          echo "Restored configuration: $CURRENT"
+          python3 -c 'import json,sys; c=json.loads(sys.argv[1]); assert c.get("enabled") is True and c.get("index")=="index.html", c' "$CURRENT"
+
+          STATUS=000
+          for TRY in $(seq 1 12); do
+            STATUS=$(curl -sSL --connect-timeout 8 --max-time 25 -H 'Cache-Control: no-cache' -o /tmp/wsp-prod-restart-index -w '%{http_code}' "$WEB" || true)
+            if [[ "$STATUS" == "200" ]]; then
+              break
+            fi
+            echo "Website propagation check $TRY: HTTP $STATUS"
+            sleep 5
+          done
+          [[ "$STATUS" == "200" ]] || {
+            echo "::error::Static hosting enabled but public page HTTP $STATUS, requires investigation"
+            echo "Public status: HTTP $STATUS" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
+          grep -qiE '<html|<script' /tmp/wsp-prod-restart-index || {
+            echo "::error::HTTP 200 but page is not an HTML document"; exit 1;
+          }
+
+          # Check a built frontend JS asset from the preserved index.
+          JS=$(python3 -c 'import re; s=open("/tmp/wsp-prod-restart-index").read(); m=re.search(r"<script[^>]+src=[\x27\x22](/assets/[^\x27\x22]+\.js)",s); print(m.group(1) if m else "")')
+          [[ -n "$JS" ]] || {
+            echo "::error::Missing hashed JavaScript asset reference"; exit 1;
+          }
+          ASSET_STATUS=$(curl -sSL --connect-timeout 8 --max-time 25 -o /dev/null -w '%{http_code}' "${WEB%/}$JS" || true)
+          [[ "$ASSET_STATUS" == "200" ]] || {
+            echo "::error::Frontend JS asset unavailable: HTTP $ASSET_STATUS"; exit 1;
+          }
+
+          echo "PROD_WEBSITE_RESTART_VERIFIED"
+          echo "Public website: $WEB" >> "$GITHUB_STEP_SUMMARY"
+          echo "Public login: ${WEB}#/login" >> "$GITHUB_STEP_SUMMARY"
+          echo "Site HTTP: 200; frontend JS asset HTTP: 200" >> "$GITHUB_STEP_SUMMARY"
+          echo "Original deployed site files retained; no app rebuild or redeploy." >> "$GITHUB_STEP_SUMMARY"
+          echo "Supabase, DEV/QA, and Functions: untouched." >> "$GITHUB_STEP_SUMMARY"
