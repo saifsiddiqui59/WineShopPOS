@@ -176,3 +176,39 @@ html .auth-screen.wsp-login-screen .auth-card button.secondary-button {
     backdrop-filter: blur(22px);
   }
 }
+
+/* Filmic copper/gold atmospheric tunnel rather than the former brown flat wash. */
+.auth-screen.wsp-login-screen {
+  background:
+    radial-gradient(ellipse 38% 38% at 49% 48%, rgba(209,136,54,.24), transparent 82%),
+    radial-gradient(ellipse 90% 66% at 52% 61%, rgba(105,32,41,.58),transparent 76%),
+    linear-gradient(135deg,#12070d,#291019 36%,#12080b 73%,#2d1111);
+}
+.wsp-login-screen .wsp-login-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: -13%;
+  background:
+    repeating-radial-gradient(ellipse 46% 56% at 50% 50%,
+      transparent 0 24px, rgba(255,179,80,.11) 26px,
+      rgba(255,197,103,.04) 29px,transparent 33px 62px),
+    radial-gradient(ellipse 35% 28% at center,rgba(255,163,60,.19),transparent 95%);
+  filter: blur(6px);
+  opacity: .8;
+  transform: translate3d(0,0,0);
+  pointer-events: none;
+}
+.wsp-login-screen .wsp-login-light--amber {
+  top: -32%; right: -12%; filter: blur(100px); opacity: .6;
+}
+.wsp-login-screen .wsp-login-light--wine {
+  bottom: -32%; left: -19%; filter: blur(90px); opacity: .53;
+}
+.wsp-login-screen .auth-card {
+  background: linear-gradient(148deg,rgba(43,24,27,.92),rgba(16,11,18,.96)) !important;
+  box-shadow: 0 24px 98px rgba(0,0,0,.77),
+    0 0 0 1px rgba(255,199,112,.2),inset 0 1px 0 rgba(255,228,188,.1) !important;
+}
+@media (max-width:760px) {
+  .wsp-login-screen .wsp-login-backdrop::before { opacity:.42; }
+}

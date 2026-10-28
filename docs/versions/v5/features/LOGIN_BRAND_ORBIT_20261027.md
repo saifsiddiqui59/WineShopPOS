@@ -22,3 +22,6 @@ The dedicated branch-only importer downloads, validates and vendors all model by
 - Inspect frame-rate data from a real browser. CI SwiftShader results are not representative of hardware GPUs: test physical desktop/mobile hardware before approving 60 FPS.
 - Real login demo, recovery and keyboard focus need user/UAT signoff. No production merge or deploy until approved.
 - In particular, no production credentials, migrations, DB, invoice, AI Functions or storage-account changes are part of this PR.
+
+## October 28 cinematic optimization follow-up
+Compared the rendered GitHub Actions screenshot with the user's reference: earlier assets formed two stiff columns and lacked near/far perspective, photographic highlights and a strong gold light tunnel. New renderer batches every repeated source mesh using InstancedMesh (instead of 26 complete cloned hierarchies), preserves texture maps and PBR environment reflections, disables expensive KHR_materials_transmission prepasses in the multi-object background, and uses distinct foreground/near/middle/far helix poses. Adds CSS copper-gold atmosphere. The production site remains untouched. Must inspect fresh desktop/mobile/screenshots and browser video before quality acceptance; measured SwiftShader CI FPS is not a hardware benchmark.

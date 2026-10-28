@@ -6,8 +6,8 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 // Models are vendored by the asset-import workflow, not fetched from a third-party CDN.
 const MANIFEST_URL = "/login-brands/models/manifest.json";
 const GOLD = 0xe8b97c;
-const MAX_DPR_DESKTOP = 1.5;
-const MAX_DPR_MOBILE = 1.15;
+const MAX_DPR_DESKTOP = 1.25;
+const MAX_DPR_MOBILE = 1;
 
 function disposeObject(object, seen) {
   object.traverse((node) => {
@@ -50,7 +50,16 @@ function normalizedModel(source, kind) {
     const materials = Array.isArray(child.material) ? child.material : [child.material];
     for (const mat of materials) {
       if (mat?.isMeshStandardMaterial || mat?.isMeshPhysicalMaterial) {
-        mat.envMapIntensity = 0.88;
+        // GLTF KHR_materials_transmission adds a costly whole-scene prepass.
+        // Retain real PBR maps, glass shape and environment reflections but
+        // disable screen-space transmission in this many-instance decorative scene.
+        mat.transmission = 0;
+        mat.transparent = false;
+        mat.opacity = 1;
+        mat.depthWrite = true;
+        mat.side = THREE.FrontSide;
+        mat.envMapIntensity = 2.35;
+        if (mat.isMeshPhysicalMaterial) mat.clearcoat = Math.max(mat.clearcoat || 0, 0.38);
         mat.needsUpdate = true;
       }
     }
@@ -101,8 +110,8 @@ function bespokeLabel(kind, sourceModel) {
   const paperHeight = dims.y * (can ? 0.64 : 0.32);
   const geometry = new THREE.CylinderGeometry(radius, radius, paperHeight,
     64, 1, true, -Math.PI, Math.PI * 2);
-  const material = new THREE.MeshPhysicalMaterial({
-    map, roughness: 0.7, metalness: can ? 0.20 : 0.03,
+  const material = new THREE.MeshStandardMaterial({
+    map, roughness: 0.68, metalness: can ? 0.15 : 0.03,
     side: THREE.DoubleSide, depthWrite: true,
   });
   const wrap = new THREE.Mesh(geometry, material);
@@ -114,7 +123,7 @@ export function mountBottleVortex(canvas) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({
-      canvas, alpha: true, antialias: true, depth: true,
+      canvas, alpha: true, antialias: false, depth: true,
       powerPreference: "high-performance", preserveDrawingBuffer: false,
     });
   } catch (error) {
@@ -129,39 +138,41 @@ export function mountBottleVortex(canvas) {
   camera.lookAt(0, 0, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.86;
+  renderer.toneMappingExposure = 1.07;
   const pmrem = new THREE.PMREMGenerator(renderer);
   const environment = new RoomEnvironment();
   const envMap = pmrem.fromScene(environment, 0.035).texture;
   stage.environment = envMap;
-  stage.add(new THREE.HemisphereLight(0xffdbbd, 0x1c101a, 0.75));
+  stage.add(new THREE.HemisphereLight(0xffdfc2, 0x1c101a, 1.25));
   function spotlight(color, intensity, x, y, z) {
     const light = new THREE.PointLight(color, intensity, 24, 2);
     light.position.set(x, y, z);
     stage.add(light);
   }
-  spotlight(0xffb46c, 68, -5.6, 4, 6);
-  spotlight(0xffe1c7, 52, 5.6, 1.8, 5);
-  spotlight(0xba3159, 40, 1.0, -4.5, -2);
-  spotlight(0x8a9ecb, 35, -1.6, 2.7, -6);
+  spotlight(0xffbd7e, 98, -6, 4.6, 7);
+  spotlight(0xffe2bf, 84, 6, 1.8, 7);
+  spotlight(0xcf3459, 58, 1.0, -4.5, -2);
+  spotlight(0xb5a5c9, 40, -1.6, 2.7, -6);
 
   // Layered golden perspective rings, like a luminous photographic tunnel.
   // Geometry is behind the card; no full-screen bloom postprocessing needed.
+  // Fast physical-depth concentric gold arcs, not flat SVG sticker layers.
+  // A thin bright ring and a wider glow ring share the same world depth.
   const halos = [];
-  for (let j = 0; j < 7; j++) {
-    const radius = 2.5 + j * 0.48;
+  for (let j = 0; j < 9; j++) {
+    const radius = 2.65 + j * 0.43;
     for (let glow = 0; glow < 2; glow++) {
-      const geo = new THREE.TorusGeometry(radius, glow ? 0.065 : 0.014,
-        glow ? 6 : 8, 160);
+      const geometry = new THREE.TorusGeometry(radius, glow ? 0.068 : 0.012,
+        glow ? 4 : 5, 128);
       const material = new THREE.MeshBasicMaterial({
-        color: j % 2 ? 0xffaa65 : 0xffca7c, transparent: true,
-        opacity: glow ? 0.085 : 0.49,
+        color: j % 3 === 0 ? 0xffb76a : 0xffd492,
+        transparent: true, opacity: glow ? 0.18 : 0.78,
         blending: THREE.AdditiveBlending, depthWrite: false,
       });
-      const ring = new THREE.Mesh(geo, material);
-      ring.rotation.x = 0.12 + j * 0.035;
-      ring.rotation.y = 0.075 + j * 0.02;
-      ring.position.z = -3.7 - j * 0.42;
+      const ring = new THREE.Mesh(geometry, material);
+      ring.rotation.x = 0.25 + j * 0.023;
+      ring.rotation.y = -0.13 + j * 0.027;
+      ring.position.z = -2.0 - j * 0.56;
       stage.add(ring);
       halos.push(ring);
     }
@@ -183,18 +194,31 @@ export function mountBottleVortex(canvas) {
   stage.add(particles);
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const models = [];
   const sourceModels = [];
+  const pools = [];
   const labelCache = new Map();
   const frameTimes = [];
   const clock = new THREE.Clock();
+  const matrix = new THREE.Matrix4();
+  const composed = new THREE.Matrix4();
+  const position = new THREE.Vector3();
+  const scale = new THREE.Vector3();
+  const rotation = new THREE.Euler(0, 0, 0, "YXZ");
+  const quaternion = new THREE.Quaternion();
+  // 4 phototextured Poly Haven bottles, 3 distinct CC0 beer/can/wine props.
+  // Keep wine dominant; avoid multiplying 20 low-fidelity product designs.
+  const selection = [0, 1, 2, 3, 0, 5, 1, 6, 2, 3, 0, 4, 1,
+    2, 3, 5, 0, 1, 2, 6, 3, 0, 4, 1, 2, 5];
   let disposed = false, raf = 0, frames = 0, isMobile = false, elapsed = 0;
   let lastFrame = 0;
+  let activeCount = 0;
   canvas.dataset.rendererStatus = "loading";
   canvas.dataset.assetStatus = "loading";
   canvas.dataset.renderedFrames = "0";
   canvas.dataset.averageFps = "0";
   canvas.dataset.p95FrameMs = "0";
+  canvas.dataset.drawCalls = "0";
+  canvas.dataset.triangles = "0";
 
   function resize() {
     const w = Math.max(1, canvas.clientWidth);
@@ -204,35 +228,70 @@ export function mountBottleVortex(canvas) {
       isMobile ? MAX_DPR_MOBILE : MAX_DPR_DESKTOP));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.position.z = isMobile ? 15.4 : 13.3;
-    camera.fov = isMobile ? 57 : 42;
+    camera.position.z = isMobile ? 15.8 : 14.5;
+    camera.fov = isMobile ? 58 : 43;
     camera.updateProjectionMatrix();
-    for (let i = 0; i < models.length; i++) models[i].visible = i < (isMobile ? 12 : 26);
-    canvas.dataset.bottleCount = String(Math.min(models.length, isMobile ? 12 : 26));
+    activeCount = isMobile ? 12 : selection.length;
+    canvas.dataset.bottleCount = String(pools.length ? activeCount : 0);
     if (reduced.matches && canvas.dataset.rendererStatus === "ready") renderFrame(2.1);
+  }
+
+  function pose(index, t) {
+    const phi = index * 2.399963229728653;
+    const a = phi + t * (0.37 + (index % 3) * 0.012);
+    // Echo abundance: golden-angle phases, but orbit in continuous 3D.
+    // The two near-hero bottles intentionally crop at the viewport edges.
+    const hero = index === 0 || index === 7 || index === 18;
+    const front = index % 5 === 0 || hero;
+    if (isMobile) {
+      const corner = (index % 4);
+      position.set(
+        (corner % 2 ? 1 : -1) * (1.38 + 0.24 * Math.sin(a)),
+        (corner < 2 ? 1 : -1) * (5.15 + 0.55 * Math.sin(a * 0.6)),
+        -2.1 + Math.cos(a) * 2.5
+      );
+      scale.setScalar(hero ? 1.15 : (front ? 0.91 : 0.72));
+    } else {
+      const radius = (hero ? 6.35 : 5.35 + (index % 4) * 0.55);
+      position.set(
+        Math.cos(a) * radius + (hero ? Math.sign(Math.cos(a)) * 0.65 : 0),
+        Math.sin(a * 0.97) * (hero ? 3.05 : 3.92),
+        (hero ? 4.1 : -2.7) + Math.sin(a + index * 0.11) * (hero ? 1.4 : 4.0)
+      );
+      scale.setScalar(hero ? 1.68 : (front ? 1.18 : 0.78));
+    }
+    rotation.set(
+      0.24 * Math.sin(a * 0.8 + index),
+      -a * 0.48 + Math.sin(t * 0.3 + index) * 0.24,
+      0.33 * Math.sin(a + index * 0.27) + (hero ? -0.28 : 0)
+    );
+    quaternion.setFromEuler(rotation);
+    return matrix.compose(position, quaternion, scale);
   }
 
   function renderFrame(t) {
     if (disposed || renderer.getContext().isContextLost()) return;
-    models.forEach((item, i) => {
-      if (!item.visible) return;
-      const phase = i * 2.399963229728653 + Math.sin(i * 1.73) * 0.15;
-      const a = phase + t * (0.23 + (i % 4) * 0.009);
-      const orbitR = (isMobile ? 4.9 : 5.35) + (i % 4) * 0.43;
-      item.position.set(
-        Math.cos(a) * (isMobile ? 2.15 : orbitR),
-        Math.sin(a) * (isMobile ? 5.8 : 3.05) + 0.22 * Math.sin(a * 2.0),
-        Math.sin(a + i * 0.07) * 4.25 - 2.1 - (i % 3) * 0.35 + (i % 9 === 0 ? 2.9 : 0)
-      );
-      item.rotation.set(
-        0.15 * Math.sin(t * 0.37 + i),
-        -a * 0.74 + 0.26 * Math.sin(t * 0.22 + i),
-        0.11 * Math.cos(t * 0.34 + phase)
-      );
-      item.scale.setScalar((i % 7 === 0 ? 1.2 : 0.92) * (isMobile ? 0.89 : 1));
-    });
+    // Each source mesh is rendered once as an InstancedMesh; repeated
+    // physical materials, texture maps and geometry share GPU memory.
+    const poses = [];
+    for (let i = 0; i < activeCount; i++) poses[i] = pose(i, t).clone();
+    for (const pool of pools) {
+      let slot = 0;
+      for (const index of pool.indices) {
+        if (index >= activeCount) continue;
+        for (const part of pool.parts) {
+          composed.multiplyMatrices(poses[index], part.localMatrix);
+          part.mesh.setMatrixAt(slot, composed);
+        }
+        slot++;
+      }
+      for (const part of pool.parts) {
+        part.mesh.count = slot;
+        if (slot) part.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
     halos.forEach((ring, i) => {
-      ring.rotation.z = t * (i % 2 ? -0.065 : 0.047) + i * 0.3;
+      ring.rotation.z = t * (i % 2 ? -0.045 : 0.033) + i * 0.14;
     });
     particles.rotation.z = -t * 0.012;
     renderer.render(stage, camera);
@@ -329,21 +388,32 @@ export function mountBottleVortex(canvas) {
         return;
       }
       loaded.forEach((entry) => sourceModels.push(entry.source));
-      for (let i = 0; i < 26; i++) {
-        const entry = loaded[i % loaded.length];
-        // Clone only nodes/transforms: geometries and PBR textures are shared.
-        // Animate the outer rig, not the glTF node. The child retains the
-        // normalization scale required for real-world-meter source assets.
-        const instance = new THREE.Group();
-        instance.add(entry.source.clone(true));
+      if (loaded.length !== 7) throw new Error("Expected 4 Poly Haven + 3 additional CC0 models");
+      for (let sourceIndex = 0; sourceIndex < loaded.length; sourceIndex++) {
+        const entry = loaded[sourceIndex];
+        const indices = selection.map((selected, index) =>
+          selected === sourceIndex ? index : -1).filter((index) => index >= 0);
+        const parts = [];
+        const meshes = [];
+        entry.source.updateMatrixWorld(true);
+        entry.source.traverse((node) => { if (node.isMesh) meshes.push(node); });
         if (!entry.spec.name.startsWith("Poly Haven")) {
-          if (!labelCache.has(entry.spec.kind)) {
-            labelCache.set(entry.spec.kind, bespokeLabel(entry.spec.kind, entry.source));
-          }
-          instance.add(labelCache.get(entry.spec.kind).clone());
+          const key = entry.spec.kind;
+          if (!labelCache.has(key)) labelCache.set(key, bespokeLabel(key, entry.source));
+          const label = labelCache.get(key);
+          label.updateMatrixWorld(true);
+          meshes.push(label);
         }
-        stage.add(instance);
-        models.push(instance);
+        for (const sourceMesh of meshes) {
+          const instanced = new THREE.InstancedMesh(
+            sourceMesh.geometry, sourceMesh.material, indices.length);
+          instanced.frustumCulled = false;
+          instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          instanced.count = 0;
+          stage.add(instanced);
+          parts.push({ mesh: instanced, localMatrix: sourceMesh.matrixWorld.clone() });
+        }
+        pools.push({ indices, parts });
       }
       canvas.dataset.assetStatus = "vendored-glTF";
       canvas.dataset.brandCount = String(loaded.length);
@@ -370,7 +440,7 @@ export function mountBottleVortex(canvas) {
     reduced.removeEventListener?.("change", onMotion);
     canvas.removeEventListener("webglcontextlost", contextLost);
     const seen = new Set();
-    for (const object of [...sourceModels, ...models, ...halos, particles])
+    for (const object of [...sourceModels, ...pools.flatMap(pool => pool.parts.map(part => part.mesh)), ...labelCache.values(), ...halos, particles])
       disposeObject(object, seen);
     environment.dispose();
     envMap.dispose();

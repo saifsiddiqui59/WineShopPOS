@@ -22,6 +22,9 @@ test("licensed glTF scene uses physically based Three.js, not procedural bottle 
   assert.match(component, /mountBottleVortex/);
   assert.match(component, /aria-hidden="true"/);
   assert.match(engine, /new GLTFLoader\(\)/);
+  assert.match(engine, /new THREE\.InstancedMesh/);
+  assert.match(engine, /transmission = 0/);
+  assert.match(engine, /drawCalls/);
   assert.match(engine, /new THREE\.WebGLRenderer/);
   assert.match(engine, /new RoomEnvironment/);
   assert.match(engine, /ACESFilmicToneMapping/);
