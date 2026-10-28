@@ -239,3 +239,15 @@ html .auth-screen.wsp-login-screen .auth-card button.secondary-button {
    concentric CSS rings, which visually contradicted the cyclone direction. */
 .wsp-login-screen .wsp-login-backdrop::before { display: none; }
 .wsp-login-screen .wsp-login-vortex-halo { opacity: 0.17; filter: blur(38px); }
+
+/* 2D cinematic bottle layer: pre-baked from licensed PBR glTF source once,
+   composed at 60 Hz in 3D-projected positions without animated WebGL shading. */
+.wsp-login-sprite-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 1;
+}

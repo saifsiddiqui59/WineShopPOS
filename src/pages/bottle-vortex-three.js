@@ -278,6 +278,18 @@ export function mountBottleVortex(canvas) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   const sourceModels = [];
   const bakedTargets = [];
+  const bakedImages = [];
+  const spriteOverlay = document.createElement("canvas");
+  spriteOverlay.className = "wsp-login-sprite-layer";
+  spriteOverlay.setAttribute("aria-hidden", "true");
+  canvas.insertAdjacentElement("afterend", spriteOverlay);
+  const spriteCtx = spriteOverlay.getContext("2d", { alpha: true, desynchronized: true });
+  const screenPoint = new THREE.Vector3();
+  const drawItems = [];
+  let useCanvas2d = false;
+  let viewportWidth = 1;
+  let viewportHeight = 1;
+
   // Slow or software GPU paths animate images baked from the actual
   // licensed PBR glTF, not generic procedural cylinders or fake asset URLs.
   // All visible product instances are simple textured planes, while their
@@ -319,11 +331,27 @@ export function mountBottleVortex(canvas) {
     renderer.setClearColor(0x000000, 0);
     renderer.clear(true, true, true);
     renderer.render(bakeScene, bakeCamera);
+    const pixels = new Uint8Array(384 * 768 * 4);
+    renderer.readRenderTargetPixels(target, 0, 0, 384, 768, pixels);
+    const imageCanvas = document.createElement("canvas");
+    imageCanvas.width = 384;
+    imageCanvas.height = 768;
+    const context = imageCanvas.getContext("2d");
+    if (!context) throw new Error("Packshot baking requires a 2D canvas");
+    const imageData = context.createImageData(384, 768);
+    const rowBytes = 384 * 4;
+    for (let y = 0; y < 768; y++) {
+      imageData.data.set(
+        pixels.subarray((767 - y) * rowBytes, (768 - y) * rowBytes),
+        y * rowBytes
+      );
+    }
+    context.putImageData(imageData, 0, 0);
     renderer.setRenderTarget(previousTarget);
     renderer.setClearColor(bakeClear, previousAlpha);
     renderer.autoClear = previousAutoClear;
     bakeScene.remove(rig);
-    return target.texture;
+    return { texture: target.texture, image: imageCanvas };
   }
   const pools = [];
   const labelCache = new Map();
@@ -377,6 +405,12 @@ export function mountBottleVortex(canvas) {
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
     isMobile = w <= 760;
+    viewportWidth = w;
+    viewportHeight = h;
+    const spriteDpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    spriteOverlay.width = Math.max(1, Math.round(w * spriteDpr));
+    spriteOverlay.height = Math.max(1, Math.round(h * spriteDpr));
+    if (spriteCtx) spriteCtx.setTransform(spriteDpr, 0, 0, spriteDpr, 0, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,
       isMobile ? MAX_DPR_MOBILE : MAX_DPR_DESKTOP) * qualityDpr);
     renderer.setSize(w, h, false);
@@ -386,6 +420,7 @@ export function mountBottleVortex(canvas) {
     camera.position.z = isMobile ? 15.8 : 14.8;
     camera.fov = isMobile ? 59 : 43;
     camera.updateProjectionMatrix();
+    if (useCanvas2d && canvas.dataset.rendererStatus === "ready") drawWebGLBackdrop(2.1);
     helixGroup.scale.set(isMobile ? 0.43 : 1, isMobile ? 1.05 : 1, isMobile ? 0.72 : 1);
     activeCount = qualityTier === "low" ? (isMobile ? 18 : 29)
       : qualityTier === "medium" ? (isMobile ? 21 : 36)
@@ -435,8 +470,65 @@ export function mountBottleVortex(canvas) {
     return matrix.compose(position, quaternion, scale);
   }
 
+  function drawPackshots2d(t) {
+    if (!spriteCtx) return;
+    const w = viewportWidth;
+    const h = viewportHeight;
+    spriteCtx.clearRect(0, 0, w, h);
+    drawItems.length = 0;
+    const focal = h * 0.5 / Math.tan(THREE.MathUtils.degToRad(camera.fov) * 0.5);
+    for (let i = 0; i < activeCount; i++) {
+      pose(i, t);
+      // perspective projection from the same camera as the original 3D helix.
+      screenPoint.copy(position).project(camera);
+      const depth = Math.max(0.5, camera.position.z - position.z);
+      const apparentHeight = 2.92 * scale.y * focal / depth;
+      const apparentWidth = 1.32 * scale.x * focal / depth;
+      const x = (screenPoint.x + 1) * w * 0.5;
+      const y = (1 - screenPoint.y) * h * 0.5;
+      if (apparentHeight < 2 || x < -apparentWidth || x > w + apparentWidth ||
+          y < -apparentHeight || y > h + apparentHeight) continue;
+      drawItems.push({ x, y, depth, width: apparentWidth,
+        height: apparentHeight, tilt: rotation.z, image: bakedImages[selection[i]] });
+    }
+    // Distant objects are drawn behind foreground bottles.
+    drawItems.sort((a, b) => b.depth - a.depth);
+    spriteCtx.imageSmoothingEnabled = true;
+    spriteCtx.imageSmoothingQuality = "high";
+    for (const item of drawItems) {
+      if (!item.image) continue;
+      spriteCtx.save();
+      spriteCtx.translate(item.x, item.y);
+      spriteCtx.rotate(-item.tilt);
+      spriteCtx.drawImage(item.image, -item.width / 2, -item.height / 2,
+        item.width, item.height);
+      spriteCtx.restore();
+    }
+    canvas.dataset.visibleSprites = String(drawItems.length);
+  }
+
+  function drawWebGLBackdrop(t) {
+    bgUniforms.uTime.value = t;
+    renderer.autoClear = false;
+    renderer.clear();
+    renderer.render(bgScene, bgCamera);
+    renderer.clearDepth();
+    renderer.render(stage, camera);
+    renderer.autoClear = true;
+    canvas.dataset.drawCalls = String(renderer.info.render.calls);
+    canvas.dataset.triangles = String(renderer.info.render.triangles);
+  }
+
   function renderFrame(t) {
     if (disposed || renderer.getContext().isContextLost()) return;
+    if (useCanvas2d) {
+      drawPackshots2d(t);
+      frames++;
+      canvas.dataset.renderedFrames = String(frames);
+      canvas.dataset.motionAxis = "vertical-cyclone";
+      canvas.dataset.motionProgress = (t * 0.56).toFixed(3);
+      return;
+    }
     // Each source mesh is rendered once as an InstancedMesh; repeated
     // physical materials, texture maps and geometry share GPU memory.
     for (let i = 0; i < activeCount; i++) poses[i].copy(pose(i, t));
@@ -459,12 +551,7 @@ export function mountBottleVortex(canvas) {
     helixGroup.rotation.z = 0.04 * Math.sin(t * 0.22);
     particles.rotation.z = -t * 0.012;
     bgUniforms.uTime.value = t;
-    renderer.autoClear = false;
-    renderer.clear();
-    renderer.render(bgScene, bgCamera);
-    renderer.clearDepth();
-    renderer.render(stage, camera);
-    renderer.autoClear = true;
+    drawWebGLBackdrop(t);
     frames++;
     canvas.dataset.renderedFrames = String(frames);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
@@ -589,7 +676,9 @@ export function mountBottleVortex(canvas) {
           label = labelCache.get(entry.spec.kind);
           label.updateMatrixWorld(true);
         }
-        const texture = bakePackshot(entry.source, entry.spec.kind, label);
+        const baked = bakePackshot(entry.source, entry.spec.kind, label);
+        bakedImages[sourceIndex] = baked.image;
+        const texture = baked.texture;
         const geometry = new THREE.PlaneGeometry(1.32, 2.92);
         const material = new THREE.MeshBasicMaterial({
           map: texture, transparent: true, alphaTest: 0.035,
@@ -609,11 +698,21 @@ export function mountBottleVortex(canvas) {
         if (sourceIndex % 2 === 1) await new Promise(resolve => setTimeout(resolve, 0));
         if (disposed) return;
       }
-      canvas.dataset.renderMode = "cached-pbr-packshots";
+      useCanvas2d = Boolean(spriteCtx) && bakedImages.length === loaded.length;
+      if (useCanvas2d) {
+        pools.forEach(pool => pool.parts.forEach(part => { part.mesh.visible = false; }));
+        canvas.dataset.renderMode = "canvas2d-cached-pbr";
+      } else {
+        canvas.dataset.renderMode = "cached-pbr-packshots";
+      }
+      frameTimes.length = 0;
+      lastFrame = 0;
+      if (qualityTier !== "high") setQuality("high");
       canvas.dataset.assetStatus = "vendored-glTF";
       canvas.dataset.brandCount = String(loaded.length);
       canvas.dataset.rendererStatus = "ready";
       resize();
+      if (useCanvas2d) drawWebGLBackdrop(reduced.matches ? 2.1 : 0);
       renderFrame(reduced.matches ? 2.1 : 0);
       schedule();
     } catch (error) {
@@ -643,6 +742,7 @@ export function mountBottleVortex(canvas) {
     background.geometry.dispose();
     background.material.dispose();
     bakedTargets.forEach(target => target.dispose());
+    spriteOverlay.remove();
     renderer.dispose();
   };
 }

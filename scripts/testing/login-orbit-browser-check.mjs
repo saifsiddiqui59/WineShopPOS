@@ -40,7 +40,7 @@ try {
     assert(visibleBottles >= (scene.name === "mobile" ? 18 : 29),
       "adaptive cyclone must preserve a visible product field");
     assert.equal(Number(await canvas.getAttribute("data-brand-count")), 7);
-    assert.equal(await canvas.getAttribute("data-render-mode"), "cached-pbr-packshots");
+    assert.equal(await canvas.getAttribute("data-render-mode"), "canvas2d-cached-pbr");
     assert.equal(await page.locator(".wsp-login-product").count(), 0);
     const card = await page.locator(".auth-card").boundingBox();
     assert(card && card.width > 230 && card.x >= 0 &&
@@ -59,6 +59,7 @@ try {
       quality: el.dataset.qualityTier, targetDensity: Number(el.dataset.desiredCount),
       visibleDensity: Number(el.dataset.bottleCount), motionAxis: el.dataset.motionAxis,
       renderMode: el.dataset.renderMode,
+      visibleSprites: Number(el.dataset.visibleSprites || "0"),
       glError: el.getContext("webgl2")?.getError(),
     }));
     results.push({ scene: scene.name, firstFrame, afterFrame, ...perf });
@@ -71,6 +72,7 @@ try {
       assert(Number.isFinite(perf.fps) && perf.fps > 0 && perf.p95FrameMs > 0, "actual FPS/p95 samples are required");
       assert(perf.calls > 0 && perf.triangles > 0, "must render real mesh triangles");
     }
+    assert(perf.visibleSprites >= 4, "cyclone must show licensed packshots");
     assert.deepEqual(errors, [], "browser page errors");
     if (scene.name === "desktop") {
       // Read-only auth smoke: no real account credentials, no Supabase write.
