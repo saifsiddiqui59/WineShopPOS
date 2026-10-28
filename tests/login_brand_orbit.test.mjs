@@ -6,60 +6,66 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("login uses an isolated decorative Echo for sign-in and password recovery", () => {
+test("login and recovery retain all existing authentication behavior", () => {
   const login = read("src/pages/Login.jsx");
   assert.match(login, /import LoginBrandOrbit from "\.\/LoginBrandOrbit"/);
   assert.equal((login.match(/<LoginBrandOrbit\s*\/>/g) ?? []).length, 2);
-  assert.equal((login.match(/className="auth-screen wsp-login-screen"/g) ?? []).length, 2);
   assert.match(login, /onSubmit=\{submit\}/);
   assert.match(login, /onSubmit=\{sendRecovery\}/);
   assert.match(login, /await signIn\(email\.trim\(\), password\)/);
   assert.match(login, /resetPasswordForEmail/);
 });
-
-test("premium layered 3D-depth vortex and reduced-motion preference are declared", () => {
+test("licensed glTF scene uses physically based Three.js, not procedural bottle profiles", () => {
   const component = read("src/pages/LoginBrandOrbit.jsx");
+  const engine = read("src/pages/bottle-vortex-three.js");
   const css = read("src/pages/login-brand-orbit.css");
+  assert.match(component, /mountBottleVortex/);
+  assert.match(component, /mountLightweightCyclone/);
+  const lite = read("src/pages/bottle-vortex-lite.js");
+  assert.match(lite, /packshots\/atlas\.webp/);
+  assert.match(lite, /figure\.animate\(keyframes/);
+  assert.match(lite, /paintTrails\(/);
+  assert.doesNotMatch(lite, /new THREE\.WebGLRenderer/);
   assert.match(component, /aria-hidden="true"/);
-  assert.match(component, /\/login-brands\//);
-  assert.match(component, /Array\.from\(\{ length: 184 \}/);
-  for (const waypoint of ["p0", "p1", "p2", "p3"]) {
-    assert.match(component, new RegExp("--echo-" + waypoint + "x"));
-    assert.match(component, new RegExp("--echo-" + waypoint + "y"));
-  }
-  assert.match(component, /function point\(/);
-  assert.match(component, /angle \+ 86/);
-  assert.match(component, /--echo-delay/);
-  assert.match(component, /--echo-size/);
-  assert.match(component, /--echo-near-size/);
-  assert.match(css, /@keyframes wsp-login-premium-echo/);
-  assert.match(css, /perspective: 1100px/);
-  assert.match(css, /transform-style: preserve-3d/);
-  assert.match(component, /--echo-p2z/);
-  assert.match(component, /data-depth=/);
-  assert.match(component, /length: 32/);
-  assert.match(css, /var\(--echo-p1x\)/);
-  assert.match(css, /var\(--echo-p2x\)/);
-  assert.match(css, /var\(--echo-p3y\)/);
-  assert.doesNotMatch(css, /@keyframes wsp-login-echo-swarm/);
-  assert.doesNotMatch(css, /@keyframes wsp-login-echo-halo/);
-  assert.match(css, /top: 50%/);
-  assert.match(css, /left: 50%/);
+  assert.match(engine, /new GLTFLoader\(\)/);
+  assert.match(engine, /new THREE\.InstancedMesh/);
+  assert.match(engine, /new THREE\.WebGLRenderTarget/);
+  assert.match(engine, /function bakePackshot\(/);
+  assert.match(engine, /compositor-keyframes-pbr/);
+  assert.match(engine, /function buildCompositor/);
+  assert.match(engine, /img\.animate\(keyframes/);
+  assert.match(engine, /function paintVerticalTrails/);
+  assert.match(engine, /readRenderTargetPixels/);
+  assert.match(engine, /drawPackshots2d/);
+  assert.match(engine, /spriteCtx\.drawImage/);
+  assert.match(engine, /function pose\(index, t\)/);
+  assert.match(engine, /motionAxis = "vertical-cyclone"/);
+  assert.match(engine, /Math\.cos\(angle\) \* radius/);
+  assert.match(engine, /Math\.sin\(angle\) \* \(2\.7/);
+  assert.match(engine, /qualityTier === "medium"/);
+  assert.doesNotMatch(engine, /poses\[i\] = pose\(i, t\)\.clone\(\)/);
+  assert.match(engine, /transmission = 0/);
+  assert.match(engine, /drawCalls/);
+  assert.match(engine, /new THREE\.WebGLRenderer/);
+  assert.match(engine, /new RoomEnvironment/);
+  assert.match(engine, /ACESFilmicToneMapping/);
+  assert.match(engine, /MANIFEST_URL/);
+  assert.match(engine, /getDelta\(\)/);
+  assert.match(engine, /averageFps/);
+  assert.match(engine, /p95FrameMs/);
+  assert.match(engine, /visibilitychange/);
+  assert.match(engine, /prefers-reduced-motion/);
+  assert.match(engine, /webglcontextlost/);
+  assert.match(css, /pointer-events: none/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(css, /pointer-events:\s*none/);
-  assert.match(css, /\.auth-screen\.wsp-login-screen/);
+  assert(!component.includes("bottle-vortex-webgl"), "new login must not use synthetic shader bottle renderer");
+  assert(read("package.json").includes('"three"'));
 });
-
-test("all locally hosted beer and wine illustrations exist and are self-contained SVGs", () => {
-  const assets = [
-    "kingfisher", "bira-91", "budweiser", "tuborg", "heineken",
-    "carlsberg", "corona", "sula", "fratelli", "jacobs-creek",
-  ];
-  for (const name of assets) {
-    const svg = read(`public/login-brands/${name}.svg`);
-    assert.match(svg, /<svg[\s\S]+viewBox=/);
-    assert.match(svg, /<title>/);
-    assert.doesNotMatch(svg, /<script|xlink:href|<foreignObject|href=/i);
-  }
-  assert.equal(assets.length, 10);
+test("CC0 asset importer uses known sources and prevents malformed downloads", () => {
+  const source = read("scripts/assets/sync-login-models.py");
+  assert.match(source, /polyhaven\.com\/files\/wine_bottles_01/);
+  assert.match(source, /innerscene\.com\/api\/library/);
+  assert.match(source, /hashlib\.sha256/);
+  assert.match(source, /valid_filename/);
+  assert.match(source, /CC0_ASSETS_READY/);
 });

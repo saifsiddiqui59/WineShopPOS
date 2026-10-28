@@ -88,52 +88,65 @@ curl -fLsS --max-time 30 "$WEB"login-brands/kingfisher.svg -o "$RUNNER_TEMP/wsp-
 grep -q 'Kingfisher' "$RUNNER_TEMP/wsp-kingfisher.svg" || { echo "::error::Product SVG unavailable"; false; }
 
 node --input-type=module <<'NODE'
+import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
-const browser=await chromium.launch({headless:true,channel:'chrome'});
-try {
-  const page=await browser.newPage({viewport:{width:1440,height:900}});
-  const errors=[];
-  page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('https://wineshoppos.z29.web.core.windows.net/#/login',{waitUntil:'domcontentloaded',timeout:30000});
-  await page.getByRole('heading',{name:'WineShop POS'}).waitFor({timeout:25000});
-  await page.locator('.wsp-login-echo').first().waitFor({state:'attached',timeout:25000});
-  const total=await page.locator('.wsp-login-product img').count();
-  if(total!==184) throw Error('Expected 184 layered Echo bottles; found '+total);
-  const loaded=await page.locator('.wsp-login-product img').first().evaluate(async img=>{
-    await img.decode();
-    return img.complete&&img.naturalWidth>0;
-  });
-  if(!loaded) throw Error('Brand image failed to load after decoding');
-  const visual=await page.locator('.wsp-login-echo').evaluateAll(els=>{
-    const active=els.filter(el=>{
-      const s=getComputedStyle(el),r=el.getBoundingClientRect();
-      return Number(s.opacity)>.35 && r.width>5 && r.right>0 && r.left<innerWidth &&
-        r.bottom>0 && r.top<innerHeight;
-    });
-    return {visible:active.length,depths:[...new Set(active.map(el=>el.dataset.depth))],
-      in3d:active.filter(el=>getComputedStyle(el).transform.startsWith('matrix3d(')).length};
-  });
-  if(visual.visible<40 || visual.depths.length<3 || visual.in3d<visual.visible*.9) {
-    throw Error('Premium 3D density or depth missing from live login: '+JSON.stringify(visual));
-  }
-  console.log('LIVE_PREMIUM_3D_DENSITY='+JSON.stringify(visual));
 
-  const points=()=>page.locator('.wsp-login-echo').evaluateAll(els=>els.slice(0,24).map(el=>{
-    const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};
-  }));
-  const before=await points();
-  await page.waitForTimeout(700);
-  const after=await points();
-  const distances=before.map((p,i)=>Math.hypot(p.x-after[i].x,p.y-after[i].y));
-  if(distances.filter(d=>d>25).length<12 || Math.max(...distances)<70) {
-    throw Error('Echo bottles do not visibly swirl: insufficient measured motion');
-  }
-  if(errors.length) throw Error('Browser JS errors: '+errors.join('; ').slice(0,500));
-  console.log('LIVE_LOGIN_PREMIUM_ECHO_PASS - 184 3D bottle copies and live clockwise motion validated');
+const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+try {
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: 'no-preference',
+    serviceWorkers: 'block',
+  });
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('https://wineshoppos.z29.web.core.windows.net/#/login', {
+    waitUntil: 'domcontentloaded', timeout: 30000,
+  });
+  await page.getByRole('heading', { name: 'WineShop POS' }).waitFor({timeout:25000});
+  await page.getByRole('button', {name:'Login'}).waitFor({timeout:25000});
+  const canvas = page.locator('.wsp-login-webgl');
+  await canvas.waitFor({state:'attached',timeout:25000});
+  await page.waitForFunction(() =>
+    document.querySelector('.wsp-login-webgl')?.dataset.rendererStatus === 'ready',
+    null, {timeout:25000});
+  assert.equal(await canvas.getAttribute('data-render-mode'), 'compositor-atlas');
+  assert.equal(await canvas.getAttribute('data-asset-status'), 'vendored-pbr-atlas');
+  assert.equal(Number(await canvas.getAttribute('data-bottle-count')), 44);
+  assert.equal(Number(await canvas.getAttribute('data-brand-count')), 7);
+  assert.equal(await page.locator('.wsp-login-cyclone-product').count(), 44);
+  const coverage = await page.locator('.wsp-login-cyclone-product')
+    .evaluateAll(nodes => {
+      const w = innerWidth, h = innerHeight;
+      const count = [0,0,0,0];
+      for (const node of nodes) {
+        if (Number(getComputedStyle(node).opacity) < .15) continue;
+        const rect = node.getBoundingClientRect();
+        if (rect.width < 6 || rect.height < 12) continue;
+        const x = rect.x + rect.width/2, y = rect.y + rect.height/2;
+        if (x < w*.46 && y < h*.36) count[0]++;
+        if (x > w*.54 && y < h*.36) count[1]++;
+        if (x < w*.46 && y > h*.64) count[2]++;
+        if (x > w*.54 && y > h*.64) count[3]++;
+      }
+      return count;
+    });
+  assert(coverage.every(v => v >= 1), 'Live login must fill all four quadrants: '+JSON.stringify(coverage));
+  const first = page.locator('.wsp-login-cyclone-product').first();
+  const before = await first.evaluate(el => getComputedStyle(el).transform);
+  await page.waitForTimeout(650);
+  const after = await first.evaluate(el => getComputedStyle(el).transform);
+  assert.notEqual(before, after, 'Cyclone bottles must visibly move');
+  assert(await first.evaluate(el => el.getAnimations().some(a => a.playState === 'running')),
+    'Cyclone browser compositor animation must be active');
+  assert.deepEqual(errors, [], 'Frontend browser errors');
+  console.log('PROD_CYCLONE_LIVE_PASS: 44 licensed atlas objects; quadrant counts',
+    JSON.stringify(coverage));
 } finally {
   await browser.close();
 }
 NODE
+
 trap - ERR
 unset AZURE_STORAGE_KEY
 echo "PROD index SHA256: $BUILT_SHA" >> "$GITHUB_STEP_SUMMARY"

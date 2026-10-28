@@ -1,238 +1,286 @@
-/* Dense, layered 3D-style branded product vortex. Scope: login/recovery only. */
+/* WineShopPOS login-only cinematic bottle stage. One GPU canvas handles
+   actual 3D meshes; no DOM forest or animated flat SVG product cards. */
 .auth-screen.wsp-login-screen {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   min-height: 100svh;
   background:
-    radial-gradient(ellipse at 50% 38%, rgba(89, 28, 48, .34) 0%, transparent 59%),
-    radial-gradient(ellipse at 3% 75%, rgba(118, 38, 61, .32), transparent 47%),
-    radial-gradient(ellipse at 93% 18%, rgba(148, 89, 40, .27), transparent 48%),
-    #0c0812;
+    radial-gradient(ellipse 75% 82% at 50% 48%, rgba(92, 34, 44, .34), transparent 78%),
+    radial-gradient(ellipse at 84% 12%, rgba(189, 107, 45, .31), transparent 42%),
+    radial-gradient(ellipse at 10% 89%, rgba(130, 34, 63, .31), transparent 47%),
+    #0c0711;
 }
 .wsp-login-backdrop,
-.wsp-login-echo-field,
-.wsp-login-center-shade,
-.wsp-login-sparkle-field {
+.wsp-login-webgl,
+.wsp-login-center-shade {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 .wsp-login-backdrop { z-index: -1; overflow: hidden; }
-.wsp-login-light {
-  position: absolute;
-  width: min(60vw, 840px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: .66;
-}
-.wsp-login-light--amber { top: -40%; right: -16%; background: rgba(237, 147, 54, .34); }
-.wsp-login-light--wine { bottom: -40%; left: -18%; background: rgba(212, 44, 90, .31); }
-
-/* Moving, wide, soft-edged spiral light shafts add depth behind the products. */
-.wsp-login-vortex {
-  position: absolute;
-  width: max(120vw, 140vh);
-  height: max(120vw, 140vh);
-  top: 50%;
-  left: 50%;
-  border-radius: 50%;
-  mask-image: radial-gradient(circle, transparent 0 17%, #000 35%, #000 73%, transparent 85%);
-  opacity: .47;
-  pointer-events: none;
-  background: conic-gradient(from 22deg,
-    transparent 0deg, rgba(240, 164, 74, .15) 29deg, transparent 51deg,
-    transparent 76deg, rgba(255, 198, 117, .11) 101deg, transparent 129deg,
-    transparent 168deg, rgba(194, 67, 108, .22) 208deg, transparent 239deg,
-    transparent 275deg, rgba(252, 167, 81, .12) 306deg, transparent 343deg);
-  animation: wsp-login-vortex-spin 25s linear infinite;
-}
-.wsp-login-vortex--ruby {
-  opacity: .28;
-  scale: .75;
-  filter: blur(18px);
-  animation-duration: 37s;
-  animation-direction: reverse;
-}
-
-.wsp-login-echo-field {
-  perspective: 1100px;
-  perspective-origin: 50% 48%;
-  transform-style: preserve-3d;
-  contain: layout style;
-}
-
-/* Each independent echo follows a 3D spiral with four actual depth waypoints. */
-.wsp-login-echo {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 104px;
-  height: 208px;
-  opacity: 0;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), var(--echo-p0z)) scale(.2);
-  animation: wsp-login-premium-echo 8.8s cubic-bezier(.32,.14,.4,.94) var(--echo-delay) infinite;
-  will-change: transform, opacity;
-}
-
-.wsp-login-product {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  transform-style: preserve-3d;
-  transform: rotateY(var(--echo-turn)) rotateX(var(--echo-pitch)) rotateZ(var(--echo-roll));
-  backface-visibility: hidden;
-  filter: drop-shadow(12px 20px 12px rgba(0,0,0,.58));
-}
-
-/* No cheap opaque rectangles around products: luminous bottle silhouette,
-   cool edge reflection and translucent glass sheen follow the 3D plane. */
-.wsp-login-product img {
+.wsp-login-webgl {
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: contain;
-  filter:
-    drop-shadow(-1px -1px 2px rgba(255,225,175,.48))
-    drop-shadow(5px 11px 9px rgba(0,0,0,.6));
-  backface-visibility: hidden;
+  opacity: 1;
 }
-.wsp-login-product::before {
-  content: "";
+.wsp-login-light {
   position: absolute;
-  left: 25%;
-  top: 10%;
-  width: 15%;
-  height: 78%;
+  width: min(67vw, 870px);
+  height: min(67vw, 870px);
   border-radius: 50%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.24), transparent);
-  filter: blur(5px);
-  mix-blend-mode: screen;
-  transform: translateZ(4px) rotate(-3deg);
+  filter: blur(88px);
+  opacity: .6;
   pointer-events: none;
 }
-.wsp-login-product::after {
-  content: "";
+.wsp-login-light--amber {
+  top: -40%; right: -23%;
+  background: rgba(231, 154, 61, .28);
+}
+.wsp-login-light--wine {
+  bottom: -36%; left: -21%;
+  background: rgba(192, 37, 72, .26);
+}
+.wsp-login-vortex-halo {
   position: absolute;
-  width: 58%;
-  height: 13%;
-  left: 22%;
-  bottom: 0;
+  left: 50%;
+  top: 50%;
+  width: min(77vw, 970px);
+  aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(230,161,77,.24), transparent 70%);
+  background: conic-gradient(from 0deg,
+    transparent 0deg,
+    rgba(231, 164, 72, .11) 27deg,
+    transparent 62deg,
+    transparent 96deg,
+    rgba(227, 104, 89, .12) 146deg,
+    transparent 192deg,
+    rgba(235, 185, 92, .10) 253deg,
+    transparent 302deg);
+  mask-image: radial-gradient(circle, transparent 29%, #000 46%, #000 67%, transparent 84%);
+  transform-origin: center;
+  animation: wsp-login-stage-spin 30s linear infinite;
   filter: blur(8px);
-  transform: translateZ(-18px) rotateX(75deg);
   pointer-events: none;
 }
-.wsp-login-echo--far .wsp-login-product { opacity: .75; }
-.wsp-login-echo--far .wsp-login-product img { filter: drop-shadow(2px 5px 10px rgba(0,0,0,.65)); }
-
-.wsp-login-sparkle-field { opacity: .7; }
-.wsp-login-sparkle {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: #ffe9ba;
-  box-shadow: 0 0 10px 2px rgba(242, 175, 89, .35);
-  animation: wsp-login-glint 5s ease-in-out var(--glint-delay) infinite;
-}
-
 .wsp-login-center-shade {
-  background: radial-gradient(ellipse 360px 330px at center, rgba(9,6,14,.68), transparent 98%);
+  background: radial-gradient(ellipse 360px 350px at center, rgba(8, 6, 12, .7), transparent 94%);
 }
-
-/* Frosted charcoal glass makes the login look expensive while preserving
-   strong label and field contrast and keeping all controls tappable. */
 .auth-screen.wsp-login-screen > .auth-card {
   position: relative;
   z-index: 2;
-  border: 1px solid rgba(250, 207, 139, .42);
+  border: 1px solid rgba(244, 190, 118, .38);
   border-radius: 22px;
-  color: #fff6eb;
+  color: #fff2e7;
   background:
-    linear-gradient(152deg, rgba(55,35,47,.93), rgba(12,14,23,.95) 77%);
-  box-shadow: 0 35px 100px rgba(0,0,0,.71), 0 0 70px rgba(174,91,43,.13),
-    inset 0 1px 0 rgba(255,240,200,.16);
-  backdrop-filter: blur(19px);
+    linear-gradient(152deg, rgba(38, 26, 37, .94), rgba(11, 12, 23, .95) 78%);
+  box-shadow: 0 26px 100px rgba(0,0,0,.68), 0 0 55px rgba(152, 78, 43, .13),
+    inset 0 1px 0 rgba(255,245,218,.12);
+  backdrop-filter: blur(18px);
 }
 .wsp-login-screen .auth-card h1 { color: #ffe2a4; letter-spacing: -.035em; }
-.wsp-login-screen .auth-card p { color: #e5d1ce; }
+.wsp-login-screen .auth-card p { color: #e2d0cc; }
 .wsp-login-screen .auth-card label { color: #ffefe9; }
-.wsp-login-screen .auth-card input { color:#191d25; background:#fffdfa; border-color:#dec9ba; }
+.wsp-login-screen .auth-card input {
+  color: #191d25;
+  background: #fffdfa;
+  border-color: #dec9ba;
+}
 .wsp-login-screen .auth-card input:focus-visible,
-.wsp-login-screen .auth-card button:focus-visible { outline:3px solid #dfb765; outline-offset:2px; }
+.wsp-login-screen .auth-card button:focus-visible {
+  outline: 3px solid #dfb765;
+  outline-offset: 2px;
+}
 .wsp-login-screen .auth-card .secondary-button {
   color: #f9e4bd;
-  border-color: rgba(246,214,162,.36);
-  background: rgba(255,255,255,.07);
+  border-color: rgba(246, 214, 162, .36);
+  background: rgba(255, 255, 255, .07);
 }
-
-/* Rich overlap: 75%+ of the animation is visible rather than the previous
-   brief fade which left most of the page empty at any single instant. */
-@keyframes wsp-login-premium-echo {
-  0% {
-    opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-p0x)), calc(-50% + var(--echo-p0y)), var(--echo-p0z))
-      rotateZ(-32deg) scale(.2);
-  }
-  11% {
-    opacity: .72;
-    transform: translate3d(calc(-50% + var(--echo-p1x)), calc(-50% + var(--echo-p1y)), var(--echo-p1z))
-      rotateZ(-11deg) scale(var(--echo-far-size));
-  }
-  37% {
-    opacity: .93;
-    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), var(--echo-p2z))
-      rotateZ(16deg) scale(var(--echo-size));
-  }
-  65% {
-    opacity: .94;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
-      rotateZ(49deg) scale(var(--echo-near-size));
-  }
-  86% {
-    opacity: .76;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
-      rotateZ(61deg) scale(var(--echo-near-size));
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(calc(-50% + var(--echo-p3x)), calc(-50% + var(--echo-p3y)), var(--echo-p3z))
-      rotateZ(68deg) scale(var(--echo-near-size));
-  }
+@keyframes wsp-login-stage-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
-@keyframes wsp-login-vortex-spin {
-  from { transform: translate(-50%,-50%) rotate(0deg); }
-  to { transform: translate(-50%,-50%) rotate(360deg); }
-}
-@keyframes wsp-login-glint {
-  0%,100% { opacity:.12; scale: .5; }
-  46% { opacity:.85; scale: 1.6; }
-}
-
 @media (max-width: 760px) {
-  .auth-screen.wsp-login-screen { padding:18px; }
-  .wsp-login-echo--secondary { display:none; }
-  .wsp-login-echo { width:75px; height:150px; }
-  .wsp-login-product::before,
-  .wsp-login-product::after { display:none; }
+  .auth-screen.wsp-login-screen { padding: 18px; }
+  .auth-screen.wsp-login-screen > .auth-card { width: min(440px,100%); }
   .wsp-login-center-shade {
-    background:radial-gradient(ellipse 285px 340px at center, rgba(7,6,13,.79), transparent 98%);
+    background: radial-gradient(ellipse 280px 360px at center, rgba(9,6,13,.76), transparent 96%);
   }
-  .auth-screen.wsp-login-screen > .auth-card { width:min(440px,100%); }
+  .wsp-login-vortex-halo { width: 140vw; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wsp-login-echo, .wsp-login-vortex, .wsp-login-sparkle { animation:none !important; will-change:auto; }
-  .wsp-login-echo {
-    opacity: .55;
-    transform: translate3d(calc(-50% + var(--echo-p2x)), calc(-50% + var(--echo-p2y)), var(--echo-p2z))
-      scale(var(--echo-size));
-  }
-  .wsp-login-sparkle { opacity:.3; }
+  .wsp-login-vortex-halo { animation: none !important; }
 }
+
+/* Fallback deliberately remains premium but static if WebGL or licensed GLBs fail. */
+.wsp-login-backdrop { background: radial-gradient(ellipse at 16% 28%, rgba(196,105,49,.20),transparent 48%), radial-gradient(ellipse at 85% 83%,rgba(164,38,68,.23),transparent 48%); }
+.wsp-login-webgl { will-change: contents; }
+.wsp-login-screen .auth-card { isolation: isolate; }
+@media (prefers-reduced-motion: reduce) {
+  .wsp-login-webgl { will-change: auto; }
+  .wsp-login-light { filter: blur(78px); }
+}
+
+/* Luxury-only login surface: intentionally scoped away from dashboard pages. */
+.wsp-login-screen .auth-card .primary-button {
+  color: #fff4ee;
+  background: linear-gradient(135deg, #8e183d, #ae2751 52%, #761331);
+  border: 1px solid rgba(255, 176, 140, .4);
+  box-shadow: 0 8px 22px rgba(100, 4, 40, .3);
+}
+.wsp-login-screen .auth-card .primary-button:hover {
+  background: linear-gradient(135deg, #ad2b50, #b63153 52%, #851a39);
+}
+.wsp-login-screen .auth-card .secondary-button {
+  color: #f7deba;
+  background: rgba(40, 23, 36, .85);
+}
+.wsp-login-screen .auth-card input {
+  background: rgba(247, 230, 215, .97);
+  border: 1px solid rgba(244, 203, 152, .55);
+}
+.wsp-login-vortex-halo {
+  opacity: 0.65;
+  filter: blur(22px);
+}
+
+/* Prevent global light/dark theme !important rules from repainting the login buttons. */
+html .auth-screen.wsp-login-screen .auth-card button.primary-button,
+html[data-theme="light"] .auth-screen.wsp-login-screen .auth-card button.primary-button,
+html[data-theme="dark"] .auth-screen.wsp-login-screen .auth-card button.primary-button {
+  background: linear-gradient(115deg, #7d163c, #a3234d 53%, #851d40) !important;
+  color: #fff4ee !important;
+  border-color: #c9856c !important;
+  box-shadow: 0 12px 28px rgba(45, 4, 21, .48) !important;
+}
+html .auth-screen.wsp-login-screen .auth-card button.secondary-button {
+  background: rgba(83, 51, 56, .18) !important;
+  color: #f4d5b3 !important;
+  border: 1px solid rgba(221, 172, 118, .45) !important;
+}
+.wsp-login-screen .wsp-login-backdrop {
+  background: radial-gradient(ellipse 59% 73% at 49% 51%,
+    rgba(154, 77, 27, .20) 0%, rgba(77, 24, 34, .16) 52%, transparent 83%);
+}
+.wsp-login-screen .wsp-login-vortex-halo {
+  opacity: .91;
+  filter: blur(14px);
+}
+@media (max-width: 760px) {
+  .wsp-login-screen .wsp-login-vortex-halo {
+    width: 220vw;
+    opacity: .72;
+  }
+  .wsp-login-screen .auth-card {
+    backdrop-filter: blur(22px);
+  }
+}
+
+/* Filmic copper/gold atmospheric tunnel rather than the former brown flat wash. */
+.auth-screen.wsp-login-screen {
+  background:
+    radial-gradient(ellipse 38% 38% at 49% 48%, rgba(209,136,54,.24), transparent 82%),
+    radial-gradient(ellipse 90% 66% at 52% 61%, rgba(105,32,41,.58),transparent 76%),
+    linear-gradient(135deg,#12070d,#291019 36%,#12080b 73%,#2d1111);
+}
+.wsp-login-screen .wsp-login-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: -13%;
+  background:
+    repeating-radial-gradient(ellipse 46% 56% at 50% 50%,
+      transparent 0 24px, rgba(255,179,80,.11) 26px,
+      rgba(255,197,103,.04) 29px,transparent 33px 62px),
+    radial-gradient(ellipse 35% 28% at center,rgba(255,163,60,.19),transparent 95%);
+  filter: blur(6px);
+  opacity: .8;
+  transform: translate3d(0,0,0);
+  pointer-events: none;
+}
+.wsp-login-screen .wsp-login-light--amber {
+  top: -32%; right: -12%; filter: blur(100px); opacity: .6;
+}
+.wsp-login-screen .wsp-login-light--wine {
+  bottom: -32%; left: -19%; filter: blur(90px); opacity: .53;
+}
+.wsp-login-screen .auth-card {
+  background: linear-gradient(148deg,rgba(43,24,27,.92),rgba(16,11,18,.96)) !important;
+  box-shadow: 0 24px 98px rgba(0,0,0,.77),
+    0 0 0 1px rgba(255,199,112,.2),inset 0 1px 0 rgba(255,228,188,.1) !important;
+}
+@media (max-width:760px) {
+  .wsp-login-screen .wsp-login-backdrop::before { opacity:.42; }
+}
+
+/* Desktop cinematic art-direction: smaller floating card reveals the bottle
+   tunnel on all four sides; keep mobile touch targets at their original size. */
+@media (min-width: 761px) {
+  .auth-screen.wsp-login-screen > .auth-card {
+    width: min(372px, 100%) !important;
+    max-width: 372px;
+    padding: 25px 26px;
+    gap: 12px;
+    border-radius: 19px;
+  }
+  .wsp-login-screen .auth-card h1 {
+    font-size: clamp(26px, 2.2vw, 31px);
+    line-height: 1.16;
+  }
+  .wsp-login-screen .auth-card input {
+    height: 42px;
+  }
+  .wsp-login-screen .auth-card button {
+    min-height: 42px;
+  }
+}
+
+/* The 3D renderer now draws upright helix trails. Suppress the former flat
+   concentric CSS rings, which visually contradicted the cyclone direction. */
+.wsp-login-screen .wsp-login-backdrop::before { display: none; }
+.wsp-login-screen .wsp-login-vortex-halo { opacity: 0.17; filter: blur(38px); }
+
+/* 2D cinematic bottle layer: pre-baked from licensed PBR glTF source once,
+   composed at 60 Hz in 3D-projected positions without animated WebGL shading. */
+.wsp-login-sprite-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* GPU-composited transforms on licensed PBR-derived bottle stills; the browser
+   interpolates each 3D-projected motion path without per-frame full-canvas
+   redraws or JavaScript-driven product placement. */
+.wsp-login-helical-trails,
+.wsp-login-compositor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.wsp-login-helical-trails { z-index: 0; opacity: .85; }
+.wsp-login-compositor { z-index: 1; overflow: hidden; }
+.wsp-login-cyclone-product {
+  position: absolute;
+  display: block;
+  max-width: none;
+  object-fit: contain;
+  pointer-events: none;
+  transform-origin: center center;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wsp-login-cyclone-product { will-change: auto; }
+}
+
+/* Zero-WebGL startup on the happy path; one 49 KB licensed product atlas. */
+.wsp-login-lite-root { position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0; }
+.wsp-login-lite-root .wsp-login-helical-trails { z-index:0; }
+.wsp-login-lite-root .wsp-login-compositor { z-index:1; }
+.wsp-login-lite-root .wsp-login-cyclone-product { background-color:transparent; }

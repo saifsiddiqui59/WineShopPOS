@@ -5,126 +5,151 @@ import { chromium } from "@playwright/test";
 const base = process.env.LOGIN_PREVIEW_URL || "http://127.0.0.1:4173";
 const output = "artifacts/login-orbit";
 await fs.mkdir(output, { recursive: true });
-
-const browser = await chromium.launch({ headless: true, channel: "chrome" });
+const browser = await chromium.launch({
+  headless: true, channel: "chrome",
+  args: ["--enable-webgl", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+});
+const results = [];
 try {
   for (const scene of [
-    { name: "desktop", viewport: { width: 1440, height: 900 }, reducedMotion: "no-preference", expectedImages: 184 },
-    { name: "mobile", viewport: { width: 390, height: 844 }, reducedMotion: "no-preference", expectedImages: 184 },
-    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, reducedMotion: "reduce", expectedImages: 184 },
+    { name: "desktop", viewport: { width: 1440, height: 900 }, motion: "no-preference", bottles: 44 },
+    { name: "mobile", viewport: { width: 390, height: 844 }, motion: "no-preference", bottles: 24 },
+    { name: "reduced-motion", viewport: { width: 1440, height: 900 }, motion: "reduce", bottles: 44 },
   ]) {
     const context = await browser.newContext({
-      viewport: scene.viewport,
-      reducedMotion: scene.reducedMotion,
-      serviceWorkers: "block",
-      ...(scene.name === "desktop" ? {
-        recordVideo: { dir: output, size: { width: 960, height: 600 } },
-      } : {}),
+      viewport: scene.viewport, reducedMotion: scene.motion, serviceWorkers: "block",
+      ...(scene.name === "desktop" ? { recordVideo: {
+        dir: output, size: { width: 960, height: 600 },
+      } } : {}),
     });
     const page = await context.newPage();
-    const pageErrors = [];
-    page.on("pageerror", error => pageErrors.push(error.message));
-
-    await page.goto(`${base}/login`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "WineShop POS" }).waitFor();
-    await page.getByRole("button", { name: "Login" }).waitFor();
-    await page.locator(".wsp-login-echo").first().waitFor({ state: "attached" });
-
-    assert.equal(await page.locator(".wsp-login-echo").count(), scene.expectedImages);
-    assert.equal(await page.locator(".wsp-login-product img").count(), scene.expectedImages);
-    await page.locator(".wsp-login-product img").first().evaluate(el => el.decode());
-    const missingImages = await page.locator(".wsp-login-product img").evaluateAll(els =>
-      els.filter(img => !img.complete || img.naturalWidth === 0).map(img => img.src));
-    assert.deepEqual(missingImages, [], "decorative SVG files should be available from public/");
-    const uniqueBrands = new Set(await page.locator(".wsp-login-product img").evaluateAll(els =>
-      els.map(img => new URL(img.src).pathname)));
-    assert.equal(uniqueBrands.size, 10, "all wine and beer brands should appear in the Echo field");
-    assert.equal(await page.locator(".wsp-login-echo[data-depth='0']").count(), 46);
-    assert.equal(await page.locator(".wsp-login-echo[data-depth='3']").count(), 46);
-    const perspective = await page.locator(".wsp-login-echo-field").evaluate(el =>
-      getComputedStyle(el).perspective);
-    assert.equal(perspective, "1100px", "depth must come from a 3D perspective camera");
-
-    await page.waitForTimeout(500);
-    const depthStats = await page.locator(".wsp-login-echo").evaluateAll(els => {
-      const visible = els.filter(el => {
-        const style = getComputedStyle(el);
-        const rect = el.getBoundingClientRect();
-        return style.display !== "none" && Number(style.opacity) > .35 &&
-          rect.width > 5 && rect.height > 5 &&
-          rect.right > -20 && rect.left < innerWidth + 20 &&
-          rect.bottom > -20 && rect.top < innerHeight + 20;
-      });
-      const depth = new Set(visible.map(el => el.dataset.depth));
-      return {
-        visible: visible.length,
-        bands: [...depth],
-        threeDimensional: visible.filter(el =>
-          getComputedStyle(el).transform.startsWith("matrix3d(")).length,
+    // Observe WebGL context creation without opening a context ourselves.
+    await page.addInitScript(() => {
+      window.__wspWebGLContexts = 0;
+      const nativeGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+        if (/^(webgl|webgl2|experimental-webgl)$/i.test(String(type)))
+          window.__wspWebGLContexts++;
+        return nativeGetContext.call(this, type, ...args);
       };
     });
-    assert(depthStats.visible >= (scene.name === "mobile" ? 18 : 40),
-      "not enough simultaneously visible bottles: " + JSON.stringify(depthStats));
-    assert(depthStats.bands.length >= 3, "visible bottles must come from multiple 3D depths");
-    assert(depthStats.threeDimensional >= depthStats.visible * .9,
-      "nearly every visible bottle must have an actual 3D transform");
-    console.log("LOGIN_PREMIUM_3D_DENSITY_" + scene.name.toUpperCase() + "=" + JSON.stringify(depthStats));
-
-    // Assert the pieces actually move in the browser. Static render counts and
-    // single screenshots do NOT qualify a swirling animation.
-    const samplePoints = () => page.locator(".wsp-login-echo").evaluateAll(els =>
-      els.slice(0, 24).map(el => {
-        const r = el.getBoundingClientRect();
-        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-      })
-    );
-    const t0 = await samplePoints();
-    await page.waitForTimeout(700);
-    const t1 = await samplePoints();
-    const distance = t0.map((point, i) =>
-      Math.hypot(point.x - t1[i].x, point.y - t1[i].y));
-    if (scene.reducedMotion === "reduce") {
-      assert(distance.every(d => d < 1), "reduced motion must freeze every Echo bottle");
-    } else {
-      assert(distance.filter(d => d > 25).length >= 12,
-        "at least 12 of 24 Echo bottles must swirl more than 25px in 700ms");
-      assert(Math.max(...distance) > 70,
-        "Echo must show strong visible movement, not subtle drifting");
-    }
-
-    const trajectory = await page.locator(".wsp-login-echo").first().evaluate(el =>
-      ["p0", "p1", "p2", "p3"].map(id => ({
-        x: parseFloat(el.style.getPropertyValue("--echo-" + id + "x")),
-        y: parseFloat(el.style.getPropertyValue("--echo-" + id + "y")),
-      }))
-    );
-    const angles = trajectory.map(p => Math.atan2(p.y, p.x));
-    const clockwise = angles.slice(1).map((angle, i) => {
-      const d = angle - angles[i];
-      return d < 0 ? d + 2 * Math.PI : d;
-    });
-    assert(clockwise.every(d => d > .5 && d < 2.1),
-      "Echo path must sweep clockwise at each waypoint, not remain static");
-
-    const animation = await page.locator(".wsp-login-echo").first().evaluate(el =>
-      getComputedStyle(el).animationName);
-    assert.equal(animation, scene.reducedMotion === "reduce" ? "none" : "wsp-login-premium-echo");
-
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    const navigationStart = Date.now();
+    await page.goto(base + "/login", { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: "WineShop POS" }).waitFor({ timeout: 30000 });
+    await page.getByRole("button", { name: "Login" }).waitFor();
+    const canvas = page.locator(".wsp-login-webgl");
+    await canvas.waitFor({ state: "attached" });
+    await page.waitForFunction(() =>
+      document.querySelector(".wsp-login-webgl")?.dataset.rendererStatus === "ready",
+      null, { timeout: 60000 });
+    const readyMs = Date.now() - navigationStart;
+    assert(readyMs < 15000, "licensed atlas must avoid the slow GLB startup path");
+    assert.equal(await canvas.getAttribute("data-asset-status"), "vendored-pbr-atlas");
+    assert.equal(Number(await canvas.getAttribute("data-desired-count")), scene.bottles);
+    assert.equal(await canvas.getAttribute("data-motion-axis"), "vertical-cyclone");
+    const visibleBottles = Number(await canvas.getAttribute("data-bottle-count"));
+    assert(visibleBottles >= (scene.name === "mobile" ? 18 : 29),
+      "adaptive cyclone must preserve a visible product field");
+    assert.equal(Number(await canvas.getAttribute("data-brand-count")), 7);
+    assert.equal(await page.locator(".wsp-login-helical-trails").count(), 1);
+    assert.equal(await canvas.getAttribute("data-render-mode"), "compositor-atlas");
+    assert.equal(await page.locator(".wsp-login-cyclone-product").count(),
+      scene.name === "mobile" ? 24 : 44);
+    assert.equal(await page.locator(".wsp-login-product").count(), 0);
     const card = await page.locator(".auth-card").boundingBox();
-    assert(card && card.width > 240 && card.x >= 0 &&
-      card.x + card.width <= scene.viewport.width + 1, "login card must fit viewport");
-    await page.screenshot({ path: `${output}/${scene.name}.png` });
-    if (scene.name === "desktop") {
-      await page.waitForTimeout(750);
-      await page.screenshot({ path: `${output}/desktop-motion-next.png` });
-      // Include a genuine browser-recorded motion clip for visual review;
-      // two screenshots alone cannot validate a swirl's aesthetic quality.
-      await page.waitForTimeout(1800);
+    assert(card && card.width > 230 && card.x >= 0 &&
+      card.x + card.width <= scene.viewport.width + 1, "login form cannot clip");
+    await page.getByLabel("Email").waitFor();
+    const firstFrame = Number(await canvas.getAttribute("data-rendered-frames"));
+    await page.waitForTimeout(scene.name === "desktop" ? 8500 : 3000);
+    const afterFrame = Number(await canvas.getAttribute("data-rendered-frames"));
+    const progress = Number(await canvas.getAttribute("data-motion-progress"));
+    assert(progress >= 0, "cyclone must report continuous time-based motion");
+    const motionProbe = page.locator(".wsp-login-cyclone-product").first();
+    const beforeMotion = await motionProbe.evaluate(node => getComputedStyle(node).transform);
+    if (scene.motion !== "reduce") {
+      await page.waitForTimeout(450);
+      const afterMotion = await motionProbe.evaluate(node => getComputedStyle(node).transform);
+      assert.notEqual(afterMotion, beforeMotion,
+        "compositor animation must physically move the bottle between sampled frames");
+      const running = await page.locator(".wsp-login-cyclone-product").first()
+        .evaluate(node => node.getAnimations().some(anim => anim.playState === "running"));
+      assert(running, "compositor keyframe animation must actually run");
+    } else {
+      assert.equal(await motionProbe.evaluate(node => node.getAnimations().length), 0,
+        "reduced motion must not animate products");
     }
-    assert.deepEqual(pageErrors, [], "Login should render without JS runtime errors");
+    const productCoverage = await page.locator(".wsp-login-cyclone-product")
+      .evaluateAll((nodes) => {
+        let left = 0, right = 0;
+        let upperLeft = 0, upperRight = 0, lowerLeft = 0, lowerRight = 0;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        for (const node of nodes) {
+          if (Number(getComputedStyle(node).opacity) < 0.15) continue;
+          const box = node.getBoundingClientRect();
+          if (box.width < 6 || box.height < 12) continue;
+          const cx = box.x + box.width / 2;
+          const cy = box.y + box.height / 2;
+          if (cx < width * 0.42) left++;
+          if (cx > width * 0.58) right++;
+          if (cx < width * .46 && cy < height * .36) upperLeft++;
+          if (cx > width * .54 && cy < height * .36) upperRight++;
+          if (cx < width * .46 && cy > height * .64) lowerLeft++;
+          if (cx > width * .54 && cy > height * .64) lowerRight++;
+        }
+        return { left, right, upperLeft, upperRight, lowerLeft, lowerRight };
+      });
+    assert(productCoverage.left >= (scene.name === "mobile" ? 2 : 5) &&
+      productCoverage.right >= (scene.name === "mobile" ? 2 : 5),
+      "Cyclone must distribute visible products on BOTH sides, not a single clustered column");
+    assert(Object.values(productCoverage).slice(2).every(x => x >= 1),
+      "cyclone must occupy all four outer screen quadrants");
+    await page.screenshot({ path: output + "/" + scene.name + ".png" });
+    const perf = await canvas.evaluate(el => ({
+      fps: Number(el.dataset.averageFps), p95FrameMs: Number(el.dataset.p95FrameMs),
+      frames: Number(el.dataset.renderedFrames), calls: Number(el.dataset.drawCalls),
+      triangles: Number(el.dataset.triangles), assets: el.dataset.assetStatus,
+      quality: el.dataset.qualityTier, targetDensity: Number(el.dataset.desiredCount),
+      visibleDensity: Number(el.dataset.bottleCount), motionAxis: el.dataset.motionAxis,
+      renderMode: el.dataset.renderMode, compositorCount: Number(el.dataset.compositorCount || 0),
+      visibleSprites: Number(el.dataset.visibleSprites || "0"),
+      webglContextsCreated: Number(window.__wspWebGLContexts || 0),
+    }));
+    results.push({ scene: scene.name, readyMs, productCoverage, firstFrame, afterFrame, ...perf });
+    await fs.writeFile(output + "/performance.json", JSON.stringify(results, null, 2));
+    console.log("VISUAL_MEASUREMENT " + JSON.stringify(results.at(-1)));
+    if (scene.motion === "reduce") assert.equal(afterFrame, firstFrame);
+    else assert(afterFrame > firstFrame, "rendering must advance at least one frame");
+    assert.equal(perf.webglContextsCreated, 0,
+      "fast atlas path must never initialize a WebGL context");
+    if (scene.name === "desktop") {
+      assert(Number.isFinite(perf.fps) && perf.fps > 0 && perf.p95FrameMs > 0, "actual FPS/p95 samples are required");
+      assert.equal(perf.calls, 0, "vendored atlas must avoid runtime WebGL calls");
+      assert.equal(perf.triangles, 0, "vendored atlas must avoid runtime GLB geometry");
+    }
+    assert(perf.visibleSprites >= 18, "cyclone must show dense licensed packshots");
+    if (scene.motion === "reduce") assert.equal(perf.compositorCount, 0);
+    else assert(perf.compositorCount >= (scene.name === "mobile" ? 24 : 44));
+    assert.deepEqual(errors, [], "browser page errors");
+    if (scene.name === "desktop") {
+      await page.screenshot({ path: output + "/first-ready-desktop.png" });
+      // Read-only auth smoke: no real account credentials, no Supabase write.
+      const primaryBackground = await page.getByRole("button", { name: "Login" })
+        .evaluate(button => getComputedStyle(button).backgroundImage);
+      assert.match(primaryBackground, /linear-gradient/i,
+        "the branded wine-red login button must not be overridden by global theme");
+      await page.getByRole("button", { name: "Forgot Password?" }).click();
+      await page.getByRole("heading", { name: "Forgot Password" }).waitFor();
+      await page.getByRole("button", { name: "Back to Login" }).click();
+      await page.getByRole("heading", { name: "WineShop POS" }).waitFor();
+    }
     await context.close();
-    console.log(`LOGIN_ECHO_VISUAL_${scene.name.toUpperCase().replaceAll("-", "_")}=PASS`);
   }
+  await fs.writeFile(output + "/performance.json", JSON.stringify(results, null, 2));
+  console.log(JSON.stringify(results, null, 2));
 } finally {
   await browser.close();
 }

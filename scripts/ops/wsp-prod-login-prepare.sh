@@ -62,9 +62,15 @@ JS_FILE=$(find dist/assets -maxdepth 1 -type f -name '*.js' | head -n 1)
 [[ -n "$JS_FILE" ]] || { echo "::error::Missing production JS"; exit 1; }
 grep -q "$PROD_REF" "$JS_FILE" || { echo "::error::PROD ref missing"; exit 1; }
 if grep -q "$DEV_REF" "$JS_FILE"; then echo "::error::DEV ref present in PROD build"; exit 1; fi
-for required in "wineshoppos-ai-1a61d5885c.azurewebsites.net" "wsp-v3-invoice-53b6e9a1.azurewebsites.net" "wsp-login-echo"; do
-  grep -q "$required" "$JS_FILE" || { echo "::error::Build missing marker: $required"; exit 1; }
+for required in "wineshoppos-ai-1a61d5885c.azurewebsites.net" "wsp-v3-invoice-53b6e9a1.azurewebsites.net"; do
+  grep -q "$required" "$JS_FILE" || { echo "::error::Build missing PROD endpoint: $required"; exit 1; }
 done
+# Vite may split login into a separate hashed chunk; verify across all JS,
+# not only the main entry. Never mistake the old GLB renderer for the live one.
+grep -rlq 'compositor-atlas' dist/assets --include='*.js' ||
+  { echo "::error::Built login lacks fast licensed cyclone"; exit 1; }
+[[ -s dist/login-brands/packshots/atlas.webp ]] ||
+  { echo "::error::Fast licensed product atlas absent from build"; exit 1; }
 for asset in dist/index.html dist/login-brands/kingfisher.svg dist/login-brands/sula.svg; do
   [[ -s "$asset" ]] || { echo "::error::Missing release asset: $asset"; exit 1; }
 done
