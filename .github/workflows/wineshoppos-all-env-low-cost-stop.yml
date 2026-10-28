@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/wineshoppos-all-env-low-cost-stop.yml"
+      - "scripts/ops/wsp-all-env-low-cost-stop-ci.sh"
   workflow_dispatch:
 permissions:
   id-token: write

@@ -9,8 +9,11 @@ RG="wineshopPOS"
 [[ "$GITHUB_SHA" == "$(git rev-parse HEAD)" ]] || exit 12
 SUB_ACTUAL=$(az account show --query id -o tsv)
 [[ "$SUB_ACTUAL" == "$SUB_WANTED" ]] || { echo "::error::Wrong subscription"; exit 13; }
-[[ "$(az group exists -n "$RG" -o tsv)" == "true" ]] ||
- { echo "::error::Wrong or inaccessible resource group"; exit 14; }
+# GitHub OIDC is scoped to named storage resources and cannot list resource
+# groups. Do NOT require Microsoft.Resources/subscriptions/resourceGroups/read.
+# All operations still use the fixed known RG, account/resource name, and
+# verified subscription. Each operation verifies its own permissions and state.
+echo "Scoped resource group: $RG (no RG-wide read required)."
 mkdir -p artifacts/wsp-shutdown
 REPORT=artifacts/wsp-shutdown/results.tsv
 ERR=artifacts/wsp-shutdown/latest-error.txt
