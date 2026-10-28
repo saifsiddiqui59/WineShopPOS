@@ -36,7 +36,21 @@ web_state() {
 web_stop() {
   local scope="$1" name="$2" initial="" final=""
   if ! initial=$(web_state "$name"); then
-    report "$scope" "$name" "static-site" "$(classify)"
+    local reason=""
+    reason=$(classify)
+    if [[ "$reason" == ABSENT ]]; then
+      report "$scope" "$name" "static-site" ABSENT
+    elif az storage account blob-service-properties update -g "$RG" -n "$name" \
+        --enable-static-website false -o none 2>"$ERR"; then
+      final=$(web_state "$name" || true)
+      if [[ "$(echo "$final" | tr '[:upper:]' '[:lower:]')" == false ]]; then
+        report "$scope" "$name" "static-site" OFF
+      else
+        report "$scope" "$name" "static-site" WRITE_SENT_VERIFY_BLOCKED
+      fi
+    else
+      report "$scope" "$name" "static-site" WRITE_BLOCKED
+    fi
     return
   fi
   if [[ "$(echo "$initial" | tr '[:upper:]' '[:lower:]')" == false ]]; then
@@ -61,7 +75,34 @@ fn_state() {
 fn_stop() {
   local scope="$1" name="$2" invoice="$3" initial="" final="" status=""
   if ! initial=$(fn_state "$name"); then
-    report "$scope" "$name" "function" "$(classify)"
+    local reason=""
+    reason=$(classify)
+    if [[ "$reason" == ABSENT ]]; then
+      report "$scope" "$name" "function" ABSENT
+    else
+      # The identity may have stop/action without sites/read; attempt only
+      # this historical, exact-name resource, then truthfully report whether
+      # state verification was possible.
+      if [[ "$invoice" == yes ]]; then
+        if az functionapp config appsettings set -g "$RG" -n "$name" \
+          --settings EMAIL_POLL_ENABLED=false "AzureWebJobs.email-invoice-poller.Disabled=true" \
+          -o none >/dev/null 2>"$ERR"; then
+          report "$scope" "$name" "disable-email-timer" WRITE_SENT_VERIFY_BLOCKED
+        else
+          report "$scope" "$name" "disable-email-timer" WRITE_BLOCKED
+        fi
+      fi
+      if az functionapp stop -g "$RG" -n "$name" -o none 2>"$ERR"; then
+        final=$(fn_state "$name" || true)
+        if [[ "$(echo "$final" | tr '[:upper:]' '[:lower:]')" == stopped ]]; then
+          report "$scope" "$name" "function" OFF
+        else
+          report "$scope" "$name" "function" WRITE_SENT_VERIFY_BLOCKED
+        fi
+      else
+        report "$scope" "$name" "function" WRITE_BLOCKED
+      fi
+    fi
     return
   fi
   if [[ "$invoice" == yes ]]; then
@@ -100,7 +141,22 @@ logic_stop() {
   local name="$1" initial="" final=""
   if ! initial=$(az resource show -g "$RG" -n "$name" \
       --resource-type Microsoft.Logic/workflows --query properties.state -o tsv 2>"$ERR"); then
-    report PROD "$name" "logic-scheduler" "$(classify)"
+    local reason=""
+    reason=$(classify)
+    if [[ "$reason" == ABSENT ]]; then
+      report PROD "$name" "logic-scheduler" ABSENT
+    elif az resource update -g "$RG" -n "$name" \
+         --resource-type Microsoft.Logic/workflows --set properties.state=Disabled -o none 2>"$ERR"; then
+      final=$(az resource show -g "$RG" -n "$name" \
+        --resource-type Microsoft.Logic/workflows --query properties.state -o tsv 2>"$ERR" || true)
+      if [[ "$final" == Disabled ]]; then
+        report PROD "$name" "logic-scheduler" OFF
+      else
+        report PROD "$name" "logic-scheduler" WRITE_SENT_VERIFY_BLOCKED
+      fi
+    else
+      report PROD "$name" "logic-scheduler" WRITE_BLOCKED
+    fi
     return
   fi
   if [[ "$initial" == Disabled ]]; then

@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/wineshoppos-all-env-low-cost-stop.yml"
       - "scripts/ops/wsp-all-env-low-cost-stop-ci.sh"
+  # Retry exact-name stop APIs when read is forbidden; never assume success.
   workflow_dispatch:
 permissions:
   id-token: write
