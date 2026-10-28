@@ -1,0 +1,29 @@
+{
+  "license": "CC0",
+  "sources": [
+    "https://polyhaven.com/a/wine_bottles_01",
+    "https://www.innerscene.com/tools/library"
+  ],
+  "models": [
+    {
+      "name": "Poly Haven four-bottle collection (original fictional labels)",
+      "kind": "wine",
+      "path": "/login-brands/models/wine-bottles-01/wine_bottles_01_1k.gltf"
+    },
+    {
+      "name": "innerscene-wine",
+      "kind": "wine",
+      "path": "/login-brands/models/innerscene-wine.glb"
+    },
+    {
+      "name": "innerscene-beer",
+      "kind": "beer",
+      "path": "/login-brands/models/innerscene-beer.glb"
+    },
+    {
+      "name": "innerscene-can",
+      "kind": "can",
+      "path": "/login-brands/models/innerscene-can.glb"
+    }
+  ]
+}
