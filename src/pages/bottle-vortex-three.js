@@ -38,10 +38,18 @@ function normalizedModel(source, kind) {
     throw new Error("Invalid glTF model bounds: " + kind);
   }
   const scale = (kind === "can" ? 1.8 : 2.35) / dimensions.y;
-  copy.scale.setScalar(scale);
-  // Center the source mesh at the local origin, including models exported in meters.
+  // GLTF root nodes can carry translations (the Poly Haven collection has
+  // three offset bottles). Keep those translations when normalizing: simply
+  // assigning -boundsCenter discards root.position and makes meshes vanish
+  // from studio-bake camera space.
+  const sourcePosition = copy.position.clone();
   const midpoint = box.getCenter(new THREE.Vector3());
-  copy.position.set(-midpoint.x * scale, -midpoint.y * scale, -midpoint.z * scale);
+  copy.scale.setScalar(scale);
+  copy.position.set(
+    (sourcePosition.x - midpoint.x) * scale,
+    (sourcePosition.y - midpoint.y) * scale,
+    (sourcePosition.z - midpoint.z) * scale
+  );
   copy.traverse((child) => {
     if (!child.isMesh) return;
     child.frustumCulled = true;
