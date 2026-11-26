@@ -1,6 +1,7 @@
 name: WineShopPOS PROD Website Start (Reversible)
 
 # User-requested re-enable of the ORIGINAL production static website.
+# Restart requested 2026-11-26; existing production files only.
 # No frontend deployment, database migration, Azure Function or DEV/QA change.
 on:
   push:
